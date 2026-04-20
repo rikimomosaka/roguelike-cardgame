@@ -1,4 +1,6 @@
 using System;
+using RoguelikeCardGame.Core.Data;
+using RoguelikeCardGame.Core.Player;
 
 namespace RoguelikeCardGame.Core.Run;
 
@@ -16,4 +18,43 @@ public sealed record RunState(
     long PlaySeconds,
     ulong RngSeed,
     DateTimeOffset SavedAtUtc,
-    RunProgress Progress);
+    RunProgress Progress)
+{
+    /// <summary>Phase 1 の JSON スキーマバージョン。</summary>
+    public const int CurrentSchemaVersion = 1;
+
+    /// <summary>初期最大 HP。</summary>
+    public const int StartingMaxHp = 80;
+
+    /// <summary>初期所持金。</summary>
+    public const int StartingGold = 99;
+
+    /// <summary>新規ソロラン状態を作る。StarterDeck が DataCatalog に存在することを検証。</summary>
+    public static RunState NewSoloRun(DataCatalog catalog, ulong rngSeed, DateTimeOffset nowUtc)
+    {
+        foreach (var id in StarterDeck.DefaultCardIds)
+        {
+            if (!catalog.TryGetCard(id, out _))
+                throw new InvalidOperationException(
+                    $"StarterDeck が参照するカード ID が DataCatalog に存在しません: {id}");
+        }
+
+        var deck = new string[StarterDeck.DefaultCardIds.Count];
+        for (var i = 0; i < deck.Length; i++) deck[i] = StarterDeck.DefaultCardIds[i];
+
+        return new RunState(
+            SchemaVersion: CurrentSchemaVersion,
+            CurrentAct: 1,
+            CurrentTileIndex: 0,
+            CurrentHp: StartingMaxHp,
+            MaxHp: StartingMaxHp,
+            Gold: StartingGold,
+            Deck: deck,
+            Relics: Array.Empty<string>(),
+            Potions: Array.Empty<string>(),
+            PlaySeconds: 0L,
+            RngSeed: rngSeed,
+            SavedAtUtc: nowUtc,
+            Progress: RunProgress.InProgress);
+    }
+}
