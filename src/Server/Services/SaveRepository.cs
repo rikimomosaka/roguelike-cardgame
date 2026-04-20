@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
 using RoguelikeCardGame.Core.Run;
@@ -22,10 +23,13 @@ public sealed class SaveRepository
     {
         ValidateAccountId(accountId);
         var json = RunStateSerializer.Serialize(state);
-        File.WriteAllText(PathFor(accountId), json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        var finalPath = PathFor(accountId);
+        var tmpPath = finalPath + ".tmp";
+        File.WriteAllText(tmpPath, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        File.Move(tmpPath, finalPath, overwrite: true);
     }
 
-    public bool TryLoad(string accountId, out RunState? state)
+    public bool TryLoad(string accountId, [MaybeNullWhen(false)] out RunState state)
     {
         ValidateAccountId(accountId);
         var path = PathFor(accountId);

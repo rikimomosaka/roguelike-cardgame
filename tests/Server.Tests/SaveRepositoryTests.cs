@@ -45,7 +45,7 @@ public class SaveRepositoryTests : IDisposable
 
         Assert.True(repo.TryLoad("player-002", out var restored));
         Assert.NotNull(restored);
-        Assert.Equal(original.RngSeed, restored!.RngSeed);
+        Assert.Equal(original.RngSeed, restored.RngSeed);
         Assert.Equal(original.MaxHp, restored.MaxHp);
         Assert.Equal(original.Deck, restored.Deck);
     }
@@ -66,7 +66,7 @@ public class SaveRepositoryTests : IDisposable
         repo.Save("p", FreshRun(seed: 2UL));
 
         Assert.True(repo.TryLoad("p", out var state));
-        Assert.Equal(2UL, state!.RngSeed);
+        Assert.Equal(2UL, state.RngSeed);
     }
 
     [Fact]
