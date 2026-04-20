@@ -137,4 +137,141 @@ public static class JsonFixtures
       "upgradedEffects": null
     }
     """;
+
+    // --- Relic フィクスチャ ---
+
+    public const string BurningBloodJson = """
+    {
+      "id": "burning_blood",
+      "name": "燃え盛る血",
+      "rarity": 1,
+      "trigger": "OnBattleEnd",
+      "effects": [ { "type": "healPercent", "amount": 6 } ]
+    }
+    """;
+
+    public const string LanternJson = """
+    {
+      "id": "lantern",
+      "name": "ランタン",
+      "rarity": 1,
+      "trigger": "Passive",
+      "effects": []
+    }
+    """;
+
+    public const string RelicBrokenRarityJson = """
+    {
+      "id": "bad_relic",
+      "name": "バッド",
+      "rarity": 99,
+      "trigger": "Passive",
+      "effects": []
+    }
+    """;
+
+    public const string RelicUnknownTriggerJson = """
+    {
+      "id": "bad_relic_trigger",
+      "name": "バッド",
+      "rarity": 1,
+      "trigger": "OnMidnight",
+      "effects": []
+    }
+    """;
+
+    // --- Potion フィクスチャ ---
+
+    public const string BlockPotionJson = """
+    {
+      "id": "block_potion",
+      "name": "ブロックポーション",
+      "rarity": 1,
+      "usableInBattle": true,
+      "usableOutOfBattle": false,
+      "effects": [ { "type": "gainBlock", "amount": 12 } ]
+    }
+    """;
+
+    public const string FirePotionJson = """
+    {
+      "id": "fire_potion",
+      "name": "ファイアポーション",
+      "rarity": 1,
+      "usableInBattle": true,
+      "usableOutOfBattle": false,
+      "effects": [ { "type": "damage", "amount": 20 } ]
+    }
+    """;
+
+    public const string PotionMissingUsableFlagsJson = """
+    {
+      "id": "bad_potion",
+      "name": "バッド",
+      "rarity": 1,
+      "effects": []
+    }
+    """;
+
+    // --- Enemy フィクスチャ ---
+
+    public const string JawWormJson = """
+    {
+      "id": "jaw_worm",
+      "name": "ジョウ・ワーム",
+      "hpMin": 40,
+      "hpMax": 44,
+      "act": 1,
+      "tier": "Weak",
+      "moveset": ["chomp", "thrash", "bellow"]
+    }
+    """;
+
+    public const string GremlinNobJson = """
+    {
+      "id": "gremlin_nob",
+      "name": "グレムリン・ノブ",
+      "hpMin": 82,
+      "hpMax": 86,
+      "act": 1,
+      "tier": "Elite",
+      "moveset": ["bellow", "rush", "skull_bash"]
+    }
+    """;
+
+    public const string EnemyBadTierJson = """
+    {
+      "id": "bad_enemy",
+      "name": "バッド",
+      "hpMin": 10,
+      "hpMax": 10,
+      "act": 1,
+      "tier": "SuperBoss",
+      "moveset": []
+    }
+    """;
+
+    public const string EnemyInvertedHpJson = """
+    {
+      "id": "inverted_hp",
+      "name": "バッド",
+      "hpMin": 50,
+      "hpMax": 10,
+      "act": 1,
+      "tier": "Weak",
+      "moveset": []
+    }
+    """;
+
+    public const string EnemyOutOfRangeActJson = """
+    {
+      "id": "bad_act",
+      "name": "バッド",
+      "hpMin": 10,
+      "hpMax": 10,
+      "act": 9,
+      "tier": "Weak",
+      "moveset": []
+    }
+    """;
 }
