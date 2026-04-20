@@ -1,0 +1,9 @@
+{
+  "id": "hexaghost",
+  "name": "ヘキサゴースト",
+  "hpMin": 250,
+  "hpMax": 250,
+  "act": 1,
+  "tier": "Boss",
+  "moveset": ["activate", "divider", "inferno", "sear", "tackle", "inflame"]
+}

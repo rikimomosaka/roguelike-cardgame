@@ -8,4 +8,11 @@
     <AssemblyName>RoguelikeCardGame.Core</AssemblyName>
   </PropertyGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Data\Cards\*.json" />
+    <EmbeddedResource Include="Data\Relics\*.json" />
+    <EmbeddedResource Include="Data\Potions\*.json" />
+    <EmbeddedResource Include="Data\Enemies\*.json" />
+  </ItemGroup>
+
 </Project>

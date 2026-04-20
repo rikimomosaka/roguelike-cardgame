@@ -1,0 +1,8 @@
+{
+  "id": "fire_potion",
+  "name": "ファイアポーション",
+  "rarity": 1,
+  "usableInBattle": true,
+  "usableOutOfBattle": false,
+  "effects": [{ "type": "damage", "amount": 20 }]
+}

@@ -1,0 +1,8 @@
+{
+  "id": "block_potion",
+  "name": "ブロックポーション",
+  "rarity": 1,
+  "usableInBattle": true,
+  "usableOutOfBattle": false,
+  "effects": [{ "type": "gainBlock", "amount": 12 }]
+}

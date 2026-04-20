@@ -1,0 +1,9 @@
+{
+  "id": "jaw_worm",
+  "name": "ジョウ・ワーム",
+  "hpMin": 40,
+  "hpMax": 44,
+  "act": 1,
+  "tier": "Weak",
+  "moveset": ["chomp", "thrash", "bellow"]
+}

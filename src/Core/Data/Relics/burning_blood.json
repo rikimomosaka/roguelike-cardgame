@@ -1,0 +1,7 @@
+{
+  "id": "burning_blood",
+  "name": "燃え盛る血",
+  "rarity": 1,
+  "trigger": "OnBattleEnd",
+  "effects": [{ "type": "healPercent", "amount": 6 }]
+}

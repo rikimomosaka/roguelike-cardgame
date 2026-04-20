@@ -1,0 +1,9 @@
+{
+  "id": "strike",
+  "name": "ストライク",
+  "rarity": 1,
+  "cardType": "Attack",
+  "cost": 1,
+  "effects": [{ "type": "damage", "amount": 6 }],
+  "upgradedEffects": [{ "type": "damage", "amount": 9 }]
+}

@@ -1,0 +1,7 @@
+{
+  "id": "lantern",
+  "name": "ランタン",
+  "rarity": 1,
+  "trigger": "Passive",
+  "effects": [{ "type": "extraEnergyOnFirstTurn", "amount": 1 }]
+}

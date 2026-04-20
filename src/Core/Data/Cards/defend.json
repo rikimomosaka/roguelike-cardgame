@@ -1,0 +1,9 @@
+{
+  "id": "defend",
+  "name": "防御",
+  "rarity": 1,
+  "cardType": "Skill",
+  "cost": 1,
+  "effects": [{ "type": "gainBlock", "amount": 5 }],
+  "upgradedEffects": [{ "type": "gainBlock", "amount": 8 }]
+}
