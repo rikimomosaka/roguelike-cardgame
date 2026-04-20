@@ -59,4 +59,9 @@ public sealed record DataCatalog(
 
         return new DataCatalog(cardMap, relicMap, potionMap, enemyMap);
     }
+
+    public bool TryGetCard(string id, out CardDefinition? def) => Cards.TryGetValue(id, out def);
+    public bool TryGetRelic(string id, out RelicDefinition? def) => Relics.TryGetValue(id, out def);
+    public bool TryGetPotion(string id, out PotionDefinition? def) => Potions.TryGetValue(id, out def);
+    public bool TryGetEnemy(string id, out EnemyDefinition? def) => Enemies.TryGetValue(id, out def);
 }
