@@ -70,13 +70,8 @@ public static class PotionJsonLoader
 
     private static CardEffect ParseEffect(JsonElement el, string? id)
     {
-        var type = GetRequiredString(el, "type", id);
-        return type switch
-        {
-            "damage" => new DamageEffect(GetRequiredInt(el, "amount", id)),
-            "gainBlock" => new GainBlockEffect(GetRequiredInt(el, "amount", id)),
-            _ => new UnknownEffect(type),
-        };
+        var ctx = id is null ? "" : $" (potion id={id})";
+        return CardEffectParser.ParseEffect(el, msg => new PotionJsonException($"{msg}{ctx}"));
     }
 
     private static string GetRequiredString(JsonElement el, string key, string? id)

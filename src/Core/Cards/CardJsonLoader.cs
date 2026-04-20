@@ -92,13 +92,8 @@ public static class CardJsonLoader
 
     private static CardEffect ParseEffect(JsonElement el, string? id)
     {
-        var type = GetRequiredString(el, "type", id);
-        return type switch
-        {
-            "damage" => new DamageEffect(GetRequiredInt(el, "amount", id)),
-            "gainBlock" => new GainBlockEffect(GetRequiredInt(el, "amount", id)),
-            _ => new UnknownEffect(type),
-        };
+        var ctx = id is null ? "" : $" (card id={id})";
+        return CardEffectParser.ParseEffect(el, msg => new CardJsonException($"{msg}{ctx}"));
     }
 
     private static CardType ParseCardType(string s, string? id) => s switch

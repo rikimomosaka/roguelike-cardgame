@@ -1,3 +1,5 @@
+using System.Linq;
+using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Relics;
 using RoguelikeCardGame.Core.Tests.Fixtures;
 using Xunit;
@@ -36,5 +38,13 @@ public class RelicJsonLoaderTests
     {
         var ex = Assert.Throws<RelicJsonException>(() => RelicJsonLoader.Parse(JsonFixtures.RelicUnknownTriggerJson));
         Assert.Contains("trigger", ex.Message);
+    }
+
+    [Fact]
+    public void ParseRelicWithDamageEffect_SpecializesAsDamageEffect()
+    {
+        var def = RelicJsonLoader.Parse(JsonFixtures.RelicWithDamageEffectJson);
+        var dmg = Assert.IsType<DamageEffect>(def.Effects.Single());
+        Assert.Equal(7, dmg.Amount);
     }
 }

@@ -180,6 +180,16 @@ public static class JsonFixtures
     }
     """;
 
+    public const string RelicWithDamageEffectJson = """
+    {
+      "id": "damage_relic",
+      "name": "ダメージレリック",
+      "rarity": 1,
+      "trigger": "OnBattleStart",
+      "effects": [ { "type": "damage", "amount": 7 } ]
+    }
+    """;
+
     // --- Potion フィクスチャ ---
 
     public const string BlockPotionJson = """

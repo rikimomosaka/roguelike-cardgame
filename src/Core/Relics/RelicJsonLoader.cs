@@ -70,13 +70,10 @@ public static class RelicJsonLoader
         if (!root.TryGetProperty(key, out var arr) || arr.ValueKind != JsonValueKind.Array)
             return Array.Empty<CardEffect>();
 
+        var ctx = id is null ? "" : $" (relic id={id})";
         var list = new List<CardEffect>();
         foreach (var el in arr.EnumerateArray())
-        {
-            var type = GetRequiredString(el, "type", id);
-            // Phase 0: すべての effect は UnknownEffect として扱う
-            list.Add(new UnknownEffect(type));
-        }
+            list.Add(CardEffectParser.ParseEffect(el, msg => new RelicJsonException($"{msg}{ctx}")));
         return list;
     }
 
