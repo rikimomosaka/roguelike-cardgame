@@ -64,6 +64,33 @@ public class RunStateSerializerTests
     }
 
     [Fact]
+    public void Deserialize_UnknownField_Throws()
+    {
+        var json = """
+        {
+          "schemaVersion": 1,
+          "currentAct": 1,
+          "currentTileIndex": 0,
+          "currentHp": 80,
+          "maxHp": 80,
+          "gold": 99,
+          "deck": [],
+          "relics": [],
+          "potions": [],
+          "playSeconds": 0,
+          "rngSeed": 0,
+          "savedAtUtc": "2026-04-20T12:00:00+00:00",
+          "progress": "InProgress",
+          "unknownField": 42
+        }
+        """;
+
+        var ex = Assert.Throws<RunStateSerializerException>(
+            () => RunStateSerializer.Deserialize(json));
+        Assert.Contains("パース", ex.Message);
+    }
+
+    [Fact]
     public void Deserialize_WrongSchemaVersion_Throws()
     {
         // 手書きで schemaVersion=99 の RunState を作る

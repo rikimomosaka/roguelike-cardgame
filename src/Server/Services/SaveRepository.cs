@@ -60,5 +60,8 @@ public sealed class SaveRepository
         if (accountId.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
             throw new ArgumentException(
                 $"accountId にファイル名として使えない文字が含まれています: {accountId}", nameof(accountId));
+        if (accountId.Contains('/') || accountId.Contains('\\'))
+            throw new ArgumentException(
+                $"accountId にパス区切り文字が含まれています: {accountId}", nameof(accountId));
     }
 }
