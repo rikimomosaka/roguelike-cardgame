@@ -39,6 +39,13 @@ public sealed class SaveRepository
         return true;
     }
 
+    public void Delete(string accountId)
+    {
+        ValidateAccountId(accountId);
+        var path = PathFor(accountId);
+        if (File.Exists(path)) File.Delete(path);
+    }
+
     private string PathFor(string accountId) =>
         Path.Combine(_rootDir, accountId + ".json");
 

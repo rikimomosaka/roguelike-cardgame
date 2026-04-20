@@ -68,4 +68,40 @@ public class SaveRepositoryTests : IDisposable
         Assert.True(repo.TryLoad("p", out var state));
         Assert.Equal(2UL, state!.RngSeed);
     }
+
+    [Fact]
+    public void Delete_ExistingAccount_RemovesFile()
+    {
+        var repo = new SaveRepository(_tempRoot);
+        repo.Save("to-delete", FreshRun());
+        var path = Path.Combine(_tempRoot, "to-delete.json");
+        Assert.True(File.Exists(path));
+
+        repo.Delete("to-delete");
+
+        Assert.False(File.Exists(path));
+        Assert.False(repo.TryLoad("to-delete", out _));
+    }
+
+    [Fact]
+    public void Delete_MissingAccount_IsNoOp()
+    {
+        var repo = new SaveRepository(_tempRoot);
+        // 例外を投げず何もしないことを確認
+        repo.Delete("never-existed");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("../escape")]
+    [InlineData("has/slash")]
+    [InlineData("has\\backslash")]
+    public void InvalidAccountId_ThrowsArgumentException(string bad)
+    {
+        var repo = new SaveRepository(_tempRoot);
+        Assert.Throws<ArgumentException>(() => repo.Save(bad, FreshRun()));
+        Assert.Throws<ArgumentException>(() => repo.TryLoad(bad, out _));
+        Assert.Throws<ArgumentException>(() => repo.Delete(bad));
+    }
 }
