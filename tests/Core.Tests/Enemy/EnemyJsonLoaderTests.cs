@@ -36,13 +36,24 @@ public class EnemyJsonLoaderTests
     public void InvertedHp_Throws()
     {
         var ex = Assert.Throws<EnemyJsonException>(() => EnemyJsonLoader.Parse(JsonFixtures.EnemyInvertedHpJson));
-        Assert.Contains("hp", ex.Message.ToLowerInvariant());
+        Assert.Contains("以下である必要があります", ex.Message);
+        Assert.Contains("inverted_hp", ex.Message);
     }
 
     [Fact]
     public void OutOfRangeAct_Throws()
     {
         var ex = Assert.Throws<EnemyJsonException>(() => EnemyJsonLoader.Parse(JsonFixtures.EnemyOutOfRangeActJson));
-        Assert.Contains("act", ex.Message.ToLowerInvariant());
+        Assert.Contains("範囲外", ex.Message);
+        Assert.Contains("bad_act", ex.Message);
+    }
+
+    [Fact]
+    public void NonStringMovesetElement_Throws_WithIndexAndValueKind()
+    {
+        var ex = Assert.Throws<EnemyJsonException>(() => EnemyJsonLoader.Parse(JsonFixtures.EnemyNonStringMovesetJson));
+        Assert.Contains("moveset", ex.Message);
+        Assert.Contains("1", ex.Message);
+        Assert.Contains("bad_moveset", ex.Message);
     }
 }

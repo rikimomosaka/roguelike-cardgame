@@ -39,9 +39,7 @@ public static class EnemyJsonLoader
                     throw new EnemyJsonException($"act の値 {act} は 1〜3 の範囲外です (enemy id={id})。");
 
                 // tier: 文字列 → enum パース
-                var tierStr = GetRequiredString(root, "tier", id);
-                if (!Enum.TryParse<EnemyTier>(tierStr, out var tier))
-                    throw new EnemyJsonException($"tier の値 \"{tierStr}\" は無効です (enemy id={id})。");
+                var tier = ParseTier(GetRequiredString(root, "tier", id), id);
 
                 var moveset = ParseMoveset(root, "moveset", id);
 
@@ -59,20 +57,32 @@ public static class EnemyJsonLoader
         }
     }
 
+    private static EnemyTier ParseTier(string s, string? id) => s switch
+    {
+        "Weak" => EnemyTier.Weak,
+        "Strong" => EnemyTier.Strong,
+        "Elite" => EnemyTier.Elite,
+        "Boss" => EnemyTier.Boss,
+        _ => throw new EnemyJsonException($"tier の値 \"{s}\" は無効です (enemy id={id})。"),
+    };
+
     private static IReadOnlyList<string> ParseMoveset(JsonElement root, string key, string? id)
     {
         if (!root.TryGetProperty(key, out var arr) || arr.ValueKind != JsonValueKind.Array)
             return Array.Empty<string>();
 
         var list = new List<string>();
+        var index = 0;
         foreach (var el in arr.EnumerateArray())
         {
             if (el.ValueKind != JsonValueKind.String)
             {
                 var ctx = id is null ? "" : $" (enemy id={id})";
-                throw new EnemyJsonException($"moveset の要素は文字列である必要があります。{ctx}");
+                throw new EnemyJsonException(
+                    $"moveset[{index}] の要素は文字列である必要があります (実際: {el.ValueKind}){ctx}。");
             }
             list.Add(el.GetString()!);
+            index++;
         }
         return list;
     }

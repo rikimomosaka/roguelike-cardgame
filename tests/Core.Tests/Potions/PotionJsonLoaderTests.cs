@@ -32,5 +32,6 @@ public class PotionJsonLoaderTests
     {
         var ex = Assert.Throws<PotionJsonException>(() => PotionJsonLoader.Parse(JsonFixtures.PotionMissingUsableFlagsJson));
         Assert.Contains("bad_potion", ex.Message);
+        Assert.Contains("usableInBattle", ex.Message);
     }
 }

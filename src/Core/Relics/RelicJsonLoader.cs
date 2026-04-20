@@ -37,9 +37,7 @@ public static class RelicJsonLoader
                 var rarity = (CardRarity)rawRarity;
 
                 // trigger: 文字列 → enum パース
-                var triggerStr = GetRequiredString(root, "trigger", id);
-                if (!Enum.TryParse<RelicTrigger>(triggerStr, out var trigger))
-                    throw new RelicJsonException($"trigger の値 \"{triggerStr}\" は無効です (relic id={id})。");
+                var trigger = ParseTrigger(GetRequiredString(root, "trigger", id), id);
 
                 var effects = ParseEffects(root, "effects", id);
 
@@ -56,6 +54,16 @@ public static class RelicJsonLoader
             }
         }
     }
+
+    private static RelicTrigger ParseTrigger(string s, string? id) => s switch
+    {
+        "OnPickup" => RelicTrigger.OnPickup,
+        "Passive" => RelicTrigger.Passive,
+        "OnBattleStart" => RelicTrigger.OnBattleStart,
+        "OnBattleEnd" => RelicTrigger.OnBattleEnd,
+        "OnMapTileResolved" => RelicTrigger.OnMapTileResolved,
+        _ => throw new RelicJsonException($"trigger の値 \"{s}\" は無効です (relic id={id})。"),
+    };
 
     private static IReadOnlyList<CardEffect> ParseEffects(JsonElement root, string key, string? id)
     {

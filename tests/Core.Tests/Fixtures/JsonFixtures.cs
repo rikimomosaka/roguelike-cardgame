@@ -274,4 +274,16 @@ public static class JsonFixtures
       "moveset": []
     }
     """;
+
+    public const string EnemyNonStringMovesetJson = """
+    {
+      "id": "bad_moveset",
+      "name": "バッド",
+      "hpMin": 10,
+      "hpMax": 10,
+      "act": 1,
+      "tier": "Weak",
+      "moveset": ["chomp", 42, "bellow"]
+    }
+    """;
 }
