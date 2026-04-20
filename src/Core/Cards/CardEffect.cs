@@ -10,4 +10,4 @@ public sealed record DamageEffect(int Amount) : CardEffect("damage");
 public sealed record GainBlockEffect(int Amount) : CardEffect("gainBlock");
 
 /// <summary>未知／将来拡張の効果。Type 文字列のみ保持する。</summary>
-public sealed record UnknownEffect(string TypeName) : CardEffect(TypeName);
+public sealed record UnknownEffect(string Type) : CardEffect(Type);
