@@ -1,4 +1,4 @@
-﻿namespace Server.Tests;
+﻿namespace RoguelikeCardGame.Server.Tests;
 
 public class UnitTest1
 {
