@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Run;
 using Xunit;
@@ -21,9 +22,9 @@ public class RunStateFactoryTests
         Assert.Equal(80, state.CurrentHp);
         Assert.Equal(80, state.MaxHp);
         Assert.Equal(99, state.Gold);
-        Assert.Equal(10, state.Deck.Length);
-        Assert.Equal(5, Array.FindAll(state.Deck, id => id == "strike").Length);
-        Assert.Equal(5, Array.FindAll(state.Deck, id => id == "defend").Length);
+        Assert.Equal(10, state.Deck.Count);
+        Assert.Equal(5, state.Deck.Count(id => id == "strike"));
+        Assert.Equal(5, state.Deck.Count(id => id == "defend"));
         Assert.Empty(state.Relics);
         Assert.Empty(state.Potions);
         Assert.Equal(0L, state.PlaySeconds);
@@ -36,10 +37,10 @@ public class RunStateFactoryTests
     public void NewSoloRun_ThrowsWhenStarterCardMissingFromCatalog()
     {
         var emptyCatalog = DataCatalog.LoadFromStrings(
-            cards: System.Array.Empty<string>(),
-            relics: System.Array.Empty<string>(),
-            potions: System.Array.Empty<string>(),
-            enemies: System.Array.Empty<string>());
+            cards: Array.Empty<string>(),
+            relics: Array.Empty<string>(),
+            potions: Array.Empty<string>(),
+            enemies: Array.Empty<string>());
 
         var ex = Assert.Throws<InvalidOperationException>(
             () => RunState.NewSoloRun(emptyCatalog, rngSeed: 0UL, nowUtc: FixedNow));

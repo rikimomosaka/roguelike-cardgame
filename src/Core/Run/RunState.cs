@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Player;
 
@@ -12,9 +14,9 @@ public sealed record RunState(
     int CurrentHp,
     int MaxHp,
     int Gold,
-    string[] Deck,
-    string[] Relics,
-    string[] Potions,
+    IReadOnlyList<string> Deck,
+    IReadOnlyList<string> Relics,
+    IReadOnlyList<string> Potions,
     long PlaySeconds,
     ulong RngSeed,
     DateTimeOffset SavedAtUtc,
@@ -39,8 +41,8 @@ public sealed record RunState(
                     $"StarterDeck が参照するカード ID が DataCatalog に存在しません: {id}");
         }
 
-        var deck = new string[StarterDeck.DefaultCardIds.Count];
-        for (var i = 0; i < deck.Length; i++) deck[i] = StarterDeck.DefaultCardIds[i];
+        // 防御的コピー: string[] は IReadOnlyList<string> を実装。
+        var deck = StarterDeck.DefaultCardIds.ToArray();
 
         return new RunState(
             SchemaVersion: CurrentSchemaVersion,
