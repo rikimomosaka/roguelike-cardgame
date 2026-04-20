@@ -65,4 +65,53 @@ public class CardJsonLoaderTests
     {
         Assert.Throws<CardJsonException>(() => CardJsonLoader.Parse(JsonFixtures.BrokenJson));
     }
+
+    // --- 新規テスト ---
+
+    [Fact]
+    public void MissingId_Throws()
+    {
+        var ex = Assert.Throws<CardJsonException>(() => CardJsonLoader.Parse(JsonFixtures.MissingIdJson));
+        Assert.Contains("id", ex.Message);
+    }
+
+    [Fact]
+    public void MissingName_Throws()
+    {
+        var ex = Assert.Throws<CardJsonException>(() => CardJsonLoader.Parse(JsonFixtures.MissingNameJson));
+        Assert.Contains("name", ex.Message);
+    }
+
+    [Fact]
+    public void UnknownCardType_Throws()
+    {
+        var ex = Assert.Throws<CardJsonException>(() => CardJsonLoader.Parse(JsonFixtures.UnknownCardTypeJson));
+        // メッセージに "Creature" または "cardType" が含まれること
+        Assert.True(
+            ex.Message.Contains("Creature") || ex.Message.Contains("cardType"),
+            $"Expected message to contain 'Creature' or 'cardType', but was: {ex.Message}");
+    }
+
+    [Fact]
+    public void RarityOutOfRange_Throws()
+    {
+        var ex = Assert.Throws<CardJsonException>(() => CardJsonLoader.Parse(JsonFixtures.RarityOutOfRangeJson));
+        // メッセージに "rarity" または "99" が含まれること
+        Assert.True(
+            ex.Message.Contains("rarity") || ex.Message.Contains("99"),
+            $"Expected message to contain 'rarity' or '99', but was: {ex.Message}");
+    }
+
+    [Fact]
+    public void UpgradedEffectsWrongType_Throws()
+    {
+        Assert.Throws<CardJsonException>(() => CardJsonLoader.Parse(JsonFixtures.UpgradedEffectsWrongTypeJson));
+    }
+
+    [Fact]
+    public void UpgradedEffectsExplicitlyNull_ReturnsNull()
+    {
+        var def = CardJsonLoader.Parse(JsonFixtures.UpgradedEffectsExplicitNullJson);
+        Assert.Null(def.UpgradedEffects);
+    }
 }

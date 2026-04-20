@@ -63,4 +63,78 @@ public static class JsonFixtures
     public const string BrokenJson = """
     { "id": "strike", "name": "ストライク"
     """;
+
+    // --- 新規：エラーケース用フィクスチャ ---
+
+    /// <summary>id フィールドが存在しない。</summary>
+    public const string MissingIdJson = """
+    {
+      "name": "ストライク",
+      "rarity": 1,
+      "cardType": "Attack",
+      "cost": 1,
+      "effects": []
+    }
+    """;
+
+    /// <summary>name フィールドが存在しない。</summary>
+    public const string MissingNameJson = """
+    {
+      "id": "strike",
+      "rarity": 1,
+      "cardType": "Attack",
+      "cost": 1,
+      "effects": []
+    }
+    """;
+
+    /// <summary>cardType が未知の値 "Creature"。</summary>
+    public const string UnknownCardTypeJson = """
+    {
+      "id": "creature_card",
+      "name": "クリーチャー",
+      "rarity": 1,
+      "cardType": "Creature",
+      "cost": 1,
+      "effects": []
+    }
+    """;
+
+    /// <summary>rarity が範囲外の値 99。</summary>
+    public const string RarityOutOfRangeJson = """
+    {
+      "id": "bad_rarity",
+      "name": "レアリティ不正",
+      "rarity": 99,
+      "cardType": "Attack",
+      "cost": 1,
+      "effects": []
+    }
+    """;
+
+    /// <summary>upgradedEffects が配列でなく文字列。</summary>
+    public const string UpgradedEffectsWrongTypeJson = """
+    {
+      "id": "wrong_upgraded",
+      "name": "不正アップグレード",
+      "rarity": 1,
+      "cardType": "Attack",
+      "cost": 1,
+      "effects": [],
+      "upgradedEffects": "not-an-array"
+    }
+    """;
+
+    /// <summary>upgradedEffects が明示的な null。</summary>
+    public const string UpgradedEffectsExplicitNullJson = """
+    {
+      "id": "null_upgraded",
+      "name": "ヌルアップグレード",
+      "rarity": 1,
+      "cardType": "Attack",
+      "cost": 1,
+      "effects": [],
+      "upgradedEffects": null
+    }
+    """;
 }
