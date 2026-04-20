@@ -46,4 +46,48 @@ public class RunStateSerializerTests
         Assert.Contains("\"progress\":\"InProgress\"", json);
         Assert.DoesNotContain("\"SchemaVersion\"", json); // PascalCase は出ない
     }
+
+    [Fact]
+    public void Deserialize_BrokenJson_Throws()
+    {
+        var ex = Assert.Throws<RunStateSerializerException>(
+            () => RunStateSerializer.Deserialize("{ not valid"));
+        Assert.Contains("パース", ex.Message);
+    }
+
+    [Fact]
+    public void Deserialize_NullLiteral_Throws()
+    {
+        var ex = Assert.Throws<RunStateSerializerException>(
+            () => RunStateSerializer.Deserialize("null"));
+        Assert.Contains("null", ex.Message);
+    }
+
+    [Fact]
+    public void Deserialize_WrongSchemaVersion_Throws()
+    {
+        // 手書きで schemaVersion=99 の RunState を作る
+        var json = """
+        {
+          "schemaVersion": 99,
+          "currentAct": 1,
+          "currentTileIndex": 0,
+          "currentHp": 80,
+          "maxHp": 80,
+          "gold": 99,
+          "deck": [],
+          "relics": [],
+          "potions": [],
+          "playSeconds": 0,
+          "rngSeed": 0,
+          "savedAtUtc": "2026-04-20T12:00:00+00:00",
+          "progress": "InProgress"
+        }
+        """;
+
+        var ex = Assert.Throws<RunStateSerializerException>(
+            () => RunStateSerializer.Deserialize(json));
+        Assert.Contains("schemaVersion", ex.Message);
+        Assert.Contains("99", ex.Message);
+    }
 }
