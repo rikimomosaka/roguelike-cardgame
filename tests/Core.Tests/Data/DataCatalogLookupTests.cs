@@ -20,7 +20,7 @@ public class DataCatalogLookupTests
         var catalog = BuildCatalog();
         Assert.True(catalog.TryGetCard("strike", out var def));
         Assert.NotNull(def);
-        Assert.Equal("ストライク", def!.Name);
+        Assert.Equal("ストライク", def.Name);
     }
 
     [Fact]

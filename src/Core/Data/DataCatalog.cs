@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Enemy;
 using RoguelikeCardGame.Core.Potions;
@@ -60,8 +61,8 @@ public sealed record DataCatalog(
         return new DataCatalog(cardMap, relicMap, potionMap, enemyMap);
     }
 
-    public bool TryGetCard(string id, out CardDefinition? def) => Cards.TryGetValue(id, out def);
-    public bool TryGetRelic(string id, out RelicDefinition? def) => Relics.TryGetValue(id, out def);
-    public bool TryGetPotion(string id, out PotionDefinition? def) => Potions.TryGetValue(id, out def);
-    public bool TryGetEnemy(string id, out EnemyDefinition? def) => Enemies.TryGetValue(id, out def);
+    public bool TryGetCard(string id, [MaybeNullWhen(false)] out CardDefinition def) => Cards.TryGetValue(id, out def);
+    public bool TryGetRelic(string id, [MaybeNullWhen(false)] out RelicDefinition def) => Relics.TryGetValue(id, out def);
+    public bool TryGetPotion(string id, [MaybeNullWhen(false)] out PotionDefinition def) => Potions.TryGetValue(id, out def);
+    public bool TryGetEnemy(string id, [MaybeNullWhen(false)] out EnemyDefinition def) => Enemies.TryGetValue(id, out def);
 }
