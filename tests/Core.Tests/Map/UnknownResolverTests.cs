@@ -52,4 +52,24 @@ public class UnknownResolverTests
         var result = UnknownResolver.ResolveAll(map, cfg, new SystemRng(123));
         Assert.All(result.Values, v => Assert.Equal(TileKind.Enemy, v));
     }
+
+    [Fact]
+    public void ResolveAll_ForbiddenKindInWeights_Throws()
+    {
+        var map = GenerateMapWithUnknowns();
+        var badCfg = new UnknownResolutionConfig(
+            ImmutableDictionary<TileKind, double>.Empty.Add(TileKind.Boss, 1));
+        Assert.Throws<MapGenerationConfigException>(
+            () => UnknownResolver.ResolveAll(map, badCfg, new SystemRng(1)));
+    }
+
+    [Fact]
+    public void ResolveAll_NullArgs_Throw()
+    {
+        var map = GenerateMapWithUnknowns();
+        var cfg = SampleConfig();
+        Assert.Throws<ArgumentNullException>(() => UnknownResolver.ResolveAll(null!, cfg, new SystemRng(1)));
+        Assert.Throws<ArgumentNullException>(() => UnknownResolver.ResolveAll(map, null!, new SystemRng(1)));
+        Assert.Throws<ArgumentNullException>(() => UnknownResolver.ResolveAll(map, cfg, null!));
+    }
 }
