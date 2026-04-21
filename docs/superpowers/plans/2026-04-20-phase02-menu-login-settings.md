@@ -2877,7 +2877,7 @@ describe('LoginScreen', () => {
     renderScreen()
     fireEvent.click(screen.getByRole('button', { name: 'アカウント作成' }))
     expect(fetchMock).not.toHaveBeenCalled()
-    expect(screen.getByText(/アカウント ID/i)).toBeInTheDocument()
+    expect(screen.getByText(/入力してください/i)).toBeInTheDocument()
   })
 
   it('creates new account on success', async () => {
