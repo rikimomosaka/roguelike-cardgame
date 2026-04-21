@@ -27,6 +27,7 @@ public sealed class FileSaveRepository : ISaveRepository
     {
         AccountIdValidator.Validate(accountId);
         if (state is null) throw new ArgumentNullException(nameof(state));
+        Directory.CreateDirectory(_dir);
 
         var json = RunStateSerializer.Serialize(state);
         var final = PathFor(accountId);

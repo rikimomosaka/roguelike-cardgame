@@ -2,10 +2,13 @@ using System;
 using System.IO;
 using System.Net;
 using System.Net.Http.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using RoguelikeCardGame.Server.Services;
 using Xunit;
 
 namespace RoguelikeCardGame.Server.Tests.Controllers;
@@ -94,6 +97,20 @@ public sealed class TempDataFactory : WebApplicationFactory<Program>
             config.AddInMemoryCollection(new[]
             {
                 new System.Collections.Generic.KeyValuePair<string, string?>("DataStorage:RootDirectory", _dataRoot),
+            });
+        });
+
+        // テストでは固定シードを使い、マップ生成が必ず成功するようにする。
+        // seed 58 は act1 config で確実に成功することが確認済み（MapGenerationConfigLoaderTests 参照）。
+        builder.ConfigureServices(services =>
+        {
+            // 既存の RunStartService を上書きして固定シード源を渡す。
+            services.AddSingleton(sp =>
+            {
+                var gen = sp.GetRequiredService<RoguelikeCardGame.Core.Map.IDungeonMapGenerator>();
+                var cfg = sp.GetRequiredService<RoguelikeCardGame.Core.Map.MapGenerationConfig>();
+                var saves = sp.GetRequiredService<RoguelikeCardGame.Server.Abstractions.ISaveRepository>();
+                return new RunStartService(gen, cfg, saves, seedSource: () => 58);
             });
         });
     }

@@ -44,6 +44,7 @@ public sealed class FileAudioSettingsRepository : IAudioSettingsRepository
     public async Task UpsertAsync(string accountId, AudioSettings settings, CancellationToken ct)
     {
         AccountIdValidator.Validate(accountId);
+        Directory.CreateDirectory(_dir);
         if (settings is null) throw new ArgumentNullException(nameof(settings));
 
         // 値域検証は Create 経由で強制（呼び出し側が不正値を渡した場合のガード）。

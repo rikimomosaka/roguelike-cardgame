@@ -1,7 +1,7 @@
 {
   "rowCount": 15,
   "columnCount": 5,
-  "rowNodeCountMin": 2,
+  "rowNodeCountMin": 3,
   "rowNodeCountMax": 4,
   "edgeWeights": { "weight1": 82, "weight2": 16, "weight3": 2 },
   "tileDistribution": {
