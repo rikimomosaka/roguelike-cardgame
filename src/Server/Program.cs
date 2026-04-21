@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using RoguelikeCardGame.Core.Map;
 using RoguelikeCardGame.Server.Abstractions;
 using RoguelikeCardGame.Server.Services;
 using RoguelikeCardGame.Server.Services.FileBacked;
@@ -19,6 +20,9 @@ builder.Services.Configure<DataStorageOptions>(
 builder.Services.AddSingleton<IAccountRepository, FileAccountRepository>();
 builder.Services.AddSingleton<IAudioSettingsRepository, FileAudioSettingsRepository>();
 builder.Services.AddSingleton<ISaveRepository, FileSaveRepository>();
+
+builder.Services.AddSingleton<MapGenerationConfig>(_ => MapGenerationConfigLoader.LoadAct1());
+builder.Services.AddSingleton<IDungeonMapGenerator, DungeonMapGenerator>();
 
 const string CorsPolicyName = "ClientCors";
 var allowedOrigins = builder.Configuration
