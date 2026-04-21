@@ -41,7 +41,15 @@ public sealed class FileSaveRepository : ISaveRepository
         var path = PathFor(accountId);
         if (!File.Exists(path)) return null;
         var json = await File.ReadAllTextAsync(path, Encoding.UTF8, ct);
-        return RunStateSerializer.Deserialize(json);
+        try
+        {
+            return RunStateSerializer.Deserialize(json);
+        }
+        catch (RunStateSerializerException)
+        {
+            // スキーマ不一致や破損セーブは「セーブ無し」扱いにして新規扱いで始められるようにする。
+            return null;
+        }
     }
 
     public Task DeleteAsync(string accountId, CancellationToken ct)
