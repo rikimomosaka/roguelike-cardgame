@@ -1,6 +1,6 @@
 using System;
 using System.Text.Json;
-using System.Text.Json.Serialization;
+using RoguelikeCardGame.Core.Json;
 
 namespace RoguelikeCardGame.Core.Run;
 
@@ -14,17 +14,9 @@ public sealed class RunStateSerializerException : Exception
 /// <summary>RunState ⇔ JSON 文字列の変換。ファイル I/O は Server 側の SaveRepository が担当。</summary>
 public static class RunStateSerializer
 {
-    private static readonly JsonSerializerOptions Options = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = false,
-        UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
-        Converters = { new JsonStringEnumConverter() },
-    };
-
     public static string Serialize(RunState state)
     {
-        return JsonSerializer.Serialize(state, Options);
+        return JsonSerializer.Serialize(state, JsonOptions.Default);
     }
 
     public static RunState Deserialize(string json)
@@ -32,7 +24,7 @@ public static class RunStateSerializer
         RunState? state;
         try
         {
-            state = JsonSerializer.Deserialize<RunState>(json, Options);
+            state = JsonSerializer.Deserialize<RunState>(json, JsonOptions.Default);
         }
         catch (JsonException ex)
         {
