@@ -1,10 +1,12 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AccountProvider } from '../context/AccountContext'
-import type { RunSnapshotDto } from '../api/types'
+import type { BattleStateDto, RewardStateDto, RunSnapshotDto } from '../api/types'
 import { MapScreen } from './MapScreen'
 
-function sampleSnapshot(): RunSnapshotDto {
+function sampleSnapshot(
+  overrides: Partial<RunSnapshotDto['run']> = {},
+): RunSnapshotDto {
   return {
     run: {
       schemaVersion: 3,
@@ -14,13 +16,14 @@ function sampleSnapshot(): RunSnapshotDto {
       unknownResolutions: {},
       characterId: 'ironclad',
       currentHp: 80, maxHp: 80, gold: 99,
-      deck: [], relics: [], potions: [],
+      deck: [], relics: [], potions: ['', '', ''],
       potionSlotCount: 3,
       activeBattle: null,
       activeReward: null,
       playSeconds: 0,
       savedAtUtc: '2026-04-21T00:00:00Z',
       progress: 'InProgress',
+      ...overrides,
     },
     map: {
       startNodeId: 0,
@@ -31,6 +34,31 @@ function sampleSnapshot(): RunSnapshotDto {
         { id: 2, row: 16, column: 2, kind: 'Boss', outgoingNodeIds: [] },
       ],
     },
+  }
+}
+
+function sampleBattle(): BattleStateDto {
+  return {
+    encounterId: 'enc_w_jaw_worm',
+    outcome: 'Pending',
+    enemies: [
+      {
+        enemyDefinitionId: 'jaw_worm',
+        name: 'Jaw Worm',
+        imageId: 'jaw_worm',
+        currentHp: 42, maxHp: 42,
+        currentMoveId: 'chomp',
+      },
+    ],
+  }
+}
+
+function sampleReward(): RewardStateDto {
+  return {
+    gold: 15, goldClaimed: false,
+    potionId: null, potionClaimed: false,
+    cardChoices: ['card_strike', 'card_bash', 'card_defend'],
+    cardStatus: 'Pending',
   }
 }
 
@@ -60,7 +88,10 @@ describe('MapScreen', () => {
   })
 
   it('calls move API when clicking a selectable node', async () => {
-    fetchMock.mockResolvedValue(new Response(null, { status: 204 }))
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 })) // move
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify(sampleSnapshot()), { status: 200 }),
+    ) // refresh
     render(
       <AccountProvider>
         <MapScreen
@@ -89,5 +120,60 @@ describe('MapScreen', () => {
     )
     fireEvent.click(screen.getByRole('button', { name: 'メニュー' }))
     expect(screen.getByRole('dialog', { name: 'ゲームメニュー' })).toBeInTheDocument()
+  })
+
+  it('shows TopBar with HP/Gold', () => {
+    render(
+      <AccountProvider>
+        <MapScreen
+          snapshot={sampleSnapshot()}
+          onExitToMenu={() => {}}
+          onAbandon={() => {}}
+        />
+      </AccountProvider>,
+    )
+    expect(screen.getByText('HP 80/80')).toBeDefined()
+    expect(screen.getByText('Gold 99')).toBeDefined()
+  })
+
+  it('overlays BattleOverlay when run has activeBattle', () => {
+    render(
+      <AccountProvider>
+        <MapScreen
+          snapshot={sampleSnapshot({ activeBattle: sampleBattle() })}
+          onExitToMenu={() => {}}
+          onAbandon={() => {}}
+        />
+      </AccountProvider>,
+    )
+    expect(screen.getByText('Jaw Worm')).toBeDefined()
+    expect(screen.getByText('勝利')).toBeDefined()
+  })
+
+  it('overlays RewardPopup when run has activeReward', () => {
+    render(
+      <AccountProvider>
+        <MapScreen
+          snapshot={sampleSnapshot({ activeReward: sampleReward() })}
+          onExitToMenu={() => {}}
+          onAbandon={() => {}}
+        />
+      </AccountProvider>,
+    )
+    expect(screen.getByText('報酬')).toBeDefined()
+    expect(screen.getByText('＋ 15 Gold')).toBeDefined()
+  })
+
+  it('blocks node selection while battle is active', () => {
+    render(
+      <AccountProvider>
+        <MapScreen
+          snapshot={sampleSnapshot({ activeBattle: sampleBattle() })}
+          onExitToMenu={() => {}}
+          onAbandon={() => {}}
+        />
+      </AccountProvider>,
+    )
+    expect(screen.getByTestId('map-node-1')).toHaveAttribute('data-selectable', 'false')
   })
 })

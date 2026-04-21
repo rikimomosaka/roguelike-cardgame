@@ -1,7 +1,19 @@
-import { useEffect, useRef, useState } from 'react'
-import { heartbeat, moveToNode } from '../api/runs'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { getCurrentRun, heartbeat, moveToNode } from '../api/runs'
+import { winBattle } from '../api/battle'
+import {
+  claimGold,
+  claimPotion,
+  discardPotion,
+  pickCard,
+  proceedReward,
+  skipCard,
+} from '../api/rewards'
 import type { MapNodeDto, RunSnapshotDto, TileKind } from '../api/types'
 import { useAccount } from '../context/AccountContext'
+import { TopBar } from '../components/TopBar'
+import { BattleOverlay } from './BattleOverlay'
+import { RewardPopup } from './RewardPopup'
 import { InGameMenuScreen } from './InGameMenuScreen'
 
 type Props = {
@@ -15,6 +27,7 @@ const COL_W = 100
 const ROW_H = 50
 const LEFT_PAD = 50
 const TOP_PAD = 30
+const SHOP_MESSAGE_MS = 2500
 
 function iconFor(kind: TileKind, resolvedKind: TileKind | null): string {
   const k = kind === 'Unknown' && resolvedKind === null ? 'Unknown' : (resolvedKind ?? kind)
@@ -35,7 +48,21 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
   const [snap, setSnap] = useState<RunSnapshotDto>(snapshot)
   const [menuOpen, setMenuOpen] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [shopMessage, setShopMessage] = useState<string | null>(null)
+  const [potionFullMessage, setPotionFullMessage] = useState<string | null>(null)
   const mountedAt = useRef<number>(performance.now())
+
+  const elapsedSeconds = useCallback(() => {
+    const e = Math.floor((performance.now() - mountedAt.current) / 1000)
+    mountedAt.current = performance.now()
+    return Math.max(0, e)
+  }, [])
+
+  const refresh = useCallback(async () => {
+    if (!accountId) return
+    const next = await getCurrentRun(accountId)
+    if (next) setSnap(next)
+  }, [accountId])
 
   useEffect(() => {
     return () => {
@@ -53,10 +80,20 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  useEffect(() => {
+    if (!shopMessage) return
+    const h = window.setTimeout(() => setShopMessage(null), SHOP_MESSAGE_MS)
+    return () => window.clearTimeout(h)
+  }, [shopMessage])
+
   const currentNode = snap.map.nodes.find((n) => n.id === snap.run.currentNodeId)!
   const visited = new Set(snap.run.visitedNodeIds)
+  const activeBattle = snap.run.activeBattle
+  const activeReward = snap.run.activeReward
+  const blockedByModal = activeBattle !== null || activeReward !== null
 
   function isSelectable(n: MapNodeDto): boolean {
+    if (blockedByModal) return false
     return currentNode.outgoingNodeIds.includes(n.id)
   }
 
@@ -71,22 +108,63 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
   async function handleClick(n: MapNodeDto) {
     if (!accountId || busy || !isSelectable(n)) return
     setBusy(true)
-    const elapsed = Math.floor((performance.now() - mountedAt.current) / 1000)
     try {
-      await moveToNode(accountId, n.id, Math.max(0, elapsed))
-      mountedAt.current = performance.now()
-      setSnap((prev) => ({
-        ...prev,
-        run: {
-          ...prev.run,
-          currentNodeId: n.id,
-          visitedNodeIds: [...prev.run.visitedNodeIds, n.id],
-          playSeconds: prev.run.playSeconds + Math.max(0, elapsed),
-        },
-      }))
+      await moveToNode(accountId, n.id, elapsedSeconds())
+      await refresh()
+      const resolvedKind = snap.run.unknownResolutions[n.id] ?? n.kind
+      const actualKind = resolvedKind === 'Unknown' ? n.kind : resolvedKind
+      if (actualKind === 'Merchant') {
+        setShopMessage('ショップは Phase 6 で実装されます')
+      }
     } finally {
       setBusy(false)
     }
+  }
+
+  async function handleWin() {
+    if (!accountId) return
+    await winBattle(accountId, elapsedSeconds())
+    await refresh()
+  }
+
+  async function handleClaimGold() {
+    if (!accountId) return
+    await claimGold(accountId)
+    await refresh()
+  }
+
+  async function handleClaimPotion() {
+    if (!accountId) return
+    await claimPotion(accountId)
+    await refresh()
+  }
+
+  async function handlePickCard(cardId: string) {
+    if (!accountId) return
+    await pickCard(accountId, cardId)
+    await refresh()
+  }
+
+  async function handleSkipCard() {
+    if (!accountId) return
+    await skipCard(accountId)
+    await refresh()
+  }
+
+  async function handleProceed() {
+    if (!accountId) return
+    await proceedReward(accountId, elapsedSeconds())
+    await refresh()
+  }
+
+  async function handleDiscardPotion(slotIndex: number) {
+    if (!accountId) return
+    await discardPotion(accountId, slotIndex)
+    await refresh()
+  }
+
+  function handlePotionFullAlert() {
+    setPotionFullMessage('ポーションスロットが満杯です。不要なポーションを捨ててください。')
   }
 
   const resolved = snap.run.unknownResolutions
@@ -97,9 +175,14 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
 
   return (
     <main className="map-screen">
+      <TopBar
+        currentHp={snap.run.currentHp}
+        maxHp={snap.run.maxHp}
+        gold={snap.run.gold}
+        potions={snap.run.potions}
+        onDiscardPotion={handleDiscardPotion}
+      />
       <header className="map-screen__top">
-        <span>HP {snap.run.currentHp}/{snap.run.maxHp}</span>
-        <span>Gold {snap.run.gold}</span>
         <button aria-label="メニュー" onClick={() => setMenuOpen(true)}>⚙</button>
       </header>
 
@@ -155,10 +238,38 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
         })}
       </svg>
 
-      {atBoss && (
+      {atBoss && !activeBattle && !activeReward && (
         <p className="map-screen__dev-note">
           ボスに到達しました。ここから先は Phase 5 以降で実装されます。
         </p>
+      )}
+
+      {shopMessage && (
+        <div className="map-screen__shop-toast" role="status">{shopMessage}</div>
+      )}
+
+      {potionFullMessage && (
+        <div className="map-screen__potion-toast" role="alert">
+          <span>{potionFullMessage}</span>
+          <button type="button" onClick={() => setPotionFullMessage(null)}>OK</button>
+        </div>
+      )}
+
+      {activeBattle && <BattleOverlay battle={activeBattle} onWin={handleWin} />}
+
+      {activeReward && (
+        <RewardPopup
+          reward={activeReward}
+          potions={snap.run.potions}
+          potionSlotCount={snap.run.potionSlotCount}
+          onClaimGold={handleClaimGold}
+          onClaimPotion={handleClaimPotion}
+          onPickCard={handlePickCard}
+          onSkipCard={handleSkipCard}
+          onProceed={handleProceed}
+          onDiscardPotion={handleDiscardPotion}
+          onPotionFullAlert={handlePotionFullAlert}
+        />
       )}
 
       {menuOpen && (
