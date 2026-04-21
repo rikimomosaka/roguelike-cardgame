@@ -1,0 +1,17 @@
+{
+  "id": "six_ghost",
+  "name": "シックスゴースト",
+  "imageId": "six_ghost",
+  "hpMin": 250,
+  "hpMax": 250,
+  "act": 1,
+  "tier": "Boss",
+  "initialMoveId": "activate",
+  "moves": [
+    { "id": "activate", "kind": "buff", "buff": "activate", "amountMin": 1, "amountMax": 1, "nextMoveId": "divider" },
+    { "id": "divider",  "kind": "multi", "damageMin": 6, "damageMax": 6, "hits": 6, "nextMoveId": "sear" },
+    { "id": "sear",     "kind": "attack", "damageMin": 6, "damageMax": 6, "hits": 1, "nextMoveId": "tackle" },
+    { "id": "tackle",   "kind": "attack", "damageMin": 5, "damageMax": 5, "hits": 2, "nextMoveId": "inferno" },
+    { "id": "inferno",  "kind": "multi",  "damageMin": 2, "damageMax": 2, "hits": 6, "nextMoveId": "sear" }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "hobgoblin",
+  "name": "ホブゴブリン",
+  "imageId": "hobgoblin",
+  "hpMin": 82,
+  "hpMax": 86,
+  "act": 1,
+  "tier": "Elite",
+  "initialMoveId": "bellow",
+  "moves": [
+    { "id": "bellow", "kind": "buff", "buff": "enrage", "amountMin": 2, "amountMax": 2, "nextMoveId": "rush" },
+    { "id": "rush",   "kind": "attack", "damageMin": 14, "damageMax": 14, "hits": 1, "nextMoveId": "skull_bash" },
+    { "id": "skull_bash", "kind": "attack", "damageMin": 6, "damageMax": 6, "hits": 1, "nextMoveId": "rush" }
+  ]
+}

@@ -1,9 +1,17 @@
 {
   "id": "jaw_worm",
   "name": "ジョウ・ワーム",
+  "imageId": "jaw_worm",
   "hpMin": 40,
   "hpMax": 44,
   "act": 1,
   "tier": "Weak",
-  "moveset": ["chomp", "thrash", "bellow"]
+  "initialMoveId": "chomp",
+  "moves": [
+    { "id": "chomp",  "kind": "attack", "damageMin": 11, "damageMax": 11, "hits": 1, "nextMoveId": "thrash" },
+    { "id": "thrash", "kind": "multi",  "damageMin": 7,  "damageMax": 7,  "hits": 1,
+      "blockMin": 5, "blockMax": 5, "nextMoveId": "bellow" },
+    { "id": "bellow", "kind": "buff",   "buff": "strength", "amountMin": 3, "amountMax": 5,
+      "blockMin": 6, "blockMax": 6, "nextMoveId": "chomp" }
+  ]
 }

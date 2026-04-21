@@ -1,9 +1,0 @@
-{
-  "id": "gremlin_nob",
-  "name": "グレムリン・ノブ",
-  "hpMin": 82,
-  "hpMax": 86,
-  "act": 1,
-  "tier": "Elite",
-  "moveset": ["bellow", "rush", "skull_bash"]
-}
