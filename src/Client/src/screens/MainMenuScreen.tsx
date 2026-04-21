@@ -1,6 +1,6 @@
 // src/Client/src/screens/MainMenuScreen.tsx
 import { useEffect, useState } from 'react'
-import { getLatestRun } from '../api/runs'
+import { getCurrentRun } from '../api/runs'
 import { Button } from '../components/Button'
 import { useAccount } from '../context/AccountContext'
 
@@ -19,8 +19,8 @@ export function MainMenuScreen({ onOpenSettings, onLogout }: Props) {
   useEffect(() => {
     if (!accountId) return
     let cancelled = false
-    getLatestRun(accountId)
-      .then((run) => { if (!cancelled) setHasRun(run !== null) })
+    getCurrentRun(accountId)
+      .then((snap) => { if (!cancelled) setHasRun(snap !== null) })
       .catch(() => { /* ignore: UI に hasRun=false のまま */ })
     return () => { cancelled = true }
   }, [accountId])
