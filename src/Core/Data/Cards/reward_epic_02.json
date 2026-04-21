@@ -1,0 +1,8 @@
+{
+  "id": "reward_epic_02",
+  "name": "覇者の咆哮",
+  "rarity": 3,
+  "cardType": "Power",
+  "cost": 2,
+  "effects": [{ "type": "gainStrength", "amount": 3 }]
+}

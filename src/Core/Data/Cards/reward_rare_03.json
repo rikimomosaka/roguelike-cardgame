@@ -1,0 +1,8 @@
+{
+  "id": "reward_rare_03",
+  "name": "洞察",
+  "rarity": 2,
+  "cardType": "Skill",
+  "cost": 0,
+  "effects": [{ "type": "drawCards", "amount": 3 }]
+}

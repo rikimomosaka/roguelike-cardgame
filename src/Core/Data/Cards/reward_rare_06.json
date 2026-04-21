@@ -1,0 +1,11 @@
+{
+  "id": "reward_rare_06",
+  "name": "冴えた一撃",
+  "rarity": 2,
+  "cardType": "Attack",
+  "cost": 1,
+  "effects": [
+    { "type": "damage", "amount": 9 },
+    { "type": "drawCards", "amount": 1 }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "id": "reward_common_08",
+  "name": "身構え",
+  "rarity": 1,
+  "cardType": "Skill",
+  "cost": 0,
+  "effects": [{ "type": "gainBlock", "amount": 3 }]
+}

@@ -1,0 +1,11 @@
+{
+  "id": "reward_rare_07",
+  "name": "戦術的退避",
+  "rarity": 2,
+  "cardType": "Skill",
+  "cost": 0,
+  "effects": [
+    { "type": "gainBlock", "amount": 5 },
+    { "type": "drawCards", "amount": 1 }
+  ]
+}

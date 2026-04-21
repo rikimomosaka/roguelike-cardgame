@@ -1,0 +1,11 @@
+{
+  "id": "reward_common_06",
+  "name": "二重防御",
+  "rarity": 1,
+  "cardType": "Skill",
+  "cost": 1,
+  "effects": [
+    { "type": "gainBlock", "amount": 5 },
+    { "type": "gainBlock", "amount": 3 }
+  ]
+}

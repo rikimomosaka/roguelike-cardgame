@@ -1,0 +1,11 @@
+{
+  "id": "reward_epic_10",
+  "name": "戦略的布陣",
+  "rarity": 3,
+  "cardType": "Skill",
+  "cost": 1,
+  "effects": [
+    { "type": "drawCards", "amount": 2 },
+    { "type": "gainBlock", "amount": 8 }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "id": "reward_common_02",
+  "name": "二連撃",
+  "rarity": 1,
+  "cardType": "Attack",
+  "cost": 1,
+  "effects": [
+    { "type": "damage", "amount": 5 },
+    { "type": "damage", "amount": 5 }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "id": "reward_rare_10",
+  "name": "城壁",
+  "rarity": 2,
+  "cardType": "Skill",
+  "cost": 2,
+  "effects": [{ "type": "gainBlock", "amount": 20 }]
+}

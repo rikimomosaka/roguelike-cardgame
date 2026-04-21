@@ -1,0 +1,8 @@
+{
+  "id": "reward_epic_06",
+  "name": "疾風の構え",
+  "rarity": 3,
+  "cardType": "Power",
+  "cost": 2,
+  "effects": [{ "type": "gainDexterity", "amount": 3 }]
+}

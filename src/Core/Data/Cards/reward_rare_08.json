@@ -1,0 +1,11 @@
+{
+  "id": "reward_rare_08",
+  "name": "双剣連撃",
+  "rarity": 2,
+  "cardType": "Attack",
+  "cost": 2,
+  "effects": [
+    { "type": "damage", "amount": 8 },
+    { "type": "damage", "amount": 8 }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "reward_epic_04",
+  "name": "三段斬り",
+  "rarity": 3,
+  "cardType": "Attack",
+  "cost": 2,
+  "effects": [
+    { "type": "damage", "amount": 12 },
+    { "type": "damage", "amount": 12 },
+    { "type": "damage", "amount": 12 }
+  ]
+}

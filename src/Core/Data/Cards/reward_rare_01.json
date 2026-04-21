@@ -1,0 +1,8 @@
+{
+  "id": "reward_rare_01",
+  "name": "強襲",
+  "rarity": 2,
+  "cardType": "Attack",
+  "cost": 2,
+  "effects": [{ "type": "damage", "amount": 18 }]
+}

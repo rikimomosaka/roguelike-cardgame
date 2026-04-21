@@ -1,0 +1,8 @@
+{
+  "id": "reward_rare_09",
+  "name": "剛力の誓い",
+  "rarity": 2,
+  "cardType": "Power",
+  "cost": 1,
+  "effects": [{ "type": "gainStrength", "amount": 2 }]
+}

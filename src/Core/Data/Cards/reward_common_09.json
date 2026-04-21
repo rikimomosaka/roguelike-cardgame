@@ -1,0 +1,8 @@
+{
+  "id": "reward_common_09",
+  "name": "軽撃",
+  "rarity": 1,
+  "cardType": "Attack",
+  "cost": 0,
+  "effects": [{ "type": "damage", "amount": 4 }]
+}

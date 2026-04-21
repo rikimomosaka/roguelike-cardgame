@@ -1,0 +1,11 @@
+{
+  "id": "reward_common_07",
+  "name": "防御撃",
+  "rarity": 1,
+  "cardType": "Attack",
+  "cost": 1,
+  "effects": [
+    { "type": "damage", "amount": 6 },
+    { "type": "gainBlock", "amount": 3 }
+  ]
+}

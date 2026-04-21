@@ -1,0 +1,12 @@
+{
+  "id": "reward_rare_04",
+  "name": "三連刺し",
+  "rarity": 2,
+  "cardType": "Attack",
+  "cost": 1,
+  "effects": [
+    { "type": "damage", "amount": 5 },
+    { "type": "damage", "amount": 5 },
+    { "type": "damage", "amount": 5 }
+  ]
+}

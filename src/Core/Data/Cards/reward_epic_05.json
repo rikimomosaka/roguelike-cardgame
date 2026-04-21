@@ -1,0 +1,8 @@
+{
+  "id": "reward_epic_05",
+  "name": "絶対防壁",
+  "rarity": 3,
+  "cardType": "Skill",
+  "cost": 1,
+  "effects": [{ "type": "gainBlock", "amount": 18 }]
+}

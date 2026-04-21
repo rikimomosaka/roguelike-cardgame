@@ -1,0 +1,8 @@
+{
+  "id": "reward_epic_01",
+  "name": "必殺の一閃",
+  "rarity": 3,
+  "cardType": "Attack",
+  "cost": 3,
+  "effects": [{ "type": "damage", "amount": 32 }]
+}

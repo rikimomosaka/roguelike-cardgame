@@ -1,0 +1,8 @@
+{
+  "id": "reward_epic_08",
+  "name": "爆裂覚醒",
+  "rarity": 3,
+  "cardType": "Skill",
+  "cost": 2,
+  "effects": [{ "type": "gainEnergy", "amount": 3 }]
+}

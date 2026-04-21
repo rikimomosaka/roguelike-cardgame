@@ -1,0 +1,8 @@
+{
+  "id": "reward_epic_07",
+  "name": "神速斬",
+  "rarity": 3,
+  "cardType": "Attack",
+  "cost": 1,
+  "effects": [{ "type": "damage", "amount": 14 }]
+}
