@@ -31,7 +31,7 @@ public class RunStateSerializerTests
         var loaded = RunStateSerializer.Deserialize(json);
         Assert.Equal(2, loaded.SchemaVersion);
         Assert.Equal(0, loaded.CurrentNodeId);
-        Assert.Contains(0, loaded.VisitedNodeIds);
+        Assert.Equal(new[] { 0 }, loaded.VisitedNodeIds.ToArray());
         Assert.Equal(TileKind.Enemy, loaded.UnknownResolutions[5]);
     }
 
@@ -40,5 +40,16 @@ public class RunStateSerializerTests
     {
         var v1 = "{\"schemaVersion\":1,\"currentAct\":1,\"currentTileIndex\":0,\"currentHp\":80,\"maxHp\":80,\"gold\":99,\"deck\":[],\"relics\":[],\"potions\":[],\"playSeconds\":0,\"rngSeed\":0,\"savedAtUtc\":\"2026-04-21T00:00:00+00:00\",\"progress\":\"InProgress\"}";
         Assert.Throws<RunStateSerializerException>(() => RunStateSerializer.Deserialize(v1));
+    }
+
+    [Fact]
+    public void Deserialize_WrongSchemaVersionOnly_ThrowsSerializerException()
+    {
+        // v2 の shape で schemaVersion だけ 99 にした JSON。
+        // UnmappedMemberHandling.Disallow に引っかからず、schemaVersion check に到達する。
+        var original = SampleV2() with { SchemaVersion = 99 };
+        var json = RunStateSerializer.Serialize(original);
+        var ex = Assert.Throws<RunStateSerializerException>(() => RunStateSerializer.Deserialize(json));
+        Assert.Contains("schemaVersion", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 }
