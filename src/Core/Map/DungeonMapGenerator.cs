@@ -41,32 +41,25 @@ public sealed class DungeonMapGenerator : IDungeonMapGenerator
         IRng rng, MapGenerationConfig config, ImmutableArray<MapNode> nodes)
     {
         var kinds = new TileKind[nodes.Length];
-
-        // Start / Boss
-        foreach (var n in nodes)
-        {
-            if (n.Row == 0) kinds[n.Id] = TileKind.Start;
-            else if (n.Row == config.RowCount + 1) kinds[n.Id] = TileKind.Boss;
-        }
-
-        // Row 1 = Enemy（Start 直後固定）
-        foreach (var n in nodes.Where(n => n.Row == 1))
-            kinds[n.Id] = TileKind.Enemy;
-
-        // FixedRows
-        foreach (var rule in config.FixedRows)
-            foreach (var n in nodes.Where(n => n.Row == rule.Row))
-                kinds[n.Id] = rule.Kind;
-
-        // default(TileKind) は Start なので、埋まっているかはフラグ配列で判別する
         var assignedFlag = new bool[nodes.Length];
+
+        // Start / Boss / Row 1 = Enemy（1 パスで Kind とフラグを同時に設定）
         foreach (var n in nodes)
         {
-            if (n.Row == 0 || n.Row == config.RowCount + 1 || n.Row == 1) assignedFlag[n.Id] = true;
+            if (n.Row == 0) { kinds[n.Id] = TileKind.Start; assignedFlag[n.Id] = true; }
+            else if (n.Row == config.RowCount + 1) { kinds[n.Id] = TileKind.Boss; assignedFlag[n.Id] = true; }
+            else if (n.Row == 1) { kinds[n.Id] = TileKind.Enemy; assignedFlag[n.Id] = true; }
         }
+
+        // FixedRows（Row 1 と衝突するルールを書いた場合は FixedRows が優先される）
         foreach (var rule in config.FixedRows)
+        {
             foreach (var n in nodes.Where(n => n.Row == rule.Row))
+            {
+                kinds[n.Id] = rule.Kind;
                 assignedFlag[n.Id] = true;
+            }
+        }
 
         // カウンタ初期化
         var counts = new Dictionary<TileKind, int>();
