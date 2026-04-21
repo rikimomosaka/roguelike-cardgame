@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using RoguelikeCardGame.Core.Map;
 using RoguelikeCardGame.Core.Random;
 using Xunit;
@@ -13,8 +14,8 @@ public class MapGenerationConfigLoaderTests
         var cfg = MapGenerationConfigLoader.LoadAct1();
         Assert.Equal(15, cfg.RowCount);
         Assert.Equal(5, cfg.ColumnCount);
-        Assert.Equal(9, cfg.FixedRows[0].Row);
-        Assert.Equal(TileKind.Treasure, cfg.FixedRows[0].Kind);
+        var row9 = cfg.FixedRows.Single(r => r.Row == 9);
+        Assert.Equal(TileKind.Treasure, row9.Kind);
     }
 
     [Fact]

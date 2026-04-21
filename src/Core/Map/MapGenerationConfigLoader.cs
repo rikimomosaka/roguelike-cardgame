@@ -47,6 +47,7 @@ public static class MapGenerationConfigLoader
         {
             return dto.ToConfig();
         }
+        // DTO → Config 変換中の NullRef / ArgumentException 等を一括で MapGenerationConfigException にラップ。
         catch (Exception ex) when (ex is not MapGenerationConfigException)
         {
             throw new MapGenerationConfigException("map-config の値変換に失敗しました。", ex);
