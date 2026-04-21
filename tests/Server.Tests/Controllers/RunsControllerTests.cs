@@ -61,7 +61,12 @@ public class RunsControllerTests : IClassFixture<TempDataFactory>
         {
             var catalog = EmbeddedDataLoader.LoadCatalog();
             var save = scope.ServiceProvider.GetRequiredService<ISaveRepository>();
-            var run = RunState.NewSoloRun(catalog, rngSeed: 777UL, nowUtc: new DateTimeOffset(2026, 4, 20, 12, 0, 0, TimeSpan.Zero));
+            var run = RunState.NewSoloRun(
+                catalog,
+                rngSeed: 777UL,
+                startNodeId: 0,
+                unknownResolutions: System.Collections.Immutable.ImmutableDictionary<int, RoguelikeCardGame.Core.Map.TileKind>.Empty,
+                nowUtc: new DateTimeOffset(2026, 4, 20, 12, 0, 0, TimeSpan.Zero));
             await save.SaveAsync("bob", run, CancellationToken.None);
         }
 

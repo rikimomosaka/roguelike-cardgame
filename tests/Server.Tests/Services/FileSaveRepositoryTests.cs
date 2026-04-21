@@ -31,7 +31,12 @@ public class FileSaveRepositoryTests : IDisposable
     }
 
     private RunState FreshRun(ulong seed = 42UL) =>
-        RunState.NewSoloRun(_catalog, rngSeed: seed, nowUtc: FixedNow);
+        RunState.NewSoloRun(
+            _catalog,
+            rngSeed: seed,
+            startNodeId: 0,
+            unknownResolutions: System.Collections.Immutable.ImmutableDictionary<int, RoguelikeCardGame.Core.Map.TileKind>.Empty,
+            nowUtc: FixedNow);
 
     [Fact]
     public async Task Save_CreatesFileUnderSavesSubdir()

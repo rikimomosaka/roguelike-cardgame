@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Immutable;
 using System.Linq;
 using RoguelikeCardGame.Core.Data;
+using RoguelikeCardGame.Core.Map;
 using RoguelikeCardGame.Core.Run;
 using Xunit;
 
@@ -14,11 +16,18 @@ public class RunStateFactoryTests
     public void NewSoloRun_InitialValues()
     {
         var catalog = EmbeddedDataLoader.LoadCatalog();
-        var state = RunState.NewSoloRun(catalog, rngSeed: 42UL, nowUtc: FixedNow);
+        var state = RunState.NewSoloRun(
+            catalog,
+            rngSeed: 42UL,
+            startNodeId: 0,
+            unknownResolutions: ImmutableDictionary<int, TileKind>.Empty,
+            nowUtc: FixedNow);
 
-        Assert.Equal(1, state.SchemaVersion);
+        Assert.Equal(2, state.SchemaVersion);
         Assert.Equal(1, state.CurrentAct);
-        Assert.Equal(0, state.CurrentTileIndex);
+        Assert.Equal(0, state.CurrentNodeId);
+        Assert.Equal(new[] { 0 }, state.VisitedNodeIds.ToArray());
+        Assert.Empty(state.UnknownResolutions);
         Assert.Equal(80, state.CurrentHp);
         Assert.Equal(80, state.MaxHp);
         Assert.Equal(99, state.Gold);
@@ -43,7 +52,12 @@ public class RunStateFactoryTests
             enemies: Array.Empty<string>());
 
         var ex = Assert.Throws<InvalidOperationException>(
-            () => RunState.NewSoloRun(emptyCatalog, rngSeed: 0UL, nowUtc: FixedNow));
+            () => RunState.NewSoloRun(
+                emptyCatalog,
+                rngSeed: 0UL,
+                startNodeId: 0,
+                unknownResolutions: ImmutableDictionary<int, TileKind>.Empty,
+                nowUtc: FixedNow));
         Assert.Contains("strike", ex.Message);
     }
 }
