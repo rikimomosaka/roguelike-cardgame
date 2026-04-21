@@ -10,7 +10,12 @@ using RoguelikeCardGame.Server.Services.FileBacked;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(opts =>
+    {
+        opts.JsonSerializerOptions.Converters.Add(
+            new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
 builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
 
@@ -23,6 +28,7 @@ builder.Services.AddSingleton<ISaveRepository, FileSaveRepository>();
 
 builder.Services.AddSingleton<MapGenerationConfig>(_ => MapGenerationConfigLoader.LoadAct1());
 builder.Services.AddSingleton<IDungeonMapGenerator, DungeonMapGenerator>();
+builder.Services.AddSingleton<RunStartService>();
 
 const string CorsPolicyName = "ClientCors";
 var allowedOrigins = builder.Configuration
