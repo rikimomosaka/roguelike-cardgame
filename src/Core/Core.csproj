@@ -16,4 +16,10 @@
     <EmbeddedResource Include="Map\Config\*.json" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Data\Encounters\*.json" />
+    <EmbeddedResource Include="Data\RewardTable\*.json" />
+    <EmbeddedResource Include="Data\Characters\*.json" />
+  </ItemGroup>
+
 </Project>
