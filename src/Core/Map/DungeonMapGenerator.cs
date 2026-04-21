@@ -16,22 +16,98 @@ public sealed class DungeonMapGenerator : IDungeonMapGenerator
             var withEdges = ConnectEdges(rng, config, nodes);
             if (withEdges.IsDefaultOrEmpty) continue;
 
-            var withKinds = withEdges
-                .Select(n => n with
-                {
-                    Kind = n.Row == 0 ? TileKind.Start
-                        : n.Row == config.RowCount + 1 ? TileKind.Boss
-                        : TileKind.Enemy,
-                })
-                .ToImmutableArray();
+            var startId = withEdges.First(n => n.Row == 0).Id;
+            var bossId = withEdges.First(n => n.Row == config.RowCount + 1).Id;
 
-            var startId = withKinds.First(n => n.Row == 0).Id;
-            var bossId = withKinds.First(n => n.Row == config.RowCount + 1).Id;
+            if (!IsBossReachable(withEdges, startId, bossId)) continue;
 
-            if (!IsBossReachable(withKinds, startId, bossId)) continue;
+            var assigned = AssignKinds(rng, config, withEdges);
+            if (assigned.IsDefaultOrEmpty) continue;
 
-            return new DungeonMap(withKinds, startId, bossId);
+            // 暫定：MinPerMap 違反なら再試行（Task 8 で正式化）
+            bool minOk = true;
+            foreach (var kv in config.TileDistribution.MinPerMap)
+            {
+                if (assigned.Count(n => n.Kind == kv.Key) < kv.Value) { minOk = false; break; }
+            }
+            if (!minOk) continue;
+
+            return new DungeonMap(assigned, startId, bossId);
         }
+    }
+
+    // フェーズ 4.3：タイル種別割当
+    private static ImmutableArray<MapNode> AssignKinds(
+        IRng rng, MapGenerationConfig config, ImmutableArray<MapNode> nodes)
+    {
+        var kinds = new TileKind[nodes.Length];
+
+        // Start / Boss
+        foreach (var n in nodes)
+        {
+            if (n.Row == 0) kinds[n.Id] = TileKind.Start;
+            else if (n.Row == config.RowCount + 1) kinds[n.Id] = TileKind.Boss;
+        }
+
+        // Row 1 = Enemy（Start 直後固定）
+        foreach (var n in nodes.Where(n => n.Row == 1))
+            kinds[n.Id] = TileKind.Enemy;
+
+        // FixedRows
+        foreach (var rule in config.FixedRows)
+            foreach (var n in nodes.Where(n => n.Row == rule.Row))
+                kinds[n.Id] = rule.Kind;
+
+        // default(TileKind) は Start なので、埋まっているかはフラグ配列で判別する
+        var assignedFlag = new bool[nodes.Length];
+        foreach (var n in nodes)
+        {
+            if (n.Row == 0 || n.Row == config.RowCount + 1 || n.Row == 1) assignedFlag[n.Id] = true;
+        }
+        foreach (var rule in config.FixedRows)
+            foreach (var n in nodes.Where(n => n.Row == rule.Row))
+                assignedFlag[n.Id] = true;
+
+        // カウンタ初期化
+        var counts = new Dictionary<TileKind, int>();
+        foreach (var k in System.Enum.GetValues<TileKind>()) counts[k] = 0;
+        for (int i = 0; i < nodes.Length; i++)
+            if (assignedFlag[i]) counts[kinds[i]]++;
+
+        foreach (var n in nodes.Where(n => !assignedFlag[n.Id]))
+        {
+            var candidates = new List<TileKind>();
+            foreach (var k in new[] { TileKind.Enemy, TileKind.Elite, TileKind.Rest, TileKind.Merchant, TileKind.Unknown })
+            {
+                // 行ごとの除外
+                if (config.RowKindExclusions.Any(x => x.Row == n.Row && x.ExcludedKind == k)) continue;
+                // Elite の最小行
+                if (k == TileKind.Elite && n.Row < config.PathConstraints.MinEliteRow) continue;
+                // MaxPerMap に既に達している Kind
+                if (config.TileDistribution.MaxPerMap.TryGetValue(k, out int max) && counts[k] >= max) continue;
+                // BaseWeights にエントリがない Kind は 0 重み = 候補に入れない
+                if (!config.TileDistribution.BaseWeights.TryGetValue(k, out double w) || w <= 0) continue;
+                candidates.Add(k);
+            }
+            if (candidates.Count == 0)
+                return ImmutableArray<MapNode>.Empty; // 生成失敗、再試行
+
+            // 重み付き乱数
+            double total = candidates.Sum(k => config.TileDistribution.BaseWeights[k]);
+            double r = rng.NextDouble() * total;
+            double acc = 0;
+            TileKind picked = candidates[candidates.Count - 1];
+            foreach (var k in candidates)
+            {
+                acc += config.TileDistribution.BaseWeights[k];
+                if (r < acc) { picked = k; break; }
+            }
+            kinds[n.Id] = picked;
+            counts[picked]++;
+            assignedFlag[n.Id] = true;
+        }
+
+        return nodes.Select(n => n with { Kind = kinds[n.Id] }).ToImmutableArray();
     }
 
     // フェーズ 4.2：エッジ貼り付け

@@ -222,4 +222,52 @@ public class DungeonMapGeneratorTests
             Assert.Equal(sorted, n.OutgoingNodeIds.ToArray());
         }
     }
+
+    [Fact]
+    public void Generate_Row1AllEnemy()
+    {
+        var map = new DungeonMapGenerator().Generate(new SystemRng(42), BaseConfig());
+        Assert.All(map.NodesInRow(1), n => Assert.Equal(TileKind.Enemy, n.Kind));
+    }
+
+    [Fact]
+    public void Generate_Row9AllTreasure()
+    {
+        var map = new DungeonMapGenerator().Generate(new SystemRng(42), BaseConfig());
+        Assert.All(map.NodesInRow(9), n => Assert.Equal(TileKind.Treasure, n.Kind));
+    }
+
+    [Fact]
+    public void Generate_Row15AllRest()
+    {
+        var map = new DungeonMapGenerator().Generate(new SystemRng(42), BaseConfig());
+        Assert.All(map.NodesInRow(15), n => Assert.Equal(TileKind.Rest, n.Kind));
+    }
+
+    [Fact]
+    public void Generate_Row14HasNoRest()
+    {
+        var map = new DungeonMapGenerator().Generate(new SystemRng(42), BaseConfig());
+        Assert.All(map.NodesInRow(14), n => Assert.NotEqual(TileKind.Rest, n.Kind));
+    }
+
+    [Fact]
+    public void Generate_EliteOnlyInRow6OrLater()
+    {
+        var map = new DungeonMapGenerator().Generate(new SystemRng(42), BaseConfig());
+        foreach (var n in map.Nodes.Where(n => n.Kind == TileKind.Elite))
+            Assert.True(n.Row >= 6, $"Elite at row {n.Row} (< 6)");
+    }
+
+    [Fact]
+    public void Generate_TileDistributionMinMaxPerMap()
+    {
+        var map = new DungeonMapGenerator().Generate(new SystemRng(42), BaseConfig());
+        int merchants = map.Nodes.Count(n => n.Kind == TileKind.Merchant);
+        int elites = map.Nodes.Count(n => n.Kind == TileKind.Elite);
+        int unknowns = map.Nodes.Count(n => n.Kind == TileKind.Unknown);
+        Assert.InRange(merchants, 3, 3);
+        Assert.InRange(elites, 2, 4);
+        Assert.InRange(unknowns, 6, 10);
+    }
 }
