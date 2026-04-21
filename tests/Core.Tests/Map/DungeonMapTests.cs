@@ -40,6 +40,17 @@ public class DungeonMapTests
     }
 
     [Fact]
+    public void DungeonMap_EqualsByValue()
+    {
+        var nodes = ImmutableArray.Create(
+            new MapNode(0, 0, 2, TileKind.Start, ImmutableArray.Create(1)),
+            new MapNode(1, 1, 2, TileKind.Boss, ImmutableArray<int>.Empty));
+        var a = new DungeonMap(nodes, 0, 1);
+        var b = new DungeonMap(nodes, 0, 1);
+        Assert.Equal(a, b);
+    }
+
+    [Fact]
     public void TileKind_EnumValues_Exist()
     {
         Assert.True(System.Enum.IsDefined(typeof(TileKind), TileKind.Start));
