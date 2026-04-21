@@ -136,4 +136,90 @@ public class DungeonMapGeneratorTests
             Assert.Equal(new[] { 0, 1, 2, 3, 4 }, cols.OrderBy(c => c));
         }
     }
+
+    [Fact]
+    public void Generate_StartConnectsToAllRow1Nodes()
+    {
+        var map = new DungeonMapGenerator().Generate(new SystemRng(42), BaseConfig());
+        var start = map.GetNode(map.StartNodeId);
+        var row1Ids = map.NodesInRow(1).Select(n => n.Id).OrderBy(i => i).ToArray();
+        Assert.Equal(row1Ids, start.OutgoingNodeIds.OrderBy(i => i));
+    }
+
+    [Fact]
+    public void Generate_Row15AllConnectToBoss()
+    {
+        var map = new DungeonMapGenerator().Generate(new SystemRng(42), BaseConfig());
+        foreach (var n in map.NodesInRow(15))
+        {
+            Assert.Single(n.OutgoingNodeIds);
+            Assert.Equal(map.BossNodeId, n.OutgoingNodeIds[0]);
+        }
+    }
+
+    [Fact]
+    public void Generate_BossHasNoOutgoingEdges()
+    {
+        var map = new DungeonMapGenerator().Generate(new SystemRng(42), BaseConfig());
+        Assert.Empty(map.GetNode(map.BossNodeId).OutgoingNodeIds);
+    }
+
+    [Fact]
+    public void Generate_MiddleEdgesRespectColumnAdjacency()
+    {
+        var map = new DungeonMapGenerator().Generate(new SystemRng(42), BaseConfig());
+        for (int r = 1; r <= 14; r++)
+        {
+            foreach (var n in map.NodesInRow(r))
+            {
+                foreach (var dstId in n.OutgoingNodeIds)
+                {
+                    var dst = map.GetNode(dstId);
+                    Assert.Equal(r + 1, dst.Row);
+                    Assert.True(
+                        System.Math.Abs(n.Column - dst.Column) <= 1,
+                        $"Edge {n.Id}(row={r}, col={n.Column}) -> {dst.Id}(col={dst.Column}) violates ±1 adjacency");
+                }
+            }
+        }
+    }
+
+    [Fact]
+    public void Generate_MiddleOutDegreeBetween1And3()
+    {
+        var map = new DungeonMapGenerator().Generate(new SystemRng(42), BaseConfig());
+        for (int r = 1; r <= 14; r++)
+        {
+            foreach (var n in map.NodesInRow(r))
+                Assert.InRange(n.OutgoingNodeIds.Length, 1, 3);
+        }
+    }
+
+    [Fact]
+    public void Generate_BossReachableFromStart()
+    {
+        var map = new DungeonMapGenerator().Generate(new SystemRng(42), BaseConfig());
+        var visited = new System.Collections.Generic.HashSet<int>();
+        var stack = new System.Collections.Generic.Stack<int>();
+        stack.Push(map.StartNodeId);
+        while (stack.Count > 0)
+        {
+            var id = stack.Pop();
+            if (!visited.Add(id)) continue;
+            foreach (var next in map.GetNode(id).OutgoingNodeIds)
+                stack.Push(next);
+        }
+        Assert.Contains(map.BossNodeId, visited);
+    }
+
+    [Fact]
+    public void Generate_OutgoingIdsAreSorted()
+    {
+        var map = new DungeonMapGenerator().Generate(new SystemRng(42), BaseConfig());
+        foreach (var n in map.Nodes)
+        {
+            var sorted = n.OutgoingNodeIds.OrderBy(i => i).ToArray();
+            Assert.Equal(sorted, n.OutgoingNodeIds.ToArray());
+        }
+    }
 }
