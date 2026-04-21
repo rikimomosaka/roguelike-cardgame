@@ -29,7 +29,7 @@ public class RewardApplierTests
     {
         var s = StateWithReward(new RewardState(0, true, "health_potion", false,
             ImmutableArray<string>.Empty, CardRewardStatus.Claimed));
-        s = s with { Potions = ImmutableArray.Create("a","b","c") };
+        s = s with { Potions = ImmutableArray.Create("a", "b", "c") };
         Assert.Throws<System.InvalidOperationException>(() => RewardApplier.ApplyPotion(s));
     }
 
@@ -38,7 +38,7 @@ public class RewardApplierTests
     {
         var s = StateWithReward(new RewardState(0, true, "health_potion", false,
             ImmutableArray<string>.Empty, CardRewardStatus.Claimed));
-        s = s with { Potions = ImmutableArray.Create("a","","") };
+        s = s with { Potions = ImmutableArray.Create("a", "", "") };
         var next = RewardApplier.ApplyPotion(s);
         Assert.Equal("health_potion", next.Potions[1]);
         Assert.True(next.ActiveReward!.PotionClaimed);
@@ -47,7 +47,7 @@ public class RewardApplierTests
     [Fact]
     public void PickCard_AddsToDeckAndMarksClaimed()
     {
-        var choices = ImmutableArray.Create("reward_common_01","reward_common_02","reward_common_03");
+        var choices = ImmutableArray.Create("reward_common_01", "reward_common_02", "reward_common_03");
         var s = StateWithReward(new RewardState(0, true, null, true, choices, CardRewardStatus.Pending));
         var next = RewardApplier.PickCard(s, "reward_common_02");
         Assert.Contains("reward_common_02", next.Deck);
@@ -74,7 +74,7 @@ public class RewardApplierTests
     [Fact]
     public void Proceed_IncompleteCard_Throws()
     {
-        var choices = ImmutableArray.Create("reward_common_01","reward_common_02","reward_common_03");
+        var choices = ImmutableArray.Create("reward_common_01", "reward_common_02", "reward_common_03");
         var s = StateWithReward(new RewardState(0, true, null, true, choices, CardRewardStatus.Pending));
         Assert.Throws<System.InvalidOperationException>(() => RewardApplier.Proceed(s));
     }
@@ -84,7 +84,7 @@ public class RewardApplierTests
     {
         var cat = EmbeddedDataLoader.LoadCatalog();
         var s = TestRunStates.FreshDefault(cat) with
-        { Potions = ImmutableArray.Create("health_potion","","") };
+        { Potions = ImmutableArray.Create("health_potion", "", "") };
         Assert.Throws<System.ArgumentException>(() => RewardApplier.DiscardPotion(s, 1));
     }
 
@@ -93,7 +93,7 @@ public class RewardApplierTests
     {
         var cat = EmbeddedDataLoader.LoadCatalog();
         var s = TestRunStates.FreshDefault(cat) with
-        { Potions = ImmutableArray.Create("health_potion","swift_potion","") };
+        { Potions = ImmutableArray.Create("health_potion", "swift_potion", "") };
         var next = RewardApplier.DiscardPotion(s, 0);
         Assert.Equal("", next.Potions[0]);
     }

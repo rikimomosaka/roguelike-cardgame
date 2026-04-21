@@ -56,8 +56,8 @@ public class DataCatalogPhase5Tests
     {
         var cat = Load();
         int common = cat.Cards.Values.Count(c => c.Id.StartsWith("reward_common_"));
-        int rare   = cat.Cards.Values.Count(c => c.Id.StartsWith("reward_rare_"));
-        int epic   = cat.Cards.Values.Count(c => c.Id.StartsWith("reward_epic_"));
+        int rare = cat.Cards.Values.Count(c => c.Id.StartsWith("reward_rare_"));
+        int epic = cat.Cards.Values.Count(c => c.Id.StartsWith("reward_epic_"));
         Assert.Equal(10, common);
         Assert.Equal(10, rare);
         Assert.Equal(10, epic);

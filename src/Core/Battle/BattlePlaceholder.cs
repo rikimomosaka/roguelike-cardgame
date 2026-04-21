@@ -43,11 +43,11 @@ public static class BattlePlaceholder
 
     private static (ImmutableArray<string> queue, Func<RunState, ImmutableArray<string>, RunState> updater)
         SelectQueue(RunState s, EnemyPool pool) => pool.Tier switch
-    {
-        EnemyTier.Weak   => (s.EncounterQueueWeak,   (st, q) => st with { EncounterQueueWeak = q }),
-        EnemyTier.Strong => (s.EncounterQueueStrong, (st, q) => st with { EncounterQueueStrong = q }),
-        EnemyTier.Elite  => (s.EncounterQueueElite,  (st, q) => st with { EncounterQueueElite = q }),
-        EnemyTier.Boss   => (s.EncounterQueueBoss,   (st, q) => st with { EncounterQueueBoss = q }),
-        _ => throw new ArgumentOutOfRangeException(nameof(pool))
-    };
+        {
+            EnemyTier.Weak => (s.EncounterQueueWeak, (st, q) => st with { EncounterQueueWeak = q }),
+            EnemyTier.Strong => (s.EncounterQueueStrong, (st, q) => st with { EncounterQueueStrong = q }),
+            EnemyTier.Elite => (s.EncounterQueueElite, (st, q) => st with { EncounterQueueElite = q }),
+            EnemyTier.Boss => (s.EncounterQueueBoss, (st, q) => st with { EncounterQueueBoss = q }),
+            _ => throw new ArgumentOutOfRangeException(nameof(pool))
+        };
 }

@@ -114,7 +114,7 @@ public class RewardGeneratorTests
                 StarterExclusions, rt, cat, new SystemRng(seed));
             bool hasRare = r.CardChoices.Any(id => cat.Cards[id].Rarity == CardRarity.Rare);
             if (hasRare) { Assert.Equal(0, next.RareChanceBonusPercent); sawAny = true; }
-            else         { Assert.Equal(1, next.RareChanceBonusPercent); }
+            else { Assert.Equal(1, next.RareChanceBonusPercent); }
         }
         Assert.True(sawAny, "at least one seed should produce a Rare");
     }
