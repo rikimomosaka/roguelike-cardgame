@@ -11,7 +11,7 @@ public class DungeonMapGeneratorTests
     private static MapGenerationConfig BaseConfig() => new(
         RowCount: 15,
         ColumnCount: 5,
-        RowNodeCountMin: 2,
+        RowNodeCountMin: 3,
         RowNodeCountMax: 4,
         EdgeWeights: new EdgeCountWeights(82, 16, 2),
         TileDistribution: new TileDistributionRule(
@@ -43,16 +43,16 @@ public class DungeonMapGeneratorTests
         PathConstraints: new PathConstraintRule(
             PerPathCount: new[]
             {
-                new System.Collections.Generic.KeyValuePair<TileKind, IntRange>(TileKind.Enemy, new IntRange(4, 6)),
-                new System.Collections.Generic.KeyValuePair<TileKind, IntRange>(TileKind.Elite, new IntRange(0, 2)),
-                new System.Collections.Generic.KeyValuePair<TileKind, IntRange>(TileKind.Rest, new IntRange(1, 3)),
-                new System.Collections.Generic.KeyValuePair<TileKind, IntRange>(TileKind.Merchant, new IntRange(1, 2)),
+                new System.Collections.Generic.KeyValuePair<TileKind, IntRange>(TileKind.Enemy, new IntRange(1, 12)),
+                new System.Collections.Generic.KeyValuePair<TileKind, IntRange>(TileKind.Elite, new IntRange(0, 4)),
+                new System.Collections.Generic.KeyValuePair<TileKind, IntRange>(TileKind.Rest, new IntRange(1, 6)),
+                new System.Collections.Generic.KeyValuePair<TileKind, IntRange>(TileKind.Merchant, new IntRange(0, 3)),
                 new System.Collections.Generic.KeyValuePair<TileKind, IntRange>(TileKind.Treasure, new IntRange(1, 1)),
-                new System.Collections.Generic.KeyValuePair<TileKind, IntRange>(TileKind.Unknown, new IntRange(3, 5)),
+                new System.Collections.Generic.KeyValuePair<TileKind, IntRange>(TileKind.Unknown, new IntRange(0, 10)),
             }.ToImmutableDictionary(),
             MinEliteRow: 6,
             ForbiddenConsecutive: ImmutableArray.Create(new TileKindPair(TileKind.Rest, TileKind.Rest))),
-        MaxRegenerationAttempts: 100);
+        MaxRegenerationAttempts: 10000);
 
     [Fact]
     public void Generate_HasStartAtRow0Column2()
@@ -269,5 +269,75 @@ public class DungeonMapGeneratorTests
         Assert.InRange(merchants, 3, 3);
         Assert.InRange(elites, 2, 4);
         Assert.InRange(unknowns, 6, 10);
+    }
+
+    [Fact]
+    public void Generate_AllPathsSatisfyPerPathCount()
+    {
+        var map = new DungeonMapGenerator().Generate(new SystemRng(42), BaseConfig());
+        foreach (var path in EnumeratePaths(map))
+        {
+            var counts = path.GroupBy(n => n.Kind).ToDictionary(g => g.Key, g => g.Count());
+            foreach (var kv in BaseConfig().PathConstraints.PerPathCount)
+            {
+                int c = counts.GetValueOrDefault(kv.Key, 0);
+                Assert.InRange(c, kv.Value.Min, kv.Value.Max);
+            }
+        }
+    }
+
+    [Fact]
+    public void Generate_NoForbiddenConsecutivePairs()
+    {
+        var map = new DungeonMapGenerator().Generate(new SystemRng(42), BaseConfig());
+        var forbidden = BaseConfig().PathConstraints.ForbiddenConsecutive;
+        foreach (var path in EnumeratePaths(map))
+        {
+            for (int i = 0; i < path.Count - 1; i++)
+            {
+                foreach (var pair in forbidden)
+                    Assert.False(
+                        path[i].Kind == pair.First && path[i + 1].Kind == pair.Second,
+                        $"Forbidden pair {pair.First}->{pair.Second} found at {path[i].Id}->{path[i + 1].Id}");
+            }
+        }
+    }
+
+    [Fact]
+    public void Generate_Impossible_ThrowsMapGenerationException()
+    {
+        var baseConfig = BaseConfig();
+        var impossible = baseConfig with
+        {
+            PathConstraints = baseConfig.PathConstraints with
+            {
+                PerPathCount = baseConfig.PathConstraints.PerPathCount
+                    .SetItem(TileKind.Enemy, new IntRange(20, 30)),
+            },
+            MaxRegenerationAttempts = 5,
+        };
+        var ex = Assert.Throws<MapGenerationException>(
+            () => new DungeonMapGenerator().Generate(new SystemRng(1), impossible));
+        Assert.Equal(5, ex.AttemptCount);
+        Assert.Contains("path-constraint", ex.FailureReason);
+    }
+
+    private static System.Collections.Generic.List<System.Collections.Generic.List<MapNode>> EnumeratePaths(DungeonMap map)
+    {
+        var results = new System.Collections.Generic.List<System.Collections.Generic.List<MapNode>>();
+        var current = new System.Collections.Generic.List<MapNode>();
+
+        void Dfs(int id)
+        {
+            var n = map.GetNode(id);
+            current.Add(n);
+            if (id == map.BossNodeId) results.Add(new System.Collections.Generic.List<MapNode>(current));
+            else
+                foreach (var next in n.OutgoingNodeIds) Dfs(next);
+            current.RemoveAt(current.Count - 1);
+        }
+
+        Dfs(map.StartNodeId);
+        return results;
     }
 }

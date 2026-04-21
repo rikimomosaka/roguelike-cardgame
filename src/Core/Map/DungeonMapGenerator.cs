@@ -10,30 +10,91 @@ public sealed class DungeonMapGenerator : IDungeonMapGenerator
 {
     public DungeonMap Generate(IRng rng, MapGenerationConfig config)
     {
-        while (true)
+        string lastReason = "no-attempt";
+        for (int attempt = 1; attempt <= config.MaxRegenerationAttempts; attempt++)
         {
             var nodes = PlaceNodes(rng, config);
             var withEdges = ConnectEdges(rng, config, nodes);
-            if (withEdges.IsDefaultOrEmpty) continue;
+            if (withEdges.IsDefaultOrEmpty) { lastReason = "edge-candidates-empty"; continue; }
 
             var startId = withEdges.First(n => n.Row == 0).Id;
             var bossId = withEdges.First(n => n.Row == config.RowCount + 1).Id;
 
-            if (!IsBossReachable(withEdges, startId, bossId)) continue;
+            if (!IsBossReachable(withEdges, startId, bossId)) { lastReason = "boss-unreachable"; continue; }
 
             var assigned = AssignKinds(rng, config, withEdges);
-            if (assigned.IsDefaultOrEmpty) continue;
+            if (assigned.IsDefaultOrEmpty) { lastReason = "kind-candidates-empty"; continue; }
 
-            // 暫定：MinPerMap 違反なら再試行（Task 8 で正式化）
-            bool minOk = true;
-            foreach (var kv in config.TileDistribution.MinPerMap)
-            {
-                if (assigned.Count(n => n.Kind == kv.Key) < kv.Value) { minOk = false; break; }
-            }
-            if (!minOk) continue;
+            var distReason = ValidateDistribution(assigned, config.TileDistribution);
+            if (distReason is not null) { lastReason = distReason; continue; }
 
-            return new DungeonMap(assigned, startId, bossId);
+            var map = new DungeonMap(assigned, startId, bossId);
+            var pathReason = ValidatePathConstraints(map, config.PathConstraints);
+            if (pathReason is not null) { lastReason = pathReason; continue; }
+
+            return map;
         }
+        throw new MapGenerationException(config.MaxRegenerationAttempts, lastReason);
+    }
+
+    // フェーズ 4.4：マップ全体分布検証。違反時は失敗理由文字列、成功時は null。
+    private static string? ValidateDistribution(ImmutableArray<MapNode> nodes, TileDistributionRule rule)
+    {
+        var counts = nodes.GroupBy(n => n.Kind).ToDictionary(g => g.Key, g => g.Count());
+        foreach (var kv in rule.MinPerMap)
+        {
+            int c = counts.TryGetValue(kv.Key, out int v) ? v : 0;
+            if (c < kv.Value) return $"distribution:{kv.Key}<{kv.Value}(got {c})";
+        }
+        foreach (var kv in rule.MaxPerMap)
+        {
+            int c = counts.TryGetValue(kv.Key, out int v) ? v : 0;
+            if (c > kv.Value) return $"distribution:{kv.Key}>{kv.Value}(got {c})";
+        }
+        return null;
+    }
+
+    // フェーズ 4.5：ルート制約検証
+    private static string? ValidatePathConstraints(DungeonMap map, PathConstraintRule rule)
+    {
+        foreach (var path in EnumeratePaths(map))
+        {
+            var counts = path.GroupBy(n => n.Kind).ToDictionary(g => g.Key, g => g.Count());
+            foreach (var kv in rule.PerPathCount)
+            {
+                int c = counts.TryGetValue(kv.Key, out int v) ? v : 0;
+                if (c < kv.Value.Min) return $"path-constraint:{kv.Key}<{kv.Value.Min}(got {c})";
+                if (c > kv.Value.Max) return $"path-constraint:{kv.Key}>{kv.Value.Max}(got {c})";
+            }
+            for (int i = 0; i < path.Count - 1; i++)
+            {
+                foreach (var pair in rule.ForbiddenConsecutive)
+                {
+                    if (path[i].Kind == pair.First && path[i + 1].Kind == pair.Second)
+                        return $"forbidden-consecutive:{pair.First}->{pair.Second}";
+                }
+            }
+        }
+        return null;
+    }
+
+    private static IEnumerable<List<MapNode>> EnumeratePaths(DungeonMap map)
+    {
+        var results = new List<List<MapNode>>();
+        var current = new List<MapNode>();
+
+        void Dfs(int id)
+        {
+            var n = map.GetNode(id);
+            current.Add(n);
+            if (id == map.BossNodeId) results.Add(new List<MapNode>(current));
+            else
+                foreach (var next in n.OutgoingNodeIds) Dfs(next);
+            current.RemoveAt(current.Count - 1);
+        }
+
+        Dfs(map.StartNodeId);
+        return results;
     }
 
     // フェーズ 4.3：タイル種別割当
