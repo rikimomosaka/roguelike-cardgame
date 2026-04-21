@@ -21,6 +21,7 @@ public class MapGenerationConfigLoaderTests
     public void LoadAct1_ConfigIsUsableByGenerator()
     {
         var cfg = MapGenerationConfigLoader.LoadAct1();
+        // seed 7 は act1 config の rowNodeCountMin: 2 で 100 回以内に edge-candidates-empty から回復できないため、58 を使用。
         var map = new DungeonMapGenerator().Generate(new SystemRng(58), cfg);
         Assert.Equal(0, map.GetNode(map.StartNodeId).Row);
         Assert.Equal(16, map.GetNode(map.BossNodeId).Row);
