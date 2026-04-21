@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -47,6 +48,22 @@ if (app.Environment.IsDevelopment())
 app.UseCors(CorsPolicyName);
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+
+// パス区切り文字を URL エンコードで迂回する試行 (%2F / %5C) を 400 で拒否する。
+// ルーティングは %2F を '/' に復号してセグメント分割するため、事前に rawPath で判定する。
+app.Use(async (context, next) =>
+{
+    var path = context.Request.Path.Value ?? string.Empty;
+    if (path.Contains("%2F", StringComparison.OrdinalIgnoreCase) ||
+        path.Contains("%5C", StringComparison.OrdinalIgnoreCase))
+    {
+        context.Response.StatusCode = StatusCodes.Status400BadRequest;
+        await context.Response.WriteAsync("エンコードされたパス区切り文字は許可されていません。");
+        return;
+    }
+    await next();
+});
+
 app.MapControllers();
 
 app.Run();
