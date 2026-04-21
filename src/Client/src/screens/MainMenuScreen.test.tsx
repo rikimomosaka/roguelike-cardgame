@@ -91,7 +91,6 @@ describe('MainMenuScreen', () => {
     localStorage.setItem('rcg.accountId', 'alice')
     render(
       <AccountProvider>
-        {/* @ts-expect-error — Task 18 adds onStartRun to Props */}
         <MainMenuScreen
           onOpenSettings={() => {}}
           onLogout={() => {}}
