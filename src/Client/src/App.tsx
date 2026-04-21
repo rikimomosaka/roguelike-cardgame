@@ -2,10 +2,12 @@
 import { useEffect, useState } from 'react'
 import { getAccount } from './api/accounts'
 import { ApiError } from './api/client'
+import type { RunSnapshotDto } from './api/types'
 import { Button } from './components/Button'
 import { useAccount } from './context/AccountContext'
 import { LoginScreen } from './screens/LoginScreen'
 import { MainMenuScreen } from './screens/MainMenuScreen'
+import { MapScreen } from './screens/MapScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
 
 type Screen =
@@ -13,6 +15,7 @@ type Screen =
   | { kind: 'login' }
   | { kind: 'main-menu' }
   | { kind: 'settings' }
+  | { kind: 'map'; snapshot: RunSnapshotDto }
   | { kind: 'bootstrap-error'; message: string }
 
 export default function App() {
@@ -62,6 +65,16 @@ export default function App() {
       <MainMenuScreen
         onOpenSettings={() => setScreen({ kind: 'settings' })}
         onLogout={() => { logout(); setScreen({ kind: 'login' }) }}
+        onStartRun={(snap) => setScreen({ kind: 'map', snapshot: snap })}
+      />
+    )
+  }
+  if (screen.kind === 'map') {
+    return (
+      <MapScreen
+        snapshot={screen.snapshot}
+        onExitToMenu={() => setScreen({ kind: 'main-menu' })}
+        onAbandon={() => setScreen({ kind: 'main-menu' })}
       />
     )
   }

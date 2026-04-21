@@ -31,7 +31,12 @@ public class FileSaveRepositoryTests : IDisposable
     }
 
     private RunState FreshRun(ulong seed = 42UL) =>
-        RunState.NewSoloRun(_catalog, rngSeed: seed, nowUtc: FixedNow);
+        RunState.NewSoloRun(
+            _catalog,
+            rngSeed: seed,
+            startNodeId: 0,
+            unknownResolutions: System.Collections.Immutable.ImmutableDictionary<int, RoguelikeCardGame.Core.Map.TileKind>.Empty,
+            nowUtc: FixedNow);
 
     [Fact]
     public async Task Save_CreatesFileUnderSavesSubdir()
@@ -112,5 +117,15 @@ public class FileSaveRepositoryTests : IDisposable
             _repo.TryLoadAsync(bad, CancellationToken.None));
         await Assert.ThrowsAsync<ArgumentException>(() =>
             _repo.DeleteAsync(bad, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task TryLoad_V1Json_ReturnsNull()
+    {
+        Directory.CreateDirectory(Path.Combine(_tempRoot, "saves"));
+        var v1 = "{\"schemaVersion\":1,\"currentAct\":1,\"currentTileIndex\":0,\"currentHp\":80,\"maxHp\":80,\"gold\":99,\"deck\":[],\"relics\":[],\"potions\":[],\"playSeconds\":0,\"rngSeed\":0,\"savedAtUtc\":\"2026-04-21T00:00:00+00:00\",\"progress\":\"InProgress\"}";
+        await File.WriteAllTextAsync(Path.Combine(_tempRoot, "saves", "v1user.json"), v1);
+        var loaded = await _repo.TryLoadAsync("v1user", CancellationToken.None);
+        Assert.Null(loaded);
     }
 }

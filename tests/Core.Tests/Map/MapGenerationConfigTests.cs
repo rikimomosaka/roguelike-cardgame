@@ -39,7 +39,10 @@ public class MapGenerationConfigTests
                 PerPathCount: ImmutableDictionary<TileKind, IntRange>.Empty,
                 MinEliteRow: 6,
                 ForbiddenConsecutive: ImmutableArray<TileKindPair>.Empty),
-            MaxRegenerationAttempts: 100);
+            MaxRegenerationAttempts: 100,
+            UnknownResolutionWeights: new UnknownResolutionConfig(
+                System.Collections.Immutable.ImmutableDictionary<TileKind, double>.Empty
+                    .Add(TileKind.Enemy, 1)));
 
         Assert.Equal(15, config.RowCount);
         Assert.Equal(9, config.FixedRows[0].Row);

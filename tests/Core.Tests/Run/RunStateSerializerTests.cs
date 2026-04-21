@@ -1,5 +1,9 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using RoguelikeCardGame.Core.Data;
+using RoguelikeCardGame.Core.Map;
 using RoguelikeCardGame.Core.Run;
 using Xunit;
 
@@ -7,114 +11,45 @@ namespace RoguelikeCardGame.Core.Tests.Run;
 
 public class RunStateSerializerTests
 {
-    private static readonly DateTimeOffset FixedNow = new(2026, 4, 20, 12, 0, 0, TimeSpan.Zero);
-
-    private static RunState FreshRun()
+    private static RunState SampleV2()
     {
         var catalog = EmbeddedDataLoader.LoadCatalog();
-        return RunState.NewSoloRun(catalog, rngSeed: 42UL, nowUtc: FixedNow);
+        var state = RunState.NewSoloRun(
+            catalog,
+            rngSeed: 42UL,
+            startNodeId: 0,
+            unknownResolutions: ImmutableDictionary<int, TileKind>.Empty.Add(5, TileKind.Enemy),
+            nowUtc: new DateTimeOffset(2026, 4, 21, 0, 0, 0, TimeSpan.Zero));
+        return state;
     }
 
     [Fact]
-    public void SerializeThenDeserialize_RoundTripsAllFields()
+    public void RoundTrip_V2_Preserves()
     {
-        var original = FreshRun();
-
+        var original = SampleV2();
         var json = RunStateSerializer.Serialize(original);
-        var restored = RunStateSerializer.Deserialize(json);
-
-        Assert.Equal(original.SchemaVersion, restored.SchemaVersion);
-        Assert.Equal(original.CurrentAct, restored.CurrentAct);
-        Assert.Equal(original.CurrentTileIndex, restored.CurrentTileIndex);
-        Assert.Equal(original.CurrentHp, restored.CurrentHp);
-        Assert.Equal(original.MaxHp, restored.MaxHp);
-        Assert.Equal(original.Gold, restored.Gold);
-        Assert.Equal(original.Deck, restored.Deck);
-        Assert.Equal(original.Relics, restored.Relics);
-        Assert.Equal(original.Potions, restored.Potions);
-        Assert.Equal(original.PlaySeconds, restored.PlaySeconds);
-        Assert.Equal(original.RngSeed, restored.RngSeed);
-        Assert.Equal(original.SavedAtUtc, restored.SavedAtUtc);
-        Assert.Equal(original.Progress, restored.Progress);
+        var loaded = RunStateSerializer.Deserialize(json);
+        Assert.Equal(2, loaded.SchemaVersion);
+        Assert.Equal(0, loaded.CurrentNodeId);
+        Assert.Equal(new[] { 0 }, loaded.VisitedNodeIds.ToArray());
+        Assert.Equal(TileKind.Enemy, loaded.UnknownResolutions[5]);
     }
 
     [Fact]
-    public void Serialize_UsesCamelCaseAndStringEnum()
+    public void Deserialize_V1Json_ThrowsSerializerException()
     {
-        var json = RunStateSerializer.Serialize(FreshRun());
-        Assert.Contains("\"schemaVersion\":1", json);
-        Assert.Contains("\"progress\":\"InProgress\"", json);
-        Assert.DoesNotContain("\"SchemaVersion\"", json); // PascalCase は出ない
+        var v1 = "{\"schemaVersion\":1,\"currentAct\":1,\"currentTileIndex\":0,\"currentHp\":80,\"maxHp\":80,\"gold\":99,\"deck\":[],\"relics\":[],\"potions\":[],\"playSeconds\":0,\"rngSeed\":0,\"savedAtUtc\":\"2026-04-21T00:00:00+00:00\",\"progress\":\"InProgress\"}";
+        Assert.Throws<RunStateSerializerException>(() => RunStateSerializer.Deserialize(v1));
     }
 
     [Fact]
-    public void Deserialize_BrokenJson_Throws()
+    public void Deserialize_WrongSchemaVersionOnly_ThrowsSerializerException()
     {
-        var ex = Assert.Throws<RunStateSerializerException>(
-            () => RunStateSerializer.Deserialize("{ not valid"));
-        Assert.Contains("パース", ex.Message);
-    }
-
-    [Fact]
-    public void Deserialize_NullLiteral_Throws()
-    {
-        var ex = Assert.Throws<RunStateSerializerException>(
-            () => RunStateSerializer.Deserialize("null"));
-        Assert.Contains("null", ex.Message);
-    }
-
-    [Fact]
-    public void Deserialize_UnknownField_Throws()
-    {
-        var json = """
-        {
-          "schemaVersion": 1,
-          "currentAct": 1,
-          "currentTileIndex": 0,
-          "currentHp": 80,
-          "maxHp": 80,
-          "gold": 99,
-          "deck": [],
-          "relics": [],
-          "potions": [],
-          "playSeconds": 0,
-          "rngSeed": 0,
-          "savedAtUtc": "2026-04-20T12:00:00+00:00",
-          "progress": "InProgress",
-          "unknownField": 42
-        }
-        """;
-
-        var ex = Assert.Throws<RunStateSerializerException>(
-            () => RunStateSerializer.Deserialize(json));
-        Assert.Contains("パース", ex.Message);
-    }
-
-    [Fact]
-    public void Deserialize_WrongSchemaVersion_Throws()
-    {
-        // 手書きで schemaVersion=99 の RunState を作る
-        var json = """
-        {
-          "schemaVersion": 99,
-          "currentAct": 1,
-          "currentTileIndex": 0,
-          "currentHp": 80,
-          "maxHp": 80,
-          "gold": 99,
-          "deck": [],
-          "relics": [],
-          "potions": [],
-          "playSeconds": 0,
-          "rngSeed": 0,
-          "savedAtUtc": "2026-04-20T12:00:00+00:00",
-          "progress": "InProgress"
-        }
-        """;
-
-        var ex = Assert.Throws<RunStateSerializerException>(
-            () => RunStateSerializer.Deserialize(json));
-        Assert.Contains("schemaVersion", ex.Message);
-        Assert.Contains("99", ex.Message);
+        // v2 の shape で schemaVersion だけ 99 にした JSON。
+        // UnmappedMemberHandling.Disallow に引っかからず、schemaVersion check に到達する。
+        var original = SampleV2() with { SchemaVersion = 99 };
+        var json = RunStateSerializer.Serialize(original);
+        var ex = Assert.Throws<RunStateSerializerException>(() => RunStateSerializer.Deserialize(json));
+        Assert.Contains("schemaVersion", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -33,6 +33,7 @@ public sealed class FileAccountRepository : IAccountRepository
     public async Task CreateAsync(string accountId, DateTimeOffset nowUtc, CancellationToken ct)
     {
         AccountIdValidator.Validate(accountId);
+        Directory.CreateDirectory(_dir);
         var path = PathFor(accountId);
         if (File.Exists(path))
             throw new AccountAlreadyExistsException(accountId);
