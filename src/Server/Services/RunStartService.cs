@@ -32,10 +32,30 @@ public sealed class RunStartService
         _seedSource = seedSource ?? (() => System.Random.Shared.Next());
     }
 
+    /// <summary>seed を最大 <see cref="MaxSeedAttempts"/> 回振り直して <see cref="MapGenerationException"/> を吸収する。
+    /// DungeonMapGenerator は与えられた RNG で <see cref="MapGenerationConfig.MaxRegenerationAttempts"/> 回内部試行するが、
+    /// 制約が厳しい seed ではその範囲で成功できないことがあるため、外側でも seed 自体を振り直す。</summary>
+    private const int MaxSeedAttempts = 10;
+
     public async Task<(RunState state, DungeonMap map)> StartAsync(string accountId, CancellationToken ct)
     {
-        int seed = _seedSource();
-        var map = _generator.Generate(new SystemRng(seed), _mapConfig);
+        int seed = 0;
+        DungeonMap? map = null;
+        MapGenerationException? last = null;
+        for (int attempt = 0; attempt < MaxSeedAttempts; attempt++)
+        {
+            seed = _seedSource();
+            try
+            {
+                map = _generator.Generate(new SystemRng(seed), _mapConfig);
+                break;
+            }
+            catch (MapGenerationException ex)
+            {
+                last = ex;
+            }
+        }
+        if (map is null) throw last!;
         var resolutions = UnknownResolver.ResolveAll(
             map, _mapConfig.UnknownResolutionWeights, new SystemRng(unchecked(seed + 1)));
         var catalog = EmbeddedDataLoader.LoadCatalog();
