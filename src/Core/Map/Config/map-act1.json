@@ -1,0 +1,40 @@
+{
+  "rowCount": 15,
+  "columnCount": 5,
+  "rowNodeCountMin": 2,
+  "rowNodeCountMax": 4,
+  "edgeWeights": { "weight1": 82, "weight2": 16, "weight3": 2 },
+  "tileDistribution": {
+    "baseWeights": {
+      "Enemy": 45,
+      "Elite": 6,
+      "Rest": 12,
+      "Merchant": 5,
+      "Unknown": 32
+    },
+    "minPerMap": { "Merchant": 3, "Elite": 2, "Unknown": 6 },
+    "maxPerMap": { "Merchant": 3, "Elite": 4, "Unknown": 10 }
+  },
+  "fixedRows": [
+    { "row": 9, "kind": "Treasure" },
+    { "row": 15, "kind": "Rest" }
+  ],
+  "rowKindExclusions": [
+    { "row": 14, "excludedKind": "Rest" }
+  ],
+  "pathConstraints": {
+    "perPathCount": {
+      "Enemy":    { "min": 4, "max": 6 },
+      "Elite":    { "min": 0, "max": 2 },
+      "Rest":     { "min": 1, "max": 3 },
+      "Merchant": { "min": 1, "max": 2 },
+      "Treasure": { "min": 1, "max": 1 },
+      "Unknown":  { "min": 3, "max": 5 }
+    },
+    "minEliteRow": 6,
+    "forbiddenConsecutive": [
+      { "first": "Rest", "second": "Rest" }
+    ]
+  },
+  "maxRegenerationAttempts": 500
+}
