@@ -37,7 +37,7 @@ public sealed class RunStartService
         int seed = _seedSource();
         var map = _generator.Generate(new SystemRng(seed), _mapConfig);
         var resolutions = UnknownResolver.ResolveAll(
-            map, _mapConfig.UnknownResolutionWeights, new SystemRng(seed + 1));
+            map, _mapConfig.UnknownResolutionWeights, new SystemRng(unchecked(seed + 1)));
         var catalog = EmbeddedDataLoader.LoadCatalog();
         var state = RunState.NewSoloRun(
             catalog,
@@ -49,7 +49,10 @@ public sealed class RunStartService
         return (state, map);
     }
 
-    /// <summary>保存済み seed から map を再生成して返す（move / current 用）。</summary>
+    /// <summary>
+    /// 保存済み seed から map の構造のみを再生成して返す（move / current 用）。
+    /// Unknown の解決結果は含まれない — それは <see cref="RunState.UnknownResolutions"/> に永続化されている。
+    /// </summary>
     public DungeonMap RehydrateMap(ulong rngSeed)
     {
         int seed = unchecked((int)(uint)rngSeed);
