@@ -1,0 +1,8 @@
+{
+  "id": "energy_potion",
+  "name": "エナジーポーション",
+  "rarity": 1,
+  "usableInBattle": true,
+  "usableOutOfBattle": false,
+  "effects": [{ "type": "gainEnergy", "amount": 2 }]
+}

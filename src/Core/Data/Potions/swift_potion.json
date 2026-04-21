@@ -1,0 +1,8 @@
+{
+  "id": "swift_potion",
+  "name": "スウィフトポーション",
+  "rarity": 1,
+  "usableInBattle": true,
+  "usableOutOfBattle": false,
+  "effects": [{ "type": "drawCards", "amount": 3 }]
+}

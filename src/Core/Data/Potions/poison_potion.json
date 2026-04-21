@@ -1,0 +1,8 @@
+{
+  "id": "poison_potion",
+  "name": "ポイズンポーション",
+  "rarity": 2,
+  "usableInBattle": true,
+  "usableOutOfBattle": false,
+  "effects": [{ "type": "applyPoison", "amount": 6 }]
+}
