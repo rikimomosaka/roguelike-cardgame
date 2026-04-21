@@ -140,6 +140,93 @@ public sealed class RunsController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("current/reward/gold")]
+    public async Task<IActionResult> PostRewardGold(CancellationToken ct)
+        => await ApplyReward(s => RewardApplier.ApplyGold(s), ct);
+
+    [HttpPost("current/reward/potion")]
+    public async Task<IActionResult> PostRewardPotion(CancellationToken ct)
+        => await ApplyReward(s => RewardApplier.ApplyPotion(s), ct);
+
+    private async Task<IActionResult> ApplyReward(Func<RunState, RunState> action, CancellationToken ct)
+    {
+        if (!TryGetAccountId(out var accountId, out var err)) return err!;
+        if (!await _accounts.ExistsAsync(accountId, ct))
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: $"アカウントが見つかりません: {accountId}");
+
+        var s = await _saves.TryLoadAsync(accountId, ct);
+        if (s is null || s.Progress != RunProgress.InProgress || s.ActiveReward is null)
+            return Problem(statusCode: StatusCodes.Status409Conflict, title: "報酬画面がありません。");
+
+        RunState updated;
+        try { updated = action(s); }
+        catch (InvalidOperationException ex)
+        { return Problem(statusCode: StatusCodes.Status409Conflict, title: ex.Message); }
+
+        updated = updated with { SavedAtUtc = DateTimeOffset.UtcNow };
+        await _saves.SaveAsync(accountId, updated, ct);
+        return NoContent();
+    }
+
+    [HttpPost("current/reward/card")]
+    public async Task<IActionResult> PostRewardCard([FromBody] RewardCardRequestDto body, CancellationToken ct)
+    {
+        if (!TryGetAccountId(out var accountId, out var err)) return err!;
+        if (body is null) return BadRequest();
+        bool hasCard = !string.IsNullOrEmpty(body.CardId);
+        bool skip = body.Skip == true;
+        if (hasCard == skip)
+            return Problem(statusCode: StatusCodes.Status400BadRequest,
+                title: "cardId と skip のうち片方のみ指定してください。");
+
+        if (!await _accounts.ExistsAsync(accountId, ct))
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: $"アカウントが見つかりません: {accountId}");
+
+        var s = await _saves.TryLoadAsync(accountId, ct);
+        if (s is null || s.Progress != RunProgress.InProgress || s.ActiveReward is null)
+            return Problem(statusCode: StatusCodes.Status409Conflict, title: "報酬画面がありません。");
+
+        RunState updated;
+        try
+        {
+            updated = skip ? RewardApplier.SkipCard(s) : RewardApplier.PickCard(s, body.CardId!);
+        }
+        catch (ArgumentException ex)
+        { return Problem(statusCode: StatusCodes.Status400BadRequest, title: ex.Message); }
+        catch (InvalidOperationException ex)
+        { return Problem(statusCode: StatusCodes.Status409Conflict, title: ex.Message); }
+
+        updated = updated with { SavedAtUtc = DateTimeOffset.UtcNow };
+        await _saves.SaveAsync(accountId, updated, ct);
+        return NoContent();
+    }
+
+    [HttpPost("current/reward/proceed")]
+    public async Task<IActionResult> PostRewardProceed([FromBody] RewardProceedRequestDto body, CancellationToken ct)
+    {
+        if (!TryGetAccountId(out var accountId, out var err)) return err!;
+        if (!await _accounts.ExistsAsync(accountId, ct))
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: $"アカウントが見つかりません: {accountId}");
+
+        var s = await _saves.TryLoadAsync(accountId, ct);
+        if (s is null || s.Progress != RunProgress.InProgress || s.ActiveReward is null)
+            return Problem(statusCode: StatusCodes.Status409Conflict, title: "報酬画面がありません。");
+
+        RunState updated;
+        try { updated = RewardApplier.Proceed(s); }
+        catch (InvalidOperationException ex)
+        { return Problem(statusCode: StatusCodes.Status409Conflict, title: ex.Message); }
+
+        long elapsed = body is null ? 0 : Math.Clamp(body.ElapsedSeconds, 0, MaxElapsedSecondsPerRequest);
+        updated = updated with
+        {
+            PlaySeconds = updated.PlaySeconds + elapsed,
+            SavedAtUtc = DateTimeOffset.UtcNow,
+        };
+        await _saves.SaveAsync(accountId, updated, ct);
+        return NoContent();
+    }
+
     [HttpPost("current/abandon")]
     public async Task<IActionResult> PostAbandon([FromBody] HeartbeatRequestDto body, CancellationToken ct)
     {
