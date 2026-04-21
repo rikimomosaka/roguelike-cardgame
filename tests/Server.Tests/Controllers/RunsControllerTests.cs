@@ -175,6 +175,32 @@ public class RunsControllerTests : IClassFixture<TempDataFactory>
     }
 
     [Fact]
+    public async Task FullFlow_NewMoveHeartbeatCurrent_AccumulatesPlaySeconds()
+    {
+        _factory.ResetData();
+        var client = _factory.CreateClient();
+        await EnsureAccountAsync(client, "ivy");
+        WithAccount(client, "ivy");
+
+        var newRes = await client.PostAsync("/api/v1/runs/new", content: null);
+        var newDoc = JsonDocument.Parse(await newRes.Content.ReadAsStringAsync());
+        int startId = newDoc.RootElement.GetProperty("run").GetProperty("currentNodeId").GetInt32();
+        int firstTarget = -1;
+        foreach (var n in newDoc.RootElement.GetProperty("map").GetProperty("nodes").EnumerateArray())
+            if (n.GetProperty("id").GetInt32() == startId)
+                firstTarget = n.GetProperty("outgoingNodeIds")[0].GetInt32();
+
+        await client.PostAsJsonAsync("/api/v1/runs/current/move",
+            new { nodeId = firstTarget, elapsedSeconds = 4 });
+        await client.PostAsJsonAsync("/api/v1/runs/current/heartbeat", new { elapsedSeconds = 3 });
+
+        var cur = await client.GetAsync("/api/v1/runs/current");
+        var doc = JsonDocument.Parse(await cur.Content.ReadAsStringAsync());
+        Assert.Equal(firstTarget, doc.RootElement.GetProperty("run").GetProperty("currentNodeId").GetInt32());
+        Assert.Equal(7, doc.RootElement.GetProperty("run").GetProperty("playSeconds").GetInt64());
+    }
+
+    [Fact]
     public async Task NoHeader_Returns400()
     {
         var client = _factory.CreateClient();
