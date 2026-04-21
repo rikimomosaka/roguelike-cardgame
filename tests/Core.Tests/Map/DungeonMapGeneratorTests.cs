@@ -370,6 +370,90 @@ public class DungeonMapGeneratorTests
         Assert.True(anyDiff, "Different seeds produced identical map (extremely unlikely)");
     }
 
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(42)]
+    [InlineData(100)]
+    [InlineData(777)]
+    [InlineData(12345)]
+    [InlineData(99999)]
+    public void Generate_AllNodesReachableFromStartAndCanReachBoss(int seed)
+    {
+        var map = new DungeonMapGenerator().Generate(new SystemRng(seed), BaseConfig());
+        var forward = new System.Collections.Generic.HashSet<int>();
+        var stack = new System.Collections.Generic.Stack<int>();
+        stack.Push(map.StartNodeId);
+        while (stack.Count > 0)
+        {
+            int id = stack.Pop();
+            if (!forward.Add(id)) continue;
+            foreach (var next in map.GetNode(id).OutgoingNodeIds) stack.Push(next);
+        }
+
+        var incoming = new System.Collections.Generic.List<int>[map.Nodes.Length];
+        for (int i = 0; i < map.Nodes.Length; i++) incoming[i] = new System.Collections.Generic.List<int>();
+        foreach (var n in map.Nodes)
+            foreach (var dst in n.OutgoingNodeIds) incoming[dst].Add(n.Id);
+        var backward = new System.Collections.Generic.HashSet<int>();
+        stack.Clear();
+        stack.Push(map.BossNodeId);
+        while (stack.Count > 0)
+        {
+            int id = stack.Pop();
+            if (!backward.Add(id)) continue;
+            foreach (var prev in incoming[id]) stack.Push(prev);
+        }
+
+        foreach (var n in map.Nodes)
+        {
+            Assert.True(forward.Contains(n.Id),
+                $"Node {n.Id} at ({n.Row},{n.Column}) is not reachable from start (seed={seed})");
+            Assert.True(backward.Contains(n.Id),
+                $"Node {n.Id} at ({n.Row},{n.Column}) cannot reach boss (seed={seed})");
+        }
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(42)]
+    [InlineData(100)]
+    [InlineData(777)]
+    [InlineData(12345)]
+    [InlineData(99999)]
+    public void Generate_NoCrossingEdges(int seed)
+    {
+        var map = new DungeonMapGenerator().Generate(new SystemRng(seed), BaseConfig());
+        var byRow = map.Nodes.GroupBy(n => n.Row).ToDictionary(g => g.Key, g => g.ToList());
+        int maxRow = byRow.Keys.Max();
+        for (int r = 0; r < maxRow; r++)
+        {
+            if (!byRow.TryGetValue(r, out var srcs)) continue;
+            var edges = new System.Collections.Generic.List<(int SrcCol, int DstCol, int SrcId, int DstId)>();
+            foreach (var s in srcs)
+                foreach (var dstId in s.OutgoingNodeIds)
+                    edges.Add((s.Column, map.GetNode(dstId).Column, s.Id, dstId));
+            for (int i = 0; i < edges.Count; i++)
+            {
+                for (int j = i + 1; j < edges.Count; j++)
+                {
+                    var a = edges[i]; var b = edges[j];
+                    if (a.SrcCol == b.SrcCol) continue;
+                    bool crosses =
+                        (a.SrcCol < b.SrcCol && a.DstCol > b.DstCol) ||
+                        (a.SrcCol > b.SrcCol && a.DstCol < b.DstCol);
+                    Assert.False(crosses,
+                        $"Crossing at row {r} (seed={seed}): " +
+                        $"{a.SrcId}(col={a.SrcCol})->{a.DstId}(col={a.DstCol}) x " +
+                        $"{b.SrcId}(col={b.SrcCol})->{b.DstId}(col={b.DstCol})");
+                }
+            }
+        }
+    }
+
     [Fact]
     public void Generate_NullRng_Throws()
     {
