@@ -11,7 +11,7 @@ public sealed class RunStateSerializerException : Exception
     public RunStateSerializerException(string message, Exception inner) : base(message, inner) { }
 }
 
-/// <summary>RunState ⇔ JSON 文字列の変換。ファイル I/O は Server 側の SaveRepository が担当。</summary>
+/// <summary>RunState ⇔ JSON 文字列の変換。ファイル I/O は Server 側の ISaveRepository が担当。</summary>
 public static class RunStateSerializer
 {
     public static string Serialize(RunState state)

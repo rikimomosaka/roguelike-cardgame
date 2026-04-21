@@ -6,7 +6,7 @@ using RoguelikeCardGame.Core.Player;
 
 namespace RoguelikeCardGame.Core.Run;
 
-/// <summary>ソロ／マルチ共通のラン 1 回分の状態。ソロのみ SaveRepository で永続化される。</summary>
+/// <summary>ソロ／マルチ共通のラン 1 回分の状態。ソロのみ ISaveRepository で永続化される。</summary>
 public sealed record RunState(
     int SchemaVersion,
     int CurrentAct,
