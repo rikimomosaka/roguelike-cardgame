@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -5,11 +6,14 @@ using RoguelikeCardGame.Core.Random;
 
 namespace RoguelikeCardGame.Core.Map;
 
-/// <summary>5 フェーズでダンジョンマップを生成する。本クラスは stateless・single-thread 前提。</summary>
+/// <summary>5 フェーズでダンジョンマップを生成する。フィールドを持たず stateless。呼び出しごとに <see cref="IRng"/> を受け取るため、DI で singleton 登録しても複数スレッドから安全に共用できる。</summary>
 public sealed class DungeonMapGenerator : IDungeonMapGenerator
 {
     public DungeonMap Generate(IRng rng, MapGenerationConfig config)
     {
+        ArgumentNullException.ThrowIfNull(rng);
+        ArgumentNullException.ThrowIfNull(config);
+
         string lastReason = "no-attempt";
         for (int attempt = 1; attempt <= config.MaxRegenerationAttempts; attempt++)
         {
@@ -78,23 +82,39 @@ public sealed class DungeonMapGenerator : IDungeonMapGenerator
         return null;
     }
 
-    private static IEnumerable<List<MapNode>> EnumeratePaths(DungeonMap map)
+    // 反復 DFS + yield return。呼び出し側が早期 return した時点で走査が打ち切られるため、
+    // 全パス数が指数的に増える設定でも制約違反が早く見つかるケースでは早期離脱できる。
+    private static IEnumerable<IReadOnlyList<MapNode>> EnumeratePaths(DungeonMap map)
     {
-        var results = new List<List<MapNode>>();
-        var current = new List<MapNode>();
+        var path = new List<MapNode>();
+        var childIndex = new Stack<int>();
 
-        void Dfs(int id)
+        path.Add(map.GetNode(map.StartNodeId));
+        childIndex.Push(0);
+
+        while (path.Count > 0)
         {
-            var n = map.GetNode(id);
-            current.Add(n);
-            if (id == map.BossNodeId) results.Add(new List<MapNode>(current));
-            else
-                foreach (var next in n.OutgoingNodeIds) Dfs(next);
-            current.RemoveAt(current.Count - 1);
-        }
+            var node = path[^1];
+            if (node.Id == map.BossNodeId)
+            {
+                yield return path.ToArray();
+                path.RemoveAt(path.Count - 1);
+                childIndex.Pop();
+                continue;
+            }
 
-        Dfs(map.StartNodeId);
-        return results;
+            int i = childIndex.Pop();
+            if (i >= node.OutgoingNodeIds.Length)
+            {
+                path.RemoveAt(path.Count - 1);
+                continue;
+            }
+
+            childIndex.Push(i + 1);
+            int nextId = node.OutgoingNodeIds[i];
+            path.Add(map.GetNode(nextId));
+            childIndex.Push(0);
+        }
     }
 
     // フェーズ 4.3：タイル種別割当

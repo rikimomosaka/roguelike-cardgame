@@ -43,15 +43,21 @@ public static class MapGenerationConfigLoader
         }
         if (dto is null) throw new MapGenerationConfigException("map-config JSON が null でした。");
 
+        MapGenerationConfig cfg;
         try
         {
-            return dto.ToConfig();
+            cfg = dto.ToConfig();
         }
         // DTO → Config 変換中の NullRef / ArgumentException 等を一括で MapGenerationConfigException にラップ。
         catch (Exception ex) when (ex is not MapGenerationConfigException)
         {
             throw new MapGenerationConfigException("map-config の値変換に失敗しました。", ex);
         }
+
+        var invalid = cfg.Validate();
+        if (invalid is not null)
+            throw new MapGenerationConfigException($"map-config の不変条件違反: {invalid}");
+        return cfg;
     }
 
     private sealed record Dto(

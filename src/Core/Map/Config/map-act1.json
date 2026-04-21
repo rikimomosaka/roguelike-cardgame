@@ -36,5 +36,5 @@
       { "first": "Rest", "second": "Rest" }
     ]
   },
-  "maxRegenerationAttempts": 100
+  "maxRegenerationAttempts": 500
 }

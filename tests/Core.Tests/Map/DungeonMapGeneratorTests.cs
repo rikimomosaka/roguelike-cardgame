@@ -366,4 +366,18 @@ public class DungeonMapGeneratorTests
                  b.Nodes.Select(n => (n.Row, n.Column, n.Kind)));
         Assert.True(anyDiff, "Different seeds produced identical map (extremely unlikely)");
     }
+
+    [Fact]
+    public void Generate_NullRng_Throws()
+    {
+        Assert.Throws<System.ArgumentNullException>(
+            () => new DungeonMapGenerator().Generate(null!, BaseConfig()));
+    }
+
+    [Fact]
+    public void Generate_NullConfig_Throws()
+    {
+        Assert.Throws<System.ArgumentNullException>(
+            () => new DungeonMapGenerator().Generate(new SystemRng(1), null!));
+    }
 }
