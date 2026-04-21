@@ -2,7 +2,9 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Map;
+using RoguelikeCardGame.Core.Random;
 using RoguelikeCardGame.Core.Run;
 using RoguelikeCardGame.Server.Abstractions;
 using RoguelikeCardGame.Server.Dtos;
@@ -20,12 +22,14 @@ public sealed class RunsController : ControllerBase
     private readonly IAccountRepository _accounts;
     private readonly ISaveRepository _saves;
     private readonly RunStartService _runStart;
+    private readonly DataCatalog _data;
 
-    public RunsController(IAccountRepository accounts, ISaveRepository saves, RunStartService runStart)
+    public RunsController(IAccountRepository accounts, ISaveRepository saves, RunStartService runStart, DataCatalog data)
     {
         _accounts = accounts;
         _saves = saves;
         _runStart = runStart;
+        _data = data;
     }
 
     [HttpGet("current")]
@@ -39,7 +43,7 @@ public sealed class RunsController : ControllerBase
         if (state is null || state.Progress != RunProgress.InProgress) return NoContent();
 
         var map = _runStart.RehydrateMap(state.RngSeed);
-        return Ok(new RunSnapshotDto(state, MapDtoMapper.From(map)));
+        return Ok(RunSnapshotDtoMapper.From(state, map, _data));
     }
 
     [HttpPost("new")]
@@ -54,7 +58,7 @@ public sealed class RunsController : ControllerBase
             return Problem(statusCode: StatusCodes.Status409Conflict, title: "進行中のランがあります。force=true で上書き可能。");
 
         var (state, map) = await _runStart.StartAsync(accountId, ct);
-        return Ok(new RunSnapshotDto(state, MapDtoMapper.From(map)));
+        return Ok(RunSnapshotDtoMapper.From(state, map, _data));
     }
 
     [HttpPost("current/move")]
@@ -69,24 +73,34 @@ public sealed class RunsController : ControllerBase
         if (state is null || state.Progress != RunProgress.InProgress)
             return Problem(statusCode: StatusCodes.Status409Conflict, title: "進行中のランがありません。");
 
+        if (state.ActiveBattle is not null || state.ActiveReward is not null)
+            return Problem(statusCode: StatusCodes.Status409Conflict,
+                title: "戦闘中または報酬未受取のため移動できません。");
+
         var map = _runStart.RehydrateMap(state.RngSeed);
-        RunState updated;
+        RunState advanced;
         try
         {
-            updated = RunActions.SelectNextNode(state, map, body.NodeId);
+            advanced = RunActions.SelectNextNode(state, map, body.NodeId);
         }
         catch (ArgumentException ex)
         {
             return Problem(statusCode: StatusCodes.Status400BadRequest, title: ex.Message);
         }
 
+        var node = map.GetNode(body.NodeId);
+        var actualKind = advanced.UnknownResolutions.TryGetValue(node.Id, out var resolved) ? resolved : node.Kind;
+
+        var effectRng = new SystemRng(unchecked((int)advanced.RngSeed ^ (node.Id * 31) ^ (int)advanced.PlaySeconds));
+        advanced = NodeEffectResolver.Resolve(advanced, actualKind, node.Row, _data, effectRng);
+
         long elapsed = Math.Clamp(body.ElapsedSeconds, 0, MaxElapsedSecondsPerRequest);
-        updated = updated with
+        advanced = advanced with
         {
-            PlaySeconds = state.PlaySeconds + elapsed,
+            PlaySeconds = advanced.PlaySeconds + elapsed,
             SavedAtUtc = DateTimeOffset.UtcNow,
         };
-        await _saves.SaveAsync(accountId, updated, ct);
+        await _saves.SaveAsync(accountId, advanced, ct);
         return NoContent();
     }
 
