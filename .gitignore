@@ -29,3 +29,7 @@ Thumbs.db
 .claude/settings.local.json
 .aidesigner/*
 !.aidesigner/.gitkeep
+
+# Phase 2 file-backed stand-in database
+/src/Server/data-local/
+/src/Server/bin/**/data-local/
