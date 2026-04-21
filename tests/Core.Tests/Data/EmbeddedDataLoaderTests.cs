@@ -21,7 +21,7 @@ public class EmbeddedDataLoaderTests
     public void LoadEmbeddedCatalog_ContainsBossEnemy()
     {
         var catalog = EmbeddedDataLoader.LoadCatalog();
-        Assert.Contains("hexaghost", catalog.Enemies.Keys);
-        Assert.Equal(EnemyTier.Boss, catalog.Enemies["hexaghost"].Pool.Tier);
+        Assert.Contains("six_ghost", catalog.Enemies.Keys);
+        Assert.Equal(EnemyTier.Boss, catalog.Enemies["six_ghost"].Pool.Tier);
     }
 }

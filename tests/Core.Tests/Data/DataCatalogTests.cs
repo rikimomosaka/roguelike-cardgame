@@ -14,14 +14,14 @@ public class DataCatalogTests
             cards: new[] { JsonFixtures.StrikeJson, JsonFixtures.DefendJson },
             relics: new[] { JsonFixtures.BurningBloodJson, JsonFixtures.LanternJson },
             potions: new[] { JsonFixtures.BlockPotionJson, JsonFixtures.FirePotionJson },
-            enemies: new[] { JsonFixtures.JawWormJson, JsonFixtures.GremlinNobJson });
+            enemies: new[] { JsonFixtures.JawWormJson, JsonFixtures.HobgoblinJson });
 
         Assert.Equal(2, catalog.Cards.Count);
         Assert.Equal(2, catalog.Relics.Count);
         Assert.Equal(2, catalog.Potions.Count);
         Assert.Equal(2, catalog.Enemies.Count);
         Assert.Equal("ストライク", catalog.Cards["strike"].Name);
-        Assert.Equal("グレムリン・ノブ", catalog.Enemies["gremlin_nob"].Name);
+        Assert.Equal("ホブゴブリン", catalog.Enemies["hobgoblin"].Name);
     }
 
     [Fact]

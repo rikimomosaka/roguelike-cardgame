@@ -229,71 +229,35 @@ public static class JsonFixtures
     {
       "id": "jaw_worm",
       "name": "ジョウ・ワーム",
+      "imageId": "jaw_worm",
       "hpMin": 40,
       "hpMax": 44,
       "act": 1,
       "tier": "Weak",
-      "moveset": ["chomp", "thrash", "bellow"]
+      "initialMoveId": "chomp",
+      "moves": [
+        { "id": "chomp",  "kind": "attack", "damageMin": 11, "damageMax": 11, "hits": 1, "nextMoveId": "thrash" },
+        { "id": "thrash", "kind": "multi",  "damageMin": 7,  "damageMax": 7,  "hits": 1, "nextMoveId": "bellow" },
+        { "id": "bellow", "kind": "buff",   "buff": "strength", "amountMin": 3, "amountMax": 5, "nextMoveId": "chomp" }
+      ]
     }
     """;
 
-    public const string GremlinNobJson = """
+    public const string HobgoblinJson = """
     {
-      "id": "gremlin_nob",
-      "name": "グレムリン・ノブ",
+      "id": "hobgoblin",
+      "name": "ホブゴブリン",
+      "imageId": "hobgoblin",
       "hpMin": 82,
       "hpMax": 86,
       "act": 1,
       "tier": "Elite",
-      "moveset": ["bellow", "rush", "skull_bash"]
-    }
-    """;
-
-    public const string EnemyBadTierJson = """
-    {
-      "id": "bad_enemy",
-      "name": "バッド",
-      "hpMin": 10,
-      "hpMax": 10,
-      "act": 1,
-      "tier": "SuperBoss",
-      "moveset": []
-    }
-    """;
-
-    public const string EnemyInvertedHpJson = """
-    {
-      "id": "inverted_hp",
-      "name": "バッド",
-      "hpMin": 50,
-      "hpMax": 10,
-      "act": 1,
-      "tier": "Weak",
-      "moveset": []
-    }
-    """;
-
-    public const string EnemyOutOfRangeActJson = """
-    {
-      "id": "bad_act",
-      "name": "バッド",
-      "hpMin": 10,
-      "hpMax": 10,
-      "act": 9,
-      "tier": "Weak",
-      "moveset": []
-    }
-    """;
-
-    public const string EnemyNonStringMovesetJson = """
-    {
-      "id": "bad_moveset",
-      "name": "バッド",
-      "hpMin": 10,
-      "hpMax": 10,
-      "act": 1,
-      "tier": "Weak",
-      "moveset": ["chomp", 42, "bellow"]
+      "initialMoveId": "bellow",
+      "moves": [
+        { "id": "bellow", "kind": "buff", "buff": "enrage", "amountMin": 2, "amountMax": 2, "nextMoveId": "rush" },
+        { "id": "rush",   "kind": "attack", "damageMin": 14, "damageMax": 14, "hits": 1, "nextMoveId": "skull_bash" },
+        { "id": "skull_bash", "kind": "attack", "damageMin": 6, "damageMax": 6, "hits": 1, "nextMoveId": "rush" }
+      ]
     }
     """;
 }

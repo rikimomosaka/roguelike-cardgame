@@ -16,16 +16,26 @@ public class EnemyDefinitionTests
     [Fact]
     public void JawWorm_IsAct1Weak()
     {
+        var moves = new[]
+        {
+            new MoveDefinition("chomp", "attack", 11, 11, 1, null, null, null, null, null, "thrash"),
+            new MoveDefinition("thrash", "multi", 7, 7, 1, 5, 5, null, null, null, "bellow"),
+            new MoveDefinition("bellow", "buff", null, null, null, 6, 6, "strength", 3, 5, "chomp"),
+        };
+
         var def = new EnemyDefinition(
             Id: "jaw_worm",
             Name: "ジョウ・ワーム",
+            ImageId: "jaw_worm",
             HpMin: 40,
             HpMax: 44,
             Pool: new EnemyPool(1, EnemyTier.Weak),
-            Moveset: new[] { "chomp", "thrash", "bellow" });
+            InitialMoveId: "chomp",
+            Moves: moves);
 
         Assert.Equal(1, def.Pool.Act);
         Assert.Equal(EnemyTier.Weak, def.Pool.Tier);
-        Assert.Equal(3, def.Moveset.Count);
+        Assert.Equal("chomp", def.InitialMoveId);
+        Assert.Equal(3, def.Moves.Count);
     }
 }
