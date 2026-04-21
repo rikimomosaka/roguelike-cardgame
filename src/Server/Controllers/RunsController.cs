@@ -62,6 +62,8 @@ public sealed class RunsController : ControllerBase
     {
         if (!TryGetAccountId(out var accountId, out var err)) return err!;
         if (body is null) return BadRequest();
+        if (!await _accounts.ExistsAsync(accountId, ct))
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: $"アカウントが見つかりません: {accountId}");
 
         var state = await _saves.TryLoadAsync(accountId, ct);
         if (state is null || state.Progress != RunProgress.InProgress)
