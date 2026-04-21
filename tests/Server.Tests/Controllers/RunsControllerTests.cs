@@ -160,6 +160,26 @@ public class RunsControllerTests : IClassFixture<TempDataFactory>
     }
 
     [Fact]
+    public async Task PostAbandon_ReturnsNotFound_WhenAccountMissing()
+    {
+        _factory.ResetData();
+        var client = _factory.CreateClient();
+        WithAccount(client, "ghost");
+        var res = await client.PostAsJsonAsync("/api/v1/runs/current/abandon", new { elapsedSeconds = 0 });
+        Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostHeartbeat_ReturnsNotFound_WhenAccountMissing()
+    {
+        _factory.ResetData();
+        var client = _factory.CreateClient();
+        WithAccount(client, "ghost");
+        var res = await client.PostAsJsonAsync("/api/v1/runs/current/heartbeat", new { elapsedSeconds = 0 });
+        Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
+    }
+
+    [Fact]
     public async Task PostHeartbeat_AddsPlaySeconds()
     {
         _factory.ResetData();

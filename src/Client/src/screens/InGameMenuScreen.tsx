@@ -28,6 +28,9 @@ export function InGameMenuScreen({ onClose, onExitToMenu, onAbandon, elapsedSeco
     const e = currentElapsed()
     try {
       await heartbeat(accountId, e).catch(() => {})
+      // 送信後は起点をリセット。これを怠ると MapScreen unmount の cleanup heartbeat が
+      // 同区間をもう一度加算してしまう (二重加算防止)。
+      elapsedSecondsRef.current = performance.now()
       onExitToMenu()
     } finally {
       setBusy(false)
@@ -39,6 +42,8 @@ export function InGameMenuScreen({ onClose, onExitToMenu, onAbandon, elapsedSeco
     setBusy(true)
     try {
       await abandonRun(accountId, currentElapsed()).catch(() => {})
+      // 同上 — abandon 後の cleanup heartbeat を 409 で空打ちさせないためリセット。
+      elapsedSecondsRef.current = performance.now()
       onAbandon()
     } finally {
       setBusy(false)
