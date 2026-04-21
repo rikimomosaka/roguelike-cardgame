@@ -12,7 +12,10 @@ public class DataCatalogLookupTests
             cards: new[] { JsonFixtures.StrikeJson, JsonFixtures.DefendJson },
             relics: new[] { JsonFixtures.BurningBloodJson },
             potions: new[] { JsonFixtures.BlockPotionJson },
-            enemies: new[] { JsonFixtures.JawWormJson });
+            enemies: new[] { JsonFixtures.JawWormJson },
+            encounters: System.Array.Empty<string>(),
+            rewardTables: System.Array.Empty<string>(),
+            characters: System.Array.Empty<string>());
 
     [Fact]
     public void TryGetCard_Hit_ReturnsTrueAndDefinition()

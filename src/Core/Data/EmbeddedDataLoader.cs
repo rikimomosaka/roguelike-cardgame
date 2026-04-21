@@ -5,13 +5,15 @@ using System.Reflection;
 
 namespace RoguelikeCardGame.Core.Data;
 
-/// <summary>Core アセンブリに埋め込まれた JSON リソースから DataCatalog を構築する。</summary>
 public static class EmbeddedDataLoader
 {
     private const string CardsPrefix = "RoguelikeCardGame.Core.Data.Cards.";
     private const string RelicsPrefix = "RoguelikeCardGame.Core.Data.Relics.";
     private const string PotionsPrefix = "RoguelikeCardGame.Core.Data.Potions.";
     private const string EnemiesPrefix = "RoguelikeCardGame.Core.Data.Enemies.";
+    private const string EncountersPrefix = "RoguelikeCardGame.Core.Data.Encounters.";
+    private const string RewardTablePrefix = "RoguelikeCardGame.Core.Data.RewardTable.";
+    private const string CharactersPrefix = "RoguelikeCardGame.Core.Data.Characters.";
 
     public static DataCatalog LoadCatalog()
     {
@@ -20,7 +22,10 @@ public static class EmbeddedDataLoader
             cards: ReadAllWithPrefix(asm, CardsPrefix),
             relics: ReadAllWithPrefix(asm, RelicsPrefix),
             potions: ReadAllWithPrefix(asm, PotionsPrefix),
-            enemies: ReadAllWithPrefix(asm, EnemiesPrefix));
+            enemies: ReadAllWithPrefix(asm, EnemiesPrefix),
+            encounters: ReadAllWithPrefix(asm, EncountersPrefix),
+            rewardTables: ReadAllWithPrefix(asm, RewardTablePrefix),
+            characters: ReadAllWithPrefix(asm, CharactersPrefix));
     }
 
     private static IEnumerable<string> ReadAllWithPrefix(Assembly asm, string prefix)

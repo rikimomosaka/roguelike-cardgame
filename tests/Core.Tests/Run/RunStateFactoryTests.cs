@@ -49,7 +49,10 @@ public class RunStateFactoryTests
             cards: Array.Empty<string>(),
             relics: Array.Empty<string>(),
             potions: Array.Empty<string>(),
-            enemies: Array.Empty<string>());
+            enemies: Array.Empty<string>(),
+            encounters: Array.Empty<string>(),
+            rewardTables: Array.Empty<string>(),
+            characters: Array.Empty<string>());
 
         var ex = Assert.Throws<InvalidOperationException>(
             () => RunState.NewSoloRun(

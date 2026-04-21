@@ -13,18 +13,23 @@ public sealed class DataCatalogException : Exception
     public DataCatalogException(string message) : base(message) { }
 }
 
-/// <summary>ゲーム全体のマスターデータ。ラン状態やマップ生成から参照される読み取り専用の辞書束。</summary>
 public sealed record DataCatalog(
     IReadOnlyDictionary<string, CardDefinition> Cards,
     IReadOnlyDictionary<string, RelicDefinition> Relics,
     IReadOnlyDictionary<string, PotionDefinition> Potions,
-    IReadOnlyDictionary<string, EnemyDefinition> Enemies)
+    IReadOnlyDictionary<string, EnemyDefinition> Enemies,
+    IReadOnlyDictionary<string, EncounterDefinition> Encounters,
+    IReadOnlyDictionary<string, RewardTable> RewardTables,
+    IReadOnlyDictionary<string, CharacterDefinition> Characters)
 {
     public static DataCatalog LoadFromStrings(
         IEnumerable<string> cards,
         IEnumerable<string> relics,
         IEnumerable<string> potions,
-        IEnumerable<string> enemies)
+        IEnumerable<string> enemies,
+        IEnumerable<string> encounters,
+        IEnumerable<string> rewardTables,
+        IEnumerable<string> characters)
     {
         var cardMap = new Dictionary<string, CardDefinition>();
         foreach (var json in cards)
@@ -58,11 +63,46 @@ public sealed record DataCatalog(
                 throw new DataCatalogException($"敵 ID が重複: {def.Id}");
         }
 
-        return new DataCatalog(cardMap, relicMap, potionMap, enemyMap);
+        var encMap = new Dictionary<string, EncounterDefinition>();
+        foreach (var json in encounters)
+        {
+            var def = EncounterJsonLoader.Parse(json);
+            if (!encMap.TryAdd(def.Id, def))
+                throw new DataCatalogException($"encounter ID が重複: {def.Id}");
+            foreach (var eid in def.EnemyIds)
+                if (!enemyMap.ContainsKey(eid))
+                    throw new DataCatalogException(
+                        $"encounter \"{def.Id}\" が参照する敵 ID \"{eid}\" が存在しません");
+        }
+
+        var rtMap = new Dictionary<string, RewardTable>();
+        foreach (var json in rewardTables)
+        {
+            var def = RewardTableJsonLoader.Parse(json);
+            if (!rtMap.TryAdd(def.Id, def))
+                throw new DataCatalogException($"reward-table ID が重複: {def.Id}");
+        }
+
+        var chMap = new Dictionary<string, CharacterDefinition>();
+        foreach (var json in characters)
+        {
+            var def = CharacterJsonLoader.Parse(json);
+            if (!chMap.TryAdd(def.Id, def))
+                throw new DataCatalogException($"character ID が重複: {def.Id}");
+            foreach (var cid in def.Deck)
+                if (!cardMap.ContainsKey(cid))
+                    throw new DataCatalogException(
+                        $"character \"{def.Id}\" のデッキが参照するカード ID \"{cid}\" が存在しません");
+        }
+
+        return new DataCatalog(cardMap, relicMap, potionMap, enemyMap, encMap, rtMap, chMap);
     }
 
     public bool TryGetCard(string id, [MaybeNullWhen(false)] out CardDefinition def) => Cards.TryGetValue(id, out def);
     public bool TryGetRelic(string id, [MaybeNullWhen(false)] out RelicDefinition def) => Relics.TryGetValue(id, out def);
     public bool TryGetPotion(string id, [MaybeNullWhen(false)] out PotionDefinition def) => Potions.TryGetValue(id, out def);
     public bool TryGetEnemy(string id, [MaybeNullWhen(false)] out EnemyDefinition def) => Enemies.TryGetValue(id, out def);
+    public bool TryGetEncounter(string id, [MaybeNullWhen(false)] out EncounterDefinition def) => Encounters.TryGetValue(id, out def);
+    public bool TryGetRewardTable(string id, [MaybeNullWhen(false)] out RewardTable def) => RewardTables.TryGetValue(id, out def);
+    public bool TryGetCharacter(string id, [MaybeNullWhen(false)] out CharacterDefinition def) => Characters.TryGetValue(id, out def);
 }

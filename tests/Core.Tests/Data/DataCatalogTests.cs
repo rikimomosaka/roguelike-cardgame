@@ -14,7 +14,10 @@ public class DataCatalogTests
             cards: new[] { JsonFixtures.StrikeJson, JsonFixtures.DefendJson },
             relics: new[] { JsonFixtures.BurningBloodJson, JsonFixtures.LanternJson },
             potions: new[] { JsonFixtures.BlockPotionJson, JsonFixtures.FirePotionJson },
-            enemies: new[] { JsonFixtures.JawWormJson, JsonFixtures.HobgoblinJson });
+            enemies: new[] { JsonFixtures.JawWormJson, JsonFixtures.HobgoblinJson },
+            encounters: System.Array.Empty<string>(),
+            rewardTables: System.Array.Empty<string>(),
+            characters: System.Array.Empty<string>());
 
         Assert.Equal(2, catalog.Cards.Count);
         Assert.Equal(2, catalog.Relics.Count);
@@ -32,7 +35,10 @@ public class DataCatalogTests
                 cards: new[] { JsonFixtures.StrikeJson, JsonFixtures.StrikeJson },
                 relics: System.Array.Empty<string>(),
                 potions: System.Array.Empty<string>(),
-                enemies: System.Array.Empty<string>()));
+                enemies: System.Array.Empty<string>(),
+                encounters: System.Array.Empty<string>(),
+                rewardTables: System.Array.Empty<string>(),
+                characters: System.Array.Empty<string>()));
         Assert.Contains("strike", ex.Message);
     }
 
@@ -43,7 +49,10 @@ public class DataCatalogTests
             cards: System.Array.Empty<string>(),
             relics: System.Array.Empty<string>(),
             potions: System.Array.Empty<string>(),
-            enemies: System.Array.Empty<string>());
+            enemies: System.Array.Empty<string>(),
+            encounters: System.Array.Empty<string>(),
+            rewardTables: System.Array.Empty<string>(),
+            characters: System.Array.Empty<string>());
         Assert.Empty(catalog.Cards);
         Assert.Empty(catalog.Relics);
         Assert.Empty(catalog.Potions);
