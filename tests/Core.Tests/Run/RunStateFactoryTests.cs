@@ -21,21 +21,30 @@ public class RunStateFactoryTests
             rngSeed: 42UL,
             startNodeId: 0,
             unknownResolutions: ImmutableDictionary<int, TileKind>.Empty,
+            encounterQueueWeak: ImmutableArray<string>.Empty,
+            encounterQueueStrong: ImmutableArray<string>.Empty,
+            encounterQueueElite: ImmutableArray<string>.Empty,
+            encounterQueueBoss: ImmutableArray<string>.Empty,
             nowUtc: FixedNow);
 
-        Assert.Equal(2, state.SchemaVersion);
+        Assert.Equal(3, state.SchemaVersion);
         Assert.Equal(1, state.CurrentAct);
         Assert.Equal(0, state.CurrentNodeId);
         Assert.Equal(new[] { 0 }, state.VisitedNodeIds.ToArray());
         Assert.Empty(state.UnknownResolutions);
+        Assert.Equal("default", state.CharacterId);
         Assert.Equal(80, state.CurrentHp);
         Assert.Equal(80, state.MaxHp);
         Assert.Equal(99, state.Gold);
-        Assert.Equal(10, state.Deck.Count);
+        Assert.Equal(10, state.Deck.Length);
         Assert.Equal(5, state.Deck.Count(id => id == "strike"));
         Assert.Equal(5, state.Deck.Count(id => id == "defend"));
+        Assert.Equal(3, state.PotionSlotCount);
+        Assert.Equal(3, state.Potions.Length);
+        Assert.All(state.Potions, p => Assert.Equal("", p));
+        Assert.Null(state.ActiveBattle);
+        Assert.Null(state.ActiveReward);
         Assert.Empty(state.Relics);
-        Assert.Empty(state.Potions);
         Assert.Equal(0L, state.PlaySeconds);
         Assert.Equal(42UL, state.RngSeed);
         Assert.Equal(FixedNow, state.SavedAtUtc);
@@ -60,7 +69,11 @@ public class RunStateFactoryTests
                 rngSeed: 0UL,
                 startNodeId: 0,
                 unknownResolutions: ImmutableDictionary<int, TileKind>.Empty,
+                encounterQueueWeak: ImmutableArray<string>.Empty,
+                encounterQueueStrong: ImmutableArray<string>.Empty,
+                encounterQueueElite: ImmutableArray<string>.Empty,
+                encounterQueueBoss: ImmutableArray<string>.Empty,
                 nowUtc: FixedNow));
-        Assert.Contains("strike", ex.Message);
+        Assert.Contains("default", ex.Message);
     }
 }

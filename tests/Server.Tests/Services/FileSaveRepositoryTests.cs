@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
@@ -36,6 +37,10 @@ public class FileSaveRepositoryTests : IDisposable
             rngSeed: seed,
             startNodeId: 0,
             unknownResolutions: System.Collections.Immutable.ImmutableDictionary<int, RoguelikeCardGame.Core.Map.TileKind>.Empty,
+            encounterQueueWeak: System.Collections.Immutable.ImmutableArray<string>.Empty,
+            encounterQueueStrong: System.Collections.Immutable.ImmutableArray<string>.Empty,
+            encounterQueueElite: System.Collections.Immutable.ImmutableArray<string>.Empty,
+            encounterQueueBoss: System.Collections.Immutable.ImmutableArray<string>.Empty,
             nowUtc: FixedNow);
 
     [Fact]
@@ -56,7 +61,7 @@ public class FileSaveRepositoryTests : IDisposable
         Assert.NotNull(restored);
         Assert.Equal(original.RngSeed, restored!.RngSeed);
         Assert.Equal(original.MaxHp, restored.MaxHp);
-        Assert.Equal(original.Deck, restored.Deck);
+        Assert.Equal(original.Deck.AsEnumerable(), restored.Deck.AsEnumerable());
     }
 
     [Fact]

@@ -17,6 +17,10 @@ public class RunStateValidateTests
             rngSeed: 1UL,
             startNodeId: 0,
             unknownResolutions: ImmutableDictionary<int, TileKind>.Empty,
+            encounterQueueWeak: ImmutableArray<string>.Empty,
+            encounterQueueStrong: ImmutableArray<string>.Empty,
+            encounterQueueElite: ImmutableArray<string>.Empty,
+            encounterQueueBoss: ImmutableArray<string>.Empty,
             nowUtc: FixedNow);
 
     [Fact]

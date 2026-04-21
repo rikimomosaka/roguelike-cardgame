@@ -21,6 +21,10 @@ public class RunActionsTests
             rngSeed: 58UL,
             startNodeId: map.StartNodeId,
             unknownResolutions: ImmutableDictionary<int, TileKind>.Empty,
+            encounterQueueWeak: ImmutableArray<string>.Empty,
+            encounterQueueStrong: ImmutableArray<string>.Empty,
+            encounterQueueElite: ImmutableArray<string>.Empty,
+            encounterQueueBoss: ImmutableArray<string>.Empty,
             nowUtc: new DateTimeOffset(2026, 4, 21, 0, 0, 0, TimeSpan.Zero));
         return (map, state);
     }

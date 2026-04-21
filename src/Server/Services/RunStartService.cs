@@ -1,7 +1,9 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using RoguelikeCardGame.Core.Battle;
 using RoguelikeCardGame.Core.Data;
+using RoguelikeCardGame.Core.Enemy;
 using RoguelikeCardGame.Core.Map;
 using RoguelikeCardGame.Core.Random;
 using RoguelikeCardGame.Core.Run;
@@ -59,11 +61,26 @@ public sealed class RunStartService
         var resolutions = UnknownResolver.ResolveAll(
             map, _mapConfig.UnknownResolutionWeights, new SystemRng(unchecked(seed + 1)));
         var catalog = EmbeddedDataLoader.LoadCatalog();
+
+        // seed+1 は UnknownResolver が使用。Encounter 用に seed+2..+5 を割り当てる。
+        var queueWeak = EncounterQueue.Initialize(
+            new EnemyPool(Act: 1, Tier: EnemyTier.Weak), catalog, new SystemRng(unchecked(seed + 2)));
+        var queueStrong = EncounterQueue.Initialize(
+            new EnemyPool(Act: 1, Tier: EnemyTier.Strong), catalog, new SystemRng(unchecked(seed + 3)));
+        var queueElite = EncounterQueue.Initialize(
+            new EnemyPool(Act: 1, Tier: EnemyTier.Elite), catalog, new SystemRng(unchecked(seed + 4)));
+        var queueBoss = EncounterQueue.Initialize(
+            new EnemyPool(Act: 1, Tier: EnemyTier.Boss), catalog, new SystemRng(unchecked(seed + 5)));
+
         var state = RunState.NewSoloRun(
             catalog,
             rngSeed: unchecked((ulong)(uint)seed),
             startNodeId: map.StartNodeId,
             unknownResolutions: resolutions,
+            encounterQueueWeak: queueWeak,
+            encounterQueueStrong: queueStrong,
+            encounterQueueElite: queueElite,
+            encounterQueueBoss: queueBoss,
             nowUtc: _now());
         await _saves.SaveAsync(accountId, state, ct);
         return (state, map);
