@@ -340,4 +340,30 @@ public class DungeonMapGeneratorTests
         Dfs(map.StartNodeId);
         return results;
     }
+
+    [Fact]
+    public void Generate_SameSeedAndConfig_ProducesIdenticalMap()
+    {
+        var cfg = BaseConfig();
+        var a = new DungeonMapGenerator().Generate(new SystemRng(12345), cfg);
+        var b = new DungeonMapGenerator().Generate(new SystemRng(12345), cfg);
+        Assert.Equal(a.Nodes.Length, b.Nodes.Length);
+        for (int i = 0; i < a.Nodes.Length; i++)
+            Assert.Equal(a.Nodes[i], b.Nodes[i]);
+        Assert.Equal(a.StartNodeId, b.StartNodeId);
+        Assert.Equal(a.BossNodeId, b.BossNodeId);
+    }
+
+    [Fact]
+    public void Generate_DifferentSeeds_ProduceDifferentMaps()
+    {
+        var cfg = BaseConfig();
+        var a = new DungeonMapGenerator().Generate(new SystemRng(1), cfg);
+        var b = new DungeonMapGenerator().Generate(new SystemRng(2), cfg);
+        bool anyDiff =
+            a.Nodes.Length != b.Nodes.Length ||
+            !a.Nodes.Select(n => (n.Row, n.Column, n.Kind)).SequenceEqual(
+                 b.Nodes.Select(n => (n.Row, n.Column, n.Kind)));
+        Assert.True(anyDiff, "Different seeds produced identical map (extremely unlikely)");
+    }
 }
