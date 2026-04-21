@@ -30,26 +30,34 @@ public class AudioSettingsTests
     }
 
     [Theory]
-    [InlineData(-1, 0, 0, 0)]
-    [InlineData(101, 0, 0, 0)]
-    [InlineData(0, -1, 0, 0)]
-    [InlineData(0, 101, 0, 0)]
-    [InlineData(0, 0, -1, 0)]
-    [InlineData(0, 0, 101, 0)]
-    [InlineData(0, 0, 0, -1)]
-    [InlineData(0, 0, 0, 101)]
-    public void Create_WithOutOfRange_Throws(int master, int bgm, int se, int ambient)
+    [InlineData(-1, 0, 0, 0, "master")]
+    [InlineData(101, 0, 0, 0, "master")]
+    [InlineData(0, -1, 0, 0, "bgm")]
+    [InlineData(0, 101, 0, 0, "bgm")]
+    [InlineData(0, 0, -1, 0, "se")]
+    [InlineData(0, 0, 101, 0, "se")]
+    [InlineData(0, 0, 0, -1, "ambient")]
+    [InlineData(0, 0, 0, 101, "ambient")]
+    public void Create_WithOutOfRange_Throws(int master, int bgm, int se, int ambient, string expectedParamName)
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
+        var ex = Assert.Throws<ArgumentOutOfRangeException>(() =>
             AudioSettings.Create(master, bgm, se, ambient));
+        Assert.Equal(expectedParamName, ex.ParamName);
     }
 
     [Fact]
     public void Create_AtBoundaries_Succeeds()
     {
         var lo = AudioSettings.Create(0, 0, 0, 0);
-        var hi = AudioSettings.Create(100, 100, 100, 100);
         Assert.Equal(0, lo.Master);
+        Assert.Equal(0, lo.Bgm);
+        Assert.Equal(0, lo.Se);
+        Assert.Equal(0, lo.Ambient);
+
+        var hi = AudioSettings.Create(100, 100, 100, 100);
+        Assert.Equal(100, hi.Master);
+        Assert.Equal(100, hi.Bgm);
+        Assert.Equal(100, hi.Se);
         Assert.Equal(100, hi.Ambient);
     }
 }
