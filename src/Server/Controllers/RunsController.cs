@@ -1,10 +1,13 @@
 using System;
+using System.Collections.Immutable;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using RoguelikeCardGame.Core.Battle;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Map;
 using RoguelikeCardGame.Core.Random;
+using RoguelikeCardGame.Core.Rewards;
 using RoguelikeCardGame.Core.Run;
 using RoguelikeCardGame.Server.Abstractions;
 using RoguelikeCardGame.Server.Dtos;
@@ -101,6 +104,39 @@ public sealed class RunsController : ControllerBase
             SavedAtUtc = DateTimeOffset.UtcNow,
         };
         await _saves.SaveAsync(accountId, advanced, ct);
+        return NoContent();
+    }
+
+    [HttpPost("current/battle/win")]
+    public async Task<IActionResult> PostBattleWin([FromBody] BattleWinRequestDto body, CancellationToken ct)
+    {
+        if (!TryGetAccountId(out var accountId, out var err)) return err!;
+        if (!await _accounts.ExistsAsync(accountId, ct))
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: $"アカウントが見つかりません: {accountId}");
+
+        var s = await _saves.TryLoadAsync(accountId, ct);
+        if (s is null || s.Progress != RunProgress.InProgress || s.ActiveBattle is null)
+            return Problem(statusCode: StatusCodes.Status409Conflict, title: "進行中の戦闘がありません。");
+
+        var afterWin = BattlePlaceholder.Win(s);
+        var pool = _data.Encounters[afterWin.ActiveBattle!.EncounterId].Pool;
+        var rewardRng = new SystemRng(unchecked((int)s.RngSeed ^ (int)s.PlaySeconds ^ 0x5EED));
+        var (reward, newRng) = RewardGenerator.Generate(
+            new RewardContext.FromEnemy(pool),
+            afterWin.RewardRngState,
+            ImmutableArray.Create("strike", "defend"),
+            _data.RewardTables["act1"], _data, rewardRng);
+
+        long elapsed = body is null ? 0 : Math.Clamp(body.ElapsedSeconds, 0, MaxElapsedSecondsPerRequest);
+        var updated = afterWin with
+        {
+            ActiveBattle = null,
+            ActiveReward = reward,
+            RewardRngState = newRng,
+            PlaySeconds = afterWin.PlaySeconds + elapsed,
+            SavedAtUtc = DateTimeOffset.UtcNow,
+        };
+        await _saves.SaveAsync(accountId, updated, ct);
         return NoContent();
     }
 
