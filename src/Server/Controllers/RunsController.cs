@@ -227,6 +227,28 @@ public sealed class RunsController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("current/potion/discard")]
+    public async Task<IActionResult> PostPotionDiscard([FromBody] PotionDiscardRequestDto body, CancellationToken ct)
+    {
+        if (!TryGetAccountId(out var accountId, out var err)) return err!;
+        if (body is null) return BadRequest();
+        if (!await _accounts.ExistsAsync(accountId, ct))
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: $"アカウントが見つかりません: {accountId}");
+
+        var s = await _saves.TryLoadAsync(accountId, ct);
+        if (s is null || s.Progress != RunProgress.InProgress)
+            return Problem(statusCode: StatusCodes.Status409Conflict, title: "進行中のランがありません。");
+
+        RunState updated;
+        try { updated = RewardApplier.DiscardPotion(s, body.SlotIndex); }
+        catch (ArgumentException ex)
+        { return Problem(statusCode: StatusCodes.Status400BadRequest, title: ex.Message); }
+
+        updated = updated with { SavedAtUtc = DateTimeOffset.UtcNow };
+        await _saves.SaveAsync(accountId, updated, ct);
+        return NoContent();
+    }
+
     [HttpPost("current/abandon")]
     public async Task<IActionResult> PostAbandon([FromBody] HeartbeatRequestDto body, CancellationToken ct)
     {
