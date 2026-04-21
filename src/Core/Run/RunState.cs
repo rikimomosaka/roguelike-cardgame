@@ -2,9 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using RoguelikeCardGame.Core.Battle;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Map;
-using RoguelikeCardGame.Core.Player;
+using RoguelikeCardGame.Core.Rewards;
 
 namespace RoguelikeCardGame.Core.Run;
 
@@ -15,41 +16,62 @@ public sealed record RunState(
     int CurrentNodeId,
     ImmutableArray<int> VisitedNodeIds,
     ImmutableDictionary<int, TileKind> UnknownResolutions,
+
+    // --- Phase 5 additions ---
+    string CharacterId,
     int CurrentHp,
     int MaxHp,
     int Gold,
-    IReadOnlyList<string> Deck,
+    ImmutableArray<string> Deck,
+    ImmutableArray<string> Potions,
+    int PotionSlotCount,
+    BattleState? ActiveBattle,
+    RewardState? ActiveReward,
+    ImmutableArray<string> EncounterQueueWeak,
+    ImmutableArray<string> EncounterQueueStrong,
+    ImmutableArray<string> EncounterQueueElite,
+    ImmutableArray<string> EncounterQueueBoss,
+    RewardRngState RewardRngState,
+
+    // --- existing ---
     IReadOnlyList<string> Relics,
-    IReadOnlyList<string> Potions,
     long PlaySeconds,
     ulong RngSeed,
     DateTimeOffset SavedAtUtc,
     RunProgress Progress)
 {
-    /// <summary>Phase 4 の JSON スキーマバージョン。</summary>
-    public const int CurrentSchemaVersion = 2;
-
-    public const int StartingMaxHp = 80;
-    public const int StartingGold = 99;
+    /// <summary>Phase 5 の JSON スキーマバージョン。</summary>
+    public const int CurrentSchemaVersion = 3;
 
     public static RunState NewSoloRun(
         DataCatalog catalog,
         ulong rngSeed,
         int startNodeId,
         ImmutableDictionary<int, TileKind> unknownResolutions,
-        DateTimeOffset nowUtc)
+        ImmutableArray<string> encounterQueueWeak,
+        ImmutableArray<string> encounterQueueStrong,
+        ImmutableArray<string> encounterQueueElite,
+        ImmutableArray<string> encounterQueueBoss,
+        DateTimeOffset nowUtc,
+        string characterId = "default")
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(unknownResolutions);
 
-        foreach (var id in StarterDeck.DefaultCardIds)
-        {
+        if (!catalog.TryGetCharacter(characterId, out var ch))
+            throw new InvalidOperationException($"Character \"{characterId}\" が DataCatalog に存在しません");
+
+        foreach (var id in ch.Deck)
             if (!catalog.TryGetCard(id, out _))
                 throw new InvalidOperationException(
-                    $"StarterDeck が参照するカード ID が DataCatalog に存在しません: {id}");
-        }
+                    $"Character \"{characterId}\" のデッキが参照するカード ID \"{id}\" が存在しません");
 
-        var deck = StarterDeck.DefaultCardIds.ToArray();
+        var potionBuilder = ImmutableArray.CreateBuilder<string>(ch.PotionSlotCount);
+        for (int i = 0; i < ch.PotionSlotCount; i++) potionBuilder.Add("");
+        var potions = potionBuilder.ToImmutable();
+
+        if (!catalog.RewardTables.TryGetValue("act1", out var rt))
+            throw new InvalidOperationException("RewardTable \"act1\" が DataCatalog に存在しません");
 
         return new RunState(
             SchemaVersion: CurrentSchemaVersion,
@@ -57,12 +79,22 @@ public sealed record RunState(
             CurrentNodeId: startNodeId,
             VisitedNodeIds: ImmutableArray.Create(startNodeId),
             UnknownResolutions: unknownResolutions,
-            CurrentHp: StartingMaxHp,
-            MaxHp: StartingMaxHp,
-            Gold: StartingGold,
-            Deck: deck,
+            CharacterId: characterId,
+            CurrentHp: ch.MaxHp,
+            MaxHp: ch.MaxHp,
+            Gold: ch.StartingGold,
+            Deck: ImmutableArray.CreateRange(ch.Deck),
+            Potions: potions,
+            PotionSlotCount: ch.PotionSlotCount,
+            ActiveBattle: null,
+            ActiveReward: null,
+            EncounterQueueWeak: encounterQueueWeak,
+            EncounterQueueStrong: encounterQueueStrong,
+            EncounterQueueElite: encounterQueueElite,
+            EncounterQueueBoss: encounterQueueBoss,
+            RewardRngState: new RewardRngState(
+                rt.PotionDynamic.InitialPercent, rt.EpicChance.InitialBonus),
             Relics: Array.Empty<string>(),
-            Potions: Array.Empty<string>(),
             PlaySeconds: 0L,
             RngSeed: rngSeed,
             SavedAtUtc: nowUtc,
@@ -86,6 +118,12 @@ public sealed record RunState(
             if (kv.Value is TileKind.Unknown or TileKind.Start or TileKind.Boss)
                 return $"UnknownResolutions[{kv.Key}]={kv.Value} is not a valid resolved kind";
         }
+        if (Potions.Length != PotionSlotCount)
+            return $"Potions.Length ({Potions.Length}) != PotionSlotCount ({PotionSlotCount})";
+        if (ActiveBattle is not null && ActiveReward is not null)
+            return "ActiveBattle and ActiveReward must not both be non-null";
+        if (ActiveReward is { CardChoices: var cc } && cc.Length != 0 && cc.Length != 3)
+            return $"CardChoices must have length 0 or 3 (got {cc.Length})";
         return null;
     }
 }
