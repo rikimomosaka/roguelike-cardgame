@@ -52,7 +52,10 @@ public class DungeonMapGeneratorTests
             }.ToImmutableDictionary(),
             MinEliteRow: 6,
             ForbiddenConsecutive: ImmutableArray.Create(new TileKindPair(TileKind.Rest, TileKind.Rest))),
-        MaxRegenerationAttempts: 100);
+        MaxRegenerationAttempts: 100,
+            UnknownResolutionWeights: new UnknownResolutionConfig(
+                System.Collections.Immutable.ImmutableDictionary<TileKind, double>.Empty
+                    .Add(TileKind.Enemy, 1)));
 
     [Fact]
     public void Generate_HasStartAtRow0Column2()

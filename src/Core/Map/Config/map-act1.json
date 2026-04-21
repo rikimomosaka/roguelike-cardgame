@@ -36,5 +36,11 @@
       { "first": "Rest", "second": "Rest" }
     ]
   },
-  "maxRegenerationAttempts": 500
+  "maxRegenerationAttempts": 500,
+  "unknownResolutionWeights": {
+    "Enemy": 48,
+    "Merchant": 24,
+    "Rest": 24,
+    "Treasure": 4
+  }
 }

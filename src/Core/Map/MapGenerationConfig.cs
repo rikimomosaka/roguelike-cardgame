@@ -16,7 +16,8 @@ public sealed record MapGenerationConfig(
     ImmutableArray<FixedRowRule> FixedRows,
     ImmutableArray<RowKindExclusion> RowKindExclusions,
     PathConstraintRule PathConstraints,
-    int MaxRegenerationAttempts)
+    int MaxRegenerationAttempts,
+    UnknownResolutionConfig UnknownResolutionWeights)
 {
     /// <summary>
     /// 構造的な不変条件を検査する。違反があれば人間可読な理由文字列、問題なければ null を返す。
@@ -69,6 +70,9 @@ public sealed record MapGenerationConfig(
             if (kv.Value.Max < kv.Value.Min)
                 return $"PathConstraints.PerPathCount[{kv.Key}].Max ({kv.Value.Max}) must be >= Min ({kv.Value.Min})";
         }
+        var unknownInvalid = UnknownResolutionWeights.Validate();
+        if (unknownInvalid is not null) return unknownInvalid;
+
         return null;
     }
 }

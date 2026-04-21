@@ -70,7 +70,8 @@ public static class MapGenerationConfigLoader
         FixedRowDto[] FixedRows,
         ExclusionDto[] RowKindExclusions,
         PathDto PathConstraints,
-        int MaxRegenerationAttempts)
+        int MaxRegenerationAttempts,
+        System.Collections.Generic.Dictionary<TileKind, double>? UnknownResolutionWeights)
     {
         public MapGenerationConfig ToConfig() => new(
             RowCount,
@@ -92,7 +93,9 @@ public static class MapGenerationConfigLoader
                 ForbiddenConsecutive: PathConstraints.ForbiddenConsecutive
                     .Select(p => new TileKindPair(p.First, p.Second))
                     .ToImmutableArray()),
-            MaxRegenerationAttempts);
+            MaxRegenerationAttempts,
+            new UnknownResolutionConfig(
+                UnknownResolutionWeights?.ToImmutableDictionary() ?? ImmutableDictionary<TileKind, double>.Empty));
     }
 
     private sealed record EdgeDto(double Weight1, double Weight2, double Weight3);
