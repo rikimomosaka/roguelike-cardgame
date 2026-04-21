@@ -1,0 +1,14 @@
+{
+  "id": "slime_spike_s",
+  "name": "スパイク・スライム",
+  "imageId": "slime_spike_s",
+  "hpMin": 10,
+  "hpMax": 14,
+  "act": 1,
+  "tier": "Weak",
+  "initialMoveId": "flame_tackle",
+  "moves": [
+    { "id": "flame_tackle", "kind": "attack", "damageMin": 5, "damageMax": 5, "hits": 1, "nextMoveId": "harden" },
+    { "id": "harden",       "kind": "block",  "blockMin": 4, "blockMax": 4, "nextMoveId": "flame_tackle" }
+  ]
+}

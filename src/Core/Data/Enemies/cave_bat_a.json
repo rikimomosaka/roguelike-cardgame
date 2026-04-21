@@ -1,0 +1,14 @@
+{
+  "id": "cave_bat_a",
+  "name": "ケーブ・バット A",
+  "imageId": "cave_bat_a",
+  "hpMin": 10,
+  "hpMax": 14,
+  "act": 1,
+  "tier": "Weak",
+  "initialMoveId": "bite",
+  "moves": [
+    { "id": "bite",  "kind": "attack", "damageMin": 5, "damageMax": 5, "hits": 1, "nextMoveId": "screech" },
+    { "id": "screech", "kind": "debuff", "buff": "weak", "amountMin": 1, "amountMax": 1, "nextMoveId": "bite" }
+  ]
+}

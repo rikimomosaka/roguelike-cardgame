@@ -1,0 +1,14 @@
+{
+  "id": "cave_bat_b",
+  "name": "ケーブ・バット B",
+  "imageId": "cave_bat_b",
+  "hpMin": 12,
+  "hpMax": 16,
+  "act": 1,
+  "tier": "Weak",
+  "initialMoveId": "dive",
+  "moves": [
+    { "id": "dive",    "kind": "attack", "damageMin": 6, "damageMax": 6, "hits": 1, "nextMoveId": "flutter" },
+    { "id": "flutter", "kind": "block",  "blockMin": 3, "blockMax": 3, "nextMoveId": "dive" }
+  ]
+}

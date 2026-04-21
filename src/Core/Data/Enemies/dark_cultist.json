@@ -1,0 +1,14 @@
+{
+  "id": "dark_cultist",
+  "name": "ダーク・カルティスト",
+  "imageId": "cultist_dark",
+  "hpMin": 14,
+  "hpMax": 18,
+  "act": 1,
+  "tier": "Weak",
+  "initialMoveId": "incantation",
+  "moves": [
+    { "id": "incantation", "kind": "buff",   "buff": "ritual", "amountMin": 3, "amountMax": 3, "nextMoveId": "dark_strike" },
+    { "id": "dark_strike", "kind": "attack", "damageMin": 6, "damageMax": 6, "hits": 1, "nextMoveId": "incantation" }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "big_slime",
+  "name": "ビッグ・スライム",
+  "imageId": "slime_big",
+  "hpMin": 44,
+  "hpMax": 48,
+  "act": 1,
+  "tier": "Strong",
+  "initialMoveId": "body_slam",
+  "moves": [
+    { "id": "body_slam", "kind": "attack", "damageMin": 12, "damageMax": 12, "hits": 1, "nextMoveId": "bounce" },
+    { "id": "bounce",    "kind": "multi",  "damageMin": 5, "damageMax": 5, "hits": 1, "blockMin": 5, "blockMax": 5, "nextMoveId": "body_slam" }
+  ]
+}

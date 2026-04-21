@@ -1,0 +1,15 @@
+{
+  "id": "slime_king",
+  "name": "キング・スライム",
+  "imageId": "slime_king",
+  "hpMin": 140,
+  "hpMax": 140,
+  "act": 1,
+  "tier": "Boss",
+  "initialMoveId": "roar",
+  "moves": [
+    { "id": "roar",  "kind": "buff", "buff": "enrage", "amountMin": 5, "amountMax": 5, "nextMoveId": "slam" },
+    { "id": "slam",  "kind": "attack", "damageMin": 35, "damageMax": 35, "hits": 1, "nextMoveId": "split" },
+    { "id": "split", "kind": "buff", "buff": "split", "amountMin": 1, "amountMax": 1, "nextMoveId": "slam" }
+  ]
+}

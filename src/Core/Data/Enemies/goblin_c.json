@@ -1,0 +1,14 @@
+{
+  "id": "goblin_c",
+  "name": "ゴブリン C",
+  "imageId": "goblin_c",
+  "hpMin": 34,
+  "hpMax": 38,
+  "act": 1,
+  "tier": "Strong",
+  "initialMoveId": "throw_knife",
+  "moves": [
+    { "id": "throw_knife", "kind": "attack", "damageMin": 4, "damageMax": 4, "hits": 2, "nextMoveId": "rally" },
+    { "id": "rally",       "kind": "buff",   "buff": "strength", "amountMin": 1, "amountMax": 1, "nextMoveId": "throw_knife" }
+  ]
+}

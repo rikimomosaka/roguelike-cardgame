@@ -1,0 +1,15 @@
+{
+  "id": "dire_wolf",
+  "name": "ダイア・ウルフ",
+  "imageId": "wolf_dire",
+  "hpMin": 38,
+  "hpMax": 42,
+  "act": 1,
+  "tier": "Strong",
+  "initialMoveId": "howl",
+  "moves": [
+    { "id": "howl", "kind": "buff", "buff": "strength", "amountMin": 2, "amountMax": 2, "nextMoveId": "pounce" },
+    { "id": "pounce", "kind": "attack", "damageMin": 11, "damageMax": 11, "hits": 1, "nextMoveId": "snarl" },
+    { "id": "snarl", "kind": "debuff", "buff": "weak", "amountMin": 1, "amountMax": 1, "nextMoveId": "pounce" }
+  ]
+}

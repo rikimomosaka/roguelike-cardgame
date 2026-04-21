@@ -1,0 +1,14 @@
+{
+  "id": "iron_golem_a",
+  "name": "アイアン・ゴーレム A",
+  "imageId": "iron_golem_a",
+  "hpMin": 60,
+  "hpMax": 64,
+  "act": 1,
+  "tier": "Elite",
+  "initialMoveId": "iron_fist",
+  "moves": [
+    { "id": "iron_fist", "kind": "attack", "damageMin": 12, "damageMax": 12, "hits": 1, "nextMoveId": "plating" },
+    { "id": "plating",   "kind": "block",  "blockMin": 12, "blockMax": 12, "nextMoveId": "iron_fist" }
+  ]
+}

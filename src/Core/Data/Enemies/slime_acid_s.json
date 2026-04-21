@@ -1,0 +1,14 @@
+{
+  "id": "slime_acid_s",
+  "name": "アシッド・スライム",
+  "imageId": "slime_green_s",
+  "hpMin": 8,
+  "hpMax": 12,
+  "act": 1,
+  "tier": "Weak",
+  "initialMoveId": "tackle",
+  "moves": [
+    { "id": "tackle", "kind": "attack", "damageMin": 3, "damageMax": 3, "hits": 1, "nextMoveId": "lick" },
+    { "id": "lick",   "kind": "debuff", "buff": "weak", "amountMin": 1, "amountMax": 1, "nextMoveId": "tackle" }
+  ]
+}

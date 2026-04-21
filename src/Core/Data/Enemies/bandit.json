@@ -1,0 +1,15 @@
+{
+  "id": "bandit",
+  "name": "バンディット",
+  "imageId": "bandit",
+  "hpMin": 40,
+  "hpMax": 44,
+  "act": 1,
+  "tier": "Strong",
+  "initialMoveId": "mug",
+  "moves": [
+    { "id": "mug",      "kind": "attack", "damageMin": 9, "damageMax": 9, "hits": 1, "nextMoveId": "dodge" },
+    { "id": "dodge",    "kind": "block",  "blockMin": 7, "blockMax": 7, "nextMoveId": "backstab" },
+    { "id": "backstab", "kind": "attack", "damageMin": 12, "damageMax": 12, "hits": 1, "nextMoveId": "mug" }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "sleeping_dragon",
+  "name": "眠れる竜",
+  "imageId": "dragon_sleep",
+  "hpMin": 68,
+  "hpMax": 72,
+  "act": 1,
+  "tier": "Elite",
+  "initialMoveId": "wake",
+  "moves": [
+    { "id": "wake", "kind": "buff", "buff": "strength", "amountMin": 3, "amountMax": 3, "nextMoveId": "fire_breath" },
+    { "id": "fire_breath", "kind": "attack", "damageMin": 18, "damageMax": 18, "hits": 1, "nextMoveId": "tail_swipe" },
+    { "id": "tail_swipe", "kind": "attack", "damageMin": 8, "damageMax": 8, "hits": 2, "nextMoveId": "fire_breath" }
+  ]
+}

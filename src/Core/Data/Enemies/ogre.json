@@ -1,0 +1,15 @@
+{
+  "id": "ogre",
+  "name": "オーガ",
+  "imageId": "ogre",
+  "hpMin": 46,
+  "hpMax": 50,
+  "act": 1,
+  "tier": "Strong",
+  "initialMoveId": "club_smash",
+  "moves": [
+    { "id": "club_smash", "kind": "attack", "damageMin": 14, "damageMax": 14, "hits": 1, "nextMoveId": "stomp" },
+    { "id": "stomp",      "kind": "multi",  "damageMin": 6, "damageMax": 6, "hits": 1, "blockMin": 6, "blockMax": 6, "nextMoveId": "roar" },
+    { "id": "roar",       "kind": "buff",   "buff": "strength", "amountMin": 2, "amountMax": 2, "nextMoveId": "club_smash" }
+  ]
+}

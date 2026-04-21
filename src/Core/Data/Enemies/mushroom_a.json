@@ -1,0 +1,14 @@
+{
+  "id": "mushroom_a",
+  "name": "マッシュルーム A",
+  "imageId": "mushroom_a",
+  "hpMin": 30,
+  "hpMax": 34,
+  "act": 1,
+  "tier": "Strong",
+  "initialMoveId": "spore_cloud",
+  "moves": [
+    { "id": "spore_cloud", "kind": "debuff", "buff": "vulnerable", "amountMin": 2, "amountMax": 2, "nextMoveId": "bite" },
+    { "id": "bite",        "kind": "attack", "damageMin": 7, "damageMax": 7, "hits": 1, "nextMoveId": "spore_cloud" }
+  ]
+}

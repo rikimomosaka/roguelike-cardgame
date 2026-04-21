@@ -1,0 +1,15 @@
+{
+  "id": "red_orc",
+  "name": "レッド・オーク",
+  "imageId": "orc_red",
+  "hpMin": 40,
+  "hpMax": 44,
+  "act": 1,
+  "tier": "Strong",
+  "initialMoveId": "smash",
+  "moves": [
+    { "id": "smash", "kind": "attack", "damageMin": 10, "damageMax": 10, "hits": 1, "nextMoveId": "guard" },
+    { "id": "guard", "kind": "block",  "blockMin": 8, "blockMax": 8, "nextMoveId": "rage" },
+    { "id": "rage",  "kind": "buff",   "buff": "strength", "amountMin": 2, "amountMax": 2, "nextMoveId": "smash" }
+  ]
+}
