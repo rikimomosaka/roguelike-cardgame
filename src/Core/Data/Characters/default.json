@@ -1,0 +1,11 @@
+{
+  "id": "default",
+  "name": "見習い冒険者",
+  "maxHp": 80,
+  "startingGold": 99,
+  "potionSlotCount": 3,
+  "deck": [
+    "strike","strike","strike","strike","strike",
+    "defend","defend","defend","defend","defend"
+  ]
+}
