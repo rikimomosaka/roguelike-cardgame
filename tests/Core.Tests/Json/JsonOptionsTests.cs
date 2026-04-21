@@ -31,4 +31,10 @@ public class JsonOptionsTests
     {
         Assert.Contains(JsonOptions.Default.Converters, c => c is JsonStringEnumConverter);
     }
+
+    [Fact]
+    public void Default_IsReadOnly()
+    {
+        Assert.True(JsonOptions.Default.IsReadOnly);
+    }
 }

@@ -24,6 +24,7 @@ public static class JsonOptions
             UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
         };
         o.Converters.Add(new JsonStringEnumConverter());
+        o.MakeReadOnly(populateMissingResolver: true);
         return o;
     }
 }
