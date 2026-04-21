@@ -69,4 +69,15 @@ public class IRngTests
         var rng = new FakeRng(new[] { 42 }, Array.Empty<double>());
         Assert.Throws<InvalidOperationException>(() => rng.NextInt(0, 10));
     }
+
+    [Fact]
+    public void FakeRng_IntOutOfRange_DoesNotAdvanceCursor()
+    {
+        var rng = new FakeRng(new[] { 42, 7 }, Array.Empty<double>());
+        Assert.Throws<InvalidOperationException>(() => rng.NextInt(0, 10));
+        // After the out-of-range throw, cursor should NOT have advanced.
+        // The next legitimate call (with a range that accepts 42) should still return 42.
+        Assert.Equal(42, rng.NextInt(0, 100));
+        Assert.Equal(7, rng.NextInt(0, 100));
+    }
 }

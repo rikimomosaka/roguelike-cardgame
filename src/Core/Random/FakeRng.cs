@@ -20,10 +20,11 @@ public sealed class FakeRng : IRng
     {
         if (_intIndex >= _ints.Length)
             throw new InvalidOperationException("FakeRng int sequence exhausted.");
-        var v = _ints[_intIndex++];
+        var v = _ints[_intIndex];
         if (v < minInclusive || v >= maxExclusive)
             throw new InvalidOperationException(
                 $"FakeRng value {v} out of range [{minInclusive}, {maxExclusive}).");
+        _intIndex++;
         return v;
     }
 
