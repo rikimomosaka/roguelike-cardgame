@@ -23,22 +23,52 @@ export type TileKind =
 
 export type RunProgress = 'InProgress' | 'Cleared' | 'GameOver' | 'Abandoned'
 
+export type BattleOutcome = 'Pending' | 'Victory'
+export type CardRewardStatus = 'Pending' | 'Claimed' | 'Skipped'
+
+export type EnemyInstanceDto = {
+  enemyDefinitionId: string
+  name: string
+  imageId: string
+  currentHp: number
+  maxHp: number
+  currentMoveId: string
+}
+
+export type BattleStateDto = {
+  encounterId: string
+  enemies: EnemyInstanceDto[]
+  outcome: BattleOutcome
+}
+
+export type RewardStateDto = {
+  gold: number
+  goldClaimed: boolean
+  potionId: string | null
+  potionClaimed: boolean
+  cardChoices: string[]
+  cardStatus: CardRewardStatus
+}
+
 export type RunStateDto = {
   schemaVersion: number
   currentAct: number
   currentNodeId: number
   visitedNodeIds: number[]
   unknownResolutions: Record<number, TileKind>
+  characterId: string
   currentHp: number
   maxHp: number
   gold: number
   deck: string[]
-  relics: string[]
   potions: string[]
+  potionSlotCount: number
+  activeBattle: BattleStateDto | null
+  activeReward: RewardStateDto | null
+  relics: string[]
   playSeconds: number
-  rngSeed: number
-  savedAtUtc: string
   progress: RunProgress
+  savedAtUtc: string
 }
 
 export type MapNodeDto = {

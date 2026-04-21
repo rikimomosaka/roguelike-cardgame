@@ -7,14 +7,18 @@ import { MapScreen } from './MapScreen'
 function sampleSnapshot(): RunSnapshotDto {
   return {
     run: {
-      schemaVersion: 2,
+      schemaVersion: 3,
       currentAct: 1,
       currentNodeId: 0,
       visitedNodeIds: [0],
       unknownResolutions: {},
+      characterId: 'ironclad',
       currentHp: 80, maxHp: 80, gold: 99,
       deck: [], relics: [], potions: [],
-      playSeconds: 0, rngSeed: 42,
+      potionSlotCount: 3,
+      activeBattle: null,
+      activeReward: null,
+      playSeconds: 0,
       savedAtUtc: '2026-04-21T00:00:00Z',
       progress: 'InProgress',
     },
