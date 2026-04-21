@@ -1,0 +1,1 @@
+{ "id": "enc_e_golems", "act": 1, "tier": "Elite", "enemyIds": ["iron_golem_a", "iron_golem_b", "iron_golem_c"] }
