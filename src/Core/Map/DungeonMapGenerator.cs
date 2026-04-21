@@ -47,7 +47,8 @@ public sealed class DungeonMapGenerator : IDungeonMapGenerator
         }
         raw.Add((config.RowCount + 1, config.ColumnCount / 2)); // Boss
 
-        // Id は Row 昇順 → 同一 Row 内は Column 昇順（raw は既にその順）
+        // Id は Row 昇順 → 同一 Row 内は Column 昇順で割り当てる。
+        // ループ順で Row 昇順にはなっているが、念のため明示的にソートする。
         var ordered = raw.OrderBy(t => t.Row).ThenBy(t => t.Column).ToList();
         var builder = ImmutableArray.CreateBuilder<MapNode>(ordered.Count);
         for (int i = 0; i < ordered.Count; i++)

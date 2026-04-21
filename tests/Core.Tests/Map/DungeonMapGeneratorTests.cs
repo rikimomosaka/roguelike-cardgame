@@ -113,4 +113,27 @@ public class DungeonMapGeneratorTests
                 $"Nodes not ordered: idx {i - 1}={prev.Row},{prev.Column} idx {i}={curr.Row},{curr.Column}");
         }
     }
+
+    [Fact]
+    public void Generate_RowNodeCountMinEqualsMax_AllRowsHaveExactCount()
+    {
+        var cfg = BaseConfig() with { RowNodeCountMin = 3, RowNodeCountMax = 3 };
+        var map = new DungeonMapGenerator().Generate(new SystemRng(42), cfg);
+        for (int r = 1; r <= 15; r++)
+            Assert.Equal(3, map.NodesInRow(r).Count());
+    }
+
+    [Fact]
+    public void Generate_RowNodeCountEqualsColumnCount_NoDuplicateColumnsInRow()
+    {
+        var cfg = BaseConfig() with { RowNodeCountMin = 5, RowNodeCountMax = 5 };
+        var map = new DungeonMapGenerator().Generate(new SystemRng(42), cfg);
+        for (int r = 1; r <= 15; r++)
+        {
+            var cols = map.NodesInRow(r).Select(n => n.Column).ToArray();
+            Assert.Equal(5, cols.Length);
+            Assert.Equal(cols.Distinct().Count(), cols.Length);  // no duplicates
+            Assert.Equal(new[] { 0, 1, 2, 3, 4 }, cols.OrderBy(c => c));
+        }
+    }
 }
