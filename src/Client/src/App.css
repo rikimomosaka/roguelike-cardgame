@@ -368,3 +368,49 @@ main.map-screen {
   gap: 0.5rem;
   margin-top: 0.5rem;
 }
+
+/* =============================================================
+   Phase 6: Merchant / Event / Rest overlays (debug styling)
+   ============================================================= */
+.merchant-screen,
+.event-screen,
+.rest-screen {
+  position: fixed;
+  top: 3.75rem;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+  overflow-y: auto;
+  background: rgba(8, 10, 12, 0.92);
+  z-index: 100;
+}
+.merchant-screen h2,
+.event-screen h2,
+.rest-screen h2 { margin: 0; }
+.merchant-screen section { min-width: 22rem; }
+.merchant-screen ul,
+.event-choices,
+.rest-screen ul {
+  list-style: none;
+  padding: 0;
+  margin: 0.25rem 0 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.merchant-offer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--muted);
+  border-radius: 0.3rem;
+}
+.merchant-offer.sold { opacity: 0.5; }
+.event-screen p { max-width: 32rem; text-align: center; }
