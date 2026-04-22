@@ -175,6 +175,33 @@ public class RewardProceedActTransitionTests : IClassFixture<TempDataFactory>
     }
 
     /// <summary>
+    /// Regression: Proceeding from boss reward into the next act must generate a
+    /// new act-start relic 3-choice. Without this the player has no way to receive
+    /// act 2+'s starter relic.
+    /// </summary>
+    [Fact]
+    public async Task Proceed_OnBossReward_GeneratesAct2RelicChoice()
+    {
+        const string AccountId = "proc-boss-act2-relic";
+        var client = await SetupRunWithBossRewardAsync(AccountId, act: 1);
+
+        var resp = await client.PostAsJsonAsync("/api/v1/runs/current/reward/proceed",
+            new RewardProceedRequestDto(ElapsedSeconds: 0));
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+
+        var body = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+        var run = body.RootElement.GetProperty("run");
+        var choice = run.GetProperty("activeActStartRelicChoice");
+        Assert.NotEqual(JsonValueKind.Null, choice.ValueKind);
+        Assert.Equal(3, choice.GetProperty("relicIds").GetArrayLength());
+
+        var catalog = _fx.Services.GetRequiredService<DataCatalog>();
+        var pool = catalog.ActStartRelicPools![2];
+        foreach (var el in choice.GetProperty("relicIds").EnumerateArray())
+            Assert.Contains(el.GetString()!, pool);
+    }
+
+    /// <summary>
     /// Regression: On act transition the new map's Unknown tiles must be resolved and
     /// exposed via unknownResolutions. Previously AdvanceAct wiped the dict to empty,
     /// causing PostMove to throw when entering an Unknown tile on act 2+.

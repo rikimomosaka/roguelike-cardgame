@@ -85,6 +85,12 @@ public sealed class RunStartService
             encounterQueueElite: queueElite,
             encounterQueueBoss: queueBoss,
             nowUtc: _now());
+
+        // Phase 7: 各アクト開始時にレリック 3 択を提示する。act 1 の初期選択もここで生成する。
+        var choice = ActStartActions.GenerateChoices(
+            state, act: 1, catalog, new SystemRng(unchecked(seed + 6)));
+        state = state with { ActiveActStartRelicChoice = choice };
+
         await _saves.SaveAsync(accountId, state, ct);
         return (state, map);
     }

@@ -59,10 +59,39 @@ public class ActStartControllerTests : IClassFixture<TempDataFactory>
         const string AccountId = "as1-no-choice";
         var client = await StartFreshRunAsync(AccountId);
 
-        // NewRun 直後は ActiveActStartRelicChoice が null → 409
+        // NewRun 直後は act1 のレリック選択肢が自動生成されているので、
+        // それを一度解消してから 409 を確認する。
+        var repo = _factory.Services.GetRequiredService<ISaveRepository>();
+        var s = (await repo.TryLoadAsync(AccountId, CancellationToken.None))!;
+        await repo.SaveAsync(AccountId, s with { ActiveActStartRelicChoice = null },
+            CancellationToken.None);
+
         var resp = await client.PostAsJsonAsync("/api/v1/act-start/choose",
             new { relicId = "some_relic" });
         Assert.Equal(HttpStatusCode.Conflict, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task NewRun_GeneratesAct1RelicChoice()
+    {
+        // Regression: each act's start tile should offer a 3-relic choice.
+        // Act 1 choice is generated at run creation (no Start tile re-entry happens).
+        const string AccountId = "as1-newrun-choice";
+        var client = await StartFreshRunAsync(AccountId);
+
+        var resp = await client.GetAsync("/api/v1/runs/current");
+        resp.EnsureSuccessStatusCode();
+        var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+        var choice = doc.RootElement.GetProperty("run").GetProperty("activeActStartRelicChoice");
+        Assert.NotEqual(JsonValueKind.Null, choice.ValueKind);
+        var ids = choice.GetProperty("relicIds");
+        Assert.Equal(3, ids.GetArrayLength());
+
+        // すべて act1 pool に属するレリックでなければならない
+        var catalog = _factory.Services.GetRequiredService<DataCatalog>();
+        var pool = catalog.ActStartRelicPools![1];
+        foreach (var el in ids.EnumerateArray())
+            Assert.Contains(el.GetString()!, pool);
     }
 
     [Fact]

@@ -168,11 +168,15 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
         await proceedReward(accountId, elapsedSeconds())
       }
       await moveToNode(accountId, n.id, elapsedSeconds())
+      // Fetch the new snapshot BEFORE flipping dismissed flags so all state updates
+      // batch into a single render. Otherwise the previous tile's popup flashes
+      // briefly (old snap still has activeReward, but dismissed is already false).
+      const next = await getCurrentRun(accountId)
+      if (next) setSnap(next)
       setRewardDismissed(false)
       setMerchantDismissed(false)
       setEventDismissed(false)
       setRestDismissed(false)
-      await refresh()
     } finally {
       setBusy(false)
     }
