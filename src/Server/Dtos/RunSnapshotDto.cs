@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Map;
 using RoguelikeCardGame.Core.Run;
@@ -52,7 +53,7 @@ public static class RunSnapshotDtoMapper
 
         var run = new RunStateDto(
             s.SchemaVersion, s.CurrentAct, s.CurrentNodeId, s.VisitedNodeIds, resolutions,
-            s.CharacterId, s.CurrentHp, s.MaxHp, s.Gold, s.Deck, s.Potions, s.PotionSlotCount,
+            s.CharacterId, s.CurrentHp, s.MaxHp, s.Gold, s.Deck.Select(c => c.Id).ToArray(), s.Potions, s.PotionSlotCount,
             battle, reward, s.Relics, s.PlaySeconds, s.Progress.ToString(),
             s.SavedAtUtc.ToString("O"));
         return new RunSnapshotDto(run, MapDtoMapper.From(map));

@@ -45,7 +45,7 @@ public static class RewardApplier
 
         return s with
         {
-            Deck = s.Deck.Add(cardId),
+            Deck = s.Deck.Add(new RoguelikeCardGame.Core.Cards.CardInstance(cardId, false)),
             ActiveReward = r with { CardStatus = CardRewardStatus.Claimed },
         };
     }

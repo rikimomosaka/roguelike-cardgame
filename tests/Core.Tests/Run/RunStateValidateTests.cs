@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Immutable;
+using RoguelikeCardGame.Core.Battle;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Map;
+using RoguelikeCardGame.Core.Merchant;
+using RoguelikeCardGame.Core.Rewards;
 using RoguelikeCardGame.Core.Run;
 using Xunit;
 
@@ -95,4 +98,63 @@ public class RunStateValidateTests
         Assert.NotNull(msg);
         Assert.Contains("UnknownResolutions", msg);
     }
+
+    [Fact]
+    public void Validate_MultipleActiveNull_ReturnsNull()
+    {
+        var s = SampleV4();
+        Assert.Null(s.Validate());
+    }
+
+    [Fact]
+    public void Validate_ActiveBattleAndActiveMerchant_ReturnsError()
+    {
+        var s = SampleV4() with
+        {
+            ActiveBattle = null,
+            ActiveMerchant = FakeInventory(),
+            ActiveReward = null,
+        };
+        // Active at most 1: start with merchant only — OK
+        Assert.Null(s.Validate());
+
+        var bad = s with { ActiveBattle = FakeBattle() };
+        Assert.Contains("at most one", bad.Validate(), System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Validate_RestPendingWithActiveReward_ReturnsError()
+    {
+        var s = SampleV4() with
+        {
+            ActiveRestPending = true,
+            ActiveReward = FakeReward(),
+        };
+        Assert.Contains("ActiveRestPending", s.Validate());
+    }
+
+    private static RunState SampleV4()
+    {
+        var catalog = EmbeddedDataLoader.LoadCatalog();
+        return RunState.NewSoloRun(
+            catalog, rngSeed: 1UL, startNodeId: 0,
+            unknownResolutions: System.Collections.Immutable.ImmutableDictionary<int, TileKind>.Empty,
+            encounterQueueWeak: System.Collections.Immutable.ImmutableArray<string>.Empty,
+            encounterQueueStrong: System.Collections.Immutable.ImmutableArray<string>.Empty,
+            encounterQueueElite: System.Collections.Immutable.ImmutableArray<string>.Empty,
+            encounterQueueBoss: System.Collections.Immutable.ImmutableArray<string>.Empty,
+            nowUtc: new System.DateTimeOffset(2026, 4, 22, 0, 0, 0, System.TimeSpan.Zero));
+    }
+
+    private static MerchantInventory FakeInventory() =>
+        new(System.Collections.Immutable.ImmutableArray<MerchantOffer>.Empty,
+            System.Collections.Immutable.ImmutableArray<MerchantOffer>.Empty,
+            System.Collections.Immutable.ImmutableArray<MerchantOffer>.Empty,
+            DiscardSlotUsed: false, DiscardPrice: 75);
+
+    private static BattleState FakeBattle() =>
+        new BattleState("test", ImmutableArray<EnemyInstance>.Empty, BattleOutcome.Pending);
+
+    private static RewardState FakeReward() =>
+        new RewardState(0, false, null, true, ImmutableArray<string>.Empty, CardRewardStatus.Pending);
 }

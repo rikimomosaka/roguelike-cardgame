@@ -50,7 +50,7 @@ public class RewardApplierTests
         var choices = ImmutableArray.Create("reward_common_01", "reward_common_02", "reward_common_03");
         var s = StateWithReward(new RewardState(0, true, null, true, choices, CardRewardStatus.Pending));
         var next = RewardApplier.PickCard(s, "reward_common_02");
-        Assert.Contains("reward_common_02", next.Deck);
+        Assert.Contains(next.Deck, ci => ci.Id == "reward_common_02");
         Assert.Equal(CardRewardStatus.Claimed, next.ActiveReward!.CardStatus);
     }
 
@@ -89,7 +89,7 @@ public class RewardApplierTests
         var choices = ImmutableArray.Create("reward_common_01", "reward_common_02", "reward_common_03");
         var s = StateWithReward(new RewardState(0, true, null, true, choices, CardRewardStatus.Skipped));
         var next = RewardApplier.PickCard(s, "reward_common_02");
-        Assert.Contains("reward_common_02", next.Deck);
+        Assert.Contains(next.Deck, ci => ci.Id == "reward_common_02");
         Assert.Equal(CardRewardStatus.Claimed, next.ActiveReward!.CardStatus);
     }
 

@@ -3,8 +3,11 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using RoguelikeCardGame.Core.Battle;
+using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Data;
+using RoguelikeCardGame.Core.Events;
 using RoguelikeCardGame.Core.Map;
+using RoguelikeCardGame.Core.Merchant;
 using RoguelikeCardGame.Core.Rewards;
 
 namespace RoguelikeCardGame.Core.Run;
@@ -22,7 +25,7 @@ public sealed record RunState(
     int CurrentHp,
     int MaxHp,
     int Gold,
-    ImmutableArray<string> Deck,
+    ImmutableArray<CardInstance> Deck,
     ImmutableArray<string> Potions,
     int PotionSlotCount,
     BattleState? ActiveBattle,
@@ -33,6 +36,11 @@ public sealed record RunState(
     ImmutableArray<string> EncounterQueueBoss,
     RewardRngState RewardRngState,
 
+    // --- Phase 6 additions ---
+    MerchantInventory? ActiveMerchant,
+    EventInstance? ActiveEvent,
+    bool ActiveRestPending,
+
     // --- existing ---
     IReadOnlyList<string> Relics,
     long PlaySeconds,
@@ -40,8 +48,8 @@ public sealed record RunState(
     DateTimeOffset SavedAtUtc,
     RunProgress Progress)
 {
-    /// <summary>Phase 5 の JSON スキーマバージョン。</summary>
-    public const int CurrentSchemaVersion = 3;
+    /// <summary>Phase 6 の JSON スキーマバージョン。</summary>
+    public const int CurrentSchemaVersion = 4;
 
     public static RunState NewSoloRun(
         DataCatalog catalog,
@@ -73,6 +81,8 @@ public sealed record RunState(
         if (!catalog.RewardTables.TryGetValue("act1", out var rt))
             throw new InvalidOperationException("RewardTable \"act1\" が DataCatalog に存在しません");
 
+        var deck = ImmutableArray.CreateRange(ch.Deck.Select(id => new CardInstance(id, false)));
+
         return new RunState(
             SchemaVersion: CurrentSchemaVersion,
             CurrentAct: 1,
@@ -83,7 +93,7 @@ public sealed record RunState(
             CurrentHp: ch.MaxHp,
             MaxHp: ch.MaxHp,
             Gold: ch.StartingGold,
-            Deck: ImmutableArray.CreateRange(ch.Deck),
+            Deck: deck,
             Potions: potions,
             PotionSlotCount: ch.PotionSlotCount,
             ActiveBattle: null,
@@ -94,6 +104,9 @@ public sealed record RunState(
             EncounterQueueBoss: encounterQueueBoss,
             RewardRngState: new RewardRngState(
                 rt.PotionDynamic.InitialPercent, rt.EpicChance.InitialBonus),
+            ActiveMerchant: null,
+            ActiveEvent: null,
+            ActiveRestPending: false,
             Relics: Array.Empty<string>(),
             PlaySeconds: 0L,
             RngSeed: rngSeed,
@@ -101,9 +114,7 @@ public sealed record RunState(
             Progress: RunProgress.InProgress);
     }
 
-    /// <summary>
-    /// 構造的不変条件を検査する。違反があれば理由文字列、問題なければ null。
-    /// </summary>
+    /// <summary>構造的不変条件を検査する。違反があれば理由文字列、問題なければ null。</summary>
     public string? Validate()
     {
         if (SchemaVersion != CurrentSchemaVersion)
@@ -120,8 +131,17 @@ public sealed record RunState(
         }
         if (Potions.Length != PotionSlotCount)
             return $"Potions.Length ({Potions.Length}) != PotionSlotCount ({PotionSlotCount})";
-        if (ActiveBattle is not null && ActiveReward is not null)
-            return "ActiveBattle and ActiveReward must not both be non-null";
+
+        int activeCount = 0;
+        if (ActiveBattle is not null) activeCount++;
+        if (ActiveReward is not null) activeCount++;
+        if (ActiveMerchant is not null) activeCount++;
+        if (ActiveEvent is not null) activeCount++;
+        if (activeCount > 1)
+            return "at most one of ActiveBattle / ActiveReward / ActiveMerchant / ActiveEvent can be non-null";
+        if (ActiveRestPending && activeCount > 0)
+            return "ActiveRestPending must not coexist with any other Active*";
+
         if (ActiveReward is { CardChoices: var cc } && cc.Length != 0 && cc.Length != 3)
             return $"CardChoices must have length 0 or 3 (got {cc.Length})";
         return null;

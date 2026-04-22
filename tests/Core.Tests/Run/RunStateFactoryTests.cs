@@ -27,7 +27,7 @@ public class RunStateFactoryTests
             encounterQueueBoss: ImmutableArray<string>.Empty,
             nowUtc: FixedNow);
 
-        Assert.Equal(3, state.SchemaVersion);
+        Assert.Equal(4, state.SchemaVersion);
         Assert.Equal(1, state.CurrentAct);
         Assert.Equal(0, state.CurrentNodeId);
         Assert.Equal(new[] { 0 }, state.VisitedNodeIds.ToArray());
@@ -37,8 +37,8 @@ public class RunStateFactoryTests
         Assert.Equal(80, state.MaxHp);
         Assert.Equal(99, state.Gold);
         Assert.Equal(10, state.Deck.Length);
-        Assert.Equal(5, state.Deck.Count(id => id == "strike"));
-        Assert.Equal(5, state.Deck.Count(id => id == "defend"));
+        Assert.Equal(5, state.Deck.Count(ci => ci.Id == "strike"));
+        Assert.Equal(5, state.Deck.Count(ci => ci.Id == "defend"));
         Assert.Equal(3, state.PotionSlotCount);
         Assert.Equal(3, state.Potions.Length);
         Assert.All(state.Potions, p => Assert.Equal("", p));
