@@ -14,16 +14,20 @@ public static class MerchantInventoryGenerator
     private const int RelicCount = 2;
     private const int PotionCount = 3;
 
+    /// <summary>1 run 内で除去マスを使うたびに、次回価格へ加算される量。</summary>
+    public const int DiscardPriceIncrement = 25;
+
     public static MerchantInventory Generate(
         DataCatalog catalog, MerchantPrices prices, RunState s, IRng rng)
     {
         var cards = PickCards(catalog, prices, s, rng, CardCount);
         var relics = PickRelics(catalog, prices, s, rng, RelicCount);
         var potions = PickPotions(catalog, prices, rng, PotionCount);
+        int discardPrice = prices.DiscardSlotPrice + DiscardPriceIncrement * s.DiscardUsesSoFar;
         return new MerchantInventory(
             cards, relics, potions,
             DiscardSlotUsed: false,
-            DiscardPrice: prices.DiscardSlotPrice);
+            DiscardPrice: discardPrice);
     }
 
     private static ImmutableArray<MerchantOffer> PickCards(

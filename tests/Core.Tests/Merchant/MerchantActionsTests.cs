@@ -114,6 +114,15 @@ public class MerchantActionsTests
     }
 
     [Fact]
+    public void Discard_IncrementsDiscardUsesSoFar()
+    {
+        var s0 = BaseWithInventory(500);
+        Assert.Equal(0, s0.DiscardUsesSoFar);
+        var s1 = MerchantActions.DiscardCard(s0, 0);
+        Assert.Equal(1, s1.DiscardUsesSoFar);
+    }
+
+    [Fact]
     public void Discard_AlreadyUsed_Throws()
     {
         var s0 = BaseWithInventory(500);

@@ -36,6 +36,20 @@ public class MerchantInventoryGeneratorTests
     }
 
     [Fact]
+    public void Generate_DiscardPriceScalesWithDiscardUsesSoFar()
+    {
+        var s0 = Base() with { DiscardUsesSoFar = 0 };
+        var s1 = Base() with { DiscardUsesSoFar = 1 };
+        var s3 = Base() with { DiscardUsesSoFar = 3 };
+        Assert.Equal(75, MerchantInventoryGenerator.Generate(
+            Catalog, Catalog.MerchantPrices!, s0, new SequentialRng(1UL)).DiscardPrice);
+        Assert.Equal(100, MerchantInventoryGenerator.Generate(
+            Catalog, Catalog.MerchantPrices!, s1, new SequentialRng(1UL)).DiscardPrice);
+        Assert.Equal(150, MerchantInventoryGenerator.Generate(
+            Catalog, Catalog.MerchantPrices!, s3, new SequentialRng(1UL)).DiscardPrice);
+    }
+
+    [Fact]
     public void Generate_CardPricesMatchRarity()
     {
         var inv = MerchantInventoryGenerator.Generate(

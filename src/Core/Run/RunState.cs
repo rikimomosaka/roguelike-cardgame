@@ -47,7 +47,8 @@ public sealed record RunState(
     long PlaySeconds,
     ulong RngSeed,
     DateTimeOffset SavedAtUtc,
-    RunProgress Progress)
+    RunProgress Progress,
+    int DiscardUsesSoFar = 0)
 {
     /// <summary>Phase 6 の JSON スキーマバージョン。</summary>
     public const int CurrentSchemaVersion = 4;

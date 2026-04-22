@@ -79,6 +79,7 @@ public static class MerchantActions
             Gold = s.Gold - inv.DiscardPrice,
             Deck = s.Deck.RemoveAt(deckIndex),
             ActiveMerchant = inv with { DiscardSlotUsed = true },
+            DiscardUsesSoFar = s.DiscardUsesSoFar + 1,
         };
     }
 
