@@ -11,6 +11,8 @@ function baseReward(overrides: Partial<RewardStateDto> = {}): RewardStateDto {
     potionClaimed: false,
     cardChoices: ['card_strike', 'card_bash', 'card_defend'],
     cardStatus: 'Pending',
+    relicId: null,
+    relicClaimed: false,
     ...overrides,
   }
 }
@@ -23,6 +25,7 @@ function baseHandlers() {
     onSkipCard: vi.fn().mockResolvedValue(undefined),
     onProceed: vi.fn(),
     onDiscardPotion: vi.fn().mockResolvedValue(undefined),
+    onClaimRelic: vi.fn().mockResolvedValue(undefined),
   }
 }
 
@@ -96,5 +99,63 @@ describe('RewardPopup', () => {
       expect(handlers.onPickCard).toHaveBeenCalledWith('card_strike'),
     )
     expect(screen.queryByText('カードを選ぶ')).toBeNull()
+  })
+
+  it('relic ボタンは relicId が設定されているとき表示される', () => {
+    const handlers = baseHandlers()
+    const reward = baseReward({ relicId: 'coin_purse', relicClaimed: false })
+    render(
+      <RewardPopup
+        reward={reward}
+        potions={['', '', '']}
+        potionSlotCount={3}
+        {...handlers}
+      />,
+    )
+    // 名前解決はカタログ未ロードで raw id にフォールバックする
+    expect(screen.getByText(/レリック: coin_purse/)).toBeDefined()
+  })
+
+  it('relic ボタンをクリックすると onClaimRelic が呼ばれる', async () => {
+    const handlers = baseHandlers()
+    const reward = baseReward({ relicId: 'coin_purse', relicClaimed: false })
+    render(
+      <RewardPopup
+        reward={reward}
+        potions={['', '', '']}
+        potionSlotCount={3}
+        {...handlers}
+      />,
+    )
+    fireEvent.click(screen.getByText(/レリック: coin_purse/))
+    await waitFor(() => expect(handlers.onClaimRelic).toHaveBeenCalledTimes(1))
+  })
+
+  it('relic は relicId が null のときは表示されない', () => {
+    const handlers = baseHandlers()
+    render(
+      <RewardPopup
+        reward={baseReward()}
+        potions={['', '', '']}
+        potionSlotCount={3}
+        {...handlers}
+      />,
+    )
+    expect(screen.queryByText(/レリック:/)).toBeNull()
+  })
+
+  it('relic は relicClaimed = true のときボタンが disabled', () => {
+    const handlers = baseHandlers()
+    const reward = baseReward({ relicId: 'coin_purse', relicClaimed: true })
+    render(
+      <RewardPopup
+        reward={reward}
+        potions={['', '', '']}
+        potionSlotCount={3}
+        {...handlers}
+      />,
+    )
+    const btn = screen.getByText(/レリック: coin_purse/).closest('button') as HTMLButtonElement
+    expect(btn.disabled).toBe(true)
   })
 })

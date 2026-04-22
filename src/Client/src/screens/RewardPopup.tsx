@@ -3,6 +3,7 @@ import type { RewardStateDto } from '../api/types'
 import { Button } from '../components/Button'
 import { PotionSlot } from '../components/PotionSlot'
 import { useCardCatalog, usePotionCatalog } from '../hooks/useCardCatalog'
+import { useRelicCatalog } from '../hooks/useRelicCatalog'
 
 type Props = {
   reward: RewardStateDto
@@ -14,6 +15,7 @@ type Props = {
   onSkipCard: () => Promise<void>
   onProceed: () => void
   onDiscardPotion: (slotIndex: number) => Promise<void>
+  onClaimRelic: () => Promise<void>
 }
 
 export function RewardPopup(p: Props) {
@@ -22,6 +24,7 @@ export function RewardPopup(p: Props) {
   const cardResolved = r.cardStatus === 'Claimed'
   const { names: cardNames } = useCardCatalog()
   const { names: potionNames } = usePotionCatalog()
+  const { names: relicNames } = useRelicCatalog()
   const cardLabel = (id: string) => cardNames[id] ?? id
   const potionLabel = (id: string) => potionNames[id] ?? id
 
@@ -80,6 +83,16 @@ export function RewardPopup(p: Props) {
               onClick={() => setCardView(true)}
             >
               {cardResolved ? '✓' : '✨'} カードの報酬
+            </Button>
+          </li>
+        )}
+        {r.relicId && (
+          <li>
+            <Button
+              disabled={r.relicClaimed}
+              onClick={() => p.onClaimRelic()}
+            >
+              {r.relicClaimed ? '✓' : '💎'} レリック: {relicNames[r.relicId] ?? r.relicId}
             </Button>
           </li>
         )}

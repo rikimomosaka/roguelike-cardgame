@@ -59,6 +59,8 @@ function sampleReward(): RewardStateDto {
     potionId: null, potionClaimed: false,
     cardChoices: ['card_strike', 'card_bash', 'card_defend'],
     cardStatus: 'Pending',
+    relicId: null,
+    relicClaimed: false,
   }
 }
 

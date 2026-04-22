@@ -4,6 +4,7 @@ import { winBattle } from '../api/battle'
 import {
   claimGold,
   claimPotion,
+  claimRelic,
   discardPotion,
   pickCard,
   proceedReward,
@@ -178,6 +179,12 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
     await refresh()
   }
 
+  async function handleClaimRelic() {
+    if (!accountId) return
+    await claimRelic(accountId)
+    await refresh()
+  }
+
   const resolved = snap.run.unknownResolutions
   const maxCol = Math.max(...snap.map.nodes.map((n) => n.column))
   const width = LEFT_PAD * 2 + maxCol * COL_W
@@ -279,6 +286,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
           onSkipCard={handleSkipCard}
           onProceed={handleProceed}
           onDiscardPotion={handleDiscardPotion}
+          onClaimRelic={handleClaimRelic}
         />
       )}
 

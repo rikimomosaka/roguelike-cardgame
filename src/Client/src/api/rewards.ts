@@ -35,3 +35,7 @@ export async function discardPotion(accountId: string, slotIndex: number): Promi
     body: { slotIndex },
   })
 }
+
+export async function claimRelic(accountId: string): Promise<void> {
+  await apiRequest<void>('POST', '/runs/current/reward/claim-relic', { accountId })
+}
