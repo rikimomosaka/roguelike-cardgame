@@ -1,0 +1,6 @@
+{
+  "cards":   { "Common": 50, "Rare": 80, "Epic": 150 },
+  "relics":  { "Common": 150, "Rare": 250, "Epic": 350 },
+  "potions": { "Common": 50, "Rare": 75, "Epic": 100 },
+  "discardSlotPrice": 75
+}

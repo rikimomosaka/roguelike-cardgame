@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Enemy;
 using RoguelikeCardGame.Core.Events;
+using RoguelikeCardGame.Core.Merchant;
 using RoguelikeCardGame.Core.Potions;
 using RoguelikeCardGame.Core.Relics;
 
@@ -22,7 +23,8 @@ public sealed record DataCatalog(
     IReadOnlyDictionary<string, EncounterDefinition> Encounters,
     IReadOnlyDictionary<string, RewardTable> RewardTables,
     IReadOnlyDictionary<string, CharacterDefinition> Characters,
-    IReadOnlyDictionary<string, EventDefinition> Events)
+    IReadOnlyDictionary<string, EventDefinition> Events,
+    MerchantPrices? MerchantPrices = null)
 {
     public static DataCatalog LoadFromStrings(
         IEnumerable<string> cards,
@@ -32,7 +34,8 @@ public sealed record DataCatalog(
         IEnumerable<string> encounters,
         IEnumerable<string> rewardTables,
         IEnumerable<string> characters,
-        IEnumerable<string>? events = null)
+        IEnumerable<string>? events = null,
+        string? merchantPricesJson = null)
     {
         var cardMap = new Dictionary<string, CardDefinition>();
         foreach (var json in cards)
@@ -109,7 +112,11 @@ public sealed record DataCatalog(
             }
         }
 
-        return new DataCatalog(cardMap, relicMap, potionMap, enemyMap, encMap, rtMap, chMap, eventMap);
+        MerchantPrices? mp = null;
+        if (merchantPricesJson is not null)
+            mp = MerchantPricesJsonLoader.Parse(merchantPricesJson);
+
+        return new DataCatalog(cardMap, relicMap, potionMap, enemyMap, encMap, rtMap, chMap, eventMap, mp);
     }
 
     public bool TryGetCard(string id, [MaybeNullWhen(false)] out CardDefinition def) => Cards.TryGetValue(id, out def);

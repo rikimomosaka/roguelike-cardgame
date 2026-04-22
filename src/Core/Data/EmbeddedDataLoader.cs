@@ -15,10 +15,12 @@ public static class EmbeddedDataLoader
     private const string RewardTablePrefix = "RoguelikeCardGame.Core.Data.RewardTable.";
     private const string CharactersPrefix = "RoguelikeCardGame.Core.Data.Characters.";
     private const string EventsPrefix = "RoguelikeCardGame.Core.Data.Events.";
+    private const string MerchantPricesResourceName = "RoguelikeCardGame.Core.Data.merchant-prices.json";
 
     public static DataCatalog LoadCatalog()
     {
         var asm = typeof(EmbeddedDataLoader).Assembly;
+        string? merchantPricesJson = ReadSingle(asm, MerchantPricesResourceName);
         return DataCatalog.LoadFromStrings(
             cards: ReadAllWithPrefix(asm, CardsPrefix),
             relics: ReadAllWithPrefix(asm, RelicsPrefix),
@@ -27,7 +29,16 @@ public static class EmbeddedDataLoader
             encounters: ReadAllWithPrefix(asm, EncountersPrefix),
             rewardTables: ReadAllWithPrefix(asm, RewardTablePrefix),
             characters: ReadAllWithPrefix(asm, CharactersPrefix),
-            events: ReadAllWithPrefix(asm, EventsPrefix));
+            events: ReadAllWithPrefix(asm, EventsPrefix),
+            merchantPricesJson: merchantPricesJson);
+    }
+
+    private static string? ReadSingle(Assembly asm, string resourceName)
+    {
+        using var stream = asm.GetManifestResourceStream(resourceName);
+        if (stream is null) return null;
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
     }
 
     private static IEnumerable<string> ReadAllWithPrefix(Assembly asm, string prefix)
