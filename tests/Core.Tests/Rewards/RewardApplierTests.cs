@@ -119,4 +119,47 @@ public class RewardApplierTests
         var next = RewardApplier.DiscardPotion(s, 0);
         Assert.Equal("", next.Potions[0]);
     }
+
+    [Fact]
+    public void ClaimRelic_AddsRelicToRunStateAndMarksClaimed()
+    {
+        var s = StateWithReward(new RewardState(
+            Gold: 0, GoldClaimed: true,
+            PotionId: null, PotionClaimed: true,
+            CardChoices: ImmutableArray<string>.Empty,
+            CardStatus: CardRewardStatus.Claimed,
+            RelicId: "burning_blood",
+            RelicClaimed: false));
+        var next = RewardApplier.ClaimRelic(s);
+        Assert.Contains("burning_blood", next.Relics);
+        Assert.True(next.ActiveReward!.RelicClaimed);
+    }
+
+    [Fact]
+    public void ClaimRelic_AlreadyClaimed_Throws()
+    {
+        var s = StateWithReward(new RewardState(
+            0, true, null, true,
+            ImmutableArray<string>.Empty, CardRewardStatus.Claimed,
+            RelicId: "burning_blood", RelicClaimed: true));
+        Assert.Throws<System.InvalidOperationException>(() => RewardApplier.ClaimRelic(s));
+    }
+
+    [Fact]
+    public void ClaimRelic_NoActiveReward_Throws()
+    {
+        var cat = EmbeddedDataLoader.LoadCatalog();
+        var s = TestRunStates.FreshDefault(cat);
+        Assert.Throws<System.InvalidOperationException>(() => RewardApplier.ClaimRelic(s));
+    }
+
+    [Fact]
+    public void ClaimRelic_NoRelicInReward_Throws()
+    {
+        var s = StateWithReward(new RewardState(
+            0, true, null, true,
+            ImmutableArray<string>.Empty, CardRewardStatus.Claimed,
+            RelicId: null, RelicClaimed: true));
+        Assert.Throws<System.InvalidOperationException>(() => RewardApplier.ClaimRelic(s));
+    }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Immutable;
+using System.Linq;
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Run;
 
@@ -72,6 +73,19 @@ public static class RewardApplier
         if (s.Potions[slotIndex] == "")
             throw new ArgumentException("Slot is already empty", nameof(slotIndex));
         return s with { Potions = s.Potions.SetItem(slotIndex, "") };
+    }
+
+    public static RunState ClaimRelic(RunState s)
+    {
+        var r = Require(s);
+        if (r.RelicId is null) throw new InvalidOperationException("No relic to claim");
+        if (r.RelicClaimed) throw new InvalidOperationException("Relic already claimed");
+        var newRelics = s.Relics.Append(r.RelicId).ToList();
+        return s with
+        {
+            Relics = newRelics,
+            ActiveReward = r with { RelicClaimed = true },
+        };
     }
 
     private static RewardState Require(RunState s)
