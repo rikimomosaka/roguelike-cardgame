@@ -64,11 +64,13 @@ export function RewardPopup(p: Props) {
     <div className="reward-popup" role="dialog" aria-modal="true">
       <h2>報酬</h2>
       <ul className="reward-list">
-        <li>
-          <Button disabled={r.goldClaimed} onClick={() => p.onClaimGold()}>
-            {r.goldClaimed ? '✓' : '＋'} {r.gold} Gold
-          </Button>
-        </li>
+        {r.gold > 0 && (
+          <li>
+            <Button disabled={r.goldClaimed} onClick={() => p.onClaimGold()}>
+              {r.goldClaimed ? '✓' : '＋'} {r.gold} Gold
+            </Button>
+          </li>
+        )}
         {r.potionId && (
           <li>
             <Button disabled={r.potionClaimed} onClick={() => p.onClaimPotion()}>

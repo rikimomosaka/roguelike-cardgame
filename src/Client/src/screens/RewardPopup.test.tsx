@@ -158,4 +158,17 @@ describe('RewardPopup', () => {
     const btn = screen.getByText(/レリック: coin_purse/).closest('button') as HTMLButtonElement
     expect(btn.disabled).toBe(true)
   })
+
+  it('gold が 0 のときは Gold 行が表示されない', () => {
+    const handlers = baseHandlers()
+    render(
+      <RewardPopup
+        reward={baseReward({ gold: 0 })}
+        potions={['', '', '']}
+        potionSlotCount={3}
+        {...handlers}
+      />,
+    )
+    expect(screen.queryByText(/0 Gold/)).toBeNull()
+  })
 })
