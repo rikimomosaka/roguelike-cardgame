@@ -130,4 +130,25 @@ public class NodeEffectResolverTests
         Assert.False(next.ActiveRestCompleted);
         Assert.NotNull(next.ActiveEvent);
     }
+
+    [Fact]
+    public void Resolve_Start_GeneratesActStartRelicChoice()
+    {
+        var cat = EmbeddedDataLoader.LoadCatalog();
+        var s = TestRunStates.FreshDefault(cat);
+        var next = NodeEffectResolver.Resolve(s, TileKind.Start, currentRow: 0, cat, new SystemRng(1));
+        Assert.NotNull(next.ActiveActStartRelicChoice);
+        Assert.Equal(3, next.ActiveActStartRelicChoice!.RelicIds.Length);
+    }
+
+    [Fact]
+    public void Resolve_Start_UsesPoolForCurrentAct()
+    {
+        var cat = EmbeddedDataLoader.LoadCatalog();
+        var s = TestRunStates.FreshDefault(cat) with { CurrentAct = 2 };
+        var next = NodeEffectResolver.Resolve(s, TileKind.Start, currentRow: 0, cat, new SystemRng(1));
+        var pool = cat.ActStartRelicPools![2];
+        foreach (var id in next.ActiveActStartRelicChoice!.RelicIds)
+            Assert.Contains(id, pool);
+    }
 }
