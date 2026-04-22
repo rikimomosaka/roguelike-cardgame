@@ -51,6 +51,8 @@ public sealed class ActStartController : ControllerBase
             return Problem(statusCode: StatusCodes.Status422UnprocessableEntity, title: ex.Message);
         }
 
+        if (!updated.VisitedNodeIds.Contains(updated.CurrentNodeId))
+            updated = updated with { VisitedNodeIds = updated.VisitedNodeIds.Add(updated.CurrentNodeId) };
         updated = updated with { SavedAtUtc = DateTimeOffset.UtcNow };
         await _saves.SaveAsync(accountId, updated, ct);
 

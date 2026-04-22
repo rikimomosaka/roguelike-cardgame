@@ -107,4 +107,44 @@ public class ActStartControllerTests : IClassFixture<TempDataFactory>
         Assert.Null(after.ActiveActStartRelicChoice);
         Assert.Contains(chosenRelicId, after.Relics);
     }
+
+    [Fact]
+    public async Task Choose_AfterAdvanceAct_AddsStartTileToVisited()
+    {
+        // Setup: simulate state immediately after AdvanceAct into act 2:
+        //   VisitedNodeIds empty, CurrentNodeId = 999 (new act's start tile),
+        //   ActiveActStartRelicChoice populated with 3 act2 relic ids.
+        const string AccountId = "as1-advance-act-visited";
+        var client = await StartFreshRunAsync(AccountId);
+
+        var repo = _factory.Services.GetRequiredService<ISaveRepository>();
+        var catalog = _factory.Services.GetRequiredService<DataCatalog>();
+        var s = (await repo.TryLoadAsync(AccountId, CancellationToken.None))!;
+
+        // Act 2 pool からレリック ID を 3 つ選ぶ
+        var pool = catalog.ActStartRelicPools![2];
+        var picked = ImmutableArray.Create(pool[0], pool[1], pool[2]);
+        var choice = new ActStartRelicChoice(picked);
+
+        // AdvanceAct 直後の状態を模倣: VisitedNodeIds は空、CurrentNodeId は 999
+        const int StartNodeId = 999;
+        var injected = s with
+        {
+            VisitedNodeIds = ImmutableArray<int>.Empty,
+            CurrentNodeId = StartNodeId,
+            ActiveActStartRelicChoice = choice
+        };
+        await repo.SaveAsync(AccountId, injected, CancellationToken.None);
+
+        // Action: choose the first relic
+        var chosenRelicId = picked[0];
+        var resp = await client.PostAsJsonAsync("/api/v1/act-start/choose",
+            new { relicId = chosenRelicId });
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+
+        // Expect: VisitedNodeIds contains CurrentNodeId (999), choice is null
+        var after = (await repo.TryLoadAsync(AccountId, CancellationToken.None))!;
+        Assert.Null(after.ActiveActStartRelicChoice);
+        Assert.Contains(StartNodeId, after.VisitedNodeIds);
+    }
 }
