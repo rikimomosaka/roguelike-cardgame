@@ -20,6 +20,13 @@ public sealed class CatalogController : ControllerBase
         string CardType,
         int? Cost);
 
+    public sealed record PotionCatalogEntryDto(
+        string Id,
+        string Name,
+        int Rarity,
+        bool UsableInBattle,
+        bool UsableOutOfBattle);
+
     [HttpGet("cards")]
     public IActionResult GetCards()
     {
@@ -33,6 +40,22 @@ public sealed class CatalogController : ControllerBase
                 (int)def.Rarity,
                 def.CardType.ToString(),
                 def.Cost);
+        }
+        return Ok(result);
+    }
+
+    [HttpGet("potions")]
+    public IActionResult GetPotions()
+    {
+        var result = new Dictionary<string, PotionCatalogEntryDto>(_data.Potions.Count);
+        foreach (var (id, def) in _data.Potions)
+        {
+            result[id] = new PotionCatalogEntryDto(
+                def.Id,
+                def.Name,
+                (int)def.Rarity,
+                def.UsableInBattle,
+                def.UsableOutOfBattle);
         }
         return Ok(result);
     }

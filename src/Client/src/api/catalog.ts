@@ -9,21 +9,46 @@ export type CardCatalogEntry = {
   cost: number | null
 }
 
-export type CardCatalog = Record<string, CardCatalogEntry>
+export type PotionCatalogEntry = {
+  id: string
+  name: string
+  rarity: number
+  usableInBattle: boolean
+  usableOutOfBattle: boolean
+}
 
-let cache: Promise<CardCatalog> | null = null
+export type CardCatalog = Record<string, CardCatalogEntry>
+export type PotionCatalog = Record<string, PotionCatalogEntry>
+
+let cardCache: Promise<CardCatalog> | null = null
+let potionCache: Promise<PotionCatalog> | null = null
 
 export function getCardCatalog(): Promise<CardCatalog> {
-  if (cache === null) {
-    cache = apiRequest<CardCatalog>('GET', '/catalog/cards').catch((err) => {
-      cache = null
+  if (cardCache === null) {
+    cardCache = apiRequest<CardCatalog>('GET', '/catalog/cards').catch((err) => {
+      cardCache = null
       throw err
     })
   }
-  return cache
+  return cardCache
 }
 
-// Exposed for tests that need to reset the module-level cache.
+export function getPotionCatalog(): Promise<PotionCatalog> {
+  if (potionCache === null) {
+    potionCache = apiRequest<PotionCatalog>('GET', '/catalog/potions').catch(
+      (err) => {
+        potionCache = null
+        throw err
+      },
+    )
+  }
+  return potionCache
+}
+
 export function resetCardCatalogCacheForTests(): void {
-  cache = null
+  cardCache = null
+}
+
+export function resetPotionCatalogCacheForTests(): void {
+  potionCache = null
 }

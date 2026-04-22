@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { RewardStateDto } from '../api/types'
 import { Button } from '../components/Button'
 import { PotionSlot } from '../components/PotionSlot'
+import { useCardCatalog, usePotionCatalog } from '../hooks/useCardCatalog'
 
 type Props = {
   reward: RewardStateDto
@@ -19,6 +20,10 @@ export function RewardPopup(p: Props) {
   const [cardView, setCardView] = useState(false)
   const r = p.reward
   const cardResolved = r.cardStatus === 'Claimed'
+  const { names: cardNames } = useCardCatalog()
+  const { names: potionNames } = usePotionCatalog()
+  const cardLabel = (id: string) => cardNames[id] ?? id
+  const potionLabel = (id: string) => potionNames[id] ?? id
 
   if (cardView && !cardResolved) {
     return (
@@ -33,7 +38,7 @@ export function RewardPopup(p: Props) {
                 setCardView(false)
               }}
             >
-              {cid}
+              {cardLabel(cid)}
             </Button>
           ))}
         </div>
@@ -64,7 +69,7 @@ export function RewardPopup(p: Props) {
         {r.potionId && (
           <li>
             <Button disabled={r.potionClaimed} onClick={() => p.onClaimPotion()}>
-              {r.potionClaimed ? '✓' : '🧪'} {r.potionId}
+              {r.potionClaimed ? '✓' : '🧪'} {potionLabel(r.potionId)}
             </Button>
           </li>
         )}
