@@ -74,6 +74,8 @@ public static class RunStateSerializer
         obj["activeMerchant"] ??= null;
         obj["activeEvent"] ??= null;
         obj["activeRestPending"] ??= false;
+        obj["runId"] ??= Guid.NewGuid().ToString();
+        obj["activeActStartRelicChoice"] ??= null;
         obj["schemaVersion"] = RunState.CurrentSchemaVersion;
         return obj;
     }
