@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using RoguelikeCardGame.Core.Battle;
 using RoguelikeCardGame.Core.Data;
+using RoguelikeCardGame.Core.Enemy;
+using RoguelikeCardGame.Core.History;
 using RoguelikeCardGame.Core.Map;
 using RoguelikeCardGame.Core.Random;
 using RoguelikeCardGame.Core.Rewards;
@@ -26,13 +28,15 @@ public sealed class RunsController : ControllerBase
     private readonly ISaveRepository _saves;
     private readonly RunStartService _runStart;
     private readonly DataCatalog _data;
+    private readonly IHistoryRepository _history;
 
-    public RunsController(IAccountRepository accounts, ISaveRepository saves, RunStartService runStart, DataCatalog data)
+    public RunsController(IAccountRepository accounts, ISaveRepository saves, RunStartService runStart, DataCatalog data, IHistoryRepository history)
     {
         _accounts = accounts;
         _saves = saves;
         _runStart = runStart;
         _data = data;
+        _history = history;
     }
 
     [HttpGet("current")]
@@ -119,15 +123,48 @@ public sealed class RunsController : ControllerBase
             return Problem(statusCode: StatusCodes.Status409Conflict, title: "進行中の戦闘がありません。");
 
         var afterWin = BattlePlaceholder.Win(s);
-        var pool = _data.Encounters[afterWin.ActiveBattle!.EncounterId].Pool;
-        var rewardRng = new SystemRng(unchecked((int)s.RngSeed ^ (int)s.PlaySeconds ^ 0x5EED));
-        var (reward, newRng) = RewardGenerator.Generate(
-            new RewardContext.FromEnemy(pool),
-            afterWin.RewardRngState,
-            ImmutableArray.Create("strike", "defend"),
-            _data.RewardTables["act1"], _data, rewardRng);
+        var enc = _data.Encounters[afterWin.ActiveBattle!.EncounterId];
+        bool isBoss = enc.Pool.Tier == EnemyTier.Boss;
 
         long elapsed = body is null ? 0 : Math.Clamp(body.ElapsedSeconds, 0, MaxElapsedSecondsPerRequest);
+
+        // ボス かつ 最終アクト → クリア処理
+        if (isBoss && afterWin.CurrentAct == RunConstants.MaxAct)
+        {
+            var finished = ActTransition.FinishRun(afterWin with
+            {
+                ActiveBattle = null,
+                PlaySeconds = afterWin.PlaySeconds + elapsed,
+            }, RunProgress.Cleared);
+            var rec = RunHistoryBuilder.From(accountId, finished, finished.VisitedNodeIds.Length, RunProgress.Cleared);
+            await _history.AppendAsync(accountId, rec, ct);
+            await _saves.DeleteAsync(accountId, ct);
+            return Ok(RunSnapshotDtoMapper.ToResultDto(rec));
+        }
+
+        var rewardRng = new SystemRng(unchecked((int)s.RngSeed ^ (int)s.PlaySeconds ^ 0x5EED));
+        RewardRngState newRng;
+        RewardState reward;
+
+        if (isBoss)
+        {
+            // ボス かつ 非最終アクト → BossReward フラグ付き報酬
+            var r = BossRewardFlow.GenerateBossReward(afterWin, _data, rewardRng);
+            reward = r!;  // CurrentAct < MaxAct なので non-null
+            newRng = afterWin.RewardRngState;  // BossRewardFlow は RewardRngState を更新しない
+        }
+        else
+        {
+            // 通常エンカウンター
+            var (r, nr) = RewardGenerator.Generate(
+                new RewardContext.FromEnemy(enc.Pool),
+                afterWin.RewardRngState,
+                ImmutableArray.CreateRange(s.Relics),
+                _data.RewardTables.TryGetValue($"act{s.CurrentAct}", out var tbl) ? tbl : _data.RewardTables["act1"],
+                _data, rewardRng);
+            reward = r; newRng = nr;
+        }
+
         var updated = afterWin with
         {
             ActiveBattle = null,
