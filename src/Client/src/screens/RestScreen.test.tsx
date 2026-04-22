@@ -55,4 +55,26 @@ describe('RestScreen', () => {
     fireEvent.click(btn)
     await waitFor(() => expect(onUpgrade).toHaveBeenCalledWith(0))
   })
+
+  it('close button is always visible (even when not completed)', () => {
+    render(<RestScreen deck={deck} completed={false} onHeal={vi.fn()} onUpgrade={vi.fn()} onClose={vi.fn()} />)
+    expect(screen.getByRole('button', { name: /^close$/i })).toBeDefined()
+  })
+
+  it('close button calls onClose', () => {
+    const onClose = vi.fn()
+    render(<RestScreen deck={deck} completed={false} onHeal={vi.fn()} onUpgrade={vi.fn()} onClose={onClose} />)
+    fireEvent.click(screen.getByRole('button', { name: /^close$/i }))
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('completed=true disables both heal and upgrade buttons but keeps close usable', () => {
+    render(<RestScreen deck={deck} completed={true} onHeal={vi.fn()} onUpgrade={vi.fn()} onClose={vi.fn()} />)
+    const heal = screen.getByRole('button', { name: /^heal$/i }) as HTMLButtonElement
+    const upgrade = screen.getByRole('button', { name: /upgrade card/i }) as HTMLButtonElement
+    const close = screen.getByRole('button', { name: /^close$/i }) as HTMLButtonElement
+    expect(heal.disabled).toBe(true)
+    expect(upgrade.disabled).toBe(true)
+    expect(close.disabled).toBe(false)
+  })
 })

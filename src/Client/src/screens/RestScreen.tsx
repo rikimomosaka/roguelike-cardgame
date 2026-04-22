@@ -53,11 +53,9 @@ export function RestScreen({ deck, completed, onHeal, onUpgrade, onClose }: Prop
       <Button onClick={() => setMode('upgrade')} aria-label="Upgrade card" disabled={completed}>
         カードを強化
       </Button>
-      {completed && (
-        <Button onClick={() => onClose()} aria-label="Close">
-          閉じる
-        </Button>
-      )}
+      <Button onClick={() => onClose()} aria-label="Close">
+        閉じる
+      </Button>
     </div>
   )
 }
