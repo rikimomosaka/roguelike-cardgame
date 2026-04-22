@@ -1,8 +1,12 @@
+using System.Text.Json.Serialization;
 using RoguelikeCardGame.Core.Run;
 
 namespace RoguelikeCardGame.Core.Events;
 
 /// <summary>EventChoice の選択可否判定。null なら常に選択可。</summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(MinGold), typeDiscriminator: "minGold")]
+[JsonDerivedType(typeof(MinHp), typeDiscriminator: "minHp")]
 public abstract record EventCondition
 {
     public abstract bool IsSatisfied(RunState state);
