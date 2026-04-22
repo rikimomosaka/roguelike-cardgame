@@ -190,9 +190,10 @@ public class RestControllerTests : IClassFixture<TempDataFactory>
         var runEl = doc.RootElement.GetProperty("run");
         Assert.Equal(54, runEl.GetProperty("currentHp").GetInt32());
 
-        // Verify ActiveRestPending is cleared via repo.
+        // Verify ActiveRestPending is still true and ActiveRestCompleted is set.
         var after = (await repo.TryLoadAsync(AccountId, CancellationToken.None))!;
-        Assert.False(after.ActiveRestPending);
+        Assert.True(after.ActiveRestPending);
+        Assert.True(after.ActiveRestCompleted);
     }
 
     [Fact]
@@ -219,11 +220,12 @@ public class RestControllerTests : IClassFixture<TempDataFactory>
         var res = await client.PostAsJsonAsync("/api/v1/rest/upgrade", new { deckIndex = 0 });
         Assert.Equal(HttpStatusCode.OK, res.StatusCode);
 
-        // Verify via repo: Deck[0].Upgraded == true and ActiveRestPending == false.
+        // Verify via repo: Deck[0].Upgraded == true, ActiveRestPending still true, ActiveRestCompleted set.
         var repo = _factory.Services.GetRequiredService<ISaveRepository>();
         var after = (await repo.TryLoadAsync(AccountId, CancellationToken.None))!;
         Assert.True(after.Deck[0].Upgraded);
-        Assert.False(after.ActiveRestPending);
+        Assert.True(after.ActiveRestPending);
+        Assert.True(after.ActiveRestCompleted);
     }
 
     [Fact]

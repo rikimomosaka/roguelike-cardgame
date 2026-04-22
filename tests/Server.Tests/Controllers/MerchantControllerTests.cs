@@ -291,7 +291,7 @@ public class MerchantControllerTests : IClassFixture<TempDataFactory>
     }
 
     [Fact]
-    public async Task Leave_ClearsActiveMerchant()
+    public async Task Leave_SetsLeftSoFarAndInventoryStillAccessible()
     {
         const string AccountId = "e5-leave";
         var client = await WalkToMerchantAsync(AccountId);
@@ -299,8 +299,18 @@ public class MerchantControllerTests : IClassFixture<TempDataFactory>
         var leaveRes = await client.PostAsync("/api/v1/merchant/leave", null);
         Assert.Equal(HttpStatusCode.OK, leaveRes.StatusCode);
 
-        // After leave, GET inventory should return 409.
+        // After leave, ActiveMerchant is still set (LeftSoFar=true), so GET inventory returns 200.
         var invRes = await client.GetAsync("/api/v1/merchant/inventory");
-        Assert.Equal(HttpStatusCode.Conflict, invRes.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, invRes.StatusCode);
+
+        // LeftSoFar flag should be true in the response.
+        var doc = JsonDocument.Parse(await invRes.Content.ReadAsStringAsync());
+        Assert.True(doc.RootElement.GetProperty("leftSoFar").GetBoolean());
+
+        // Verify via repo: ActiveMerchant is not null and LeftSoFar = true.
+        var repo = _factory.Services.GetRequiredService<ISaveRepository>();
+        var after = (await repo.TryLoadAsync(AccountId, CancellationToken.None))!;
+        Assert.NotNull(after.ActiveMerchant);
+        Assert.True(after.ActiveMerchant!.LeftSoFar);
     }
 }

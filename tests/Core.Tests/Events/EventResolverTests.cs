@@ -36,7 +36,8 @@ public class EventResolverTests
         var s0 = Base(gold: 100) with { ActiveEvent = inst };
         var s1 = EventResolver.ApplyChoice(s0, 0, Catalog, new SequentialRng(1UL));
         Assert.Equal(130, s1.Gold);
-        Assert.Null(s1.ActiveEvent);
+        Assert.NotNull(s1.ActiveEvent);
+        Assert.Equal(0, s1.ActiveEvent!.ChosenIndex);
     }
 
     [Fact]
@@ -100,7 +101,21 @@ public class EventResolverTests
         var s1 = EventResolver.ApplyChoice(s0, 0, Catalog, new SequentialRng(1UL));
         Assert.NotNull(s1.ActiveReward);
         Assert.Equal(3, s1.ActiveReward!.CardChoices.Length);
-        Assert.Null(s1.ActiveEvent);
+        Assert.NotNull(s1.ActiveEvent);
+        Assert.Equal(0, s1.ActiveEvent!.ChosenIndex);
+    }
+
+    [Fact]
+    public void ApplyChoice_AlreadyResolved_Throws()
+    {
+        var inst = MakeInstance(
+            new EventChoice("gain", null, ImmutableArray.Create<EventEffect>(new EventEffect.GainGold(10))),
+            new EventChoice("pay", null, ImmutableArray.Create<EventEffect>(new EventEffect.PayGold(10))));
+        var s0 = Base() with { ActiveEvent = inst };
+        var s1 = EventResolver.ApplyChoice(s0, 0, Catalog, new SequentialRng(1UL));
+        // 2回目の ApplyChoice は throw
+        Assert.Throws<InvalidOperationException>(() =>
+            EventResolver.ApplyChoice(s1, 1, Catalog, new SequentialRng(1UL)));
     }
 
     [Fact]

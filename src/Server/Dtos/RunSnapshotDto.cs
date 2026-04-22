@@ -31,6 +31,7 @@ public sealed record RunStateDto(
     string Progress,
     EventInstanceDto? ActiveEvent,
     bool ActiveRestPending,
+    bool ActiveRestCompleted,
     string SavedAtUtc);
 
 public sealed record EventChoiceSnapshotDto(string Label, string? ConditionSummary, bool ConditionMet);
@@ -39,7 +40,8 @@ public sealed record EventInstanceDto(
     string EventId,
     string Name,
     string Description,
-    IReadOnlyList<EventChoiceSnapshotDto> Choices);
+    IReadOnlyList<EventChoiceSnapshotDto> Choices,
+    int? ChosenIndex);
 
 public static class RunSnapshotDtoMapper
 {
@@ -80,7 +82,7 @@ public static class RunSnapshotDtoMapper
             s.Deck.Select(c => new CardInstanceDto(c.Id, c.Upgraded)).ToArray(),
             s.Potions, s.PotionSlotCount,
             battle, reward, merchant, s.Relics, s.PlaySeconds, s.Progress.ToString(),
-            activeEvent, s.ActiveRestPending,
+            activeEvent, s.ActiveRestPending, s.ActiveRestCompleted,
             s.SavedAtUtc.ToString("O"));
         return new RunSnapshotDto(run, MapDtoMapper.From(map));
     }
@@ -91,14 +93,15 @@ public sealed record MerchantInventoryDto(
     IReadOnlyList<MerchantOfferDto> Relics,
     IReadOnlyList<MerchantOfferDto> Potions,
     bool DiscardSlotUsed,
-    int DiscardPrice)
+    int DiscardPrice,
+    bool LeftSoFar)
 {
     public static MerchantInventoryDto From(MerchantInventory inv)
     {
         var cards = inv.Cards.Select(o => new MerchantOfferDto(o.Kind, o.Id, o.Price, o.Sold)).ToArray();
         var relics = inv.Relics.Select(o => new MerchantOfferDto(o.Kind, o.Id, o.Price, o.Sold)).ToArray();
         var potions = inv.Potions.Select(o => new MerchantOfferDto(o.Kind, o.Id, o.Price, o.Sold)).ToArray();
-        return new MerchantInventoryDto(cards, relics, potions, inv.DiscardSlotUsed, inv.DiscardPrice);
+        return new MerchantInventoryDto(cards, relics, potions, inv.DiscardSlotUsed, inv.DiscardPrice, inv.LeftSoFar);
     }
 }
 

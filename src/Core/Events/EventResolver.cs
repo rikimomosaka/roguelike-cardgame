@@ -17,6 +17,7 @@ public static class EventResolver
     {
         if (s.ActiveEvent is null) throw new InvalidOperationException("No active event");
         var inst = s.ActiveEvent;
+        if (inst.ChosenIndex is not null) throw new InvalidOperationException("Event already resolved");
         if (choiceIndex < 0 || choiceIndex >= inst.Choices.Length)
             throw new ArgumentOutOfRangeException(nameof(choiceIndex));
         var choice = inst.Choices[choiceIndex];
@@ -26,7 +27,7 @@ public static class EventResolver
         foreach (var eff in choice.Effects)
             s = Apply(s, eff, catalog, rng);
 
-        return s with { ActiveEvent = null };
+        return s with { ActiveEvent = inst with { ChosenIndex = choiceIndex } };
     }
 
     private static RunState Apply(RunState s, EventEffect eff, DataCatalog catalog, IRng rng)

@@ -100,4 +100,34 @@ public class NodeEffectResolverTests
         var next = NodeEffectResolver.Resolve(s, TileKind.Boss, currentRow: 15, cat, new SystemRng(1));
         Assert.NotNull(next.ActiveBattle);
     }
+
+    [Fact]
+    public void Resolve_ClearsOldActiveMerchant()
+    {
+        var cat = EmbeddedDataLoader.LoadCatalog();
+        // 商人マスで Leave した状態（LeftSoFar=true）を持つ state を作る
+        var s = TestRunStates.FreshDefault(cat);
+        var withMerchant = NodeEffectResolver.Resolve(s, TileKind.Merchant, currentRow: 5, cat, new SystemRng(1));
+        Assert.NotNull(withMerchant.ActiveMerchant);
+        // 次のマスへ移動（Rest）
+        var next = NodeEffectResolver.Resolve(withMerchant, TileKind.Rest, currentRow: 6, cat, new SequentialRng(1UL));
+        Assert.Null(next.ActiveMerchant);
+        Assert.True(next.ActiveRestPending);
+    }
+
+    [Fact]
+    public void Resolve_ClearsActiveRestCompleted()
+    {
+        var cat = EmbeddedDataLoader.LoadCatalog();
+        var s = TestRunStates.FreshDefault(cat) with
+        {
+            ActiveRestPending = true,
+            ActiveRestCompleted = true,
+        };
+        // 次のマスへ移動
+        var next = NodeEffectResolver.Resolve(s, TileKind.Event, currentRow: 7, cat, new SequentialRng(1UL));
+        Assert.False(next.ActiveRestPending);
+        Assert.False(next.ActiveRestCompleted);
+        Assert.NotNull(next.ActiveEvent);
+    }
 }

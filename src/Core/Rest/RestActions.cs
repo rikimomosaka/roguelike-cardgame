@@ -14,11 +14,13 @@ public static class RestActions
         ArgumentNullException.ThrowIfNull(catalog);
         if (!s.ActiveRestPending)
             throw new InvalidOperationException("Rest is not pending");
+        if (s.ActiveRestCompleted)
+            throw new InvalidOperationException("Rest already completed");
 
         int baseAmount = (int)Math.Ceiling(s.MaxHp * 0.30);
         int total = NonBattleRelicEffects.ApplyPassiveRestHealBonus(baseAmount, s, catalog);
         int newHp = Math.Min(s.MaxHp, s.CurrentHp + total);
-        return s with { CurrentHp = newHp, ActiveRestPending = false };
+        return s with { CurrentHp = newHp, ActiveRestCompleted = true };
     }
 
     public static RunState UpgradeCard(RunState s, int deckIndex, DataCatalog catalog)
@@ -27,6 +29,8 @@ public static class RestActions
         ArgumentNullException.ThrowIfNull(catalog);
         if (!s.ActiveRestPending)
             throw new InvalidOperationException("Rest is not pending");
+        if (s.ActiveRestCompleted)
+            throw new InvalidOperationException("Rest already completed");
         if (deckIndex < 0 || deckIndex >= s.Deck.Length)
             throw new ArgumentOutOfRangeException(nameof(deckIndex));
 
@@ -39,7 +43,7 @@ public static class RestActions
         return s with
         {
             Deck = s.Deck.SetItem(deckIndex, upgraded),
-            ActiveRestPending = false,
+            ActiveRestCompleted = true,
         };
     }
 }

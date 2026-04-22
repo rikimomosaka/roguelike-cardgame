@@ -28,6 +28,6 @@ public static class EventInstanceDtoFactory
             };
             return new Dtos.EventChoiceSnapshotDto(c.Label, summary, met);
         }).ToList();
-        return new Dtos.EventInstanceDto(inst.EventId, def.Name, def.Description, choices);
+        return new Dtos.EventInstanceDto(inst.EventId, def.Name, def.Description, choices, inst.ChosenIndex);
     }
 }

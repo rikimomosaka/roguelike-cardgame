@@ -131,10 +131,29 @@ public class MerchantActionsTests
     }
 
     [Fact]
-    public void Leave_ClearsActiveMerchant()
+    public void Leave_SetsLeftSoFar()
     {
         var s0 = BaseWithInventory(500);
         var s1 = MerchantActions.Leave(s0);
-        Assert.Null(s1.ActiveMerchant);
+        Assert.NotNull(s1.ActiveMerchant);
+        Assert.True(s1.ActiveMerchant!.LeftSoFar);
+    }
+
+    [Fact]
+    public void Leave_Twice_StillLeftSoFar()
+    {
+        var s0 = BaseWithInventory(500);
+        var s1 = MerchantActions.Leave(s0);
+        var s2 = MerchantActions.Leave(s1);
+        Assert.True(s2.ActiveMerchant!.LeftSoFar);
+    }
+
+    [Fact]
+    public void Leave_ThenBuy_Throws()
+    {
+        var s0 = BaseWithInventory(500);
+        var s1 = MerchantActions.Leave(s0);
+        Assert.Throws<InvalidOperationException>(() =>
+            MerchantActions.BuyCard(s1, "reward_common_01", Catalog));
     }
 }

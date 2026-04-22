@@ -40,6 +40,7 @@ public sealed record RunState(
     MerchantInventory? ActiveMerchant,
     EventInstance? ActiveEvent,
     bool ActiveRestPending,
+    bool ActiveRestCompleted,
 
     // --- existing ---
     IReadOnlyList<string> Relics,
@@ -107,6 +108,7 @@ public sealed record RunState(
             ActiveMerchant: null,
             ActiveEvent: null,
             ActiveRestPending: false,
+            ActiveRestCompleted: false,
             Relics: Array.Empty<string>(),
             PlaySeconds: 0L,
             RngSeed: rngSeed,
@@ -141,6 +143,8 @@ public sealed record RunState(
             return "at most one of ActiveBattle / ActiveReward / ActiveMerchant / ActiveEvent can be non-null";
         if (ActiveRestPending && activeCount > 0)
             return "ActiveRestPending must not coexist with any other Active*";
+        if (ActiveRestCompleted && !ActiveRestPending)
+            return "ActiveRestCompleted requires ActiveRestPending";
 
         if (ActiveReward is { CardChoices: var cc } && cc.Length != 0 && cc.Length != 3)
             return $"CardChoices must have length 0 or 3 (got {cc.Length})";

@@ -39,13 +39,14 @@ public class RestActionsTests
     }
 
     [Fact]
-    public void Heal_HealsCeilThirtyPercent_AndClearsPending()
+    public void Heal_HealsCeilThirtyPercent_AndSetsCompleted()
     {
         var s = PendingRunAt(currentHp: 30, maxHp: 80);
         var s1 = RestActions.Heal(s, Catalog());
         // ceil(80 * 0.30) = ceil(24) = 24
         Assert.Equal(30 + 24, s1.CurrentHp);
-        Assert.False(s1.ActiveRestPending);
+        Assert.True(s1.ActiveRestPending);   // Pending は残る
+        Assert.True(s1.ActiveRestCompleted); // Completed が立つ
     }
 
     [Fact]
@@ -54,7 +55,26 @@ public class RestActionsTests
         var s = PendingRunAt(currentHp: 70, maxHp: 80);
         var s1 = RestActions.Heal(s, Catalog());
         Assert.Equal(80, s1.CurrentHp);
-        Assert.False(s1.ActiveRestPending);
+        Assert.True(s1.ActiveRestPending);
+        Assert.True(s1.ActiveRestCompleted);
+    }
+
+    [Fact]
+    public void Heal_TwiceThrows()
+    {
+        var s = PendingRunAt(currentHp: 30, maxHp: 80);
+        var s1 = RestActions.Heal(s, Catalog());
+        Assert.Throws<InvalidOperationException>(() => RestActions.Heal(s1, Catalog()));
+    }
+
+    [Fact]
+    public void Heal_ThenUpgrade_Throws()
+    {
+        var deck = ImmutableArray.Create(new CardInstance("strike", Upgraded: false));
+        var s = PendingRunAt(30, 80, deck: deck);
+        var s1 = RestActions.Heal(s, Catalog());
+        Assert.Throws<InvalidOperationException>(() =>
+            RestActions.UpgradeCard(s1, 0, Catalog()));
     }
 
     [Fact]
@@ -75,7 +95,7 @@ public class RestActionsTests
     }
 
     [Fact]
-    public void UpgradeCard_UpgradesDeckIndex_AndClearsPending()
+    public void UpgradeCard_UpgradesDeckIndex_AndSetsCompleted()
     {
         var catalog = Catalog();
         // 強化可能なカード (例: "strike") を 1 枚持つデッキを作る
@@ -86,7 +106,8 @@ public class RestActionsTests
         var s1 = RestActions.UpgradeCard(s, deckIndex: 0, catalog);
         Assert.True(s1.Deck[0].Upgraded);
         Assert.False(s1.Deck[1].Upgraded);
-        Assert.False(s1.ActiveRestPending);
+        Assert.True(s1.ActiveRestPending);   // Pending は残る
+        Assert.True(s1.ActiveRestCompleted); // Completed が立つ
     }
 
     [Fact]

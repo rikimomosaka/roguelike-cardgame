@@ -149,7 +149,7 @@ public class EventControllerTests : IClassFixture<TempDataFactory>
     }
 
     [Fact]
-    public async Task PostChoose_ValidChoice_AppliesAndClearsActiveEvent()
+    public async Task PostChoose_ValidChoice_AppliesAndSetsChosenIndex()
     {
         const string AccountId = "ev1-choose-ok";
         var client = await StartFreshRunAsync(AccountId);
@@ -171,16 +171,18 @@ public class EventControllerTests : IClassFixture<TempDataFactory>
         // HP+15 が適用されているか
         Assert.Equal(65, runEl.GetProperty("currentHp").GetInt32());
 
-        // activeEvent が null になっているか（レスポンス）
-        Assert.Equal(JsonValueKind.Null, runEl.GetProperty("activeEvent").ValueKind);
+        // activeEvent は null ではなく、chosenIndex がセットされているか
+        Assert.NotEqual(JsonValueKind.Null, runEl.GetProperty("activeEvent").ValueKind);
+        Assert.Equal(0, runEl.GetProperty("activeEvent").GetProperty("chosenIndex").GetInt32());
 
-        // リポジトリでも ActiveEvent が null になっているか確認
+        // リポジトリでも ActiveEvent が ChosenIndex=0 になっているか確認
         var after = (await repo.TryLoadAsync(AccountId, CancellationToken.None))!;
-        Assert.Null(after.ActiveEvent);
+        Assert.NotNull(after.ActiveEvent);
+        Assert.Equal(0, after.ActiveEvent!.ChosenIndex);
     }
 
     [Fact]
-    public async Task PostChoose_LeaveChoice_Returns200AndClearsEvent()
+    public async Task PostChoose_LeaveChoice_Returns200AndSetsChosenIndex()
     {
         const string AccountId = "ev1-choose-leave";
         var client = await StartFreshRunAsync(AccountId);
@@ -192,10 +194,13 @@ public class EventControllerTests : IClassFixture<TempDataFactory>
 
         var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
         var runEl = doc.RootElement.GetProperty("run");
-        Assert.Equal(JsonValueKind.Null, runEl.GetProperty("activeEvent").ValueKind);
 
-        // GET /event/current は 409 を返すようになるはず
+        // activeEvent は null ではなく chosenIndex=2 がセットされているか
+        Assert.NotEqual(JsonValueKind.Null, runEl.GetProperty("activeEvent").ValueKind);
+        Assert.Equal(2, runEl.GetProperty("activeEvent").GetProperty("chosenIndex").GetInt32());
+
+        // GET /event/current は引き続き 200 を返す（ActiveEvent はまだ存在する）
         var getRes = await client.GetAsync("/api/v1/event/current");
-        Assert.Equal(HttpStatusCode.Conflict, getRes.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, getRes.StatusCode);
     }
 }

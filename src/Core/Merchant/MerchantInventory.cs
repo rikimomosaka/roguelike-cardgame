@@ -7,4 +7,5 @@ public sealed record MerchantInventory(
     ImmutableArray<MerchantOffer> Relics,
     ImmutableArray<MerchantOffer> Potions,
     bool DiscardSlotUsed,
-    int DiscardPrice);
+    int DiscardPrice,
+    bool LeftSoFar = false);

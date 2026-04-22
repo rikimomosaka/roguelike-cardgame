@@ -18,6 +18,15 @@ public static class NodeEffectResolver
     public static RunState Resolve(
         RunState state, TileKind kind, int currentRow, DataCatalog data, IRng rng)
     {
+        // 前のマスの未完了状態をクリア（次のマスに入った時点で閉じる）
+        state = state with
+        {
+            ActiveMerchant = null,
+            ActiveEvent = null,
+            ActiveRestPending = false,
+            ActiveRestCompleted = false,
+        };
+
         var table = data.RewardTables["act1"];
         return kind switch
         {
