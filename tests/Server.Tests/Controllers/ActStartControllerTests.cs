@@ -59,39 +59,78 @@ public class ActStartControllerTests : IClassFixture<TempDataFactory>
         const string AccountId = "as1-no-choice";
         var client = await StartFreshRunAsync(AccountId);
 
-        // NewRun 直後は act1 のレリック選択肢が自動生成されているので、
-        // それを一度解消してから 409 を確認する。
-        var repo = _factory.Services.GetRequiredService<ISaveRepository>();
-        var s = (await repo.TryLoadAsync(AccountId, CancellationToken.None))!;
-        await repo.SaveAsync(AccountId, s with { ActiveActStartRelicChoice = null },
-            CancellationToken.None);
-
+        // NewRun 直後は ActiveActStartRelicChoice が null → 409
         var resp = await client.PostAsJsonAsync("/api/v1/act-start/choose",
             new { relicId = "some_relic" });
         Assert.Equal(HttpStatusCode.Conflict, resp.StatusCode);
     }
 
     [Fact]
-    public async Task NewRun_GeneratesAct1RelicChoice()
+    public async Task NewRun_DoesNotAutoGenerateRelicChoice()
     {
-        // Regression: each act's start tile should offer a 3-relic choice.
-        // Act 1 choice is generated at run creation (no Start tile re-entry happens).
-        const string AccountId = "as1-newrun-choice";
+        // Regression: act-start relic 選択はスタートマスを踏んだ時のイベントとして
+        // 発動するため、NewRun 直後には activeActStartRelicChoice は null のままでなければならない。
+        const string AccountId = "as1-newrun-null";
         var client = await StartFreshRunAsync(AccountId);
 
         var resp = await client.GetAsync("/api/v1/runs/current");
         resp.EnsureSuccessStatusCode();
         var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
         var choice = doc.RootElement.GetProperty("run").GetProperty("activeActStartRelicChoice");
+        Assert.Equal(JsonValueKind.Null, choice.ValueKind);
+    }
+
+    [Fact]
+    public async Task Enter_OnStartTile_GeneratesRelicChoice()
+    {
+        // Regression: POST /act-start/enter はスタートマス入場時に 3 択を生成する。
+        const string AccountId = "as1-enter-generate";
+        var client = await StartFreshRunAsync(AccountId);
+
+        var resp = await client.PostAsync("/api/v1/act-start/enter", content: null);
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+        var choice = doc.RootElement.GetProperty("run").GetProperty("activeActStartRelicChoice");
         Assert.NotEqual(JsonValueKind.Null, choice.ValueKind);
         var ids = choice.GetProperty("relicIds");
         Assert.Equal(3, ids.GetArrayLength());
 
-        // すべて act1 pool に属するレリックでなければならない
         var catalog = _factory.Services.GetRequiredService<DataCatalog>();
         var pool = catalog.ActStartRelicPools![1];
         foreach (var el in ids.EnumerateArray())
             Assert.Contains(el.GetString()!, pool);
+    }
+
+    [Fact]
+    public async Task Enter_WhenAlreadyActive_Returns409()
+    {
+        const string AccountId = "as1-enter-already-active";
+        var client = await StartFreshRunAsync(AccountId);
+
+        (await client.PostAsync("/api/v1/act-start/enter", content: null))
+            .EnsureSuccessStatusCode();
+        var resp = await client.PostAsync("/api/v1/act-start/enter", content: null);
+        Assert.Equal(HttpStatusCode.Conflict, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Enter_WhenStartAlreadyVisited_Returns409()
+    {
+        const string AccountId = "as1-enter-visited";
+        var client = await StartFreshRunAsync(AccountId);
+
+        // Start を踏んで relic を選ぶところまで進めると VisitedNodeIds に Start が入る
+        (await client.PostAsync("/api/v1/act-start/enter", content: null))
+            .EnsureSuccessStatusCode();
+        var catalog = _factory.Services.GetRequiredService<DataCatalog>();
+        var repo = _factory.Services.GetRequiredService<ISaveRepository>();
+        var s = (await repo.TryLoadAsync(AccountId, CancellationToken.None))!;
+        var picked = s.ActiveActStartRelicChoice!.RelicIds[0];
+        (await client.PostAsJsonAsync("/api/v1/act-start/choose", new { relicId = picked }))
+            .EnsureSuccessStatusCode();
+
+        var resp = await client.PostAsync("/api/v1/act-start/enter", content: null);
+        Assert.Equal(HttpStatusCode.Conflict, resp.StatusCode);
     }
 
     [Fact]

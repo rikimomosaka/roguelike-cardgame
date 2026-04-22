@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using RoguelikeCardGame.Core.Data;
+using RoguelikeCardGame.Core.Random;
 using RoguelikeCardGame.Core.Run;
 using RoguelikeCardGame.Server.Abstractions;
 using RoguelikeCardGame.Server.Dtos;
@@ -25,6 +26,52 @@ public sealed class ActStartController : ControllerBase
         _saves = saves;
         _runStart = runStart;
         _data = data;
+    }
+
+    /// <summary>
+    /// スタートマスを踏んだ時点で呼ぶ。まだ選択肢が未生成であれば、現アクトの
+    /// ActStartRelicPool から 3 択を決定的に生成して ActiveActStartRelicChoice に設定する。
+    /// 既に選択肢が存在する／スタートマスを既に通過済みの場合は 409。
+    /// </summary>
+    [HttpPost("enter")]
+    public async Task<IActionResult> Enter(CancellationToken ct)
+    {
+        if (!TryGetAccountId(out var accountId, out var err)) return err!;
+        if (!await _accounts.ExistsAsync(accountId, ct))
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: $"アカウントが見つかりません: {accountId}");
+
+        var s = await _saves.TryLoadAsync(accountId, ct);
+        if (s is null || s.Progress != RunProgress.InProgress)
+            return Problem(statusCode: StatusCodes.Status409Conflict, title: "進行中のランがありません。");
+        if (s.ActiveActStartRelicChoice is not null)
+            return Problem(statusCode: StatusCodes.Status409Conflict, title: "既に層開始レリック選択中です。");
+
+        var map = _runStart.RehydrateMap(s.RngSeed, s.CurrentAct);
+        if (s.CurrentNodeId != map.StartNodeId)
+            return Problem(statusCode: StatusCodes.Status409Conflict, title: "スタートマスにいません。");
+        if (s.VisitedNodeIds.Contains(s.CurrentNodeId))
+            return Problem(statusCode: StatusCodes.Status409Conflict, title: "スタートマスは通過済みです。");
+
+        // (rngSeed, act) から決定的にレリック選択 RNG を派生させる
+        var derivedSeed = unchecked((int)(uint)ActMapSeed.Derive(s.RngSeed, s.CurrentAct));
+        var rng = new SystemRng(unchecked(derivedSeed ^ 0x5ECF));
+        RunState updated;
+        try
+        {
+            var choice = ActStartActions.GenerateChoices(s, s.CurrentAct, _data, rng);
+            updated = s with
+            {
+                ActiveActStartRelicChoice = choice,
+                SavedAtUtc = DateTimeOffset.UtcNow,
+            };
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Problem(statusCode: StatusCodes.Status409Conflict, title: ex.Message);
+        }
+
+        await _saves.SaveAsync(accountId, updated, ct);
+        return Ok(RunSnapshotDtoMapper.From(updated, map, _data));
     }
 
     [HttpPost("choose")]

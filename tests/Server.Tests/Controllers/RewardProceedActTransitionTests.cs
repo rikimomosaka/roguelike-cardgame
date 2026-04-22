@@ -175,14 +175,13 @@ public class RewardProceedActTransitionTests : IClassFixture<TempDataFactory>
     }
 
     /// <summary>
-    /// Regression: Proceeding from boss reward into the next act must generate a
-    /// new act-start relic 3-choice. Without this the player has no way to receive
-    /// act 2+'s starter relic.
+    /// Regression: Act 遷移直後は選択肢を自動生成せず null のまま。層開始レリックは
+    /// プレイヤーがスタートマスをクリックした時（/act-start/enter）に初めて生成される。
     /// </summary>
     [Fact]
-    public async Task Proceed_OnBossReward_GeneratesAct2RelicChoice()
+    public async Task Proceed_OnBossReward_DoesNotAutoGenerateAct2RelicChoice()
     {
-        const string AccountId = "proc-boss-act2-relic";
+        const string AccountId = "proc-boss-act2-nochoice";
         var client = await SetupRunWithBossRewardAsync(AccountId, act: 1);
 
         var resp = await client.PostAsJsonAsync("/api/v1/runs/current/reward/proceed",
@@ -191,10 +190,15 @@ public class RewardProceedActTransitionTests : IClassFixture<TempDataFactory>
 
         var body = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
         var run = body.RootElement.GetProperty("run");
-        var choice = run.GetProperty("activeActStartRelicChoice");
+        Assert.Equal(JsonValueKind.Null, run.GetProperty("activeActStartRelicChoice").ValueKind);
+
+        // Enter で act2 の選択肢が生成される
+        var enterResp = await client.PostAsync("/api/v1/act-start/enter", content: null);
+        Assert.Equal(HttpStatusCode.OK, enterResp.StatusCode);
+        var enterDoc = JsonDocument.Parse(await enterResp.Content.ReadAsStringAsync());
+        var choice = enterDoc.RootElement.GetProperty("run").GetProperty("activeActStartRelicChoice");
         Assert.NotEqual(JsonValueKind.Null, choice.ValueKind);
         Assert.Equal(3, choice.GetProperty("relicIds").GetArrayLength());
-
         var catalog = _fx.Services.GetRequiredService<DataCatalog>();
         var pool = catalog.ActStartRelicPools![2];
         foreach (var el in choice.GetProperty("relicIds").EnumerateArray())

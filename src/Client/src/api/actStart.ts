@@ -7,3 +7,9 @@ export async function chooseActStartRelic(accountId: string, relicId: string): P
     body: { relicId },
   })
 }
+
+export async function enterActStart(accountId: string): Promise<RunSnapshotDto> {
+  return await apiRequest<RunSnapshotDto>('POST', '/act-start/enter', {
+    accountId,
+  })
+}

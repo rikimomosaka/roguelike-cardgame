@@ -334,4 +334,53 @@ describe('MapScreen', () => {
     )
     expect(screen.getByText(/層開始のレリックを選ぶ/)).toBeDefined()
   })
+
+  it('at act start (Start not visited, choice null), Start is the only clickable tile', () => {
+    // Regression: 層開始時はスタートマスが唯一クリック可能で、１マス目は選べない。
+    render(
+      <AccountProvider>
+        <MapScreen
+          snapshot={sampleSnapshot({ visitedNodeIds: [], currentNodeId: 0 })}
+          onExitToMenu={() => {}}
+          onAbandon={() => {}}
+        />
+      </AccountProvider>,
+    )
+    expect(screen.getByTestId('map-node-0')).toHaveAttribute('data-start-entry', 'true')
+    expect(screen.getByTestId('map-node-1')).toHaveAttribute('data-selectable', 'false')
+  })
+
+  it('clicking Start when act-start is pending calls /act-start/enter', async () => {
+    const entered = sampleSnapshot({
+      visitedNodeIds: [],
+      currentNodeId: 0,
+      activeActStartRelicChoice: { relicIds: ['r1', 'r2', 'r3'] },
+    })
+    fetchMock.mockImplementation((input: unknown) => {
+      const url = String(input)
+      if (url.includes('/act-start/enter')) {
+        return Promise.resolve(new Response(JSON.stringify(entered), { status: 200 }))
+      }
+      return Promise.resolve(new Response(null, { status: 204 }))
+    })
+    render(
+      <AccountProvider>
+        <MapScreen
+          snapshot={sampleSnapshot({ visitedNodeIds: [], currentNodeId: 0 })}
+          onExitToMenu={() => {}}
+          onAbandon={() => {}}
+        />
+      </AccountProvider>,
+    )
+    fireEvent.click(screen.getByTestId('map-node-0'))
+    await waitFor(() => {
+      const call = fetchMock.mock.calls.find((args) =>
+        String(args[0]).includes('/act-start/enter'),
+      )
+      expect(call).toBeDefined()
+    })
+    await waitFor(() => {
+      expect(screen.getByText(/層開始のレリックを選ぶ/)).toBeDefined()
+    })
+  })
 })

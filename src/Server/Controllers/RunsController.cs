@@ -264,12 +264,7 @@ public sealed class RunsController : ControllerBase
             var newResolutions = _runStart.ResolveUnknownsForAct(newMap, s.RngSeed, nextAct);
             var advanceRng = new SystemRng(unchecked(nextActSeed ^ 0xAC70));
             updated = ActTransition.AdvanceAct(s, newMap, _data, advanceRng, newResolutions);
-
-            // 新アクト開始時のレリック 3 択を生成
-            var choiceRng = new SystemRng(unchecked(nextActSeed ^ 0x5ECF));
-            var choice = ActStartActions.GenerateChoices(updated, nextAct, _data, choiceRng);
-            updated = updated with { ActiveActStartRelicChoice = choice };
-
+            // 新アクトの層開始レリック選択はスタートマスに入った時点で ActStartController.Enter が生成する。
             updated = updated with
             {
                 PlaySeconds = updated.PlaySeconds + elapsed,
