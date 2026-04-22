@@ -3,6 +3,39 @@ export type AccountDto = {
   createdAt: string
 }
 
+export type CardInstanceDto = {
+  id: string
+  upgraded: boolean
+}
+
+export type MerchantOfferDto = {
+  kind: string
+  id: string
+  price: number
+  sold: boolean
+}
+
+export type MerchantInventoryDto = {
+  cards: MerchantOfferDto[]
+  relics: MerchantOfferDto[]
+  potions: MerchantOfferDto[]
+  discardSlotUsed: boolean
+  discardPrice: number
+}
+
+export type EventChoiceSnapshotDto = {
+  label: string
+  conditionSummary: string | null
+  conditionMet: boolean
+}
+
+export type EventInstanceDto = {
+  eventId: string
+  name: string
+  description: string
+  choices: EventChoiceSnapshotDto[]
+}
+
 export type AudioSettingsDto = {
   schemaVersion: number
   master: number
@@ -48,6 +81,8 @@ export type RewardStateDto = {
   potionClaimed: boolean
   cardChoices: string[]
   cardStatus: CardRewardStatus
+  relicId: string | null
+  relicClaimed: boolean
 }
 
 export type RunStateDto = {
@@ -60,11 +95,14 @@ export type RunStateDto = {
   currentHp: number
   maxHp: number
   gold: number
-  deck: string[]
+  deck: CardInstanceDto[]
   potions: string[]
   potionSlotCount: number
   activeBattle: BattleStateDto | null
   activeReward: RewardStateDto | null
+  activeMerchant: MerchantInventoryDto | null
+  activeEvent: EventInstanceDto | null
+  activeRestPending: boolean
   relics: string[]
   playSeconds: number
   progress: RunProgress
