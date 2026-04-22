@@ -1,19 +1,18 @@
 using System;
-using System.Collections.Immutable;
-using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Json;
 
 namespace RoguelikeCardGame.Core.Run;
 
+/// <summary>RunState JSON のパース失敗を表す例外。</summary>
 public sealed class RunStateSerializerException : Exception
 {
     public RunStateSerializerException(string message) : base(message) { }
     public RunStateSerializerException(string message, Exception inner) : base(message, inner) { }
 }
 
+/// <summary>RunState ⇔ JSON 文字列の変換。ファイル I/O は Server 側の ISaveRepository が担当。</summary>
 public static class RunStateSerializer
 {
     public static string Serialize(RunState state)
@@ -49,9 +48,12 @@ public static class RunStateSerializer
     private static JsonObject MigrateV3ToV4(JsonObject obj)
     {
         // Deck: string[] → CardInstance[] with Upgraded=false
-        if (obj["deck"] is JsonArray deckV3)
+        if (obj["deck"] is not JsonArray deckV3)
+            throw new RunStateSerializerException("v3 の deck が配列ではありません。");
+
+        var deckV4 = new JsonArray();
+        try
         {
-            var deckV4 = new JsonArray();
             foreach (var idNode in deckV3)
             {
                 var id = idNode?.GetValue<string>()
@@ -62,8 +64,13 @@ public static class RunStateSerializer
                     ["upgraded"] = false,
                 });
             }
-            obj["deck"] = deckV4;
         }
+        catch (Exception ex) when (ex is InvalidOperationException or FormatException or JsonException)
+        {
+            throw new RunStateSerializerException("v3 の deck 要素が string ではありません。", ex);
+        }
+        obj["deck"] = deckV4;
+
         obj["activeMerchant"] ??= null;
         obj["activeEvent"] ??= null;
         obj["activeRestPending"] ??= false;

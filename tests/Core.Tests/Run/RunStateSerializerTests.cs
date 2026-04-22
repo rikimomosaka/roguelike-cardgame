@@ -117,4 +117,39 @@ public class RunStateSerializerTests
         var ex = Assert.Throws<RunStateSerializerException>(() => RunStateSerializer.Deserialize(json));
         Assert.Contains("schemaVersion", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public void Deserialize_V3WithMalformedDeck_Throws()
+    {
+        // deck 要素に数値が混ざっている。migration 時に RunStateSerializerException 経由で拒否されるべき。
+        var v3 = """
+        {
+          "schemaVersion": 3,
+          "currentAct": 1,
+          "currentNodeId": 0,
+          "visitedNodeIds": [0],
+          "unknownResolutions": {},
+          "characterId": "default",
+          "currentHp": 80,
+          "maxHp": 80,
+          "gold": 99,
+          "deck": ["strike", 42],
+          "potions": ["", "", ""],
+          "potionSlotCount": 3,
+          "activeBattle": null,
+          "activeReward": null,
+          "encounterQueueWeak": [],
+          "encounterQueueStrong": [],
+          "encounterQueueElite": [],
+          "encounterQueueBoss": [],
+          "rewardRngState": { "potionChancePercent": 40, "rareChanceBonusPercent": 0 },
+          "relics": [],
+          "playSeconds": 0,
+          "rngSeed": 0,
+          "savedAtUtc": "2026-04-21T00:00:00+00:00",
+          "progress": "InProgress"
+        }
+        """;
+        Assert.Throws<RunStateSerializerException>(() => RunStateSerializer.Deserialize(v3));
+    }
 }
