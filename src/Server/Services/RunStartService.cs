@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Immutable;
 using System.Threading;
 using System.Threading.Tasks;
 using RoguelikeCardGame.Core.Battle;
@@ -8,6 +9,7 @@ using RoguelikeCardGame.Core.Map;
 using RoguelikeCardGame.Core.Random;
 using RoguelikeCardGame.Core.Run;
 using RoguelikeCardGame.Server.Abstractions;
+using ActMapSeedHelper = RoguelikeCardGame.Core.Run.ActMapSeed;
 
 namespace RoguelikeCardGame.Server.Services;
 
@@ -47,9 +49,10 @@ public sealed class RunStartService
         for (int attempt = 0; attempt < MaxSeedAttempts; attempt++)
         {
             seed = _seedSource();
+            var act1Seed = unchecked((int)(uint)ActMapSeedHelper.Derive((ulong)(uint)seed, 1));
             try
             {
-                map = _generator.Generate(new SystemRng(seed), _mapConfig);
+                map = _generator.Generate(new SystemRng(act1Seed), _mapConfig);
                 break;
             }
             catch (MapGenerationException ex)
@@ -82,6 +85,9 @@ public sealed class RunStartService
             encounterQueueElite: queueElite,
             encounterQueueBoss: queueBoss,
             nowUtc: _now());
+
+        // Phase 7: 層開始レリック選択はスタートマスを踏んだ時のイベントとして発動する。
+        // ここでは生成せず、ActStartController.Enter が生成を担当する。
         await _saves.SaveAsync(accountId, state, ct);
         return (state, map);
     }
@@ -90,9 +96,25 @@ public sealed class RunStartService
     /// 保存済み seed から map の構造のみを再生成して返す（move / current 用）。
     /// Unknown の解決結果は含まれない — それは <see cref="RunState.UnknownResolutions"/> に永続化されている。
     /// </summary>
-    public DungeonMap RehydrateMap(ulong rngSeed)
+    /// <param name="rngSeed">ランの生の RNG seed（RunState.RngSeed）。</param>
+    /// <param name="act">act 番号（1 始まり）。ActMapSeed.Derive で per-act seed に変換する。</param>
+    public DungeonMap RehydrateMap(ulong rngSeed, int act = 1)
     {
-        int seed = unchecked((int)(uint)rngSeed);
+        var derived = ActMapSeedHelper.Derive(rngSeed, act);
+        int seed = unchecked((int)(uint)derived);
         return _generator.Generate(new SystemRng(seed), _mapConfig);
+    }
+
+    /// <summary>
+    /// アクト遷移時に新マップの Unknown ノードを解決する。
+    /// 同じ (rngSeed, act, map) に対して決定的に同じ結果を返す。
+    /// </summary>
+    public ImmutableDictionary<int, TileKind> ResolveUnknownsForAct(
+        DungeonMap map, ulong rngSeed, int act)
+    {
+        var derived = ActMapSeedHelper.Derive(rngSeed, act);
+        int seed = unchecked((int)(uint)derived);
+        var rng = new SystemRng(unchecked(seed ^ 0x11E50));
+        return UnknownResolver.ResolveAll(map, _mapConfig.UnknownResolutionWeights, rng);
     }
 }

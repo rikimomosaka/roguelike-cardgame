@@ -13,6 +13,7 @@ function baseReward(overrides: Partial<RewardStateDto> = {}): RewardStateDto {
     cardStatus: 'Pending',
     relicId: null,
     relicClaimed: false,
+    isBossReward: false,
     ...overrides,
   }
 }
@@ -170,5 +171,88 @@ describe('RewardPopup', () => {
       />,
     )
     expect(screen.queryByText(/0 Gold/)).toBeNull()
+  })
+
+  it('proceed button shows "次の層へ" when reward.isBossReward is true', () => {
+    const handlers = baseHandlers()
+    const reward = baseReward({ isBossReward: true })
+    render(
+      <RewardPopup
+        reward={reward}
+        potions={['', '', '']}
+        potionSlotCount={3}
+        {...handlers}
+      />,
+    )
+    expect(screen.getByText('次の層へ')).toBeDefined()
+    expect(screen.queryByText('進む')).toBeNull()
+  })
+
+  it('proceed button shows "進む" when reward.isBossReward is false', () => {
+    const handlers = baseHandlers()
+    const reward = baseReward({ isBossReward: false })
+    render(
+      <RewardPopup
+        reward={reward}
+        potions={['', '', '']}
+        potionSlotCount={3}
+        {...handlers}
+      />,
+    )
+    expect(screen.getByText('進む')).toBeDefined()
+    expect(screen.queryByText('次の層へ')).toBeNull()
+  })
+
+  it('card view shows only Skip button (no 戻る) when cardStatus is Pending', () => {
+    const handlers = baseHandlers()
+    render(
+      <RewardPopup
+        reward={baseReward({ goldClaimed: true })}
+        potions={['', '', '']}
+        potionSlotCount={3}
+        {...handlers}
+      />,
+    )
+    fireEvent.click(screen.getByText('✨ カードの報酬'))
+    expect(screen.getByText('Skip')).toBeDefined()
+    expect(screen.queryByText('戻る')).toBeNull()
+  })
+
+  it('clicking Skip when Pending calls onSkipCard then closes card view', async () => {
+    const handlers = baseHandlers()
+    render(
+      <RewardPopup
+        reward={baseReward({ goldClaimed: true })}
+        potions={['', '', '']}
+        potionSlotCount={3}
+        {...handlers}
+      />,
+    )
+    fireEvent.click(screen.getByText('✨ カードの報酬'))
+    fireEvent.click(screen.getByText('Skip'))
+    await waitFor(() => expect(handlers.onSkipCard).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(screen.queryByText('カードを選ぶ')).toBeNull())
+  })
+
+  it('card view shows Skip (not 戻る) when reopened after Skipped and does not re-call onSkipCard', async () => {
+    // Regression (new Bug ③): After Skip, reopening the card view previously
+    // rendered only "戻る". It should render "Skip" only, and clicking it must
+    // not hit the server again (server rejects SkipCard when not Pending).
+    const handlers = baseHandlers()
+    render(
+      <RewardPopup
+        reward={baseReward({ goldClaimed: true, cardStatus: 'Skipped' })}
+        potions={['', '', '']}
+        potionSlotCount={3}
+        {...handlers}
+      />,
+    )
+    fireEvent.click(screen.getByText('✨ カードの報酬'))
+    expect(screen.getByText('Skip')).toBeDefined()
+    expect(screen.queryByText('戻る')).toBeNull()
+    fireEvent.click(screen.getByText('Skip'))
+    // onSkipCard は呼ばれてはならない（サーバ側 SkipCard は Pending 以外で 409）
+    await waitFor(() => expect(screen.queryByText('カードを選ぶ')).toBeNull())
+    expect(handlers.onSkipCard).not.toHaveBeenCalled()
   })
 })

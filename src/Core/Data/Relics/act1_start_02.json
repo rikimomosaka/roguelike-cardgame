@@ -1,0 +1,1 @@
+{"id":"act1_start_02","name":"道銀貨","rarity":1,"trigger":"OnPickup","effects":[{"type":"gainGold","amount":75}]}

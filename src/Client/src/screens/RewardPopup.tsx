@@ -45,17 +45,16 @@ export function RewardPopup(p: Props) {
             </Button>
           ))}
         </div>
-        {r.cardStatus === 'Pending' && (
-          <Button
-            onClick={async () => {
-              await p.onSkipCard()
-              setCardView(false)
-            }}
-          >
-            Skip
-          </Button>
-        )}
-        <Button onClick={() => setCardView(false)}>戻る</Button>
+        {/* Skip は報酬全体の画面へ戻るボタンを兼ねる。Pending のときだけ
+            サーバへ skip を通知し、以降は単にローカルで閉じるのみ。 */}
+        <Button
+          onClick={async () => {
+            if (r.cardStatus === 'Pending') await p.onSkipCard()
+            setCardView(false)
+          }}
+        >
+          Skip
+        </Button>
       </div>
     )
   }
@@ -109,7 +108,7 @@ export function RewardPopup(p: Props) {
           />
         ))}
       </div>
-      <Button onClick={() => p.onProceed()}>進む</Button>
+      <Button onClick={() => p.onProceed()}>{r.isBossReward ? '次の層へ' : '進む'}</Button>
     </div>
   )
 }

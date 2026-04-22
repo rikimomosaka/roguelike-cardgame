@@ -1,0 +1,1 @@
+{"id":"act3_start_01","name":"英雄の証","rarity":2,"trigger":"OnPickup","effects":[{"type":"gainMaxHp","amount":20}]}

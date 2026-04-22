@@ -21,7 +21,8 @@ public sealed record RewardState(
     ImmutableArray<string> CardChoices,
     CardRewardStatus CardStatus,
     string? RelicId = null,
-    bool RelicClaimed = true);
+    bool RelicClaimed = true,
+    bool IsBossReward = false);
 
 public sealed record RewardRngState(
     int PotionChancePercent,

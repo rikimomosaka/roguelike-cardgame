@@ -156,7 +156,7 @@ public class RewardGeneratorTests
     }
 
     [Fact]
-    public void GenerateFromNonBattle_Treasure_RelicOnlyNoGoldNoPotionNoCards()
+    public void GenerateFromNonBattle_Treasure_AlwaysYieldsGoldAndRelic_NoPotionNoCards()
     {
         var catalog = EmbeddedDataLoader.LoadCatalog();
         var rt = catalog.RewardTables["act1"];
@@ -165,7 +165,9 @@ public class RewardGeneratorTests
         var (reward, _) = RewardGenerator.Generate(
             new RewardContext.FromNonBattle(NonBattleRewardKind.Treasure),
             rngState, ImmutableArray<string>.Empty, rt, catalog, rng);
-        Assert.Equal(0, reward.Gold);
+        var treasureEntry = rt.NonBattle["treasure"];
+        Assert.InRange(reward.Gold, treasureEntry.GoldMin, treasureEntry.GoldMax);
+        Assert.False(reward.GoldClaimed);
         Assert.Null(reward.PotionId);
         Assert.Empty(reward.CardChoices);
         Assert.Equal(CardRewardStatus.Claimed, reward.CardStatus);

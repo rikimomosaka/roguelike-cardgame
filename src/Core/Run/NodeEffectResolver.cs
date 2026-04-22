@@ -25,12 +25,15 @@ public static class NodeEffectResolver
             ActiveEvent = null,
             ActiveRestPending = false,
             ActiveRestCompleted = false,
+            ActiveActStartRelicChoice = null,
         };
 
         var table = data.RewardTables["act1"];
         return kind switch
         {
-            TileKind.Start => state,
+            TileKind.Start => state with {
+                ActiveActStartRelicChoice = ActStartActions.GenerateChoices(state, state.CurrentAct, data, rng),
+            },
             TileKind.Enemy => BattlePlaceholder.Start(state,
                 RouteEnemyPool(table, state.CurrentAct, currentRow), data, rng),
             TileKind.Elite => BattlePlaceholder.Start(state,

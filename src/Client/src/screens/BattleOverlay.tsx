@@ -5,9 +5,10 @@ import { Button } from '../components/Button'
 type Props = {
   battle: BattleStateDto
   onWin: () => Promise<void> | void
+  onDebugDamage?: () => void
 }
 
-export function BattleOverlay({ battle, onWin }: Props) {
+export function BattleOverlay({ battle, onWin, onDebugDamage }: Props) {
   const [busy, setBusy] = useState(false)
 
   return (
@@ -39,6 +40,9 @@ export function BattleOverlay({ battle, onWin }: Props) {
         >
           勝利
         </Button>
+        {import.meta.env.DEV && onDebugDamage && (
+          <Button onClick={onDebugDamage} aria-label="DEBUG -10HP">DEBUG -10HP</Button>
+        )}
       </div>
     </div>
   )

@@ -1,0 +1,1 @@
+{"id":"act3_start_04","name":"決戦の剣","rarity":2,"trigger":"OnPickup","effects":[{"type":"gainMaxHp","amount":15}]}

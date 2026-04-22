@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using System.Text.Json;
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Enemy;
 using RoguelikeCardGame.Core.Events;
@@ -24,7 +27,8 @@ public sealed record DataCatalog(
     IReadOnlyDictionary<string, RewardTable> RewardTables,
     IReadOnlyDictionary<string, CharacterDefinition> Characters,
     IReadOnlyDictionary<string, EventDefinition> Events,
-    MerchantPrices? MerchantPrices = null)
+    MerchantPrices? MerchantPrices = null,
+    IReadOnlyDictionary<int, ImmutableArray<string>>? ActStartRelicPools = null)
 {
     public static DataCatalog LoadFromStrings(
         IEnumerable<string> cards,
@@ -35,6 +39,7 @@ public sealed record DataCatalog(
         IEnumerable<string> rewardTables,
         IEnumerable<string> characters,
         IEnumerable<string>? events = null,
+        IEnumerable<string>? actStartRelicPools = null,
         string? merchantPricesJson = null)
     {
         var cardMap = new Dictionary<string, CardDefinition>();
@@ -116,7 +121,21 @@ public sealed record DataCatalog(
         if (merchantPricesJson is not null)
             mp = MerchantPricesJsonLoader.Parse(merchantPricesJson);
 
-        return new DataCatalog(cardMap, relicMap, potionMap, enemyMap, encMap, rtMap, chMap, eventMap, mp);
+        var pools = new Dictionary<int, ImmutableArray<string>>();
+        if (actStartRelicPools is not null)
+        {
+            foreach (var json in actStartRelicPools)
+            {
+                using var doc = JsonDocument.Parse(json);
+                int act = doc.RootElement.GetProperty("act").GetInt32();
+                var ids = doc.RootElement.GetProperty("relicIds").EnumerateArray()
+                    .Select(e => e.GetString()!).ToImmutableArray();
+                if (!pools.TryAdd(act, ids))
+                    throw new DataCatalogException($"act-start relic pool 重複: act={act}");
+            }
+        }
+
+        return new DataCatalog(cardMap, relicMap, potionMap, enemyMap, encMap, rtMap, chMap, eventMap, mp, pools);
     }
 
     public bool TryGetCard(string id, [MaybeNullWhen(false)] out CardDefinition def) => Cards.TryGetValue(id, out def);

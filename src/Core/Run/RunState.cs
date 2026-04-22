@@ -48,10 +48,12 @@ public sealed record RunState(
     ulong RngSeed,
     DateTimeOffset SavedAtUtc,
     RunProgress Progress,
+    string RunId,                                   // ← Phase 7
+    ActStartRelicChoice? ActiveActStartRelicChoice, // ← Phase 7
     int DiscardUsesSoFar = 0)
 {
-    /// <summary>Phase 6 の JSON スキーマバージョン。</summary>
-    public const int CurrentSchemaVersion = 4;
+    /// <summary>Phase 7 の JSON スキーマバージョン。</summary>
+    public const int CurrentSchemaVersion = 5;
 
     public static RunState NewSoloRun(
         DataCatalog catalog,
@@ -63,7 +65,8 @@ public sealed record RunState(
         ImmutableArray<string> encounterQueueElite,
         ImmutableArray<string> encounterQueueBoss,
         DateTimeOffset nowUtc,
-        string characterId = "default")
+        string characterId = "default",
+        string? runId = null)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(unknownResolutions);
@@ -89,7 +92,7 @@ public sealed record RunState(
             SchemaVersion: CurrentSchemaVersion,
             CurrentAct: 1,
             CurrentNodeId: startNodeId,
-            VisitedNodeIds: ImmutableArray.Create(startNodeId),
+            VisitedNodeIds: ImmutableArray<int>.Empty,
             UnknownResolutions: unknownResolutions,
             CharacterId: characterId,
             CurrentHp: ch.MaxHp,
@@ -114,7 +117,9 @@ public sealed record RunState(
             PlaySeconds: 0L,
             RngSeed: rngSeed,
             SavedAtUtc: nowUtc,
-            Progress: RunProgress.InProgress);
+            Progress: RunProgress.InProgress,
+            RunId: runId ?? Guid.NewGuid().ToString(),
+            ActiveActStartRelicChoice: null);
     }
 
     /// <summary>構造的不変条件を検査する。違反があれば理由文字列、問題なければ null。</summary>
@@ -123,8 +128,10 @@ public sealed record RunState(
         if (SchemaVersion != CurrentSchemaVersion)
             return $"SchemaVersion must be {CurrentSchemaVersion} (got {SchemaVersion})";
         if (VisitedNodeIds.IsDefault) return "VisitedNodeIds must not be default";
-        if (!VisitedNodeIds.Contains(CurrentNodeId))
-            return $"VisitedNodeIds must contain CurrentNodeId ({CurrentNodeId})";
+        // invariant 緩和: act-start relic choice がある間は CurrentNodeId が未 visited でも OK
+        if (ActiveActStartRelicChoice is null && VisitedNodeIds.Length > 0
+            && !VisitedNodeIds.Contains(CurrentNodeId))
+            return $"VisitedNodeIds must contain CurrentNodeId ({CurrentNodeId}) unless act-start relic choice is active";
         if (VisitedNodeIds.Length != VisitedNodeIds.Distinct().Count())
             return "VisitedNodeIds must not contain duplicates";
         foreach (var kv in UnknownResolutions)
@@ -140,8 +147,9 @@ public sealed record RunState(
         if (ActiveReward is not null) activeCount++;
         if (ActiveMerchant is not null) activeCount++;
         if (ActiveEvent is not null) activeCount++;
+        if (ActiveActStartRelicChoice is not null) activeCount++;
         if (activeCount > 1)
-            return "at most one of ActiveBattle / ActiveReward / ActiveMerchant / ActiveEvent can be non-null";
+            return "at most one of ActiveBattle / ActiveReward / ActiveMerchant / ActiveEvent / ActiveActStartRelicChoice can be non-null";
         if (ActiveRestPending && activeCount > 0)
             return "ActiveRestPending must not coexist with any other Active*";
         if (ActiveRestCompleted && !ActiveRestPending)
@@ -149,6 +157,8 @@ public sealed record RunState(
 
         if (ActiveReward is { CardChoices: var cc } && cc.Length != 0 && cc.Length != 3)
             return $"CardChoices must have length 0 or 3 (got {cc.Length})";
+        if (ActiveActStartRelicChoice is { RelicIds: var ids } && ids.Length != 3)
+            return $"ActStartRelicChoice.RelicIds must have length 3 (got {ids.Length})";
         return null;
     }
 }

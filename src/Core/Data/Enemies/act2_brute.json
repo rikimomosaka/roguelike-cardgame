@@ -1,0 +1,1 @@
+{"id":"act2_brute","name":"剛拳","imageId":"act2_brute","hpMin":52,"hpMax":58,"act":2,"tier":"Strong","initialMoveId":"smash","moves":[{"id":"smash","kind":"attack","damageMin":14,"damageMax":16,"hits":1,"nextMoveId":"guard"},{"id":"guard","kind":"block","blockMin":10,"blockMax":10,"nextMoveId":"smash"}]}

@@ -31,8 +31,9 @@ public static class RunStateSerializer
         int version = obj["schemaVersion"]?.GetValue<int>()
             ?? throw new RunStateSerializerException("schemaVersion が存在しません。");
 
-        if (version == 3) obj = MigrateV3ToV4(obj);
-        else if (version != RunState.CurrentSchemaVersion)
+        if (version == 3) { obj = MigrateV3ToV4(obj); version = 4; }
+        if (version == 4) { obj = MigrateV4ToV5(obj); version = 5; }
+        if (version != RunState.CurrentSchemaVersion)
             throw new RunStateSerializerException(
                 $"未対応の schemaVersion: {version} (対応: {RunState.CurrentSchemaVersion})");
 
@@ -74,6 +75,17 @@ public static class RunStateSerializer
         obj["activeMerchant"] ??= null;
         obj["activeEvent"] ??= null;
         obj["activeRestPending"] ??= false;
+        obj["schemaVersion"] = 4;
+        return obj;
+    }
+
+    private static JsonObject MigrateV4ToV5(JsonObject obj)
+    {
+        obj["runId"] ??= Guid.NewGuid().ToString();
+        obj["activeActStartRelicChoice"] ??= null;
+        // v4 セーブは Start が既に visited 済みなので VisitedNodeIds をそのまま引き継ぐ
+        // (自然と act-start relic スキップとして扱われる、spec の migration ルール通り)
+        // RewardState.isBossReward は JSON 側で default (false) のまま問題なし
         obj["schemaVersion"] = RunState.CurrentSchemaVersion;
         return obj;
     }

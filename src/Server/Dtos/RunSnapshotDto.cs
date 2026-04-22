@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using RoguelikeCardGame.Core.Data;
+using RoguelikeCardGame.Core.History;
 using RoguelikeCardGame.Core.Map;
 using RoguelikeCardGame.Core.Merchant;
 using RoguelikeCardGame.Core.Run;
@@ -32,7 +33,8 @@ public sealed record RunStateDto(
     EventInstanceDto? ActiveEvent,
     bool ActiveRestPending,
     bool ActiveRestCompleted,
-    string SavedAtUtc);
+    string SavedAtUtc,
+    ActStartRelicChoiceDto? ActiveActStartRelicChoice);
 
 public sealed record EventChoiceSnapshotDto(string Label, string? ConditionSummary, bool ConditionMet);
 
@@ -63,7 +65,7 @@ public static class RunSnapshotDtoMapper
         RewardStateDto? reward = null;
         if (s.ActiveReward is { } r)
             reward = new RewardStateDto(r.Gold, r.GoldClaimed, r.PotionId, r.PotionClaimed,
-                r.CardChoices, r.CardStatus.ToString(), r.RelicId, r.RelicClaimed);
+                r.CardChoices, r.CardStatus.ToString(), r.RelicId, r.RelicClaimed, r.IsBossReward);
 
         MerchantInventoryDto? merchant = null;
         if (s.ActiveMerchant is { } m)
@@ -83,8 +85,27 @@ public static class RunSnapshotDtoMapper
             s.Potions, s.PotionSlotCount,
             battle, reward, merchant, s.Relics, s.PlaySeconds, s.Progress.ToString(),
             activeEvent, s.ActiveRestPending, s.ActiveRestCompleted,
-            s.SavedAtUtc.ToString("O"));
+            s.SavedAtUtc.ToString("O"),
+            s.ActiveActStartRelicChoice is null ? null : new ActStartRelicChoiceDto(s.ActiveActStartRelicChoice.RelicIds));
         return new RunSnapshotDto(run, MapDtoMapper.From(map));
+    }
+
+    public static RunResultDto ToResult(string accountId, RunState s, int nodesVisited, RunProgress outcome)
+    {
+        var rec = RunHistoryBuilder.From(accountId, s, nodesVisited, outcome);
+        return ToResultDto(rec);
+    }
+
+    public static RunResultDto ToResultDto(RunHistoryRecord rec)
+    {
+        var deck = new List<RunResultCardDto>();
+        foreach (var c in rec.FinalDeck) deck.Add(new RunResultCardDto(c.Id, c.Upgraded));
+        return new RunResultDto(
+            rec.SchemaVersion, rec.AccountId, rec.RunId,
+            rec.Outcome.ToString(), rec.ActReached, rec.NodesVisited,
+            rec.PlaySeconds, rec.CharacterId, rec.FinalHp, rec.FinalMaxHp, rec.FinalGold,
+            deck, System.Linq.Enumerable.ToList(rec.FinalRelics),
+            rec.EndedAtUtc.ToString("O"));
     }
 }
 

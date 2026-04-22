@@ -33,9 +33,9 @@ public class RunStateSerializerTests
         var original = SampleV4();
         var json = RunStateSerializer.Serialize(original);
         var loaded = RunStateSerializer.Deserialize(json);
-        Assert.Equal(4, loaded.SchemaVersion);
+        Assert.Equal(5, loaded.SchemaVersion);
         Assert.Equal(0, loaded.CurrentNodeId);
-        Assert.Equal(new[] { 0 }, loaded.VisitedNodeIds.ToArray());
+        Assert.Empty(loaded.VisitedNodeIds);
         Assert.Equal(TileKind.Enemy, loaded.UnknownResolutions[5]);
         Assert.Equal("default", loaded.CharacterId);
         Assert.Equal(80, loaded.MaxHp);
@@ -82,7 +82,7 @@ public class RunStateSerializerTests
         }
         """;
         var loaded = RunStateSerializer.Deserialize(v3);
-        Assert.Equal(4, loaded.SchemaVersion);
+        Assert.Equal(5, loaded.SchemaVersion);
         Assert.Equal(2, loaded.Deck.Length);
         Assert.Equal("strike", loaded.Deck[0].Id);
         Assert.False(loaded.Deck[0].Upgraded);

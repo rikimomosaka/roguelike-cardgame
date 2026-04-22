@@ -34,11 +34,17 @@ public class BattleEndpointsTests : IClassFixture<TempDataFactory>
         await BattleTestHelpers.StartRunAndMoveToEnemyAsync(client);
 
         var res = await client.PostAsJsonAsync("/api/v1/runs/current/battle/win", new { elapsedSeconds = 1 });
-        Assert.Equal(HttpStatusCode.NoContent, res.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
 
-        var cur = await client.GetAsync("/api/v1/runs/current");
-        var doc = JsonDocument.Parse(await cur.Content.ReadAsStringAsync());
+        // Response body is the updated snapshot.
+        var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
         Assert.Equal(JsonValueKind.Null, doc.RootElement.GetProperty("run").GetProperty("activeBattle").ValueKind);
         Assert.NotEqual(JsonValueKind.Null, doc.RootElement.GetProperty("run").GetProperty("activeReward").ValueKind);
+
+        // Subsequent GET reflects the same state.
+        var cur = await client.GetAsync("/api/v1/runs/current");
+        var curDoc = JsonDocument.Parse(await cur.Content.ReadAsStringAsync());
+        Assert.Equal(JsonValueKind.Null, curDoc.RootElement.GetProperty("run").GetProperty("activeBattle").ValueKind);
+        Assert.NotEqual(JsonValueKind.Null, curDoc.RootElement.GetProperty("run").GetProperty("activeReward").ValueKind);
     }
 }

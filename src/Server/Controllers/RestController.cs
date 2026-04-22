@@ -53,7 +53,7 @@ public sealed class RestController : ControllerBase
 
         updated = updated with { SavedAtUtc = DateTimeOffset.UtcNow };
         await _saves.SaveAsync(accountId, updated, ct);
-        var map = _runStart.RehydrateMap(updated.RngSeed);
+        var map = _runStart.RehydrateMap(updated.RngSeed, updated.CurrentAct);
         return Ok(RunSnapshotDtoMapper.From(updated, map, _data));
     }
 
@@ -87,7 +87,7 @@ public sealed class RestController : ControllerBase
 
         updated = updated with { SavedAtUtc = DateTimeOffset.UtcNow };
         await _saves.SaveAsync(accountId, updated, ct);
-        var map = _runStart.RehydrateMap(updated.RngSeed);
+        var map = _runStart.RehydrateMap(updated.RngSeed, updated.CurrentAct);
         return Ok(RunSnapshotDtoMapper.From(updated, map, _data));
     }
 

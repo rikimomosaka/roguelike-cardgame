@@ -1,0 +1,1 @@
+{"id":"act2_start_02","name":"豪商の刻印","rarity":1,"trigger":"OnPickup","effects":[{"type":"gainGold","amount":100}]}

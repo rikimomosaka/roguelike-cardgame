@@ -31,8 +31,9 @@ public static class RewardGenerator
     }
 
     /// <summary>
-    /// 宝箱マス用の報酬を生成する。所有済みレリックを除外した候補から 1 本ランダム選択。
-    /// 全レリック所有済みの場合は <c>RelicId = null</c> / <c>RelicClaimed = true</c> を返す（取得不要）。
+    /// 宝箱マス用の報酬を生成する。必ず Gold（テーブル設定）とレリック 1 本のコンボで入る。
+    /// 所有済みレリックを除外した候補からランダム選択。
+    /// 全レリック所有済みの場合は <c>RelicId = null</c> / <c>RelicClaimed = true</c>（レリック取得不要）。
     /// </summary>
     public static (RewardState, RewardRngState) GenerateTreasure(
         RewardRngState rngState,
@@ -46,8 +47,11 @@ public static class RewardGenerator
             .OrderBy(id => id)
             .ToArray();
         string? relic = pool.Length == 0 ? null : pool[rng.NextInt(0, pool.Length)];
+        var entry = table.NonBattle["treasure"];
+        int goldRange = entry.GoldMax - entry.GoldMin + 1;
+        int gold = goldRange <= 1 ? entry.GoldMin : entry.GoldMin + rng.NextInt(0, goldRange);
         var reward = new RewardState(
-            Gold: 0, GoldClaimed: true,
+            Gold: gold, GoldClaimed: false,
             PotionId: null, PotionClaimed: true,
             CardChoices: ImmutableArray<string>.Empty,
             CardStatus: CardRewardStatus.Claimed,

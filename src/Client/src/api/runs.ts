@@ -1,5 +1,5 @@
 import { ApiError, apiRequest } from './client'
-import type { RunSnapshotDto } from './types'
+import type { RunResultDto, RunSnapshotDto } from './types'
 
 export async function getCurrentRun(accountId: string): Promise<RunSnapshotDto | null> {
   try {
@@ -23,8 +23,8 @@ export async function moveToNode(accountId: string, nodeId: number, elapsedSecon
   })
 }
 
-export async function abandonRun(accountId: string, elapsedSeconds: number): Promise<void> {
-  await apiRequest<void>('POST', '/runs/current/abandon', {
+export async function abandonRun(accountId: string, elapsedSeconds: number): Promise<RunResultDto> {
+  return await apiRequest<RunResultDto>('POST', '/runs/current/abandon', {
     accountId,
     body: { elapsedSeconds },
   })

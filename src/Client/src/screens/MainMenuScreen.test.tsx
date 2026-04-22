@@ -101,4 +101,47 @@ describe('MainMenuScreen', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'シングルプレイ' }))
     await waitFor(() => expect(onStart).toHaveBeenCalled())
   })
+
+  it('hides badge when hasCurrentRun is explicitly false', async () => {
+    // Even if /runs/current returns a snapshot, hasCurrentRun={false} suppresses badge.
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          run: { schemaVersion: 2, progress: 'InProgress', currentNodeId: 0 },
+          map: { startNodeId: 0, bossNodeId: 1, nodes: [] },
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    )
+    localStorage.setItem('rcg.accountId', 'alice')
+    render(
+      <AccountProvider>
+        <MainMenuScreen
+          onOpenSettings={() => {}}
+          onLogout={() => {}}
+          hasCurrentRun={false}
+        />
+      </AccountProvider>,
+    )
+    // Wait for the fetch to settle.
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled())
+    expect(screen.queryByText('保存済みラン有り')).toBeNull()
+  })
+
+  it('shows badge when hasCurrentRun is explicitly true', async () => {
+    // Even with no snapshot (204), hasCurrentRun={true} shows the badge.
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }))
+    localStorage.setItem('rcg.accountId', 'alice')
+    render(
+      <AccountProvider>
+        <MainMenuScreen
+          onOpenSettings={() => {}}
+          onLogout={() => {}}
+          hasCurrentRun={true}
+        />
+      </AccountProvider>,
+    )
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled())
+    expect(screen.getByText('保存済みラン有り')).toBeInTheDocument()
+  })
 })

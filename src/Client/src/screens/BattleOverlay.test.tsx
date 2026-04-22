@@ -39,4 +39,12 @@ describe('BattleOverlay', () => {
     render(<BattleOverlay battle={sampleBattle()} onWin={() => {}} />)
     expect(screen.queryByText('マップを見る')).toBeNull()
   })
+
+  it('shows DEBUG -10HP button and fires onDebugDamage', () => {
+    const onDebugDamage = vi.fn()
+    render(<BattleOverlay battle={sampleBattle()} onWin={() => {}} onDebugDamage={onDebugDamage} />)
+    const btn = screen.getByRole('button', { name: /DEBUG -10HP/ })
+    fireEvent.click(btn)
+    expect(onDebugDamage).toHaveBeenCalled()
+  })
 })

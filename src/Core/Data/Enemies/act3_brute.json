@@ -1,0 +1,1 @@
+{"id":"act3_brute","name":"闇鎧騎士","imageId":"act3_brute","hpMin":78,"hpMax":84,"act":3,"tier":"Strong","initialMoveId":"crush","moves":[{"id":"crush","kind":"attack","damageMin":20,"damageMax":22,"hits":1,"nextMoveId":"wall"},{"id":"wall","kind":"block","blockMin":14,"blockMax":14,"nextMoveId":"crush"}]}

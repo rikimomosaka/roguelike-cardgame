@@ -15,6 +15,7 @@ public static class EmbeddedDataLoader
     private const string RewardTablePrefix = "RoguelikeCardGame.Core.Data.RewardTable.";
     private const string CharactersPrefix = "RoguelikeCardGame.Core.Data.Characters.";
     private const string EventsPrefix = "RoguelikeCardGame.Core.Data.Events.";
+    private const string RelicsActStartPrefix = "RoguelikeCardGame.Core.Data.RelicsActStart.";
     private const string MerchantPricesResourceName = "RoguelikeCardGame.Core.Data.merchant-prices.json";
 
     public static DataCatalog LoadCatalog()
@@ -30,6 +31,7 @@ public static class EmbeddedDataLoader
             rewardTables: ReadAllWithPrefix(asm, RewardTablePrefix),
             characters: ReadAllWithPrefix(asm, CharactersPrefix),
             events: ReadAllWithPrefix(asm, EventsPrefix),
+            actStartRelicPools: ReadAllWithPrefix(asm, RelicsActStartPrefix),
             merchantPricesJson: merchantPricesJson);
     }
 

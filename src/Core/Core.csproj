@@ -22,6 +22,7 @@
     <EmbeddedResource Include="Data\Encounters\*.json" />
     <EmbeddedResource Include="Data\RewardTable\*.json" />
     <EmbeddedResource Include="Data\Characters\*.json" />
+    <EmbeddedResource Include="Data\RelicsActStart\*.json" />
   </ItemGroup>
 
 </Project>

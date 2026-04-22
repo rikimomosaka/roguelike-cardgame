@@ -154,7 +154,7 @@ public class RunsControllerTests : IClassFixture<TempDataFactory>
         WithAccount(client, "gus");
         await client.PostAsync("/api/v1/runs/new", content: null);
         var abandon = await client.PostAsJsonAsync("/api/v1/runs/current/abandon", new { elapsedSeconds = 3 });
-        Assert.Equal(HttpStatusCode.NoContent, abandon.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, abandon.StatusCode);
         var cur = await client.GetAsync("/api/v1/runs/current");
         Assert.Equal(HttpStatusCode.NoContent, cur.StatusCode);
     }

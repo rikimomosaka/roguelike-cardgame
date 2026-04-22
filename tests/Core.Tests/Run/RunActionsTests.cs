@@ -36,7 +36,7 @@ public class RunActionsTests
         int target = map.GetNode(map.StartNodeId).OutgoingNodeIds[0];
         var next = RunActions.SelectNextNode(state, map, target);
         Assert.Equal(target, next.CurrentNodeId);
-        Assert.Equal(new[] { map.StartNodeId, target }, next.VisitedNodeIds.ToArray());
+        Assert.Equal(new[] { target }, next.VisitedNodeIds.ToArray());
     }
 
     [Fact]
