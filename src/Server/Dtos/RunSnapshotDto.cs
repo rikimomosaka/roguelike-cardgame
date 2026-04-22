@@ -52,13 +52,7 @@ public static class RunSnapshotDtoMapper
 
         MerchantInventoryDto? merchant = null;
         if (s.ActiveMerchant is { } m)
-        {
-            var cardsDto = m.Cards.Select(o => new MerchantOfferDto(o.Kind, o.Id, o.Price, o.Sold)).ToArray();
-            var relicsDto = m.Relics.Select(o => new MerchantOfferDto(o.Kind, o.Id, o.Price, o.Sold)).ToArray();
-            var potionsDto = m.Potions.Select(o => new MerchantOfferDto(o.Kind, o.Id, o.Price, o.Sold)).ToArray();
-            merchant = new MerchantInventoryDto(cardsDto, relicsDto, potionsDto,
-                m.DiscardSlotUsed, m.DiscardPrice);
-        }
+            merchant = MerchantInventoryDto.From(m);
 
         var resolutions = new Dictionary<int, string>();
         foreach (var kv in s.UnknownResolutions) resolutions[kv.Key] = kv.Value.ToString();
@@ -79,7 +73,16 @@ public sealed record MerchantInventoryDto(
     IReadOnlyList<MerchantOfferDto> Relics,
     IReadOnlyList<MerchantOfferDto> Potions,
     bool DiscardSlotUsed,
-    int DiscardPrice);
+    int DiscardPrice)
+{
+    public static MerchantInventoryDto From(MerchantInventory inv)
+    {
+        var cards = inv.Cards.Select(o => new MerchantOfferDto(o.Kind, o.Id, o.Price, o.Sold)).ToArray();
+        var relics = inv.Relics.Select(o => new MerchantOfferDto(o.Kind, o.Id, o.Price, o.Sold)).ToArray();
+        var potions = inv.Potions.Select(o => new MerchantOfferDto(o.Kind, o.Id, o.Price, o.Sold)).ToArray();
+        return new MerchantInventoryDto(cards, relics, potions, inv.DiscardSlotUsed, inv.DiscardPrice);
+    }
+}
 
 public sealed record MerchantOfferDto(
     string Kind,
