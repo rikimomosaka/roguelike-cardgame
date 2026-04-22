@@ -2,6 +2,7 @@ using System;
 using System.Collections.Immutable;
 using System.Linq;
 using RoguelikeCardGame.Core.Cards;
+using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Run;
 
 namespace RoguelikeCardGame.Core.Rewards;
@@ -75,17 +76,18 @@ public static class RewardApplier
         return s with { Potions = s.Potions.SetItem(slotIndex, "") };
     }
 
-    public static RunState ClaimRelic(RunState s)
+    public static RunState ClaimRelic(RunState s, DataCatalog catalog)
     {
         var r = Require(s);
         if (r.RelicId is null) throw new InvalidOperationException("No relic to claim");
         if (r.RelicClaimed) throw new InvalidOperationException("Relic already claimed");
         var newRelics = s.Relics.Append(r.RelicId).ToList();
-        return s with
+        var s1 = s with
         {
             Relics = newRelics,
             ActiveReward = r with { RelicClaimed = true },
         };
+        return Relics.NonBattleRelicEffects.ApplyOnPickup(s1, r.RelicId, catalog);
     }
 
     private static RewardState Require(RunState s)

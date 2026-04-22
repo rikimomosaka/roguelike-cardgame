@@ -8,10 +8,11 @@ namespace RoguelikeCardGame.Core.Tests.Rewards;
 
 public class RewardApplierTests
 {
+    private static readonly DataCatalog Cat = EmbeddedDataLoader.LoadCatalog();
+
     private static RunState StateWithReward(RewardState r)
     {
-        var cat = EmbeddedDataLoader.LoadCatalog();
-        return TestRunStates.FreshDefault(cat) with { ActiveReward = r };
+        return TestRunStates.FreshDefault(Cat) with { ActiveReward = r };
     }
 
     [Fact]
@@ -104,8 +105,7 @@ public class RewardApplierTests
     [Fact]
     public void DiscardPotion_EmptySlot_Throws()
     {
-        var cat = EmbeddedDataLoader.LoadCatalog();
-        var s = TestRunStates.FreshDefault(cat) with
+        var s = TestRunStates.FreshDefault(Cat) with
         { Potions = ImmutableArray.Create("health_potion", "", "") };
         Assert.Throws<System.ArgumentException>(() => RewardApplier.DiscardPotion(s, 1));
     }
@@ -113,8 +113,7 @@ public class RewardApplierTests
     [Fact]
     public void DiscardPotion_OccupiedSlot_Empties()
     {
-        var cat = EmbeddedDataLoader.LoadCatalog();
-        var s = TestRunStates.FreshDefault(cat) with
+        var s = TestRunStates.FreshDefault(Cat) with
         { Potions = ImmutableArray.Create("health_potion", "swift_potion", "") };
         var next = RewardApplier.DiscardPotion(s, 0);
         Assert.Equal("", next.Potions[0]);
@@ -130,7 +129,7 @@ public class RewardApplierTests
             CardStatus: CardRewardStatus.Claimed,
             RelicId: "burning_blood",
             RelicClaimed: false));
-        var next = RewardApplier.ClaimRelic(s);
+        var next = RewardApplier.ClaimRelic(s, Cat);
         Assert.Contains("burning_blood", next.Relics);
         Assert.True(next.ActiveReward!.RelicClaimed);
     }
@@ -142,15 +141,14 @@ public class RewardApplierTests
             0, true, null, true,
             ImmutableArray<string>.Empty, CardRewardStatus.Claimed,
             RelicId: "burning_blood", RelicClaimed: true));
-        Assert.Throws<System.InvalidOperationException>(() => RewardApplier.ClaimRelic(s));
+        Assert.Throws<System.InvalidOperationException>(() => RewardApplier.ClaimRelic(s, Cat));
     }
 
     [Fact]
     public void ClaimRelic_NoActiveReward_Throws()
     {
-        var cat = EmbeddedDataLoader.LoadCatalog();
-        var s = TestRunStates.FreshDefault(cat);
-        Assert.Throws<System.InvalidOperationException>(() => RewardApplier.ClaimRelic(s));
+        var s = TestRunStates.FreshDefault(Cat);
+        Assert.Throws<System.InvalidOperationException>(() => RewardApplier.ClaimRelic(s, Cat));
     }
 
     [Fact]
@@ -160,6 +158,20 @@ public class RewardApplierTests
             0, true, null, true,
             ImmutableArray<string>.Empty, CardRewardStatus.Claimed,
             RelicId: null, RelicClaimed: true));
-        Assert.Throws<System.InvalidOperationException>(() => RewardApplier.ClaimRelic(s));
+        Assert.Throws<System.InvalidOperationException>(() => RewardApplier.ClaimRelic(s, Cat));
+    }
+
+    [Fact]
+    public void ClaimRelic_WithExtraMaxHp_ChainsOnPickup()
+    {
+        var s0 = StateWithReward(new RewardState(
+            0, true, null, true,
+            ImmutableArray<string>.Empty, CardRewardStatus.Claimed,
+            RelicId: "extra_max_hp", RelicClaimed: false)) with
+        { CurrentHp = 50, MaxHp = 80 };
+        var s1 = RewardApplier.ClaimRelic(s0, Cat);
+        Assert.Equal(87, s1.MaxHp);
+        Assert.Equal(57, s1.CurrentHp);
+        Assert.Contains("extra_max_hp", s1.Relics);
     }
 }
