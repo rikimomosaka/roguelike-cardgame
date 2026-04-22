@@ -25,6 +25,9 @@ public static class CardEffectParser
         {
             "damage" => new DamageEffect(GetRequiredInt(el, "amount", makeException)),
             "gainBlock" => new GainBlockEffect(GetRequiredInt(el, "amount", makeException)),
+            "gainMaxHp" => new GainMaxHpEffect(GetRequiredInt(el, "amount", makeException)),
+            "gainGold" => new GainGoldEffect(GetRequiredInt(el, "amount", makeException)),
+            "restHealBonus" => new RestHealBonusEffect(GetRequiredInt(el, "amount", makeException)),
             _ => new UnknownEffect(type),
         };
     }
