@@ -1,0 +1,1 @@
+{"id":"act3_elite","name":"深淵の執行者","imageId":"act3_elite","hpMin":130,"hpMax":140,"act":3,"tier":"Elite","initialMoveId":"execute","moves":[{"id":"execute","kind":"attack","damageMin":26,"damageMax":28,"hits":1,"nextMoveId":"rampart"},{"id":"rampart","kind":"block","blockMin":22,"blockMax":22,"nextMoveId":"execute"}]}

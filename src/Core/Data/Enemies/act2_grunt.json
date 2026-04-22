@@ -1,0 +1,1 @@
+{"id":"act2_grunt","name":"鋼兵","imageId":"act2_grunt","hpMin":28,"hpMax":32,"act":2,"tier":"Weak","initialMoveId":"slash","moves":[{"id":"slash","kind":"attack","damageMin":8,"damageMax":10,"hits":1,"nextMoveId":"slash"}]}

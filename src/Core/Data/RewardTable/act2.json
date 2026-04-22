@@ -1,0 +1,20 @@
+{
+  "id": "act2",
+  "pools": {
+    "weak":   { "gold": [10, 20], "potionBase": 40,
+                "rarityDist": { "common": 60, "rare": 37, "epic": 3 } },
+    "strong": { "gold": [15, 25], "potionBase": 40,
+                "rarityDist": { "common": 60, "rare": 37, "epic": 3 } },
+    "elite":  { "gold": [25, 35], "potionBase": 100,
+                "rarityDist": { "common": 0, "rare": 70, "epic": 30 } },
+    "boss":   { "gold": [95, 105], "potionBase": 0,
+                "rarityDist": { "common": 0, "rare": 0, "epic": 100 } }
+  },
+  "nonBattle": {
+    "event":    { "gold": [10, 20] },
+    "treasure": { "gold": [0, 0] }
+  },
+  "potionDynamic": { "initialPercent": 40, "step": 10, "min": 0, "max": 100 },
+  "epicChance":    { "initialBonus": 0, "perBattleIncrement": 1 },
+  "enemyPoolRouting": { "weakRowsThreshold": 3 }
+}

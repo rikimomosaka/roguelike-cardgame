@@ -1,0 +1,1 @@
+{"id":"act3_grunt","name":"闇兵","imageId":"act3_grunt","hpMin":42,"hpMax":46,"act":3,"tier":"Weak","initialMoveId":"pierce","moves":[{"id":"pierce","kind":"attack","damageMin":12,"damageMax":14,"hits":1,"nextMoveId":"pierce"}]}

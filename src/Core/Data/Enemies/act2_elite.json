@@ -1,0 +1,1 @@
+{"id":"act2_elite","name":"重装機兵","imageId":"act2_elite","hpMin":88,"hpMax":96,"act":2,"tier":"Elite","initialMoveId":"heavy","moves":[{"id":"heavy","kind":"attack","damageMin":18,"damageMax":20,"hits":1,"nextMoveId":"stance"},{"id":"stance","kind":"block","blockMin":18,"blockMax":18,"nextMoveId":"heavy"}]}
