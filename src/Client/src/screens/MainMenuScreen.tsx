@@ -8,11 +8,12 @@ type Props = {
   onOpenSettings: () => void
   onLogout: () => void
   onStartRun?: (snapshot: RunSnapshotDto) => void
+  hasCurrentRun?: boolean
 }
 
 type ComingSoonKind = 'multi' | 'achievements' | 'quit' | null
 
-export function MainMenuScreen({ onOpenSettings, onLogout, onStartRun }: Props) {
+export function MainMenuScreen({ onOpenSettings, onLogout, onStartRun, hasCurrentRun }: Props) {
   const { accountId } = useAccount()
   const [snapshot, setSnapshot] = useState<RunSnapshotDto | null>(null)
   const [dialog, setDialog] = useState<ComingSoonKind>(null)
@@ -28,6 +29,9 @@ export function MainMenuScreen({ onOpenSettings, onLogout, onStartRun }: Props) 
     return () => { cancelled = true }
   }, [accountId])
 
+  const effectiveHasRun =
+    hasCurrentRun ?? (snapshot !== null && snapshot.run.progress === 'InProgress')
+
   async function startFresh(force: boolean) {
     if (!accountId || pending) return
     setPending(true)
@@ -41,7 +45,7 @@ export function MainMenuScreen({ onOpenSettings, onLogout, onStartRun }: Props) 
   }
 
   function handleSingle() {
-    if (snapshot && snapshot.run.progress === 'InProgress') {
+    if (effectiveHasRun && snapshot) {
       setSingleDialog(true)
     } else {
       void startFresh(false)
@@ -68,7 +72,7 @@ export function MainMenuScreen({ onOpenSettings, onLogout, onStartRun }: Props) 
         <Button variant="danger" onClick={() => setDialog('quit')}>終了</Button>
       </nav>
 
-      {snapshot && <p className="main-menu__badge">保存済みラン有り</p>}
+      {effectiveHasRun && <p className="main-menu__badge">保存済みラン有り</p>}
 
       {dialog && (
         <div role="dialog" aria-label="準備中" className="main-menu__dialog">
