@@ -1,0 +1,27 @@
+{
+  "id": "shady_merchant",
+  "name": "怪しい商人",
+  "description": "フードを目深にかぶった商人が、レリックを売ると持ちかけてきた。",
+  "choices": [
+    {
+      "label": "50 ゴールドで買う",
+      "condition": { "type": "minGold", "amount": 50 },
+      "effects": [
+        { "type": "payGold", "amount": 50 },
+        { "type": "gainRelicRandom", "rarity": 1 }
+      ]
+    },
+    {
+      "label": "200 ゴールドで特上品",
+      "condition": { "type": "minGold", "amount": 200 },
+      "effects": [
+        { "type": "payGold", "amount": 200 },
+        { "type": "gainRelicRandom", "rarity": 2 }
+      ]
+    },
+    {
+      "label": "断る",
+      "effects": []
+    }
+  ]
+}

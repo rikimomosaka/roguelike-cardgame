@@ -1,0 +1,19 @@
+{
+  "id": "blessing_fountain",
+  "name": "祝福の泉",
+  "description": "清らかな泉が湧き出ている。いくつかの噂を耳にした。",
+  "choices": [
+    {
+      "label": "水を飲む（HP +15）",
+      "effects": [ { "type": "heal", "amount": 15 } ]
+    },
+    {
+      "label": "コインを投げ入れる（最大HP +5）",
+      "effects": [ { "type": "gainMaxHp", "amount": 5 } ]
+    },
+    {
+      "label": "立ち去る",
+      "effects": []
+    }
+  ]
+}
