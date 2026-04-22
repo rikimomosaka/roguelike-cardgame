@@ -1,0 +1,1 @@
+{"id":"act2_start_01","name":"堅実な鎧","rarity":1,"trigger":"OnPickup","effects":[{"type":"gainMaxHp","amount":12}]}

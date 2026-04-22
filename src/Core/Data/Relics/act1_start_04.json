@@ -1,0 +1,1 @@
+{"id":"act1_start_04","name":"旅人の懐刀","rarity":1,"trigger":"OnPickup","effects":[{"type":"gainMaxHp","amount":5}]}

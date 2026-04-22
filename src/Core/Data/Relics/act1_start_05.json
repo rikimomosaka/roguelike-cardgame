@@ -1,0 +1,1 @@
+{"id":"act1_start_05","name":"賢者の導き","rarity":1,"trigger":"OnPickup","effects":[{"type":"gainGold","amount":50}]}

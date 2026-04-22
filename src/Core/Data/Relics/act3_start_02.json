@@ -1,0 +1,1 @@
+{"id":"act3_start_02","name":"王室の印","rarity":2,"trigger":"OnPickup","effects":[{"type":"gainGold","amount":150}]}

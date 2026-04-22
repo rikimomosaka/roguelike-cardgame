@@ -1,0 +1,1 @@
+{"id":"act2_start_05","name":"冒険の記憶","rarity":1,"trigger":"OnPickup","effects":[{"type":"gainGold","amount":80}]}
