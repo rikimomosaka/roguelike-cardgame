@@ -246,3 +246,8 @@ Phase 5 まででバトル／報酬／マップ進行が暫定動作している
 | HP 全回復 / 層移動 / Run 結果画面 | Phase 7 |
 | Event/Merchant のマルチプレイ同期 | Phase 9 |
 | ビジュアルデザインの作り込み | Phase 6-8 完了後、Claude Design で一括 |
+
+## Accepted Scope Limitations (Phase 6)
+
+- **強化対象カードは strike / defend のみ**: `src/Core/Data/Cards/` に `upgradedEffects` が定義されているカードがその 2 枚のみであり、Rest マスの強化画面および Phase 10 のバトル効果実装時に追加する想定。Phase 6 ではデータの不足をそのまま受け入れる（`CardUpgrade.CanUpgrade` がデータ駆動なので、JSON を足すだけで拡張できる）。
+- **除去価格の増加カーブは 75 + 25 × run 内使用回数**: 仕様書本文に明記されていないが、ゲームバランス調整用に暫定値として採用。`RunState.DiscardUsesSoFar` で追跡し、商人訪問ごとに再計算される。
