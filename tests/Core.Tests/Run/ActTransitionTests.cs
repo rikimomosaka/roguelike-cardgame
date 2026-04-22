@@ -50,6 +50,21 @@ public class ActTransitionTests
     }
 
     [Fact]
+    public void AdvanceAct_RebuildsEncounterQueuesWithNextActEncounters()
+    {
+        var cat = EmbeddedDataLoader.LoadCatalog();
+        var s = TestRunStates.FreshDefault(cat);
+        var next = ActTransition.AdvanceAct(s, FakeMap(999), cat, new SystemRng(1));
+
+        // After AdvanceAct from act 1 to act 2, the boss queue must contain only act 2 bosses,
+        // and must not contain any act 1 boss encounter ids.
+        Assert.Contains("enc_b_act2_boss", next.EncounterQueueBoss);
+        Assert.DoesNotContain("enc_b_guardian", next.EncounterQueueBoss);
+        Assert.DoesNotContain("enc_b_six_ghost", next.EncounterQueueBoss);
+        Assert.DoesNotContain("enc_b_slime_king", next.EncounterQueueBoss);
+    }
+
+    [Fact]
     public void AdvanceAct_PreservesDeckRelicsGold()
     {
         var cat = EmbeddedDataLoader.LoadCatalog();

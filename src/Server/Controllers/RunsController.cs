@@ -149,8 +149,10 @@ public sealed class RunsController : ControllerBase
         if (isBoss)
         {
             // ボス かつ 非最終アクト → BossReward フラグ付き報酬
-            var r = BossRewardFlow.GenerateBossReward(afterWin, _data, rewardRng);
-            reward = r!;  // CurrentAct < MaxAct なので non-null
+            var r = BossRewardFlow.GenerateBossReward(afterWin, _data, rewardRng)
+                ?? throw new InvalidOperationException(
+                    $"BossRewardFlow returned null for non-final act {afterWin.CurrentAct}.");
+            reward = r;
             newRng = afterWin.RewardRngState;  // BossRewardFlow は RewardRngState を更新しない
         }
         else
@@ -256,11 +258,15 @@ public sealed class RunsController : ControllerBase
         {
             // act 遷移: 新マップ生成 → AdvanceAct
             int nextAct = s.CurrentAct + 1;
-            var act2Seed = unchecked((int)(uint)ActMapSeed.Derive(s.RngSeed, nextAct));
+            var nextActSeed = unchecked((int)(uint)ActMapSeed.Derive(s.RngSeed, nextAct));
             var newMap = _runStart.RehydrateMap(s.RngSeed, nextAct);
-            var advanceRng = new SystemRng(unchecked(act2Seed ^ 0xAC70));
+            var advanceRng = new SystemRng(unchecked(nextActSeed ^ 0xAC70));
             updated = ActTransition.AdvanceAct(s, newMap, _data, advanceRng);
-            updated = updated with { PlaySeconds = updated.PlaySeconds + elapsed };
+            updated = updated with
+            {
+                PlaySeconds = updated.PlaySeconds + elapsed,
+                SavedAtUtc = DateTimeOffset.UtcNow,
+            };
         }
         else
         {
