@@ -13,8 +13,11 @@ import {
 import { buyFromMerchant, discardAtMerchant, leaveMerchant } from '../api/merchant'
 import { chooseEvent } from '../api/event'
 import { restHeal, restUpgrade } from '../api/rest'
-import type { MapNodeDto, RunSnapshotDto, TileKind } from '../api/types'
+import { chooseActStartRelic } from '../api/actStart'
+import { applyDebugDamage } from '../api/debug'
+import type { MapNodeDto, RunSnapshotDto, RunResultDto, TileKind } from '../api/types'
 import { useAccount } from '../context/AccountContext'
+import { useRelicCatalog } from '../hooks/useRelicCatalog'
 import { Button } from '../components/Button'
 import { TopBar } from '../components/TopBar'
 import { BattleOverlay } from './BattleOverlay'
@@ -23,12 +26,14 @@ import { InGameMenuScreen } from './InGameMenuScreen'
 import { MerchantScreen } from './MerchantScreen'
 import { EventScreen } from './EventScreen'
 import { RestScreen } from './RestScreen'
+import { ActStartRelicScreen } from './ActStartRelicScreen'
 
 type Props = {
   snapshot: RunSnapshotDto
   onExitToMenu: () => void
   onAbandon: () => void
   onDebugDamage?: () => void
+  onRunFinished?: (result: RunResultDto) => void
 }
 
 const NODE_R = 20
@@ -53,9 +58,10 @@ function iconFor(kind: TileKind, resolvedKind: TileKind | null): string {
   }
 }
 
-export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage }: Props) {
+export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, onRunFinished }: Props) {
   const { accountId } = useAccount()
   const [snap, setSnap] = useState<RunSnapshotDto>(snapshot)
+  const { names: relicNames } = useRelicCatalog()
   const [menuOpen, setMenuOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [shopMessage, setShopMessage] = useState<string | null>(null)
@@ -77,6 +83,13 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage }: 
     const next = await getCurrentRun(accountId)
     if (next) setSnap(next)
   }, [accountId])
+
+  const internalDebugDamage = useCallback(async () => {
+    if (!accountId) return
+    const resp = await applyDebugDamage(accountId, 10)
+    if ('outcome' in resp) onRunFinished?.(resp as RunResultDto)
+    else setSnap(resp as RunSnapshotDto)
+  }, [accountId, onRunFinished])
 
   useEffect(() => {
     return () => {
@@ -338,8 +351,8 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage }: 
           <div className="map-screen__shop-toast" role="status">{shopMessage}</div>
         )}
 
-        {import.meta.env.DEV && onDebugDamage && (
-          <Button onClick={onDebugDamage} aria-label="DEBUG -10HP">DEBUG -10HP</Button>
+        {import.meta.env.DEV && (
+          <Button onClick={onDebugDamage ?? internalDebugDamage} aria-label="DEBUG -10HP">DEBUG -10HP</Button>
         )}
       </main>
 
@@ -397,6 +410,18 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage }: 
           onHeal={handleRestHeal}
           onUpgrade={handleRestUpgrade}
           onClose={handleCloseRest}
+        />
+      )}
+
+      {snap.run.activeActStartRelicChoice && (
+        <ActStartRelicScreen
+          choices={snap.run.activeActStartRelicChoice.relicIds}
+          relicNames={relicNames}
+          onChoose={async (relicId) => {
+            if (!accountId) return
+            const next = await chooseActStartRelic(accountId, relicId)
+            setSnap(next)
+          }}
         />
       )}
     </>

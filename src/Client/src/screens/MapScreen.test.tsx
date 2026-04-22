@@ -260,4 +260,17 @@ describe('MapScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: /DEBUG -10HP/ }))
     expect(onDebugDamage).toHaveBeenCalled()
   })
+
+  it('renders ActStartRelicScreen when activeActStartRelicChoice is set', () => {
+    render(
+      <AccountProvider>
+        <MapScreen
+          snapshot={sampleSnapshot({ activeActStartRelicChoice: { relicIds: ['r1', 'r2', 'r3'] } })}
+          onExitToMenu={() => {}}
+          onAbandon={() => {}}
+        />
+      </AccountProvider>,
+    )
+    expect(screen.getByText(/層開始のレリックを選ぶ/)).toBeDefined()
+  })
 })
