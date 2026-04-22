@@ -8,16 +8,7 @@ type Props = {
 }
 
 export function BattleOverlay({ battle, onWin }: Props) {
-  const [peeking, setPeeking] = useState(false)
   const [busy, setBusy] = useState(false)
-
-  if (peeking) {
-    return (
-      <div className="battle-peek" onClick={() => setPeeking(false)}>
-        <span>クリックで戦闘画面に戻る</span>
-      </div>
-    )
-  }
 
   return (
     <div className="battle-overlay" role="dialog" aria-modal="true">
@@ -48,7 +39,6 @@ export function BattleOverlay({ battle, onWin }: Props) {
         >
           勝利
         </Button>
-        <Button onClick={() => setPeeking(true)}>マップを見る</Button>
       </div>
     </div>
   )

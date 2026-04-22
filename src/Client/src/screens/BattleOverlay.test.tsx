@@ -35,12 +35,8 @@ describe('BattleOverlay', () => {
     expect(onWin).toHaveBeenCalledTimes(1)
   })
 
-  it('switches to peek view on マップを見る and returns on click', () => {
+  it('does not render a map-peek button — that control lives in TopBar', () => {
     render(<BattleOverlay battle={sampleBattle()} onWin={() => {}} />)
-    fireEvent.click(screen.getByText('マップを見る'))
-    const peek = screen.getByText('クリックで戦闘画面に戻る')
-    expect(peek).toBeDefined()
-    fireEvent.click(peek)
-    expect(screen.getByText('勝利')).toBeDefined()
+    expect(screen.queryByText('マップを見る')).toBeNull()
   })
 })

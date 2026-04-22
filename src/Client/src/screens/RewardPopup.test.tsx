@@ -68,8 +68,8 @@ describe('RewardPopup', () => {
         {...handlers}
       />,
     )
-    // Card button shows the reopen glyph and is still enabled (not Claimed).
-    const cardBtn = screen.getByText('↩ カードの報酬') as HTMLButtonElement
+    // Card button is still enabled (not Claimed) and keeps the ✨ glyph.
+    const cardBtn = screen.getByText('✨ カードの報酬') as HTMLButtonElement
     expect(cardBtn.disabled).toBe(false)
     fireEvent.click(cardBtn)
     fireEvent.click(screen.getByText('card_strike'))

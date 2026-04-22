@@ -74,7 +74,7 @@ export function RewardPopup(p: Props) {
               disabled={cardResolved}
               onClick={() => setCardView(true)}
             >
-              {cardResolved ? '✓' : r.cardStatus === 'Skipped' ? '↩' : '✨'} カードの報酬
+              {cardResolved ? '✓' : '✨'} カードの報酬
             </Button>
           </li>
         )}

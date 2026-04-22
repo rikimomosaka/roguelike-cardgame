@@ -50,6 +50,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
   const [busy, setBusy] = useState(false)
   const [shopMessage, setShopMessage] = useState<string | null>(null)
   const [rewardDismissed, setRewardDismissed] = useState(false)
+  const [peekMap, setPeekMap] = useState(false)
   const mountedAt = useRef<number>(performance.now())
 
   const elapsedSeconds = useCallback(() => {
@@ -91,7 +92,6 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
   const activeBattle = snap.run.activeBattle
   const activeReward = snap.run.activeReward
   const rewardVisible = activeReward !== null && !rewardDismissed
-  const rewardDismissedActive = activeReward !== null && rewardDismissed
   const blockedByModal = activeBattle !== null || rewardVisible
 
   function isSelectable(n: MapNodeDto): boolean {
@@ -100,7 +100,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
   }
 
   function isCurrentReopenable(n: MapNodeDto): boolean {
-    return rewardDismissedActive && n.id === snap.run.currentNodeId
+    return activeReward !== null && rewardDismissed && n.id === snap.run.currentNodeId
   }
 
   function posOf(n: MapNodeDto): { cx: number; cy: number } {
@@ -140,6 +140,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
     if (!accountId) return
     await winBattle(accountId, elapsedSeconds())
     setRewardDismissed(false)
+    setPeekMap(false)
     await refresh()
   }
 
@@ -190,13 +191,13 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
         maxHp={snap.run.maxHp}
         gold={snap.run.gold}
         potions={snap.run.potions}
+        deck={snap.run.deck}
         onDiscardPotion={handleDiscardPotion}
+        onOpenMenu={() => setMenuOpen(true)}
+        onTogglePeek={activeBattle ? () => setPeekMap(v => !v) : undefined}
+        peekActive={peekMap}
       />
       <main className="map-screen">
-        <header className="map-screen__top">
-          <button aria-label="メニュー" onClick={() => setMenuOpen(true)}>⚙</button>
-        </header>
-
         <svg viewBox={`0 0 ${width} ${height}`} className="map-screen__svg">
           {snap.map.nodes.map((n) =>
             n.outgoingNodeIds.map((toId) => {
@@ -261,15 +262,11 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
         {shopMessage && (
           <div className="map-screen__shop-toast" role="status">{shopMessage}</div>
         )}
-
-        {rewardDismissedActive && (
-          <p className="map-screen__dev-note">
-            報酬は現在のマスをクリックで再度開けます。
-          </p>
-        )}
       </main>
 
-      {activeBattle && <BattleOverlay battle={activeBattle} onWin={handleWin} />}
+      {activeBattle && !peekMap && (
+        <BattleOverlay battle={activeBattle} onWin={handleWin} />
+      )}
 
       {rewardVisible && activeReward && (
         <RewardPopup
