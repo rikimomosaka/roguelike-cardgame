@@ -218,7 +218,7 @@ public class NonBattleMoveTests : IClassFixture<TempDataFactory>
     }
 
     [Fact]
-    public async Task Merchant_Move_DoesNothing()
+    public async Task Merchant_Move_SetsActiveMerchant()
     {
         var setup = await SetupWalkAsync("merchant-walker", "Merchant");
         if (setup is null)
@@ -246,7 +246,8 @@ public class NonBattleMoveTests : IClassFixture<TempDataFactory>
 
         var after = await GetSnapshotAsync(client);
         var runEl = after.RootElement.GetProperty("run");
-        // Merchant is a no-op in NodeEffectResolver — no reward, no battle, no HP/gold change.
+        // Merchant now generates an inventory and sets ActiveMerchant.
+        Assert.NotEqual(JsonValueKind.Null, runEl.GetProperty("activeMerchant").ValueKind);
         Assert.Equal(JsonValueKind.Null, runEl.GetProperty("activeBattle").ValueKind);
         Assert.Equal(JsonValueKind.Null, runEl.GetProperty("activeReward").ValueKind);
         Assert.Equal(beforeHp, runEl.GetProperty("currentHp").GetInt32());

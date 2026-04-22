@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Map;
+using RoguelikeCardGame.Core.Merchant;
 using RoguelikeCardGame.Core.Run;
 
 namespace RoguelikeCardGame.Server.Dtos;
@@ -21,6 +22,7 @@ public sealed record RunStateDto(
     int PotionSlotCount,
     BattleStateDto? ActiveBattle,
     RewardStateDto? ActiveReward,
+    MerchantInventoryDto? ActiveMerchant,
     IReadOnlyList<string> Relics,
     long PlaySeconds,
     string Progress,
@@ -48,6 +50,16 @@ public static class RunSnapshotDtoMapper
             reward = new RewardStateDto(r.Gold, r.GoldClaimed, r.PotionId, r.PotionClaimed,
                 r.CardChoices, r.CardStatus.ToString());
 
+        MerchantInventoryDto? merchant = null;
+        if (s.ActiveMerchant is { } m)
+        {
+            var cardsDto = m.Cards.Select(o => new MerchantOfferDto(o.Kind, o.Id, o.Price, o.Sold)).ToArray();
+            var relicsDto = m.Relics.Select(o => new MerchantOfferDto(o.Kind, o.Id, o.Price, o.Sold)).ToArray();
+            var potionsDto = m.Potions.Select(o => new MerchantOfferDto(o.Kind, o.Id, o.Price, o.Sold)).ToArray();
+            merchant = new MerchantInventoryDto(cardsDto, relicsDto, potionsDto,
+                m.DiscardSlotUsed, m.DiscardPrice);
+        }
+
         var resolutions = new Dictionary<int, string>();
         foreach (var kv in s.UnknownResolutions) resolutions[kv.Key] = kv.Value.ToString();
 
@@ -56,11 +68,24 @@ public static class RunSnapshotDtoMapper
             s.CharacterId, s.CurrentHp, s.MaxHp, s.Gold,
             // TODO(G3): replace with CardInstanceDto; currently drops Upgraded flag
             s.Deck.Select(c => c.Id).ToArray(), s.Potions, s.PotionSlotCount,
-            battle, reward, s.Relics, s.PlaySeconds, s.Progress.ToString(),
+            battle, reward, merchant, s.Relics, s.PlaySeconds, s.Progress.ToString(),
             s.SavedAtUtc.ToString("O"));
         return new RunSnapshotDto(run, MapDtoMapper.From(map));
     }
 }
+
+public sealed record MerchantInventoryDto(
+    IReadOnlyList<MerchantOfferDto> Cards,
+    IReadOnlyList<MerchantOfferDto> Relics,
+    IReadOnlyList<MerchantOfferDto> Potions,
+    bool DiscardSlotUsed,
+    int DiscardPrice);
+
+public sealed record MerchantOfferDto(
+    string Kind,
+    string Id,
+    int Price,
+    bool Sold);
 
 public sealed record MapDto(int StartNodeId, int BossNodeId, IReadOnlyList<MapNodeDto> Nodes);
 public sealed record MapNodeDto(int Id, int Row, int Column, TileKind Kind, IReadOnlyList<int> OutgoingNodeIds);

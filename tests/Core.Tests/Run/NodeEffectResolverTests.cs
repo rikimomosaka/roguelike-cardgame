@@ -81,12 +81,12 @@ public class NodeEffectResolverTests
     }
 
     [Fact]
-    public void Resolve_Shop_DoesNothing()
+    public void Resolve_Merchant_SetsActiveMerchant()
     {
-        // Merchant dispatch は E3 後に有効化される。現時点では no-op 維持。
         var cat = EmbeddedDataLoader.LoadCatalog();
         var s = TestRunStates.FreshDefault(cat);
         var next = NodeEffectResolver.Resolve(s, TileKind.Merchant, currentRow: 5, cat, new SystemRng(1));
+        Assert.NotNull(next.ActiveMerchant);
         Assert.Null(next.ActiveBattle);
         Assert.Null(next.ActiveReward);
         Assert.Equal(s.CurrentHp, next.CurrentHp);

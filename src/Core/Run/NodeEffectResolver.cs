@@ -6,6 +6,7 @@ using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Enemy;
 using RoguelikeCardGame.Core.Events;
 using RoguelikeCardGame.Core.Map;
+using RoguelikeCardGame.Core.Merchant;
 using RoguelikeCardGame.Core.Random;
 using RoguelikeCardGame.Core.Rewards;
 
@@ -28,8 +29,7 @@ public static class NodeEffectResolver
             TileKind.Boss => BattlePlaceholder.Start(state,
                 new EnemyPool(state.CurrentAct, EnemyTier.Boss), data, rng),
             TileKind.Rest => state with { ActiveRestPending = true },
-            // Merchant dispatch は E3 (MerchantInventoryGenerator) 完成後に有効化する。
-            TileKind.Merchant => state,
+            TileKind.Merchant => StartMerchant(state, data, rng),
             TileKind.Treasure => StartTreasure(state, table, data, rng),
             TileKind.Event => StartEvent(state, data, rng),
             TileKind.Unknown => throw new ArgumentException("Unknown tile should be pre-resolved"),
@@ -58,5 +58,13 @@ public static class NodeEffectResolver
         var def = EventPool.Pick(pool, rng);
         var inst = new EventInstance(def.Id, def.Choices);
         return s with { ActiveEvent = inst };
+    }
+
+    private static RunState StartMerchant(RunState s, DataCatalog data, IRng rng)
+    {
+        if (data.MerchantPrices is null)
+            throw new InvalidOperationException("DataCatalog.MerchantPrices is not configured");
+        var inv = MerchantInventoryGenerator.Generate(data, data.MerchantPrices, s, rng);
+        return s with { ActiveMerchant = inv };
     }
 }
