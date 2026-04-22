@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { CardInstanceDto, MerchantInventoryDto, MerchantOfferDto } from '../api/types'
 import { Button } from '../components/Button'
 import { useCardCatalog, usePotionCatalog } from '../hooks/useCardCatalog'
@@ -17,8 +18,40 @@ export function MerchantScreen(p: Props) {
   const { names: cardNames } = useCardCatalog()
   const { names: relicNames } = useRelicCatalog()
   const { names: potionNames } = usePotionCatalog()
+  const [mode, setMode] = useState<'shop' | 'discard'>('shop')
 
   const left = p.inventory.leftSoFar
+  const canDiscard =
+    !left && !p.inventory.discardSlotUsed && p.gold >= p.inventory.discardPrice
+
+  if (mode === 'discard') {
+    return (
+      <div className="merchant-screen" role="dialog" aria-modal="true">
+        <h2>カードを除去 ({p.inventory.discardPrice} g)</h2>
+        <ul>
+          {p.deck.map((c, i) => {
+            const name = cardNames[c.id] ?? c.id
+            return (
+              <li key={i}>
+                <span>{name}{c.upgraded ? '+' : ''}</span>
+                <Button
+                  onClick={async () => {
+                    await p.onDiscard(i)
+                    setMode('shop')
+                  }}
+                  disabled={!canDiscard}
+                  aria-label={`Discard ${name} at index ${i}`}
+                >
+                  除去
+                </Button>
+              </li>
+            )
+          })}
+        </ul>
+        <Button onClick={() => setMode('shop')} aria-label="Back">戻る</Button>
+      </div>
+    )
+  }
 
   const row = (
     kind: 'card' | 'relic' | 'potion',
@@ -58,24 +91,14 @@ export function MerchantScreen(p: Props) {
       </section>
 
       <section>
-        <h3>除去 ({p.inventory.discardPrice} g、1回のみ)</h3>
-        <ul>
-          {p.deck.map((c, i) => {
-            const name = cardNames[c.id] ?? c.id
-            return (
-              <li key={i}>
-                <span>{name}{c.upgraded ? '+' : ''}</span>
-                <Button
-                  onClick={() => p.onDiscard(i)}
-                  disabled={left || p.inventory.discardSlotUsed || p.gold < p.inventory.discardPrice}
-                  aria-label={`Discard ${name} at index ${i}`}
-                >
-                  除去
-                </Button>
-              </li>
-            )
-          })}
-        </ul>
+        <Button
+          onClick={() => setMode('discard')}
+          disabled={!canDiscard}
+          aria-label="Open discard view"
+        >
+          除去 ({p.inventory.discardPrice} g
+          {p.inventory.discardSlotUsed ? ' / 使用済み' : '、1回のみ'})
+        </Button>
       </section>
 
       {left ? (

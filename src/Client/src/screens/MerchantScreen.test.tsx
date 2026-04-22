@@ -32,7 +32,6 @@ describe('MerchantScreen', () => {
       />,
     )
     // カタログ未ロードなので raw id で表示される
-    // strike は cards セクションと discard セクションの両方に現れるので getAllByText を使う
     expect(screen.getAllByText('strike').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('coin_purse')).toBeDefined()
     expect(screen.getByText('heal_potion_small')).toBeDefined()
@@ -79,6 +78,41 @@ describe('MerchantScreen', () => {
     const btns = screen.queryAllByRole('button', { name: /discard/i })
     expect(btns.length).toBeGreaterThan(0)
     btns.forEach(b => expect((b as HTMLButtonElement).disabled).toBe(true))
+  })
+
+  it('除去ボタンを押すとデッキ一覧モーダルに遷移する', () => {
+    render(
+      <MerchantScreen
+        gold={500}
+        deck={[{ id: 'strike', upgraded: false }, { id: 'defend', upgraded: false }]}
+        inventory={baseInventory}
+        {...baseHandlers()}
+      />,
+    )
+    // 初期状態では per-card の除去ボタンはない
+    expect(screen.queryByRole('button', { name: /discard strike/i })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /open discard view/i }))
+    // モーダル内では deck 内の各カードに除去ボタンが表示される
+    expect(screen.getByRole('button', { name: /discard strike at index 0/i })).toBeDefined()
+    expect(screen.getByRole('button', { name: /discard defend at index 1/i })).toBeDefined()
+    // 戻るボタンで shop モードへ
+    fireEvent.click(screen.getByRole('button', { name: /^back$/i }))
+    expect(screen.queryByRole('button', { name: /discard strike/i })).toBeNull()
+  })
+
+  it('除去モーダルで除去を選ぶと onDiscard が呼ばれ shop へ戻る', async () => {
+    const handlers = baseHandlers()
+    render(
+      <MerchantScreen
+        gold={500}
+        deck={[{ id: 'strike', upgraded: false }]}
+        inventory={baseInventory}
+        {...handlers}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /open discard view/i }))
+    fireEvent.click(screen.getByRole('button', { name: /discard strike at index 0/i }))
+    await waitFor(() => expect(handlers.onDiscard).toHaveBeenCalledWith(0))
   })
 
   it('立ち去るボタンで onLeave が呼ばれる', async () => {
