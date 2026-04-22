@@ -24,12 +24,16 @@ public static class RewardGenerator
             RewardContext.FromEnemy fe => GenerateFromEnemy(fe.Pool, rngState, cardExclusions, table, data, rng),
             RewardContext.FromNonBattle nb when nb.Kind == NonBattleRewardKind.Treasure
                 => GenerateTreasure(rngState, ImmutableArray<string>.Empty, table, data, rng),
-            RewardContext.FromNonBattle nb
-                => GenerateFromNonBattleEvent(nb.Kind, rngState, table, rng),
+            RewardContext.FromNonBattle
+                => GenerateFromNonBattleEvent(rngState, table, rng),
             _ => throw new ArgumentOutOfRangeException(nameof(context))
         };
     }
 
+    /// <summary>
+    /// 宝箱マス用の報酬を生成する。所有済みレリックを除外した候補から 1 本ランダム選択。
+    /// 全レリック所有済みの場合は <c>RelicId = null</c> / <c>RelicClaimed = true</c> を返す（取得不要）。
+    /// </summary>
     public static (RewardState, RewardRngState) GenerateTreasure(
         RewardRngState rngState,
         ImmutableArray<string> ownedRelics,
@@ -53,7 +57,7 @@ public static class RewardGenerator
     }
 
     private static (RewardState, RewardRngState) GenerateFromNonBattleEvent(
-        NonBattleRewardKind kind, RewardRngState rngState, RewardTable table, IRng rng)
+        RewardRngState rngState, RewardTable table, IRng rng)
     {
         string key = "event";
         var entry = table.NonBattle[key];
@@ -77,8 +81,15 @@ public static class RewardGenerator
         string? potionId = null;
         var newRng = rngState;
         int potionBase = entry.PotionBasePercent;
-        if (potionBase == 100) potionId = PickRandomPotion(data, rng);
-        else if (potionBase == 0) { }
+        if (potionBase == 100)
+        {
+            // Elite: always drop, do not touch dynamic chance
+            potionId = PickRandomPotion(data, rng);
+        }
+        else if (potionBase == 0)
+        {
+            // Boss: never drop, do not touch dynamic chance
+        }
         else
         {
             int chance = rngState.PotionChancePercent;

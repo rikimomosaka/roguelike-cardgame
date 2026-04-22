@@ -22,7 +22,7 @@ public sealed class SequentialRng : IRng
     public int NextInt(int minInclusive, int maxExclusive)
     {
         if (maxExclusive <= minInclusive) return minInclusive;
-        int range = maxExclusive - minInclusive;
+        long range = (long)maxExclusive - minInclusive;
         return minInclusive + (int)(Next() % (ulong)range);
     }
 

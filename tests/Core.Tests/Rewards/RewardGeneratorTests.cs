@@ -185,4 +185,17 @@ public class RewardGeneratorTests
         Assert.NotNull(reward.RelicId);
         Assert.DoesNotContain(reward.RelicId!, owned);
     }
+
+    [Fact]
+    public void GenerateFromNonBattle_Treasure_AllOwned_YieldsNullRelicAlreadyClaimed()
+    {
+        var catalog = EmbeddedDataLoader.LoadCatalog();
+        var rt = catalog.RewardTables["act1"];
+        var rng = new SequentialRng(7UL);
+        var rngState = new RewardRngState(40, 0);
+        var owned = ImmutableArray.CreateRange(catalog.Relics.Keys);
+        var (reward, _) = RewardGenerator.GenerateTreasure(rngState, owned, rt, catalog, rng);
+        Assert.Null(reward.RelicId);
+        Assert.True(reward.RelicClaimed);
+    }
 }
