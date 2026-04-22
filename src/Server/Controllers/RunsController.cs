@@ -335,13 +335,13 @@ public sealed class RunsController : ControllerBase
             return Problem(statusCode: StatusCodes.Status409Conflict, title: "進行中のランがありません。");
 
         long elapsed = body is null ? 0 : Math.Clamp(body.ElapsedSeconds, 0, MaxElapsedSecondsPerRequest);
-        var updated = state with
+        var finished = ActTransition.FinishRun(state with
         {
-            Progress = RunProgress.Abandoned,
             PlaySeconds = state.PlaySeconds + elapsed,
-            SavedAtUtc = DateTimeOffset.UtcNow,
-        };
-        await _saves.SaveAsync(accountId, updated, ct);
+        }, RunProgress.Abandoned);
+        var rec = RunHistoryBuilder.From(accountId, finished, finished.VisitedNodeIds.Length, RunProgress.Abandoned);
+        await _history.AppendAsync(accountId, rec, ct);
+        await _saves.DeleteAsync(accountId, ct);
         return NoContent();
     }
 
