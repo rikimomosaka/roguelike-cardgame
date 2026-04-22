@@ -13,7 +13,6 @@ public static class MerchantActions
     public static RunState BuyCard(RunState s, string cardId, DataCatalog catalog)
     {
         var (inv, offer, idx) = RequireOffer(s, "card", cardId);
-        if (inv.LeftSoFar) throw new InvalidOperationException("Merchant already left");
         if (s.Gold < offer.Price)
             throw new InvalidOperationException($"Not enough gold ({s.Gold} < {offer.Price})");
         if (!catalog.TryGetCard(cardId, out _))
@@ -30,7 +29,6 @@ public static class MerchantActions
     public static RunState BuyRelic(RunState s, string relicId, DataCatalog catalog)
     {
         var (inv, offer, idx) = RequireOffer(s, "relic", relicId);
-        if (inv.LeftSoFar) throw new InvalidOperationException("Merchant already left");
         if (s.Gold < offer.Price)
             throw new InvalidOperationException($"Not enough gold ({s.Gold} < {offer.Price})");
         if (!catalog.TryGetRelic(relicId, out _))
@@ -48,7 +46,6 @@ public static class MerchantActions
     public static RunState BuyPotion(RunState s, string potionId, DataCatalog catalog)
     {
         var (inv, offer, idx) = RequireOffer(s, "potion", potionId);
-        if (inv.LeftSoFar) throw new InvalidOperationException("Merchant already left");
         if (s.Gold < offer.Price)
             throw new InvalidOperationException($"Not enough gold ({s.Gold} < {offer.Price})");
         if (!catalog.TryGetPotion(potionId, out _))
@@ -68,7 +65,6 @@ public static class MerchantActions
     public static RunState DiscardCard(RunState s, int deckIndex)
     {
         var inv = RequireInventory(s);
-        if (inv.LeftSoFar) throw new InvalidOperationException("Merchant already left");
         if (inv.DiscardSlotUsed) throw new InvalidOperationException("Discard slot already used");
         if (s.Gold < inv.DiscardPrice)
             throw new InvalidOperationException($"Not enough gold ({s.Gold} < {inv.DiscardPrice})");
@@ -83,10 +79,14 @@ public static class MerchantActions
         };
     }
 
+    /// <summary>
+    /// 「立ち去る」は副作用なし。次のマスに進むまで商人在庫は保持され、
+    /// クライアントは好きなタイミングで再入店できる。
+    /// </summary>
     public static RunState Leave(RunState s)
     {
-        var inv = RequireInventory(s);
-        return s with { ActiveMerchant = inv with { LeftSoFar = true } };
+        RequireInventory(s);
+        return s;
     }
 
     private static MerchantInventory RequireInventory(RunState s) =>

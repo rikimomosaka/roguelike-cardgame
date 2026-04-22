@@ -11,7 +11,6 @@ type Props = {
   onBuy: (kind: 'card' | 'relic' | 'potion', id: string) => void | Promise<void>
   onDiscard: (deckIndex: number) => void | Promise<void>
   onLeave: () => void | Promise<void>
-  onClose: () => void
 }
 
 export function MerchantScreen(p: Props) {
@@ -20,9 +19,8 @@ export function MerchantScreen(p: Props) {
   const { names: potionNames } = usePotionCatalog()
   const [mode, setMode] = useState<'shop' | 'discard'>('shop')
 
-  const left = p.inventory.leftSoFar
   const canDiscard =
-    !left && !p.inventory.discardSlotUsed && p.gold >= p.inventory.discardPrice
+    !p.inventory.discardSlotUsed && p.gold >= p.inventory.discardPrice
 
   if (mode === 'discard') {
     return (
@@ -63,7 +61,7 @@ export function MerchantScreen(p: Props) {
       <span>{offer.price} g</span>
       <Button
         onClick={() => p.onBuy(kind, offer.id)}
-        disabled={left || offer.sold || p.gold < offer.price}
+        disabled={offer.sold || p.gold < offer.price}
         aria-label={`Buy ${name}`}
       >
         {offer.sold ? '売切' : '購入'}
@@ -101,15 +99,9 @@ export function MerchantScreen(p: Props) {
         </Button>
       </section>
 
-      {left ? (
-        <Button onClick={() => p.onClose()} aria-label="Close">
-          閉じる
-        </Button>
-      ) : (
-        <Button onClick={() => p.onLeave()} aria-label="Leave">
-          立ち去る
-        </Button>
-      )}
+      <Button onClick={() => p.onLeave()} aria-label="Leave">
+        立ち去る
+      </Button>
     </div>
   )
 }

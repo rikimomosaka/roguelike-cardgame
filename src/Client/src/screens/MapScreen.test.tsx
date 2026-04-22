@@ -196,7 +196,6 @@ describe('MapScreen', () => {
       potions: [],
       discardSlotUsed: false,
       discardPrice: 75,
-      leftSoFar: false,
     }
     render(
       <AccountProvider>

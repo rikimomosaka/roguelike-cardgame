@@ -9,7 +9,6 @@ const baseInventory: MerchantInventoryDto = {
   potions: [{ kind: 'potion', id: 'heal_potion_small', price: 50, sold: false }],
   discardSlotUsed: false,
   discardPrice: 75,
-  leftSoFar: false,
 }
 
 function baseHandlers() {
@@ -17,7 +16,6 @@ function baseHandlers() {
     onBuy: vi.fn().mockResolvedValue(undefined),
     onDiscard: vi.fn().mockResolvedValue(undefined),
     onLeave: vi.fn().mockResolvedValue(undefined),
-    onClose: vi.fn(),
   }
 }
 

@@ -140,29 +140,21 @@ public class MerchantActionsTests
     }
 
     [Fact]
-    public void Leave_SetsLeftSoFar()
+    public void Leave_IsNoOp_AndPreservesInventory()
     {
         var s0 = BaseWithInventory(500);
         var s1 = MerchantActions.Leave(s0);
+        Assert.Same(s0, s1);
         Assert.NotNull(s1.ActiveMerchant);
-        Assert.True(s1.ActiveMerchant!.LeftSoFar);
     }
 
     [Fact]
-    public void Leave_Twice_StillLeftSoFar()
+    public void Leave_ThenBuy_Succeeds_BecauseInventoryPersists()
     {
         var s0 = BaseWithInventory(500);
         var s1 = MerchantActions.Leave(s0);
-        var s2 = MerchantActions.Leave(s1);
-        Assert.True(s2.ActiveMerchant!.LeftSoFar);
-    }
-
-    [Fact]
-    public void Leave_ThenBuy_Throws()
-    {
-        var s0 = BaseWithInventory(500);
-        var s1 = MerchantActions.Leave(s0);
-        Assert.Throws<InvalidOperationException>(() =>
-            MerchantActions.BuyCard(s1, "reward_common_01", Catalog));
+        var s2 = MerchantActions.BuyCard(s1, "reward_common_01", Catalog);
+        Assert.Equal(450, s2.Gold);
+        Assert.True(s2.ActiveMerchant!.Cards[0].Sold);
     }
 }

@@ -291,26 +291,29 @@ public class MerchantControllerTests : IClassFixture<TempDataFactory>
     }
 
     [Fact]
-    public async Task Leave_SetsLeftSoFarAndInventoryStillAccessible()
+    public async Task Leave_IsNoOp_AndInventoryStillAccessible()
     {
         const string AccountId = "e5-leave";
         var client = await WalkToMerchantAsync(AccountId);
 
+        var repo = _factory.Services.GetRequiredService<ISaveRepository>();
+        var s = (await repo.TryLoadAsync(AccountId, CancellationToken.None))!;
+        await repo.SaveAsync(AccountId, s with { Gold = 500 }, CancellationToken.None);
+
         var leaveRes = await client.PostAsync("/api/v1/merchant/leave", null);
         Assert.Equal(HttpStatusCode.OK, leaveRes.StatusCode);
 
-        // After leave, ActiveMerchant is still set (LeftSoFar=true), so GET inventory returns 200.
+        // 立ち去っても次マスに進むまで在庫は保持される。
         var invRes = await client.GetAsync("/api/v1/merchant/inventory");
         Assert.Equal(HttpStatusCode.OK, invRes.StatusCode);
 
-        // LeftSoFar flag should be true in the response.
-        var doc = JsonDocument.Parse(await invRes.Content.ReadAsStringAsync());
-        Assert.True(doc.RootElement.GetProperty("leftSoFar").GetBoolean());
-
-        // Verify via repo: ActiveMerchant is not null and LeftSoFar = true.
-        var repo = _factory.Services.GetRequiredService<ISaveRepository>();
         var after = (await repo.TryLoadAsync(AccountId, CancellationToken.None))!;
         Assert.NotNull(after.ActiveMerchant);
-        Assert.True(after.ActiveMerchant!.LeftSoFar);
+
+        // 立ち去った後も購入は可能。
+        var firstCardId = after.ActiveMerchant!.Cards[0].Id;
+        var buyRes = await client.PostAsJsonAsync(
+            "/api/v1/merchant/buy", new { kind = "card", id = firstCardId });
+        Assert.Equal(HttpStatusCode.OK, buyRes.StatusCode);
     }
 }

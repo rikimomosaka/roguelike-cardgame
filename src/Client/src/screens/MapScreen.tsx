@@ -226,7 +226,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
   async function handleLeaveMerchant() {
     if (!accountId) return
     await leaveMerchant(accountId)
-    await refresh()
+    setMerchantDismissed(true)
   }
 
   async function handleChooseEvent(choiceIndex: number) {
@@ -247,7 +247,6 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
     await refresh()
   }
 
-  function handleCloseMerchant() { setMerchantDismissed(true) }
   function handleCloseEvent() { setEventDismissed(true) }
   function handleCloseRest() { setRestDismissed(true) }
 
@@ -374,7 +373,6 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
           onBuy={handleBuy}
           onDiscard={handleDiscardAtMerchant}
           onLeave={handleLeaveMerchant}
-          onClose={handleCloseMerchant}
         />
       )}
 

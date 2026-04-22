@@ -93,15 +93,14 @@ public sealed record MerchantInventoryDto(
     IReadOnlyList<MerchantOfferDto> Relics,
     IReadOnlyList<MerchantOfferDto> Potions,
     bool DiscardSlotUsed,
-    int DiscardPrice,
-    bool LeftSoFar)
+    int DiscardPrice)
 {
     public static MerchantInventoryDto From(MerchantInventory inv)
     {
         var cards = inv.Cards.Select(o => new MerchantOfferDto(o.Kind, o.Id, o.Price, o.Sold)).ToArray();
         var relics = inv.Relics.Select(o => new MerchantOfferDto(o.Kind, o.Id, o.Price, o.Sold)).ToArray();
         var potions = inv.Potions.Select(o => new MerchantOfferDto(o.Kind, o.Id, o.Price, o.Sold)).ToArray();
-        return new MerchantInventoryDto(cards, relics, potions, inv.DiscardSlotUsed, inv.DiscardPrice, inv.LeftSoFar);
+        return new MerchantInventoryDto(cards, relics, potions, inv.DiscardSlotUsed, inv.DiscardPrice);
     }
 }
 

@@ -15,7 +15,7 @@ beforeEach(() => {
 describe('merchant api', () => {
   it('getMerchantInventory GETs /api/v1/merchant/inventory with accountId header', async () => {
     fetchMock.mockResolvedValue(new Response(JSON.stringify({
-      cards: [], relics: [], potions: [], discardSlotUsed: false, discardPrice: 75, leftSoFar: false,
+      cards: [], relics: [], potions: [], discardSlotUsed: false, discardPrice: 75,
     }), { status: 200 }))
     const inv = await getMerchantInventory('alice')
     expect(fetchMock).toHaveBeenCalledTimes(1)

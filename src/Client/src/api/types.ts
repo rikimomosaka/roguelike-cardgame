@@ -21,7 +21,6 @@ export type MerchantInventoryDto = {
   potions: MerchantOfferDto[]
   discardSlotUsed: boolean
   discardPrice: number
-  leftSoFar: boolean
 }
 
 export type EventChoiceSnapshotDto = {

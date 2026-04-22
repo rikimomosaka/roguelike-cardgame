@@ -105,7 +105,7 @@ public class NodeEffectResolverTests
     public void Resolve_ClearsOldActiveMerchant()
     {
         var cat = EmbeddedDataLoader.LoadCatalog();
-        // 商人マスで Leave した状態（LeftSoFar=true）を持つ state を作る
+        // 商人マスに入った状態を作り、次のマスへ進むと ActiveMerchant がクリアされることを確認
         var s = TestRunStates.FreshDefault(cat);
         var withMerchant = NodeEffectResolver.Resolve(s, TileKind.Merchant, currentRow: 5, cat, new SystemRng(1));
         Assert.NotNull(withMerchant.ActiveMerchant);
