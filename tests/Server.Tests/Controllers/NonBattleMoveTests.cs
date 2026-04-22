@@ -187,24 +187,23 @@ public class NonBattleMoveTests : IClassFixture<TempDataFactory>
     }
 
     [Fact]
-    public async Task Rest_Move_FullyHeals()
+    public async Task Rest_Move_SetsActiveRestPending()
     {
+        // Phase 6: Rest マス進入では即時回復せず ActiveRestPending=true のみ立てる。
+        // 実際の回復／アップグレードは Task F2 で追加される Rest node 画面で選択する。
         var setup = await SetupWalkAsync("rest-walker", "Rest");
         Assert.NotNull(setup);
         var (client, path, _) = setup!.Value;
 
-        // Walk through all but last node (each may trigger battle/reward).
         for (int i = 1; i < path.Count - 1; i++)
             await TraverseIntermediateAsync(client, path[i], "rest-walker");
 
-        // Before final move: lower HP so Rest heal is observable.
         var repo = _factory.Services.GetRequiredService<ISaveRepository>();
         var s = await repo.TryLoadAsync("rest-walker", CancellationToken.None);
         Assert.NotNull(s);
         Assert.True(s!.MaxHp > 1);
         await repo.SaveAsync("rest-walker", s with { CurrentHp = 1 }, CancellationToken.None);
 
-        // Move onto Rest node.
         int restId = path[^1];
         var moveRes = await client.PostAsJsonAsync("/api/v1/runs/current/move",
             new { nodeId = restId, elapsedSeconds = 0 });
@@ -212,10 +211,8 @@ public class NonBattleMoveTests : IClassFixture<TempDataFactory>
 
         var after = await GetSnapshotAsync(client);
         var runEl = after.RootElement.GetProperty("run");
-        int curHp = runEl.GetProperty("currentHp").GetInt32();
-        int maxHp = runEl.GetProperty("maxHp").GetInt32();
-        Assert.Equal(maxHp, curHp);
-        // Rest does not trigger battle or reward.
+        // 即時回復しないことを検証。ActiveRestPending フラグ自体は Task G3 の DTO 更新後に検証する。
+        Assert.Equal(1, runEl.GetProperty("currentHp").GetInt32());
         Assert.Equal(JsonValueKind.Null, runEl.GetProperty("activeBattle").ValueKind);
         Assert.Equal(JsonValueKind.Null, runEl.GetProperty("activeReward").ValueKind);
     }
