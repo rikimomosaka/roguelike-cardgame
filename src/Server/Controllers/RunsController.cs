@@ -249,17 +249,31 @@ public sealed class RunsController : ControllerBase
         if (s is null || s.Progress != RunProgress.InProgress || s.ActiveReward is null)
             return Problem(statusCode: StatusCodes.Status409Conflict, title: "報酬画面がありません。");
 
-        RunState updated;
-        try { updated = RewardApplier.Proceed(s); }
-        catch (InvalidOperationException ex)
-        { return Problem(statusCode: StatusCodes.Status409Conflict, title: ex.Message); }
-
         long elapsed = body is null ? 0 : Math.Clamp(body.ElapsedSeconds, 0, MaxElapsedSecondsPerRequest);
-        updated = updated with
+
+        RunState updated;
+        if (s.ActiveReward.IsBossReward && s.CurrentAct < RunConstants.MaxAct)
         {
-            PlaySeconds = updated.PlaySeconds + elapsed,
-            SavedAtUtc = DateTimeOffset.UtcNow,
-        };
+            // act 遷移: 新マップ生成 → AdvanceAct
+            int nextAct = s.CurrentAct + 1;
+            var act2Seed = unchecked((int)(uint)ActMapSeed.Derive(s.RngSeed, nextAct));
+            var newMap = _runStart.RehydrateMap(s.RngSeed, nextAct);
+            var advanceRng = new SystemRng(unchecked(act2Seed ^ 0xAC70));
+            updated = ActTransition.AdvanceAct(s, newMap, _data, advanceRng);
+            updated = updated with { PlaySeconds = updated.PlaySeconds + elapsed };
+        }
+        else
+        {
+            try { updated = RewardApplier.Proceed(s); }
+            catch (InvalidOperationException ex)
+            { return Problem(statusCode: StatusCodes.Status409Conflict, title: ex.Message); }
+            updated = updated with
+            {
+                PlaySeconds = updated.PlaySeconds + elapsed,
+                SavedAtUtc = DateTimeOffset.UtcNow,
+            };
+        }
+
         await _saves.SaveAsync(accountId, updated, ct);
         return NoContent();
     }
