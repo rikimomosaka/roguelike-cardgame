@@ -8,4 +8,5 @@ public sealed record RewardStateDto(
     IReadOnlyList<string> CardChoices,
     string CardStatus,
     string? RelicId,
-    bool RelicClaimed);
+    bool RelicClaimed,
+    bool IsBossReward);
