@@ -85,7 +85,36 @@ export type RewardStateDto = {
   cardStatus: CardRewardStatus
   relicId: string | null
   relicClaimed: boolean
+  isBossReward: boolean
 }
+
+export type ActStartRelicChoiceDto = {
+  relicIds: string[]
+}
+
+export type RunResultCardDto = {
+  id: string
+  upgraded: boolean
+}
+
+export type RunResultDto = {
+  schemaVersion: number
+  accountId: string
+  runId: string
+  outcome: RunProgress
+  actReached: number
+  nodesVisited: number
+  playSeconds: number
+  characterId: string
+  finalHp: number
+  finalMaxHp: number
+  finalGold: number
+  finalDeck: RunResultCardDto[]
+  finalRelics: string[]
+  endedAtUtc: string
+}
+
+export type RunHistoryDto = RunResultDto[]
 
 export type RunStateDto = {
   schemaVersion: number
@@ -110,6 +139,7 @@ export type RunStateDto = {
   playSeconds: number
   progress: RunProgress
   savedAtUtc: string
+  activeActStartRelicChoice: ActStartRelicChoiceDto | null
 }
 
 export type MapNodeDto = {
