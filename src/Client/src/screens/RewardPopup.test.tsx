@@ -13,6 +13,7 @@ function baseReward(overrides: Partial<RewardStateDto> = {}): RewardStateDto {
     cardStatus: 'Pending',
     relicId: null,
     relicClaimed: false,
+    isBossReward: false,
     ...overrides,
   }
 }
