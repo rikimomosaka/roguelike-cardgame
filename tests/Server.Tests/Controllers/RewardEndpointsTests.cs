@@ -135,12 +135,16 @@ public class RewardEndpointsTests : IClassFixture<TempDataFactory>
     }
 
     [Fact]
-    public async Task RewardProceed_IncompleteRewards_Returns409()
+    public async Task RewardProceed_IncompleteRewards_StillSucceeds()
     {
+        // Phase 5 UX: Proceed always succeeds so the player can dismiss the popup
+        // without being forced to claim gold/potion/card first.
         var client = await ClientWithActiveRewardAsync("ivan");
-        // Nothing claimed yet -> Proceed should 409.
         var res = await client.PostAsJsonAsync("/api/v1/runs/current/reward/proceed", new { elapsedSeconds = 0 });
-        Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, res.StatusCode);
+
+        var after = await GetSnapshotAsync(client);
+        Assert.Equal(JsonValueKind.Null, after.RootElement.GetProperty("run").GetProperty("activeReward").ValueKind);
     }
 
     [Fact]

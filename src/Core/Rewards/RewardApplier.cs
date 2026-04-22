@@ -38,8 +38,8 @@ public static class RewardApplier
     public static RunState PickCard(RunState s, string cardId)
     {
         var r = Require(s);
-        if (r.CardStatus != CardRewardStatus.Pending)
-            throw new InvalidOperationException("Card already resolved");
+        if (r.CardStatus == CardRewardStatus.Claimed)
+            throw new InvalidOperationException("Card already claimed");
         if (!r.CardChoices.Contains(cardId))
             throw new ArgumentException($"cardId \"{cardId}\" is not in CardChoices", nameof(cardId));
 
@@ -60,10 +60,7 @@ public static class RewardApplier
 
     public static RunState Proceed(RunState s)
     {
-        var r = Require(s);
-        if (!r.GoldClaimed) throw new InvalidOperationException("Gold not claimed");
-        if (r.PotionId is not null && !r.PotionClaimed) throw new InvalidOperationException("Potion not claimed");
-        if (r.CardStatus == CardRewardStatus.Pending) throw new InvalidOperationException("Card not resolved");
+        Require(s);
         return s with { ActiveReward = null };
     }
 

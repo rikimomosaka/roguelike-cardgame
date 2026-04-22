@@ -11,29 +11,16 @@ type Props = {
   onClaimPotion: () => Promise<void>
   onPickCard: (cardId: string) => Promise<void>
   onSkipCard: () => Promise<void>
-  onProceed: () => Promise<void>
+  onProceed: () => void
   onDiscardPotion: (slotIndex: number) => Promise<void>
-  onPotionFullAlert: () => void
 }
 
 export function RewardPopup(p: Props) {
   const [cardView, setCardView] = useState(false)
   const r = p.reward
-  const canProceed =
-    r.goldClaimed &&
-    (r.potionId === null || r.potionClaimed) &&
-    r.cardStatus !== 'Pending'
+  const cardResolved = r.cardStatus === 'Claimed'
 
-  const handleClaimPotion = async () => {
-    try {
-      await p.onClaimPotion()
-    } catch (e) {
-      if ((e as { status?: number }).status === 409) p.onPotionFullAlert()
-      else throw e
-    }
-  }
-
-  if (cardView && r.cardStatus === 'Pending') {
+  if (cardView && !cardResolved) {
     return (
       <div className="reward-popup" role="dialog" aria-modal="true">
         <h2>カードを選ぶ</h2>
@@ -50,14 +37,17 @@ export function RewardPopup(p: Props) {
             </Button>
           ))}
         </div>
-        <Button
-          onClick={async () => {
-            await p.onSkipCard()
-            setCardView(false)
-          }}
-        >
-          Skip
-        </Button>
+        {r.cardStatus === 'Pending' && (
+          <Button
+            onClick={async () => {
+              await p.onSkipCard()
+              setCardView(false)
+            }}
+          >
+            Skip
+          </Button>
+        )}
+        <Button onClick={() => setCardView(false)}>戻る</Button>
       </div>
     )
   }
@@ -73,7 +63,7 @@ export function RewardPopup(p: Props) {
         </li>
         {r.potionId && (
           <li>
-            <Button disabled={r.potionClaimed} onClick={handleClaimPotion}>
+            <Button disabled={r.potionClaimed} onClick={() => p.onClaimPotion()}>
               {r.potionClaimed ? '✓' : '🧪'} {r.potionId}
             </Button>
           </li>
@@ -81,10 +71,10 @@ export function RewardPopup(p: Props) {
         {r.cardChoices.length > 0 && (
           <li>
             <Button
-              disabled={r.cardStatus !== 'Pending'}
+              disabled={cardResolved}
               onClick={() => setCardView(true)}
             >
-              {r.cardStatus !== 'Pending' ? '✓' : '✨'} カードの報酬
+              {cardResolved ? '✓' : r.cardStatus === 'Skipped' ? '↩' : '✨'} カードの報酬
             </Button>
           </li>
         )}
@@ -99,9 +89,7 @@ export function RewardPopup(p: Props) {
           />
         ))}
       </div>
-      <Button disabled={!canProceed} onClick={() => p.onProceed()}>
-        進む
-      </Button>
+      <Button onClick={() => p.onProceed()}>進む</Button>
     </div>
   )
 }

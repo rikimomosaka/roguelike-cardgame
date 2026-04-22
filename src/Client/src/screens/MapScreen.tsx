@@ -49,7 +49,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [shopMessage, setShopMessage] = useState<string | null>(null)
-  const [potionFullMessage, setPotionFullMessage] = useState<string | null>(null)
+  const [rewardDismissed, setRewardDismissed] = useState(false)
   const mountedAt = useRef<number>(performance.now())
 
   const elapsedSeconds = useCallback(() => {
@@ -90,11 +90,17 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
   const visited = new Set(snap.run.visitedNodeIds)
   const activeBattle = snap.run.activeBattle
   const activeReward = snap.run.activeReward
-  const blockedByModal = activeBattle !== null || activeReward !== null
+  const rewardVisible = activeReward !== null && !rewardDismissed
+  const rewardDismissedActive = activeReward !== null && rewardDismissed
+  const blockedByModal = activeBattle !== null || rewardVisible
 
   function isSelectable(n: MapNodeDto): boolean {
     if (blockedByModal) return false
     return currentNode.outgoingNodeIds.includes(n.id)
+  }
+
+  function isCurrentReopenable(n: MapNodeDto): boolean {
+    return rewardDismissedActive && n.id === snap.run.currentNodeId
   }
 
   function posOf(n: MapNodeDto): { cx: number; cy: number } {
@@ -106,10 +112,19 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
   }
 
   async function handleClick(n: MapNodeDto) {
-    if (!accountId || busy || !isSelectable(n)) return
+    if (!accountId || busy) return
+    if (isCurrentReopenable(n)) {
+      setRewardDismissed(false)
+      return
+    }
+    if (!isSelectable(n)) return
     setBusy(true)
     try {
+      if (activeReward) {
+        await proceedReward(accountId, elapsedSeconds())
+      }
       await moveToNode(accountId, n.id, elapsedSeconds())
+      setRewardDismissed(false)
       await refresh()
       const resolvedKind = snap.run.unknownResolutions[n.id] ?? n.kind
       const actualKind = resolvedKind === 'Unknown' ? n.kind : resolvedKind
@@ -124,6 +139,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
   async function handleWin() {
     if (!accountId) return
     await winBattle(accountId, elapsedSeconds())
+    setRewardDismissed(false)
     await refresh()
   }
 
@@ -151,20 +167,14 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
     await refresh()
   }
 
-  async function handleProceed() {
-    if (!accountId) return
-    await proceedReward(accountId, elapsedSeconds())
-    await refresh()
+  function handleProceed() {
+    setRewardDismissed(true)
   }
 
   async function handleDiscardPotion(slotIndex: number) {
     if (!accountId) return
     await discardPotion(accountId, slotIndex)
     await refresh()
-  }
-
-  function handlePotionFullAlert() {
-    setPotionFullMessage('ポーションスロットが満杯です。不要なポーションを捨ててください。')
   }
 
   const resolved = snap.run.unknownResolutions
@@ -174,7 +184,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
   const atBoss = currentNode.kind === 'Boss'
 
   return (
-    <main className="map-screen">
+    <>
       <TopBar
         currentHp={snap.run.currentHp}
         maxHp={snap.run.maxHp}
@@ -182,82 +192,86 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
         potions={snap.run.potions}
         onDiscardPotion={handleDiscardPotion}
       />
-      <header className="map-screen__top">
-        <button aria-label="メニュー" onClick={() => setMenuOpen(true)}>⚙</button>
-      </header>
+      <main className="map-screen">
+        <header className="map-screen__top">
+          <button aria-label="メニュー" onClick={() => setMenuOpen(true)}>⚙</button>
+        </header>
 
-      <svg viewBox={`0 0 ${width} ${height}`} className="map-screen__svg">
-        {snap.map.nodes.map((n) =>
-          n.outgoingNodeIds.map((toId) => {
-            const to = snap.map.nodes.find((x) => x.id === toId)!
-            const a = posOf(n)
-            const b = posOf(to)
-            const visitedEdge = visited.has(n.id) && visited.has(toId)
+        <svg viewBox={`0 0 ${width} ${height}`} className="map-screen__svg">
+          {snap.map.nodes.map((n) =>
+            n.outgoingNodeIds.map((toId) => {
+              const to = snap.map.nodes.find((x) => x.id === toId)!
+              const a = posOf(n)
+              const b = posOf(to)
+              const visitedEdge = visited.has(n.id) && visited.has(toId)
+              return (
+                <line
+                  key={`${n.id}-${toId}`}
+                  x1={a.cx} y1={a.cy} x2={b.cx} y2={b.cy}
+                  stroke={visitedEdge ? '#888' : '#444'}
+                  strokeWidth={visitedEdge ? 3 : 2}
+                />
+              )
+            }),
+          )}
+          {snap.map.nodes.map((n) => {
+            const { cx, cy } = posOf(n)
+            const isCurrent = n.id === snap.run.currentNodeId
+            const isVisited = visited.has(n.id)
+            const selectable = isSelectable(n)
+            const reopen = isCurrentReopenable(n)
+            const clickable = selectable || reopen
+            const resolvedKind: TileKind | null = isVisited ? (resolved[n.id] ?? null) : null
             return (
-              <line
-                key={`${n.id}-${toId}`}
-                x1={a.cx} y1={a.cy} x2={b.cx} y2={b.cy}
-                stroke={visitedEdge ? '#888' : '#444'}
-                strokeWidth={visitedEdge ? 3 : 2}
-              />
-            )
-          }),
-        )}
-        {snap.map.nodes.map((n) => {
-          const { cx, cy } = posOf(n)
-          const isCurrent = n.id === snap.run.currentNodeId
-          const isVisited = visited.has(n.id)
-          const selectable = isSelectable(n)
-          const resolvedKind: TileKind | null = isVisited ? (resolved[n.id] ?? null) : null
-          return (
-            <g
-              key={n.id}
-              data-testid={`map-node-${n.id}`}
-              data-current={isCurrent ? 'true' : 'false'}
-              data-selectable={selectable ? 'true' : 'false'}
-              data-visited={isVisited ? 'true' : 'false'}
-              onClick={() => handleClick(n)}
-              style={{ cursor: selectable ? 'pointer' : 'default' }}
-            >
-              <circle
-                cx={cx} cy={cy} r={NODE_R}
-                fill={isVisited ? '#444' : '#222'}
-                stroke={isCurrent ? 'gold' : selectable ? '#4ae' : '#666'}
-                strokeWidth={isCurrent ? 4 : selectable ? 3 : 1}
-              />
-              <text
-                x={cx} y={cy + 5}
-                textAnchor="middle"
-                fill={isVisited ? '#aaa' : '#eee'}
-                fontSize="14"
+              <g
+                key={n.id}
+                data-testid={`map-node-${n.id}`}
+                data-current={isCurrent ? 'true' : 'false'}
+                data-selectable={selectable ? 'true' : 'false'}
+                data-visited={isVisited ? 'true' : 'false'}
+                data-reopen-reward={reopen ? 'true' : 'false'}
+                onClick={() => handleClick(n)}
+                style={{ cursor: clickable ? 'pointer' : 'default' }}
               >
-                {iconFor(n.kind, resolvedKind)}
-              </text>
-            </g>
-          )
-        })}
-      </svg>
+                <circle
+                  cx={cx} cy={cy} r={NODE_R}
+                  fill={isVisited ? '#444' : '#222'}
+                  stroke={isCurrent ? 'gold' : selectable ? '#4ae' : '#666'}
+                  strokeWidth={isCurrent ? 4 : selectable ? 3 : 1}
+                />
+                <text
+                  x={cx} y={cy + 5}
+                  textAnchor="middle"
+                  fill={isVisited ? '#aaa' : '#eee'}
+                  fontSize="14"
+                >
+                  {iconFor(n.kind, resolvedKind)}
+                </text>
+              </g>
+            )
+          })}
+        </svg>
 
-      {atBoss && !activeBattle && !activeReward && (
-        <p className="map-screen__dev-note">
-          ボスに到達しました。ここから先は Phase 5 以降で実装されます。
-        </p>
-      )}
+        {atBoss && !activeBattle && !activeReward && (
+          <p className="map-screen__dev-note">
+            ボスに到達しました。ここから先は Phase 5 以降で実装されます。
+          </p>
+        )}
 
-      {shopMessage && (
-        <div className="map-screen__shop-toast" role="status">{shopMessage}</div>
-      )}
+        {shopMessage && (
+          <div className="map-screen__shop-toast" role="status">{shopMessage}</div>
+        )}
 
-      {potionFullMessage && (
-        <div className="map-screen__potion-toast" role="alert">
-          <span>{potionFullMessage}</span>
-          <button type="button" onClick={() => setPotionFullMessage(null)}>OK</button>
-        </div>
-      )}
+        {rewardDismissedActive && (
+          <p className="map-screen__dev-note">
+            報酬は現在のマスをクリックで再度開けます。
+          </p>
+        )}
+      </main>
 
       {activeBattle && <BattleOverlay battle={activeBattle} onWin={handleWin} />}
 
-      {activeReward && (
+      {rewardVisible && activeReward && (
         <RewardPopup
           reward={activeReward}
           potions={snap.run.potions}
@@ -268,7 +282,6 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
           onSkipCard={handleSkipCard}
           onProceed={handleProceed}
           onDiscardPotion={handleDiscardPotion}
-          onPotionFullAlert={handlePotionFullAlert}
         />
       )}
 
@@ -280,6 +293,6 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
           elapsedSecondsRef={mountedAt}
         />
       )}
-    </main>
+    </>
   )
 }

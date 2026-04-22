@@ -1,7 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { RewardStateDto } from '../api/types'
-import { ApiError } from '../api/client'
 import { RewardPopup } from './RewardPopup'
 
 function baseReward(overrides: Partial<RewardStateDto> = {}): RewardStateDto {
@@ -22,22 +21,17 @@ function baseHandlers() {
     onClaimPotion: vi.fn().mockResolvedValue(undefined),
     onPickCard: vi.fn().mockResolvedValue(undefined),
     onSkipCard: vi.fn().mockResolvedValue(undefined),
-    onProceed: vi.fn().mockResolvedValue(undefined),
+    onProceed: vi.fn(),
     onDiscardPotion: vi.fn().mockResolvedValue(undefined),
-    onPotionFullAlert: vi.fn(),
   }
 }
 
 describe('RewardPopup', () => {
-  it('enables 進む only when all rewards resolved, and invokes onProceed', async () => {
+  it('進む is always enabled and invokes onProceed even with nothing claimed', () => {
     const handlers = baseHandlers()
-    const reward = baseReward({
-      goldClaimed: true,
-      cardStatus: 'Claimed',
-    })
     render(
       <RewardPopup
-        reward={reward}
+        reward={baseReward()}
         potions={['', '', '']}
         potionSlotCount={3}
         {...handlers}
@@ -46,10 +40,10 @@ describe('RewardPopup', () => {
     const proceed = screen.getByText('進む') as HTMLButtonElement
     expect(proceed.disabled).toBe(false)
     fireEvent.click(proceed)
-    await waitFor(() => expect(handlers.onProceed).toHaveBeenCalledTimes(1))
+    expect(handlers.onProceed).toHaveBeenCalledTimes(1)
   })
 
-  it('disables 進む while card reward is Pending', () => {
+  it('進む remains enabled when card reward is still Pending', () => {
     const handlers = baseHandlers()
     const reward = baseReward({ goldClaimed: true, cardStatus: 'Pending' })
     render(
@@ -60,24 +54,27 @@ describe('RewardPopup', () => {
         {...handlers}
       />,
     )
-    expect((screen.getByText('進む') as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByText('進む') as HTMLButtonElement).disabled).toBe(false)
   })
 
-  it('invokes onPotionFullAlert when claim potion throws 409', async () => {
+  it('allows reopening the card chooser after Skip to reclaim a card', async () => {
     const handlers = baseHandlers()
-    handlers.onClaimPotion.mockRejectedValue(new ApiError(409, 'potions full'))
-    const reward = baseReward({ potionId: 'potion_heal', cardStatus: 'Claimed' })
+    const reward = baseReward({ goldClaimed: true, cardStatus: 'Skipped' })
     render(
       <RewardPopup
         reward={reward}
-        potions={['p1', 'p2', 'p3']}
+        potions={['', '', '']}
         potionSlotCount={3}
         {...handlers}
       />,
     )
-    fireEvent.click(screen.getByText('🧪 potion_heal'))
+    // Card button shows the reopen glyph and is still enabled (not Claimed).
+    const cardBtn = screen.getByText('↩ カードの報酬') as HTMLButtonElement
+    expect(cardBtn.disabled).toBe(false)
+    fireEvent.click(cardBtn)
+    fireEvent.click(screen.getByText('card_strike'))
     await waitFor(() =>
-      expect(handlers.onPotionFullAlert).toHaveBeenCalledTimes(1),
+      expect(handlers.onPickCard).toHaveBeenCalledWith('card_strike'),
     )
   })
 

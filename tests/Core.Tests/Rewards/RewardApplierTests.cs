@@ -72,11 +72,33 @@ public class RewardApplierTests
     }
 
     [Fact]
-    public void Proceed_IncompleteCard_Throws()
+    public void Proceed_IncompleteReward_StillClearsActiveReward()
+    {
+        // Phase 5 UX: Proceed must succeed even when gold/potion/card are unresolved,
+        // so the player can always dismiss the reward popup.
+        var choices = ImmutableArray.Create("reward_common_01", "reward_common_02", "reward_common_03");
+        var s = StateWithReward(new RewardState(15, false, "health_potion", false, choices, CardRewardStatus.Pending));
+        var next = RewardApplier.Proceed(s);
+        Assert.Null(next.ActiveReward);
+    }
+
+    [Fact]
+    public void PickCard_AfterSkip_AllowsClaim()
+    {
+        // Phase 5 UX: skipping is reversible until the player moves to the next node.
+        var choices = ImmutableArray.Create("reward_common_01", "reward_common_02", "reward_common_03");
+        var s = StateWithReward(new RewardState(0, true, null, true, choices, CardRewardStatus.Skipped));
+        var next = RewardApplier.PickCard(s, "reward_common_02");
+        Assert.Contains("reward_common_02", next.Deck);
+        Assert.Equal(CardRewardStatus.Claimed, next.ActiveReward!.CardStatus);
+    }
+
+    [Fact]
+    public void PickCard_AfterClaim_Throws()
     {
         var choices = ImmutableArray.Create("reward_common_01", "reward_common_02", "reward_common_03");
-        var s = StateWithReward(new RewardState(0, true, null, true, choices, CardRewardStatus.Pending));
-        Assert.Throws<System.InvalidOperationException>(() => RewardApplier.Proceed(s));
+        var s = StateWithReward(new RewardState(0, true, null, true, choices, CardRewardStatus.Claimed));
+        Assert.Throws<System.InvalidOperationException>(() => RewardApplier.PickCard(s, "reward_common_02"));
     }
 
     [Fact]
