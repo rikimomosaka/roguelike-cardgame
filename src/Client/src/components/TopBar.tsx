@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { PotionSlot } from './PotionSlot'
+import { useCardCatalog } from '../hooks/useCardCatalog'
 
 type Props = {
   currentHp: number
@@ -25,7 +26,11 @@ export function TopBar({
   peekActive,
 }: Props) {
   const [deckOpen, setDeckOpen] = useState(false)
-  const sortedDeck = [...deck].sort()
+  const { names } = useCardCatalog()
+  const deckLabel = (id: string) => names[id] ?? id
+  const sortedDeck = [...deck].sort((a, b) => deckLabel(a).localeCompare(deckLabel(b), 'ja'))
+  const deckOpenAria: 'true' | 'false' = deckOpen ? 'true' : 'false'
+  const peekPressedAria: 'true' | 'false' = peekActive ? 'true' : 'false'
 
   return (
     <div className="topbar" role="status">
@@ -49,8 +54,8 @@ export function TopBar({
             type="button"
             className="topbar__btn"
             aria-label={`デッキ (${deck.length}枚)`}
-            aria-expanded={deckOpen}
-            aria-pressed={deckOpen}
+            aria-expanded={deckOpenAria}
+            aria-pressed={deckOpenAria}
             onClick={() => setDeckOpen((v) => !v)}
           >
             🃏 {deck.length}
@@ -73,7 +78,7 @@ export function TopBar({
               ) : (
                 <ul className="topbar__deck-list">
                   {sortedDeck.map((id, i) => (
-                    <li key={`${id}-${i}`}>{id}</li>
+                    <li key={`${id}-${i}`}>{deckLabel(id)}</li>
                   ))}
                 </ul>
               )}
@@ -85,7 +90,7 @@ export function TopBar({
             type="button"
             className="topbar__btn"
             aria-label={peekActive ? '戦闘に戻る' : 'マップを見る'}
-            aria-pressed={peekActive ?? false}
+            aria-pressed={peekPressedAria}
             onClick={onTogglePeek}
           >
             {peekActive ? '⚔' : '🗺'}
