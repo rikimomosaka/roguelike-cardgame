@@ -109,7 +109,7 @@ export function RewardPopup(p: Props) {
           />
         ))}
       </div>
-      <Button onClick={() => p.onProceed()}>進む</Button>
+      <Button onClick={() => p.onProceed()}>{r.isBossReward ? '次の層へ' : '進む'}</Button>
     </div>
   )
 }

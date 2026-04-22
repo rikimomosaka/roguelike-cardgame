@@ -171,4 +171,34 @@ describe('RewardPopup', () => {
     )
     expect(screen.queryByText(/0 Gold/)).toBeNull()
   })
+
+  it('proceed button shows "次の層へ" when reward.isBossReward is true', () => {
+    const handlers = baseHandlers()
+    const reward = baseReward({ isBossReward: true })
+    render(
+      <RewardPopup
+        reward={reward}
+        potions={['', '', '']}
+        potionSlotCount={3}
+        {...handlers}
+      />,
+    )
+    expect(screen.getByText('次の層へ')).toBeDefined()
+    expect(screen.queryByText('進む')).toBeNull()
+  })
+
+  it('proceed button shows "進む" when reward.isBossReward is false', () => {
+    const handlers = baseHandlers()
+    const reward = baseReward({ isBossReward: false })
+    render(
+      <RewardPopup
+        reward={reward}
+        potions={['', '', '']}
+        potionSlotCount={3}
+        {...handlers}
+      />,
+    )
+    expect(screen.getByText('進む')).toBeDefined()
+    expect(screen.queryByText('次の層へ')).toBeNull()
+  })
 })
