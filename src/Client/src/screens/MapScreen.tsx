@@ -45,6 +45,7 @@ function iconFor(kind: TileKind, resolvedKind: TileKind | null): string {
     case 'Merchant': return '商'
     case 'Rest': return '火'
     case 'Treasure': return '宝'
+    case 'Event': return 'E'
     case 'Unknown': return '?'
     case 'Boss': return '王'
   }
@@ -57,6 +58,9 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
   const [busy, setBusy] = useState(false)
   const [shopMessage, setShopMessage] = useState<string | null>(null)
   const [rewardDismissed, setRewardDismissed] = useState(false)
+  const [merchantDismissed, setMerchantDismissed] = useState(false)
+  const [eventDismissed, setEventDismissed] = useState(false)
+  const [restDismissed, setRestDismissed] = useState(false)
   const [peekMap, setPeekMap] = useState(false)
   const mountedAt = useRef<number>(performance.now())
 
@@ -98,11 +102,18 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
   const visited = new Set(snap.run.visitedNodeIds)
   const activeBattle = snap.run.activeBattle
   const activeReward = snap.run.activeReward
+  const activeMerchant = snap.run.activeMerchant
+  const activeEvent = snap.run.activeEvent
+  const activeRestPending = snap.run.activeRestPending
   const rewardVisible = activeReward !== null && !rewardDismissed
-  const blockedByModal = activeBattle !== null || rewardVisible
-    || snap.run.activeMerchant !== null
-    || snap.run.activeEvent !== null
-    || snap.run.activeRestPending
+  const merchantVisible = activeMerchant !== null && !merchantDismissed
+  const eventVisible = activeEvent !== null && !eventDismissed
+  const restVisible = activeRestPending && !restDismissed
+  const blockedByModal = activeBattle !== null
+    || rewardVisible
+    || merchantVisible
+    || eventVisible
+    || restVisible
 
   function isSelectable(n: MapNodeDto): boolean {
     if (blockedByModal) return false
@@ -110,7 +121,12 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
   }
 
   function isCurrentReopenable(n: MapNodeDto): boolean {
-    return activeReward !== null && rewardDismissed && n.id === snap.run.currentNodeId
+    if (n.id !== snap.run.currentNodeId) return false
+    if (activeReward !== null && rewardDismissed) return true
+    if (activeMerchant !== null && merchantDismissed) return true
+    if (activeEvent !== null && eventDismissed) return true
+    if (activeRestPending && restDismissed) return true
+    return false
   }
 
   function posOf(n: MapNodeDto): { cx: number; cy: number } {
@@ -125,6 +141,9 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
     if (!accountId || busy) return
     if (isCurrentReopenable(n)) {
       setRewardDismissed(false)
+      setMerchantDismissed(false)
+      setEventDismissed(false)
+      setRestDismissed(false)
       return
     }
     if (!isSelectable(n)) return
@@ -135,12 +154,10 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
       }
       await moveToNode(accountId, n.id, elapsedSeconds())
       setRewardDismissed(false)
+      setMerchantDismissed(false)
+      setEventDismissed(false)
+      setRestDismissed(false)
       await refresh()
-      const resolvedKind = snap.run.unknownResolutions[n.id] ?? n.kind
-      const actualKind = resolvedKind === 'Unknown' ? n.kind : resolvedKind
-      if (actualKind === 'Merchant') {
-        setShopMessage('ショップは Phase 6 で実装されます')
-      }
     } finally {
       setBusy(false)
     }
@@ -229,6 +246,10 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
     await restUpgrade(accountId, deckIndex)
     await refresh()
   }
+
+  function handleCloseMerchant() { setMerchantDismissed(true) }
+  function handleCloseEvent() { setEventDismissed(true) }
+  function handleCloseRest() { setRestDismissed(true) }
 
   const resolved = snap.run.unknownResolutions
   const maxCol = Math.max(...snap.map.nodes.map((n) => n.column))
@@ -345,29 +366,33 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
         />
       )}
 
-      {snap.run.activeMerchant && (
+      {merchantVisible && activeMerchant && (
         <MerchantScreen
           gold={snap.run.gold}
           deck={snap.run.deck}
-          inventory={snap.run.activeMerchant}
+          inventory={activeMerchant}
           onBuy={handleBuy}
           onDiscard={handleDiscardAtMerchant}
           onLeave={handleLeaveMerchant}
+          onClose={handleCloseMerchant}
         />
       )}
 
-      {snap.run.activeEvent && (
+      {eventVisible && activeEvent && (
         <EventScreen
-          event={snap.run.activeEvent}
+          event={activeEvent}
           onChoose={handleChooseEvent}
+          onClose={handleCloseEvent}
         />
       )}
 
-      {snap.run.activeRestPending && (
+      {restVisible && (
         <RestScreen
           deck={snap.run.deck}
+          completed={snap.run.activeRestCompleted}
           onHeal={handleRestHeal}
           onUpgrade={handleRestUpgrade}
+          onClose={handleCloseRest}
         />
       )}
     </>

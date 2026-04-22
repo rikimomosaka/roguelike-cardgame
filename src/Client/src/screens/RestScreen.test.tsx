@@ -25,20 +25,20 @@ const deck: CardInstanceDto[] = [
 
 describe('RestScreen', () => {
   it('default view shows heal and upgrade buttons', () => {
-    render(<RestScreen deck={deck} onHeal={vi.fn()} onUpgrade={vi.fn()} />)
+    render(<RestScreen deck={deck} completed={false} onHeal={vi.fn()} onUpgrade={vi.fn()} onClose={vi.fn()} />)
     expect(screen.getByRole('button', { name: /^heal$/i })).toBeDefined()
     expect(screen.getByRole('button', { name: /upgrade card/i })).toBeDefined()
   })
 
   it('heal button calls onHeal', async () => {
     const onHeal = vi.fn()
-    render(<RestScreen deck={deck} onHeal={onHeal} onUpgrade={vi.fn()} />)
+    render(<RestScreen deck={deck} completed={false} onHeal={onHeal} onUpgrade={vi.fn()} onClose={vi.fn()} />)
     fireEvent.click(screen.getByRole('button', { name: /^heal$/i }))
     await waitFor(() => expect(onHeal).toHaveBeenCalled())
   })
 
   it('upgrade view lists only upgradable cards', async () => {
-    render(<RestScreen deck={deck} onHeal={vi.fn()} onUpgrade={vi.fn()} />)
+    render(<RestScreen deck={deck} completed={false} onHeal={vi.fn()} onUpgrade={vi.fn()} onClose={vi.fn()} />)
     fireEvent.click(screen.getByRole('button', { name: /upgrade card/i }))
     // Wait for catalog to load
     await waitFor(() => {
@@ -49,7 +49,7 @@ describe('RestScreen', () => {
 
   it('selecting upgrade card calls onUpgrade with correct index', async () => {
     const onUpgrade = vi.fn()
-    render(<RestScreen deck={deck} onHeal={vi.fn()} onUpgrade={onUpgrade} />)
+    render(<RestScreen deck={deck} completed={false} onHeal={vi.fn()} onUpgrade={onUpgrade} onClose={vi.fn()} />)
     fireEvent.click(screen.getByRole('button', { name: /upgrade card/i }))
     const btn = await screen.findByRole('button', { name: /upgrade strike at 0/i })
     fireEvent.click(btn)

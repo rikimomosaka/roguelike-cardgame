@@ -5,11 +5,13 @@ import { useCardCatalog } from '../hooks/useCardCatalog'
 
 type Props = {
   deck: CardInstanceDto[]
+  completed: boolean
   onHeal: () => void | Promise<void>
   onUpgrade: (deckIndex: number) => void | Promise<void>
+  onClose: () => void
 }
 
-export function RestScreen({ deck, onHeal, onUpgrade }: Props) {
+export function RestScreen({ deck, completed, onHeal, onUpgrade, onClose }: Props) {
   const [mode, setMode] = useState<'choose' | 'upgrade'>('choose')
   const { names, catalog } = useCardCatalog()
 
@@ -28,6 +30,7 @@ export function RestScreen({ deck, onHeal, onUpgrade }: Props) {
               <li key={e.index}>
                 <Button
                   onClick={() => onUpgrade(e.index)}
+                  disabled={completed}
                   aria-label={`Upgrade ${name} at ${e.index}`}
                 >
                   {name} を強化 (#{e.index})
@@ -43,13 +46,18 @@ export function RestScreen({ deck, onHeal, onUpgrade }: Props) {
 
   return (
     <div className="rest-screen" role="dialog" aria-modal="true">
-      <h2>休息所</h2>
-      <Button onClick={() => onHeal()} aria-label="Heal">
+      <h2>休息所{completed ? '(使用済み)' : ''}</h2>
+      <Button onClick={() => onHeal()} aria-label="Heal" disabled={completed}>
         回復 (+30% max HP)
       </Button>
-      <Button onClick={() => setMode('upgrade')} aria-label="Upgrade card">
+      <Button onClick={() => setMode('upgrade')} aria-label="Upgrade card" disabled={completed}>
         カードを強化
       </Button>
+      {completed && (
+        <Button onClick={() => onClose()} aria-label="Close">
+          閉じる
+        </Button>
+      )}
     </div>
   )
 }

@@ -23,6 +23,7 @@ function sampleSnapshot(
       activeMerchant: null,
       activeEvent: null,
       activeRestPending: false,
+      activeRestCompleted: false,
       playSeconds: 0,
       savedAtUtc: '2026-04-21T00:00:00Z',
       progress: 'InProgress',
@@ -195,6 +196,7 @@ describe('MapScreen', () => {
       potions: [],
       discardSlotUsed: false,
       discardPrice: 75,
+      leftSoFar: false,
     }
     render(
       <AccountProvider>
@@ -217,6 +219,7 @@ describe('MapScreen', () => {
         { label: 'Drink', conditionSummary: null, conditionMet: true },
         { label: 'Walk by', conditionSummary: null, conditionMet: true },
       ],
+      chosenIndex: null,
     }
     render(
       <AccountProvider>

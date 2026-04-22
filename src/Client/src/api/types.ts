@@ -21,6 +21,7 @@ export type MerchantInventoryDto = {
   potions: MerchantOfferDto[]
   discardSlotUsed: boolean
   discardPrice: number
+  leftSoFar: boolean
 }
 
 export type EventChoiceSnapshotDto = {
@@ -34,6 +35,7 @@ export type EventInstanceDto = {
   name: string
   description: string
   choices: EventChoiceSnapshotDto[]
+  chosenIndex: number | null
 }
 
 export type AudioSettingsDto = {
@@ -51,6 +53,7 @@ export type TileKind =
   | 'Rest'
   | 'Merchant'
   | 'Treasure'
+  | 'Event'
   | 'Unknown'
   | 'Boss'
 
@@ -103,6 +106,7 @@ export type RunStateDto = {
   activeMerchant: MerchantInventoryDto | null
   activeEvent: EventInstanceDto | null
   activeRestPending: boolean
+  activeRestCompleted: boolean
   relics: string[]
   playSeconds: number
   progress: RunProgress
