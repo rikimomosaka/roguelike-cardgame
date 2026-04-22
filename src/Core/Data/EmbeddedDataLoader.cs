@@ -14,6 +14,7 @@ public static class EmbeddedDataLoader
     private const string EncountersPrefix = "RoguelikeCardGame.Core.Data.Encounters.";
     private const string RewardTablePrefix = "RoguelikeCardGame.Core.Data.RewardTable.";
     private const string CharactersPrefix = "RoguelikeCardGame.Core.Data.Characters.";
+    private const string EventsPrefix = "RoguelikeCardGame.Core.Data.Events.";
 
     public static DataCatalog LoadCatalog()
     {
@@ -25,7 +26,8 @@ public static class EmbeddedDataLoader
             enemies: ReadAllWithPrefix(asm, EnemiesPrefix),
             encounters: ReadAllWithPrefix(asm, EncountersPrefix),
             rewardTables: ReadAllWithPrefix(asm, RewardTablePrefix),
-            characters: ReadAllWithPrefix(asm, CharactersPrefix));
+            characters: ReadAllWithPrefix(asm, CharactersPrefix),
+            events: ReadAllWithPrefix(asm, EventsPrefix));
     }
 
     private static IEnumerable<string> ReadAllWithPrefix(Assembly asm, string prefix)

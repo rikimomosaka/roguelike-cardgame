@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Enemy;
+using RoguelikeCardGame.Core.Events;
 using RoguelikeCardGame.Core.Potions;
 using RoguelikeCardGame.Core.Relics;
 
@@ -20,7 +21,8 @@ public sealed record DataCatalog(
     IReadOnlyDictionary<string, EnemyDefinition> Enemies,
     IReadOnlyDictionary<string, EncounterDefinition> Encounters,
     IReadOnlyDictionary<string, RewardTable> RewardTables,
-    IReadOnlyDictionary<string, CharacterDefinition> Characters)
+    IReadOnlyDictionary<string, CharacterDefinition> Characters,
+    IReadOnlyDictionary<string, EventDefinition> Events)
 {
     public static DataCatalog LoadFromStrings(
         IEnumerable<string> cards,
@@ -29,7 +31,8 @@ public sealed record DataCatalog(
         IEnumerable<string> enemies,
         IEnumerable<string> encounters,
         IEnumerable<string> rewardTables,
-        IEnumerable<string> characters)
+        IEnumerable<string> characters,
+        IEnumerable<string>? events = null)
     {
         var cardMap = new Dictionary<string, CardDefinition>();
         foreach (var json in cards)
@@ -95,7 +98,18 @@ public sealed record DataCatalog(
                         $"character \"{def.Id}\" のデッキが参照するカード ID \"{cid}\" が存在しません");
         }
 
-        return new DataCatalog(cardMap, relicMap, potionMap, enemyMap, encMap, rtMap, chMap);
+        var eventMap = new Dictionary<string, EventDefinition>();
+        if (events is not null)
+        {
+            foreach (var json in events)
+            {
+                var def = EventJsonLoader.Parse(json);
+                if (!eventMap.TryAdd(def.Id, def))
+                    throw new DataCatalogException($"event ID が重複: {def.Id}");
+            }
+        }
+
+        return new DataCatalog(cardMap, relicMap, potionMap, enemyMap, encMap, rtMap, chMap, eventMap);
     }
 
     public bool TryGetCard(string id, [MaybeNullWhen(false)] out CardDefinition def) => Cards.TryGetValue(id, out def);
@@ -105,4 +119,5 @@ public sealed record DataCatalog(
     public bool TryGetEncounter(string id, [MaybeNullWhen(false)] out EncounterDefinition def) => Encounters.TryGetValue(id, out def);
     public bool TryGetRewardTable(string id, [MaybeNullWhen(false)] out RewardTable def) => RewardTables.TryGetValue(id, out def);
     public bool TryGetCharacter(string id, [MaybeNullWhen(false)] out CharacterDefinition def) => Characters.TryGetValue(id, out def);
+    public bool TryGetEvent(string id, [MaybeNullWhen(false)] out EventDefinition def) => Events.TryGetValue(id, out def);
 }
