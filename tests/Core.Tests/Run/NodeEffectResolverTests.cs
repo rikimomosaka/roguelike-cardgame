@@ -38,14 +38,13 @@ public class NodeEffectResolverTests
     }
 
     [Fact]
-    public void Resolve_Rest_FullyHealsHp()
+    public void Resolve_Rest_SetsActiveRestPending()
     {
         var cat = EmbeddedDataLoader.LoadCatalog();
-        var s = TestRunStates.FreshDefault(cat) with { CurrentHp = 5 };
-        var next = NodeEffectResolver.Resolve(s, TileKind.Rest, currentRow: 5, cat, new SystemRng(1));
-        Assert.Equal(s.MaxHp, next.CurrentHp);
-        Assert.Null(next.ActiveBattle);
-        Assert.Null(next.ActiveReward);
+        var s = TestRunStates.FreshDefault(cat) with { CurrentHp = 40 };
+        var next = NodeEffectResolver.Resolve(s, TileKind.Rest, currentRow: 2, cat, new SequentialRng(1UL));
+        Assert.True(next.ActiveRestPending);
+        Assert.Equal(40, next.CurrentHp);  // Rest 選択まで回復しない
     }
 
     [Fact]
@@ -59,8 +58,32 @@ public class NodeEffectResolverTests
     }
 
     [Fact]
+    public void Resolve_Treasure_SetsActiveRewardWithRelicOnly()
+    {
+        var cat = EmbeddedDataLoader.LoadCatalog();
+        var s = TestRunStates.FreshDefault(cat);
+        var next = NodeEffectResolver.Resolve(s, TileKind.Treasure, 2, cat, new SequentialRng(1UL));
+        Assert.NotNull(next.ActiveReward);
+        Assert.Equal(0, next.ActiveReward!.Gold);
+        Assert.Empty(next.ActiveReward.CardChoices);
+        Assert.NotNull(next.ActiveReward.RelicId);
+        Assert.False(next.ActiveReward.RelicClaimed);
+    }
+
+    [Fact]
+    public void Resolve_Event_SetsActiveEvent()
+    {
+        var cat = EmbeddedDataLoader.LoadCatalog();
+        var s = TestRunStates.FreshDefault(cat);
+        var next = NodeEffectResolver.Resolve(s, TileKind.Event, currentRow: 2, cat, new SequentialRng(1UL));
+        Assert.NotNull(next.ActiveEvent);
+        Assert.Contains(next.ActiveEvent!.EventId, cat.Events.Keys);
+    }
+
+    [Fact]
     public void Resolve_Shop_DoesNothing()
     {
+        // Merchant dispatch は E3 後に有効化される。現時点では no-op 維持。
         var cat = EmbeddedDataLoader.LoadCatalog();
         var s = TestRunStates.FreshDefault(cat);
         var next = NodeEffectResolver.Resolve(s, TileKind.Merchant, currentRow: 5, cat, new SystemRng(1));
