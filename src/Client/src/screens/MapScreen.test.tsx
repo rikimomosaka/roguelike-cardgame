@@ -27,6 +27,7 @@ function sampleSnapshot(
       playSeconds: 0,
       savedAtUtc: '2026-04-21T00:00:00Z',
       progress: 'InProgress',
+      activeActStartRelicChoice: null,
       ...overrides,
     },
     map: {
@@ -65,6 +66,7 @@ function sampleReward(): RewardStateDto {
     cardStatus: 'Pending',
     relicId: null,
     relicClaimed: false,
+    isBossReward: false,
   }
 }
 
@@ -259,6 +261,35 @@ describe('MapScreen', () => {
     )
     fireEvent.click(screen.getByRole('button', { name: /DEBUG -10HP/ }))
     expect(onDebugDamage).toHaveBeenCalled()
+  })
+
+  it('clicking 進む on reward popup calls /reward/proceed and swaps snapshot', async () => {
+    // Regression (Bug ②): handleProceed must hit the server and apply the new snapshot,
+    // not just dismiss the popup locally.
+    const act2Snap = sampleSnapshot({ currentAct: 2, activeReward: null })
+    fetchMock.mockImplementation((input: unknown) => {
+      const url = String(input)
+      if (url.includes('/runs/current/reward/proceed')) {
+        return Promise.resolve(new Response(JSON.stringify(act2Snap), { status: 200 }))
+      }
+      return Promise.resolve(new Response(null, { status: 204 }))
+    })
+    render(
+      <AccountProvider>
+        <MapScreen
+          snapshot={sampleSnapshot({ activeReward: sampleReward() })}
+          onExitToMenu={() => {}}
+          onAbandon={() => {}}
+        />
+      </AccountProvider>,
+    )
+    fireEvent.click(screen.getByText('進む'))
+    await waitFor(() => {
+      const call = fetchMock.mock.calls.find((args) =>
+        String(args[0]).includes('/runs/current/reward/proceed'),
+      )
+      expect(call).toBeDefined()
+    })
   })
 
   it('renders ActStartRelicScreen when activeActStartRelicChoice is set', () => {

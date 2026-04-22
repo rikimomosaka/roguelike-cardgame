@@ -176,7 +176,8 @@ public sealed class RunsController : ControllerBase
             SavedAtUtc = DateTimeOffset.UtcNow,
         };
         await _saves.SaveAsync(accountId, updated, ct);
-        return NoContent();
+        var winMap = _runStart.RehydrateMap(updated.RngSeed, updated.CurrentAct);
+        return Ok(RunSnapshotDtoMapper.From(updated, winMap, _data));
     }
 
     [HttpPost("current/reward/gold")]
@@ -281,7 +282,8 @@ public sealed class RunsController : ControllerBase
         }
 
         await _saves.SaveAsync(accountId, updated, ct);
-        return NoContent();
+        var proceedMap = _runStart.RehydrateMap(updated.RngSeed, updated.CurrentAct);
+        return Ok(RunSnapshotDtoMapper.From(updated, proceedMap, _data));
     }
 
     [HttpPost("current/reward/claim-relic")]
@@ -348,7 +350,7 @@ public sealed class RunsController : ControllerBase
         var rec = RunHistoryBuilder.From(accountId, finished, finished.VisitedNodeIds.Length, RunProgress.Abandoned);
         await _history.AppendAsync(accountId, rec, ct);
         await _saves.DeleteAsync(accountId, ct);
-        return NoContent();
+        return Ok(RunSnapshotDtoMapper.ToResultDto(rec));
     }
 
     [HttpPost("current/heartbeat")]

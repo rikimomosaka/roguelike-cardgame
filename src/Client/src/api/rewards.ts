@@ -1,4 +1,5 @@
 import { apiRequest } from './client'
+import type { RunSnapshotDto } from './types'
 
 export async function claimGold(accountId: string): Promise<void> {
   await apiRequest<void>('POST', '/runs/current/reward/gold', { accountId })
@@ -22,8 +23,8 @@ export async function skipCard(accountId: string): Promise<void> {
   })
 }
 
-export async function proceedReward(accountId: string, elapsedSeconds: number): Promise<void> {
-  await apiRequest<void>('POST', '/runs/current/reward/proceed', {
+export async function proceedReward(accountId: string, elapsedSeconds: number): Promise<RunSnapshotDto> {
+  return await apiRequest<RunSnapshotDto>('POST', '/runs/current/reward/proceed', {
     accountId,
     body: { elapsedSeconds },
   })

@@ -214,8 +214,16 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
     await refresh()
   }
 
-  function handleProceed() {
-    setRewardDismissed(true)
+  async function handleProceed() {
+    if (!accountId || busy) return
+    setBusy(true)
+    try {
+      const next = await proceedReward(accountId, elapsedSeconds())
+      setRewardDismissed(false)
+      setSnap(next)
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function handleDiscardPotion(slotIndex: number) {

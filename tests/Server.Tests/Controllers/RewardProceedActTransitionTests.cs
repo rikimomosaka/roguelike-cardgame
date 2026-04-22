@@ -149,4 +149,28 @@ public class RewardProceedActTransitionTests : IClassFixture<TempDataFactory>
         Assert.Equal(actBefore, actAfter);
         Assert.Equal(JsonValueKind.Null, afterDoc.RootElement.GetProperty("run").GetProperty("activeReward").ValueKind);
     }
+
+    /// <summary>
+    /// Regression (Bug ②): Proceed on boss reward must return the snapshot body so
+    /// the client can swap to the newly-generated act map without an extra GET.
+    /// </summary>
+    [Fact]
+    public async Task Proceed_OnBossReward_ResponseBodyContainsNewActSnapshot()
+    {
+        const string AccountId = "proc-boss-body";
+        var client = await SetupRunWithBossRewardAsync(AccountId, act: 1);
+
+        var resp = await client.PostAsJsonAsync("/api/v1/runs/current/reward/proceed",
+            new RewardProceedRequestDto(ElapsedSeconds: 0));
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+
+        var body = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+        var run = body.RootElement.GetProperty("run");
+        Assert.Equal(2, run.GetProperty("currentAct").GetInt32());
+        Assert.Equal(JsonValueKind.Null, run.GetProperty("activeReward").ValueKind);
+        // The returned map must be the newly-generated act 2 map, reachable via map.nodes.
+        Assert.True(body.RootElement.GetProperty("map").GetProperty("nodes").GetArrayLength() > 0);
+        var startId = body.RootElement.GetProperty("map").GetProperty("startNodeId").GetInt32();
+        Assert.Equal(startId, run.GetProperty("currentNodeId").GetInt32());
+    }
 }

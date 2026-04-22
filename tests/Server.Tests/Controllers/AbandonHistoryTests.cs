@@ -63,7 +63,10 @@ public class AbandonHistoryTests : IClassFixture<TempDataFactory>
         // Abandon
         var abandResp = await client.PostAsJsonAsync("/api/v1/runs/current/abandon",
             new HeartbeatRequestDto(ElapsedSeconds: 10));
-        Assert.Equal(HttpStatusCode.NoContent, abandResp.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, abandResp.StatusCode);
+        // Response body is a RunResultDto with outcome=Abandoned.
+        var resultDoc = System.Text.Json.JsonDocument.Parse(await abandResp.Content.ReadAsStringAsync());
+        Assert.Equal("Abandoned", resultDoc.RootElement.GetProperty("outcome").GetString());
 
         // current が消えているはず
         Assert.Null(await GetCurrentAsync(client));

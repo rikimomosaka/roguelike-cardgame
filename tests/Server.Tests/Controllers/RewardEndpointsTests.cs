@@ -142,7 +142,11 @@ public class RewardEndpointsTests : IClassFixture<TempDataFactory>
         // without being forced to claim gold/potion/card first.
         var client = await ClientWithActiveRewardAsync("ivan");
         var res = await client.PostAsJsonAsync("/api/v1/runs/current/reward/proceed", new { elapsedSeconds = 0 });
-        Assert.Equal(HttpStatusCode.NoContent, res.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+
+        // Response body is the updated snapshot with activeReward cleared.
+        var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
+        Assert.Equal(JsonValueKind.Null, doc.RootElement.GetProperty("run").GetProperty("activeReward").ValueKind);
 
         var after = await GetSnapshotAsync(client);
         Assert.Equal(JsonValueKind.Null, after.RootElement.GetProperty("run").GetProperty("activeReward").ValueKind);
@@ -165,7 +169,7 @@ public class RewardEndpointsTests : IClassFixture<TempDataFactory>
         (await client.PostAsJsonAsync("/api/v1/runs/current/reward/card", new { skip = true })).EnsureSuccessStatusCode();
 
         var proceed = await client.PostAsJsonAsync("/api/v1/runs/current/reward/proceed", new { elapsedSeconds = 1 });
-        Assert.Equal(HttpStatusCode.NoContent, proceed.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, proceed.StatusCode);
 
         var after = await GetSnapshotAsync(client);
         Assert.Equal(JsonValueKind.Null, after.RootElement.GetProperty("run").GetProperty("activeReward").ValueKind);
