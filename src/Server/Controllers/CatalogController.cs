@@ -22,7 +22,8 @@ public sealed class CatalogController : ControllerBase
         string? DisplayName,
         int Rarity,
         string CardType,
-        int? Cost);
+        int? Cost,
+        bool Upgradable);
 
     public sealed record PotionCatalogEntryDto(
         string Id,
@@ -43,7 +44,8 @@ public sealed class CatalogController : ControllerBase
                 def.DisplayName,
                 (int)def.Rarity,
                 def.CardType.ToString(),
-                def.Cost);
+                def.Cost,
+                def.UpgradedEffects is not null);
         }
         return Ok(result);
     }

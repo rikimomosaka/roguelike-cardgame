@@ -7,6 +7,7 @@ export type CardCatalogEntry = {
   rarity: number
   cardType: string
   cost: number | null
+  upgradable: boolean
 }
 
 export type PotionCatalogEntry = {
