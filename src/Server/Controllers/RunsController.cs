@@ -45,7 +45,7 @@ public sealed class RunsController : ControllerBase
         var state = await _saves.TryLoadAsync(accountId, ct);
         if (state is null || state.Progress != RunProgress.InProgress) return NoContent();
 
-        var map = _runStart.RehydrateMap(state.RngSeed);
+        var map = _runStart.RehydrateMap(state.RngSeed, state.CurrentAct);
         return Ok(RunSnapshotDtoMapper.From(state, map, _data));
     }
 
@@ -80,7 +80,7 @@ public sealed class RunsController : ControllerBase
             return Problem(statusCode: StatusCodes.Status409Conflict,
                 title: "戦闘中または報酬未受取のため移動できません。");
 
-        var map = _runStart.RehydrateMap(state.RngSeed);
+        var map = _runStart.RehydrateMap(state.RngSeed, state.CurrentAct);
         RunState advanced;
         try
         {
