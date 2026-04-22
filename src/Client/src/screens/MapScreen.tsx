@@ -10,12 +10,18 @@ import {
   proceedReward,
   skipCard,
 } from '../api/rewards'
+import { buyFromMerchant, discardAtMerchant, leaveMerchant } from '../api/merchant'
+import { chooseEvent } from '../api/event'
+import { restHeal, restUpgrade } from '../api/rest'
 import type { MapNodeDto, RunSnapshotDto, TileKind } from '../api/types'
 import { useAccount } from '../context/AccountContext'
 import { TopBar } from '../components/TopBar'
 import { BattleOverlay } from './BattleOverlay'
 import { RewardPopup } from './RewardPopup'
 import { InGameMenuScreen } from './InGameMenuScreen'
+import { MerchantScreen } from './MerchantScreen'
+import { EventScreen } from './EventScreen'
+import { RestScreen } from './RestScreen'
 
 type Props = {
   snapshot: RunSnapshotDto
@@ -94,6 +100,9 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
   const activeReward = snap.run.activeReward
   const rewardVisible = activeReward !== null && !rewardDismissed
   const blockedByModal = activeBattle !== null || rewardVisible
+    || snap.run.activeMerchant !== null
+    || snap.run.activeEvent !== null
+    || snap.run.activeRestPending
 
   function isSelectable(n: MapNodeDto): boolean {
     if (blockedByModal) return false
@@ -182,6 +191,42 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
   async function handleClaimRelic() {
     if (!accountId) return
     await claimRelic(accountId)
+    await refresh()
+  }
+
+  async function handleBuy(kind: 'card' | 'relic' | 'potion', id: string) {
+    if (!accountId) return
+    await buyFromMerchant(accountId, { kind, id })
+    await refresh()
+  }
+
+  async function handleDiscardAtMerchant(deckIndex: number) {
+    if (!accountId) return
+    await discardAtMerchant(accountId, deckIndex)
+    await refresh()
+  }
+
+  async function handleLeaveMerchant() {
+    if (!accountId) return
+    await leaveMerchant(accountId)
+    await refresh()
+  }
+
+  async function handleChooseEvent(choiceIndex: number) {
+    if (!accountId) return
+    await chooseEvent(accountId, choiceIndex)
+    await refresh()
+  }
+
+  async function handleRestHeal() {
+    if (!accountId) return
+    await restHeal(accountId)
+    await refresh()
+  }
+
+  async function handleRestUpgrade(deckIndex: number) {
+    if (!accountId) return
+    await restUpgrade(accountId, deckIndex)
     await refresh()
   }
 
@@ -296,6 +341,32 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
           onExitToMenu={onExitToMenu}
           onAbandon={onAbandon}
           elapsedSecondsRef={mountedAt}
+        />
+      )}
+
+      {snap.run.activeMerchant && (
+        <MerchantScreen
+          gold={snap.run.gold}
+          deck={snap.run.deck}
+          inventory={snap.run.activeMerchant}
+          onBuy={handleBuy}
+          onDiscard={handleDiscardAtMerchant}
+          onLeave={handleLeaveMerchant}
+        />
+      )}
+
+      {snap.run.activeEvent && (
+        <EventScreen
+          event={snap.run.activeEvent}
+          onChoose={handleChooseEvent}
+        />
+      )}
+
+      {snap.run.activeRestPending && (
+        <RestScreen
+          deck={snap.run.deck}
+          onHeal={handleRestHeal}
+          onUpgrade={handleRestUpgrade}
         />
       )}
     </>

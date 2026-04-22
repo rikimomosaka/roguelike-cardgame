@@ -20,6 +20,9 @@ function sampleSnapshot(
       potionSlotCount: 3,
       activeBattle: null,
       activeReward: null,
+      activeMerchant: null,
+      activeEvent: null,
+      activeRestPending: false,
       playSeconds: 0,
       savedAtUtc: '2026-04-21T00:00:00Z',
       progress: 'InProgress',
@@ -177,5 +180,60 @@ describe('MapScreen', () => {
       </AccountProvider>,
     )
     expect(screen.getByTestId('map-node-1')).toHaveAttribute('data-selectable', 'false')
+  })
+
+  it('renders MerchantScreen when snapshot has activeMerchant', () => {
+    const inventory = {
+      cards: [],
+      relics: [],
+      potions: [],
+      discardSlotUsed: false,
+      discardPrice: 75,
+    }
+    render(
+      <AccountProvider>
+        <MapScreen
+          snapshot={sampleSnapshot({ activeMerchant: inventory })}
+          onExitToMenu={() => {}}
+          onAbandon={() => {}}
+        />
+      </AccountProvider>,
+    )
+    expect(screen.getByText(/商人/)).toBeInTheDocument()
+  })
+
+  it('renders EventScreen when snapshot has activeEvent', () => {
+    const event = {
+      eventId: 'blessing_fountain',
+      name: 'Blessing Fountain',
+      description: 'A mystical fountain offers its gifts.',
+      choices: [
+        { label: 'Drink', conditionSummary: null, conditionMet: true },
+        { label: 'Walk by', conditionSummary: null, conditionMet: true },
+      ],
+    }
+    render(
+      <AccountProvider>
+        <MapScreen
+          snapshot={sampleSnapshot({ activeEvent: event })}
+          onExitToMenu={() => {}}
+          onAbandon={() => {}}
+        />
+      </AccountProvider>,
+    )
+    expect(screen.getByText('Blessing Fountain')).toBeInTheDocument()
+  })
+
+  it('renders RestScreen when snapshot has activeRestPending', () => {
+    render(
+      <AccountProvider>
+        <MapScreen
+          snapshot={sampleSnapshot({ activeRestPending: true })}
+          onExitToMenu={() => {}}
+          onAbandon={() => {}}
+        />
+      </AccountProvider>,
+    )
+    expect(screen.getByText('休息所')).toBeInTheDocument()
   })
 })
