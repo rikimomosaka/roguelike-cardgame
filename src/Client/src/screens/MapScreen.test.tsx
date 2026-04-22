@@ -244,4 +244,20 @@ describe('MapScreen', () => {
     )
     expect(screen.getByText('休息所')).toBeInTheDocument()
   })
+
+  it('shows DEBUG -10HP button and fires onDebugDamage', () => {
+    const onDebugDamage = vi.fn()
+    render(
+      <AccountProvider>
+        <MapScreen
+          snapshot={sampleSnapshot()}
+          onExitToMenu={() => {}}
+          onAbandon={() => {}}
+          onDebugDamage={onDebugDamage}
+        />
+      </AccountProvider>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /DEBUG -10HP/ }))
+    expect(onDebugDamage).toHaveBeenCalled()
+  })
 })

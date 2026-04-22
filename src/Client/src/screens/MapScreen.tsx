@@ -15,6 +15,7 @@ import { chooseEvent } from '../api/event'
 import { restHeal, restUpgrade } from '../api/rest'
 import type { MapNodeDto, RunSnapshotDto, TileKind } from '../api/types'
 import { useAccount } from '../context/AccountContext'
+import { Button } from '../components/Button'
 import { TopBar } from '../components/TopBar'
 import { BattleOverlay } from './BattleOverlay'
 import { RewardPopup } from './RewardPopup'
@@ -27,6 +28,7 @@ type Props = {
   snapshot: RunSnapshotDto
   onExitToMenu: () => void
   onAbandon: () => void
+  onDebugDamage?: () => void
 }
 
 const NODE_R = 20
@@ -51,7 +53,7 @@ function iconFor(kind: TileKind, resolvedKind: TileKind | null): string {
   }
 }
 
-export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
+export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage }: Props) {
   const { accountId } = useAccount()
   const [snap, setSnap] = useState<RunSnapshotDto>(snapshot)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -334,6 +336,10 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
 
         {shopMessage && (
           <div className="map-screen__shop-toast" role="status">{shopMessage}</div>
+        )}
+
+        {import.meta.env.DEV && onDebugDamage && (
+          <Button onClick={onDebugDamage} aria-label="DEBUG -10HP">DEBUG -10HP</Button>
         )}
       </main>
 
