@@ -1,0 +1,7 @@
+{
+  "id": "extra_max_hp",
+  "name": "鍛えた肉体",
+  "rarity": 0,
+  "trigger": "OnPickup",
+  "effects": [{ "type": "gainMaxHp", "amount": 7 }]
+}

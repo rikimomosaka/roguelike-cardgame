@@ -1,0 +1,7 @@
+{
+  "id": "coin_purse",
+  "name": "旅人の財布",
+  "rarity": 0,
+  "trigger": "OnPickup",
+  "effects": [{ "type": "gainGold", "amount": 50 }]
+}

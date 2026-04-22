@@ -1,0 +1,7 @@
+{
+  "id": "traveler_boots",
+  "name": "旅人のブーツ",
+  "rarity": 1,
+  "trigger": "OnMapTileResolved",
+  "effects": [{ "type": "gainGold", "amount": 1 }]
+}

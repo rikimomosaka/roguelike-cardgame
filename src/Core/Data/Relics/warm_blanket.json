@@ -1,0 +1,7 @@
+{
+  "id": "warm_blanket",
+  "name": "あたたかい毛布",
+  "rarity": 1,
+  "trigger": "Passive",
+  "effects": [{ "type": "restHealBonus", "amount": 10 }]
+}
