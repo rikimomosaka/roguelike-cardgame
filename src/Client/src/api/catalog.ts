@@ -52,3 +52,62 @@ export function resetCardCatalogCacheForTests(): void {
 export function resetPotionCatalogCacheForTests(): void {
   potionCache = null
 }
+
+export type RelicCatalogEntry = {
+  id: string
+  name: string
+  description: string
+  rarity: string
+  trigger: string
+}
+
+export type EventChoiceCatalogEntry = {
+  label: string
+  conditionSummary: string | null
+  effectSummaries: string[]
+}
+
+export type EventCatalogEntry = {
+  id: string
+  name: string
+  description: string
+  choices: EventChoiceCatalogEntry[]
+}
+
+export type RelicCatalog = Record<string, RelicCatalogEntry>
+export type EventCatalog = Record<string, EventCatalogEntry>
+
+let relicCache: Promise<RelicCatalog> | null = null
+let eventCache: Promise<EventCatalog> | null = null
+
+export function getRelicCatalog(): Promise<RelicCatalog> {
+  if (relicCache === null) {
+    relicCache = apiRequest<RelicCatalogEntry[]>('GET', '/catalog/relics')
+      .then((list) => Object.fromEntries(list.map((r) => [r.id, r])))
+      .catch((err) => {
+        relicCache = null
+        throw err
+      })
+  }
+  return relicCache
+}
+
+export function getEventCatalog(): Promise<EventCatalog> {
+  if (eventCache === null) {
+    eventCache = apiRequest<EventCatalogEntry[]>('GET', '/catalog/events')
+      .then((list) => Object.fromEntries(list.map((e) => [e.id, e])))
+      .catch((err) => {
+        eventCache = null
+        throw err
+      })
+  }
+  return eventCache
+}
+
+export function resetRelicCatalogCacheForTests(): void {
+  relicCache = null
+}
+
+export function resetEventCatalogCacheForTests(): void {
+  eventCache = null
+}
