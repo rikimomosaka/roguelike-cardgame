@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace RoguelikeCardGame.Server.Tests.Controllers;
@@ -168,5 +169,51 @@ public class RewardEndpointsTests : IClassFixture<TempDataFactory>
 
         var after = await GetSnapshotAsync(client);
         Assert.Equal(JsonValueKind.Null, after.RootElement.GetProperty("run").GetProperty("activeReward").ValueKind);
+    }
+
+    [Fact]
+    public async Task PostClaimRelic_NoActiveReward_Returns409()
+    {
+        _factory.ResetData();
+        var client = _factory.CreateClient();
+        await BattleTestHelpers.EnsureAccountAsync(client, "claim-relic-empty");
+        BattleTestHelpers.WithAccount(client, "claim-relic-empty");
+        (await client.PostAsync("/api/v1/runs/new", null)).EnsureSuccessStatusCode();
+
+        var res = await client.PostAsync("/api/v1/runs/current/reward/claim-relic", null);
+        Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostClaimRelic_NoRelicOnReward_Returns409()
+    {
+        // Enemy battle reward never has a relic (RelicId == null).
+        var client = await ClientWithActiveRewardAsync("claim-relic-no-relic");
+        var res = await client.PostAsync("/api/v1/runs/current/reward/claim-relic", null);
+        Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostClaimRelic_WithActiveRewardRelic_Returns204AndAddsToInventory()
+    {
+        // Inject a reward with RelicId via ISaveRepository (Treasure tile unreachable in seed 58).
+        var client = await ClientWithActiveRewardAsync("claim-relic-success");
+
+        var repo = _factory.Services.GetRequiredService<RoguelikeCardGame.Server.Abstractions.ISaveRepository>();
+        var s = (await repo.TryLoadAsync("claim-relic-success", System.Threading.CancellationToken.None))!;
+        Assert.NotNull(s.ActiveReward);
+        var rewardWithRelic = s.ActiveReward! with { RelicId = "extra_max_hp", RelicClaimed = false };
+        await repo.SaveAsync("claim-relic-success", s with { ActiveReward = rewardWithRelic }, System.Threading.CancellationToken.None);
+
+        int beforeMaxHp = s.MaxHp;
+
+        var res = await client.PostAsync("/api/v1/runs/current/reward/claim-relic", null);
+        Assert.Equal(HttpStatusCode.NoContent, res.StatusCode);
+
+        var after = (await repo.TryLoadAsync("claim-relic-success", System.Threading.CancellationToken.None))!;
+        Assert.Contains("extra_max_hp", after.Relics);
+        Assert.True(after.ActiveReward!.RelicClaimed);
+        // extra_max_hp grants +7 MaxHp via NonBattleRelicEffects.ApplyOnPickup
+        Assert.Equal(beforeMaxHp + 7, after.MaxHp);
     }
 }

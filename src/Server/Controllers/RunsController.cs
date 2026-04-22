@@ -227,6 +227,29 @@ public sealed class RunsController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("current/reward/claim-relic")]
+    public async Task<IActionResult> PostRewardClaimRelic(CancellationToken ct)
+    {
+        if (!TryGetAccountId(out var accountId, out var err)) return err!;
+        if (!await _accounts.ExistsAsync(accountId, ct))
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: $"アカウントが見つかりません: {accountId}");
+
+        var s = await _saves.TryLoadAsync(accountId, ct);
+        if (s is null || s.Progress != RunProgress.InProgress || s.ActiveReward is null)
+            return Problem(statusCode: StatusCodes.Status409Conflict, title: "報酬画面がありません。");
+        if (s.ActiveReward.RelicId is null || s.ActiveReward.RelicClaimed)
+            return Problem(statusCode: StatusCodes.Status409Conflict, title: "relic を受け取れません。");
+
+        RunState updated;
+        try { updated = RewardApplier.ClaimRelic(s, _data); }
+        catch (InvalidOperationException ex)
+        { return Problem(statusCode: StatusCodes.Status409Conflict, title: ex.Message); }
+
+        updated = updated with { SavedAtUtc = DateTimeOffset.UtcNow };
+        await _saves.SaveAsync(accountId, updated, ct);
+        return NoContent();
+    }
+
     [HttpPost("current/potion/discard")]
     public async Task<IActionResult> PostPotionDiscard([FromBody] PotionDiscardRequestDto body, CancellationToken ct)
     {
