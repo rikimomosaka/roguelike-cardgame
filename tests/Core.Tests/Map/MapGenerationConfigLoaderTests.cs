@@ -16,8 +16,9 @@ public class MapGenerationConfigLoaderTests
         Assert.Equal(5, cfg.ColumnCount);
         var row9 = cfg.FixedRows.Single(r => r.Row == 9);
         Assert.Equal(TileKind.Treasure, row9.Kind);
-        Assert.Equal(48, cfg.UnknownResolutionWeights.Weights[TileKind.Enemy]);
-        Assert.False(cfg.UnknownResolutionWeights.Weights.ContainsKey(TileKind.Elite));
+        Assert.Equal(25, cfg.UnknownResolutionWeights.Weights[TileKind.Enemy]);
+        Assert.True(cfg.UnknownResolutionWeights.Weights.ContainsKey(TileKind.Elite));
+        Assert.True(cfg.UnknownResolutionWeights.Weights.ContainsKey(TileKind.Event));
     }
 
     [Fact]

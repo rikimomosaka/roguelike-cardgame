@@ -38,9 +38,11 @@
   },
   "maxRegenerationAttempts": 500,
   "unknownResolutionWeights": {
-    "Enemy": 48,
-    "Merchant": 24,
-    "Rest": 24,
-    "Treasure": 4
+    "Enemy": 25,
+    "Elite": 10,
+    "Merchant": 15,
+    "Rest": 25,
+    "Treasure": 0,
+    "Event": 25
   }
 }

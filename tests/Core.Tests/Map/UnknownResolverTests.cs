@@ -81,4 +81,21 @@ public class UnknownResolverTests
                 .Add(TileKind.Event, 1.0));
         Assert.Null(cfg.Validate());
     }
+
+    [Fact]
+    public void ResolveAll_WeightedIncludingEvent_YieldsMixedKinds()
+    {
+        var map = GenerateMapWithUnknowns();
+        var cfg = new UnknownResolutionConfig(
+            System.Collections.Immutable.ImmutableDictionary<TileKind, double>.Empty
+                .Add(TileKind.Enemy, 25.0)
+                .Add(TileKind.Elite, 10.0)
+                .Add(TileKind.Merchant, 15.0)
+                .Add(TileKind.Rest, 25.0)
+                .Add(TileKind.Treasure, 0.0)
+                .Add(TileKind.Event, 25.0));
+        var rng = new SequentialRng(1UL);
+        var res = UnknownResolver.ResolveAll(map, cfg, rng);
+        Assert.Contains(res.Values, v => v == TileKind.Event);
+    }
 }
