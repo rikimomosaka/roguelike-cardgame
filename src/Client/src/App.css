@@ -91,6 +91,23 @@ main.map-screen {
 .topbar__hp { color: #8fd08f; font-weight: bold; }
 .topbar__gold { color: #ffd54f; font-weight: bold; }
 .topbar__potions { display: flex; gap: 0.5rem; margin-left: auto; }
+.topbar__relics {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.topbar__relic {
+  font-size: 0.85rem;
+  color: #ffd54f;
+  padding: 0.1rem 0.4rem;
+  border: 1px solid var(--muted);
+  border-radius: 0.3rem;
+  background: rgba(255, 213, 79, 0.08);
+}
 .topbar__actions { display: flex; gap: 0.4rem; }
 .topbar__btn {
   background: transparent;

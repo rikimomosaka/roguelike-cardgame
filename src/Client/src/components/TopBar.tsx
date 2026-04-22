@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { CardInstanceDto } from '../api/types'
 import { PotionSlot } from './PotionSlot'
 import { useCardCatalog } from '../hooks/useCardCatalog'
+import { useRelicCatalog } from '../hooks/useRelicCatalog'
 
 type Props = {
   currentHp: number
@@ -9,6 +10,7 @@ type Props = {
   gold: number
   potions: string[]
   deck: CardInstanceDto[]
+  relics: string[]
   onDiscardPotion: (slotIndex: number) => void
   onOpenMenu: () => void
   onTogglePeek?: () => void
@@ -21,6 +23,7 @@ export function TopBar({
   gold,
   potions,
   deck,
+  relics,
   onDiscardPotion,
   onOpenMenu,
   onTogglePeek,
@@ -28,6 +31,7 @@ export function TopBar({
 }: Props) {
   const [deckOpen, setDeckOpen] = useState(false)
   const { names } = useCardCatalog()
+  const { names: relicNames } = useRelicCatalog()
   const deckLabel = (id: string) => names[id] ?? id
   const sortedDeck = [...deck].sort((a, b) =>
     deckLabel(a.id).localeCompare(deckLabel(b.id), 'ja'),
@@ -41,6 +45,13 @@ export function TopBar({
         HP {currentHp}/{maxHp}
       </span>
       <span className="topbar__gold">Gold {gold}</span>
+      <ul className="topbar__relics" aria-label={`レリック (${relics.length}個)`}>
+        {relics.map((id, i) => (
+          <li key={`${id}-${i}`} className="topbar__relic" title={relicNames[id] ?? id}>
+            💎 {relicNames[id] ?? id}
+          </li>
+        ))}
+      </ul>
       <div className="topbar__potions">
         {potions.map((id, i) => (
           <PotionSlot

@@ -244,6 +244,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon }: Props) {
         gold={snap.run.gold}
         potions={snap.run.potions}
         deck={snap.run.deck}
+        relics={snap.run.relics}
         onDiscardPotion={handleDiscardPotion}
         onOpenMenu={() => setMenuOpen(true)}
         onTogglePeek={activeBattle ? () => setPeekMap(v => !v) : undefined}

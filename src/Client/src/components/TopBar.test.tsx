@@ -14,6 +14,7 @@ function baseProps(overrides: Partial<Parameters<typeof TopBar>[0]> = {}) {
       { id: 'card_defend', upgraded: false },
       { id: 'card_strike', upgraded: false },
     ] as CardInstanceDto[],
+    relics: [] as string[],
     onDiscardPotion: vi.fn(),
     onOpenMenu: vi.fn(),
     ...overrides,
@@ -71,6 +72,21 @@ describe('TopBar', () => {
     render(<TopBar {...baseProps({ onOpenMenu })} />)
     fireEvent.click(screen.getByLabelText('メニュー'))
     expect(onOpenMenu).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders the list of held relics by name', () => {
+    render(
+      <TopBar {...baseProps({ relics: ['extra_max_hp', 'coin_purse'] })} />,
+    )
+    const list = screen.getByLabelText('レリック (2個)')
+    const items = list.querySelectorAll('li')
+    expect(items.length).toBe(2)
+  })
+
+  it('renders an empty relic list when no relics are held', () => {
+    render(<TopBar {...baseProps()} />)
+    const list = screen.getByLabelText('レリック (0個)')
+    expect(list.querySelectorAll('li').length).toBe(0)
   })
 
   it('renders the map-peek button only when onTogglePeek is provided', () => {

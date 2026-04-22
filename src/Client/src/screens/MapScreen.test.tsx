@@ -107,10 +107,16 @@ describe('MapScreen', () => {
       </AccountProvider>,
     )
     fireEvent.click(screen.getByTestId('map-node-1'))
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled())
-    const [url, init] = fetchMock.mock.calls[0]
-    expect(url).toContain('/runs/current/move')
-    expect(init.body).toContain('"nodeId":1')
+    await waitFor(() => {
+      const call = fetchMock.mock.calls.find((args) =>
+        String(args[0]).includes('/runs/current/move'),
+      )
+      expect(call).toBeDefined()
+    })
+    const moveCall = fetchMock.mock.calls.find((args) =>
+      String(args[0]).includes('/runs/current/move'),
+    )!
+    expect((moveCall[1] as RequestInit).body).toContain('"nodeId":1')
   })
 
   it('opens in-game menu when gear icon is clicked', () => {
