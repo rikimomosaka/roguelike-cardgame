@@ -430,7 +430,7 @@ Append to `tests/Core.Tests/Run/RunStateValidateTests.cs` (new tests, keep exist
         // "strike_promo_anniversary" は UpgradedEffects 無し（既存 JSON 前提）。
         // もし未登録なら strike を流用して upgradedEffects=null の適当カードを想定。
         var s = SampleV4();
-        var deck = s.Deck.Add(new CardInstance("reward_common_slice", Upgraded: true));
+        var deck = s.Deck.Add(new CardInstance("reward_common_01", Upgraded: true));
         var bad = s with { Deck = deck };
         // Card は存在するが UpgradedEffects 無しの ID を使う。このテストは
         // ランナ実装時に存在するカードに合わせて差し替え可（スキップ OK）。
@@ -3340,7 +3340,7 @@ public class MerchantActionsTests
 
     private static MerchantInventory MakeInventory() => new(
         Cards: ImmutableArray.Create(
-            new MerchantOffer("card", "reward_common_slice", 50, false)),
+            new MerchantOffer("card", "reward_common_01", 50, false)),
         Relics: ImmutableArray.Create(
             new MerchantOffer("relic", "extra_max_hp", 150, false)),
         Potions: ImmutableArray.Create(
@@ -3352,9 +3352,9 @@ public class MerchantActionsTests
     public void BuyCard_SufficientGold_AddsCardDeductsGoldMarksSold()
     {
         var s0 = BaseWithInventory(500);
-        var s1 = MerchantActions.BuyCard(s0, "reward_common_slice", Catalog);
+        var s1 = MerchantActions.BuyCard(s0, "reward_common_01", Catalog);
         Assert.Equal(450, s1.Gold);
-        Assert.Contains(s1.Deck, c => c.Id == "reward_common_slice");
+        Assert.Contains(s1.Deck, c => c.Id == "reward_common_01");
         Assert.True(s1.ActiveMerchant!.Cards[0].Sold);
     }
 
@@ -3363,16 +3363,16 @@ public class MerchantActionsTests
     {
         var s0 = BaseWithInventory(30);
         Assert.Throws<InvalidOperationException>(() =>
-            MerchantActions.BuyCard(s0, "reward_common_slice", Catalog));
+            MerchantActions.BuyCard(s0, "reward_common_01", Catalog));
     }
 
     [Fact]
     public void BuyCard_AlreadySold_Throws()
     {
         var s0 = BaseWithInventory(500);
-        var s1 = MerchantActions.BuyCard(s0, "reward_common_slice", Catalog);
+        var s1 = MerchantActions.BuyCard(s0, "reward_common_01", Catalog);
         Assert.Throws<InvalidOperationException>(() =>
-            MerchantActions.BuyCard(s1, "reward_common_slice", Catalog));
+            MerchantActions.BuyCard(s1, "reward_common_01", Catalog));
     }
 
     [Fact]
