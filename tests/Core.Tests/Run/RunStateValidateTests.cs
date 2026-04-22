@@ -100,7 +100,7 @@ public class RunStateValidateTests
     }
 
     [Fact]
-    public void Validate_MultipleActiveNull_ReturnsNull()
+    public void Validate_AllActiveNull_ReturnsNull()
     {
         var s = SampleV4();
         Assert.Null(s.Validate());
@@ -119,7 +119,7 @@ public class RunStateValidateTests
         Assert.Null(s.Validate());
 
         var bad = s with { ActiveBattle = FakeBattle() };
-        Assert.Contains("at most one", bad.Validate(), System.StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("at most one", bad.Validate(), StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -138,18 +138,18 @@ public class RunStateValidateTests
         var catalog = EmbeddedDataLoader.LoadCatalog();
         return RunState.NewSoloRun(
             catalog, rngSeed: 1UL, startNodeId: 0,
-            unknownResolutions: System.Collections.Immutable.ImmutableDictionary<int, TileKind>.Empty,
-            encounterQueueWeak: System.Collections.Immutable.ImmutableArray<string>.Empty,
-            encounterQueueStrong: System.Collections.Immutable.ImmutableArray<string>.Empty,
-            encounterQueueElite: System.Collections.Immutable.ImmutableArray<string>.Empty,
-            encounterQueueBoss: System.Collections.Immutable.ImmutableArray<string>.Empty,
-            nowUtc: new System.DateTimeOffset(2026, 4, 22, 0, 0, 0, System.TimeSpan.Zero));
+            unknownResolutions: ImmutableDictionary<int, TileKind>.Empty,
+            encounterQueueWeak: ImmutableArray<string>.Empty,
+            encounterQueueStrong: ImmutableArray<string>.Empty,
+            encounterQueueElite: ImmutableArray<string>.Empty,
+            encounterQueueBoss: ImmutableArray<string>.Empty,
+            nowUtc: new DateTimeOffset(2026, 4, 22, 0, 0, 0, TimeSpan.Zero));
     }
 
     private static MerchantInventory FakeInventory() =>
-        new(System.Collections.Immutable.ImmutableArray<MerchantOffer>.Empty,
-            System.Collections.Immutable.ImmutableArray<MerchantOffer>.Empty,
-            System.Collections.Immutable.ImmutableArray<MerchantOffer>.Empty,
+        new(ImmutableArray<MerchantOffer>.Empty,
+            ImmutableArray<MerchantOffer>.Empty,
+            ImmutableArray<MerchantOffer>.Empty,
             DiscardSlotUsed: false, DiscardPrice: 75);
 
     private static BattleState FakeBattle() =>

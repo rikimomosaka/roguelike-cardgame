@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Immutable;
+using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Run;
 
 namespace RoguelikeCardGame.Core.Rewards;
@@ -45,7 +46,7 @@ public static class RewardApplier
 
         return s with
         {
-            Deck = s.Deck.Add(new RoguelikeCardGame.Core.Cards.CardInstance(cardId, false)),
+            Deck = s.Deck.Add(new CardInstance(cardId, false)),
             ActiveReward = r with { CardStatus = CardRewardStatus.Claimed },
         };
     }

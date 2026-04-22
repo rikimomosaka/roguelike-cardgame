@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build *)",
+      "Read(//c/Users/Metaverse/projects/roguelike-cardgame-phase04/docs/superpowers/plans/**)",
+      "Read(//c/Users/Metaverse/projects/roguelike-cardgame-phase04/**)"
+    ],
+    "deny": [],
+    "additionalDirectories": [
+      "c:\\Users\\Metaverse\\projects\\roguelike-cardgame-phase04\\src\\Core\\Map"
+    ]
+  }
+}
