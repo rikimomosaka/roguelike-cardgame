@@ -72,4 +72,13 @@ public class UnknownResolverTests
         Assert.Throws<ArgumentNullException>(() => UnknownResolver.ResolveAll(map, null!, new SystemRng(1)));
         Assert.Throws<ArgumentNullException>(() => UnknownResolver.ResolveAll(map, cfg, null!));
     }
+
+    [Fact]
+    public void Event_IsAllowedInWeights()
+    {
+        var cfg = new UnknownResolutionConfig(
+            System.Collections.Immutable.ImmutableDictionary<TileKind, double>.Empty
+                .Add(TileKind.Event, 1.0));
+        Assert.Null(cfg.Validate());
+    }
 }

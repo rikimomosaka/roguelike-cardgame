@@ -11,4 +11,5 @@ public enum TileKind
     Treasure,
     Unknown,
     Boss,
+    Event,
 }
