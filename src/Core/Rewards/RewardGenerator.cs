@@ -22,9 +22,48 @@ public static class RewardGenerator
         return context switch
         {
             RewardContext.FromEnemy fe => GenerateFromEnemy(fe.Pool, rngState, cardExclusions, table, data, rng),
-            RewardContext.FromNonBattle nb => GenerateFromNonBattle(nb.Kind, rngState, table, rng),
+            RewardContext.FromNonBattle nb when nb.Kind == NonBattleRewardKind.Treasure
+                => GenerateTreasure(rngState, ImmutableArray<string>.Empty, table, data, rng),
+            RewardContext.FromNonBattle nb
+                => GenerateFromNonBattleEvent(nb.Kind, rngState, table, rng),
             _ => throw new ArgumentOutOfRangeException(nameof(context))
         };
+    }
+
+    public static (RewardState, RewardRngState) GenerateTreasure(
+        RewardRngState rngState,
+        ImmutableArray<string> ownedRelics,
+        RewardTable table,
+        DataCatalog data,
+        IRng rng)
+    {
+        var pool = data.Relics.Keys
+            .Where(id => !ownedRelics.Contains(id))
+            .OrderBy(id => id)
+            .ToArray();
+        string? relic = pool.Length == 0 ? null : pool[rng.NextInt(0, pool.Length)];
+        var reward = new RewardState(
+            Gold: 0, GoldClaimed: true,
+            PotionId: null, PotionClaimed: true,
+            CardChoices: ImmutableArray<string>.Empty,
+            CardStatus: CardRewardStatus.Claimed,
+            RelicId: relic,
+            RelicClaimed: relic is null);
+        return (reward, rngState);
+    }
+
+    private static (RewardState, RewardRngState) GenerateFromNonBattleEvent(
+        NonBattleRewardKind kind, RewardRngState rngState, RewardTable table, IRng rng)
+    {
+        string key = "event";
+        var entry = table.NonBattle[key];
+        int gold = entry.GoldMin + rng.NextInt(0, entry.GoldMax - entry.GoldMin + 1);
+        var reward = new RewardState(
+            Gold: gold, GoldClaimed: false,
+            PotionId: null, PotionClaimed: true,
+            CardChoices: ImmutableArray<string>.Empty,
+            CardStatus: CardRewardStatus.Claimed);
+        return (reward, rngState);
     }
 
     private static (RewardState, RewardRngState) GenerateFromEnemy(
@@ -38,15 +77,8 @@ public static class RewardGenerator
         string? potionId = null;
         var newRng = rngState;
         int potionBase = entry.PotionBasePercent;
-        if (potionBase == 100)
-        {
-            // Elite: always drop, do not touch dynamic chance
-            potionId = PickRandomPotion(data, rng);
-        }
-        else if (potionBase == 0)
-        {
-            // Boss: never drop, do not touch dynamic chance
-        }
+        if (potionBase == 100) potionId = PickRandomPotion(data, rng);
+        else if (potionBase == 0) { }
         else
         {
             int chance = rngState.PotionChancePercent;
@@ -112,20 +144,6 @@ public static class RewardGenerator
             CardChoices: picks.ToImmutableArray(),
             CardStatus: CardRewardStatus.Pending);
         return (reward, newRng);
-    }
-
-    private static (RewardState, RewardRngState) GenerateFromNonBattle(
-        NonBattleRewardKind kind, RewardRngState rngState, RewardTable table, IRng rng)
-    {
-        string key = kind == NonBattleRewardKind.Event ? "event" : "treasure";
-        var entry = table.NonBattle[key];
-        int gold = entry.GoldMin + rng.NextInt(0, entry.GoldMax - entry.GoldMin + 1);
-        var reward = new RewardState(
-            Gold: gold, GoldClaimed: false,
-            PotionId: null, PotionClaimed: true,
-            CardChoices: ImmutableArray<string>.Empty,
-            CardStatus: CardRewardStatus.Claimed);
-        return (reward, rngState);
     }
 
     private static string PickRandomPotion(DataCatalog data, IRng rng)

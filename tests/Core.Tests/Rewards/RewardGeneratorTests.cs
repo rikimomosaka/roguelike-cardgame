@@ -118,4 +118,71 @@ public class RewardGeneratorTests
         }
         Assert.True(sawAny, "at least one seed should produce a Rare");
     }
+
+    [Fact]
+    public void GenerateFromEnemy_Elite_AllCardsAreRareOrEpic()
+    {
+        var catalog = EmbeddedDataLoader.LoadCatalog();
+        var rt = catalog.RewardTables["act1"];
+        var rng = new SequentialRng(1UL);
+        var rngState = new RewardRngState(rt.PotionDynamic.InitialPercent, 0);
+        for (int trial = 0; trial < 50; trial++)
+        {
+            var (reward, _) = RewardGenerator.Generate(
+                new RewardContext.FromEnemy(new EnemyPool(1, EnemyTier.Elite)),
+                rngState, ImmutableArray.Create("strike", "defend"), rt, catalog, rng);
+            foreach (var id in reward.CardChoices)
+            {
+                var def = catalog.Cards[id];
+                Assert.NotEqual(CardRarity.Common, def.Rarity);
+            }
+        }
+    }
+
+    [Fact]
+    public void GenerateFromEnemy_Boss_AllCardsAreEpic()
+    {
+        var catalog = EmbeddedDataLoader.LoadCatalog();
+        var rt = catalog.RewardTables["act1"];
+        var rng = new SequentialRng(42UL);
+        var rngState = new RewardRngState(0, 0);
+        var (reward, _) = RewardGenerator.Generate(
+            new RewardContext.FromEnemy(new EnemyPool(1, EnemyTier.Boss)),
+            rngState, ImmutableArray<string>.Empty, rt, catalog, rng);
+        foreach (var id in reward.CardChoices)
+        {
+            Assert.Equal(CardRarity.Epic, catalog.Cards[id].Rarity);
+        }
+    }
+
+    [Fact]
+    public void GenerateFromNonBattle_Treasure_RelicOnlyNoGoldNoPotionNoCards()
+    {
+        var catalog = EmbeddedDataLoader.LoadCatalog();
+        var rt = catalog.RewardTables["act1"];
+        var rng = new SequentialRng(3UL);
+        var rngState = new RewardRngState(40, 0);
+        var (reward, _) = RewardGenerator.Generate(
+            new RewardContext.FromNonBattle(NonBattleRewardKind.Treasure),
+            rngState, ImmutableArray<string>.Empty, rt, catalog, rng);
+        Assert.Equal(0, reward.Gold);
+        Assert.Null(reward.PotionId);
+        Assert.Empty(reward.CardChoices);
+        Assert.Equal(CardRewardStatus.Claimed, reward.CardStatus);
+        Assert.NotNull(reward.RelicId);
+        Assert.False(reward.RelicClaimed);
+    }
+
+    [Fact]
+    public void GenerateFromNonBattle_Treasure_ExcludesOwnedRelics()
+    {
+        var catalog = EmbeddedDataLoader.LoadCatalog();
+        var rt = catalog.RewardTables["act1"];
+        var rng = new SequentialRng(99UL);
+        var rngState = new RewardRngState(40, 0);
+        var owned = ImmutableArray.CreateRange(catalog.Relics.Keys.Take(catalog.Relics.Count - 1));
+        var (reward, _) = RewardGenerator.GenerateTreasure(rngState, owned, rt, catalog, rng);
+        Assert.NotNull(reward.RelicId);
+        Assert.DoesNotContain(reward.RelicId!, owned);
+    }
 }
