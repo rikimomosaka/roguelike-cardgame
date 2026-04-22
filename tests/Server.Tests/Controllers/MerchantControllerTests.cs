@@ -265,7 +265,7 @@ public class MerchantControllerTests : IClassFixture<TempDataFactory>
         Assert.True(gold < 500, $"Expected gold < 500 after buy, got {gold}");
 
         // Card should appear in deck.
-        var deck = runEl.GetProperty("deck").EnumerateArray().Select(e => e.GetString()).ToList();
+        var deck = runEl.GetProperty("deck").EnumerateArray().Select(e => e.GetProperty("id").GetString()).ToList();
         Assert.Contains(firstCardId, deck);
     }
 

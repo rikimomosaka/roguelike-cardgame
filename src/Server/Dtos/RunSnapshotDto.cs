@@ -4,10 +4,13 @@ using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Map;
 using RoguelikeCardGame.Core.Merchant;
 using RoguelikeCardGame.Core.Run;
+using RoguelikeCardGame.Server.Services;
 
 namespace RoguelikeCardGame.Server.Dtos;
 
 public sealed record RunSnapshotDto(RunStateDto Run, MapDto Map);
+
+public sealed record CardInstanceDto(string Id, bool Upgraded);
 
 public sealed record RunStateDto(
     int SchemaVersion,
@@ -17,7 +20,7 @@ public sealed record RunStateDto(
     IReadOnlyDictionary<int, string> UnknownResolutions,
     string CharacterId,
     int CurrentHp, int MaxHp, int Gold,
-    IReadOnlyList<string> Deck,
+    IReadOnlyList<CardInstanceDto> Deck,
     IReadOnlyList<string> Potions,
     int PotionSlotCount,
     BattleStateDto? ActiveBattle,
@@ -26,7 +29,17 @@ public sealed record RunStateDto(
     IReadOnlyList<string> Relics,
     long PlaySeconds,
     string Progress,
+    EventInstanceDto? ActiveEvent,
+    bool ActiveRestPending,
     string SavedAtUtc);
+
+public sealed record EventChoiceSnapshotDto(string Label, string? ConditionSummary, bool ConditionMet);
+
+public sealed record EventInstanceDto(
+    string EventId,
+    string Name,
+    string Description,
+    IReadOnlyList<EventChoiceSnapshotDto> Choices);
 
 public static class RunSnapshotDtoMapper
 {
@@ -48,7 +61,7 @@ public static class RunSnapshotDtoMapper
         RewardStateDto? reward = null;
         if (s.ActiveReward is { } r)
             reward = new RewardStateDto(r.Gold, r.GoldClaimed, r.PotionId, r.PotionClaimed,
-                r.CardChoices, r.CardStatus.ToString());
+                r.CardChoices, r.CardStatus.ToString(), r.RelicId, r.RelicClaimed);
 
         MerchantInventoryDto? merchant = null;
         if (s.ActiveMerchant is { } m)
@@ -57,12 +70,17 @@ public static class RunSnapshotDtoMapper
         var resolutions = new Dictionary<int, string>();
         foreach (var kv in s.UnknownResolutions) resolutions[kv.Key] = kv.Value.ToString();
 
+        EventInstanceDto? activeEvent = s.ActiveEvent is null
+            ? null
+            : EventInstanceDtoFactory.From(s.ActiveEvent, s, data);
+
         var run = new RunStateDto(
             s.SchemaVersion, s.CurrentAct, s.CurrentNodeId, s.VisitedNodeIds, resolutions,
             s.CharacterId, s.CurrentHp, s.MaxHp, s.Gold,
-            // TODO(G3): replace with CardInstanceDto; currently drops Upgraded flag
-            s.Deck.Select(c => c.Id).ToArray(), s.Potions, s.PotionSlotCount,
+            s.Deck.Select(c => new CardInstanceDto(c.Id, c.Upgraded)).ToArray(),
+            s.Potions, s.PotionSlotCount,
             battle, reward, merchant, s.Relics, s.PlaySeconds, s.Progress.ToString(),
+            activeEvent, s.ActiveRestPending,
             s.SavedAtUtc.ToString("O"));
         return new RunSnapshotDto(run, MapDtoMapper.From(map));
     }

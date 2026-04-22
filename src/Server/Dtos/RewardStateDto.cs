@@ -6,4 +6,6 @@ public sealed record RewardStateDto(
     int Gold, bool GoldClaimed,
     string? PotionId, bool PotionClaimed,
     IReadOnlyList<string> CardChoices,
-    string CardStatus);
+    string CardStatus,
+    string? RelicId,
+    bool RelicClaimed);

@@ -93,14 +93,14 @@ public class RewardEndpointsTests : IClassFixture<TempDataFactory>
         string choice = snap.RootElement.GetProperty("run").GetProperty("activeReward")
             .GetProperty("cardChoices")[0].GetString()!;
         var deckBefore = new System.Collections.Generic.List<string>();
-        foreach (var c in snap.RootElement.GetProperty("run").GetProperty("deck").EnumerateArray()) deckBefore.Add(c.GetString()!);
+        foreach (var c in snap.RootElement.GetProperty("run").GetProperty("deck").EnumerateArray()) deckBefore.Add(c.GetProperty("id").GetString()!);
 
         var pick = await client.PostAsJsonAsync("/api/v1/runs/current/reward/card", new { cardId = choice });
         Assert.Equal(HttpStatusCode.NoContent, pick.StatusCode);
 
         var after = await GetSnapshotAsync(client);
         var deckAfter = new System.Collections.Generic.List<string>();
-        foreach (var c in after.RootElement.GetProperty("run").GetProperty("deck").EnumerateArray()) deckAfter.Add(c.GetString()!);
+        foreach (var c in after.RootElement.GetProperty("run").GetProperty("deck").EnumerateArray()) deckAfter.Add(c.GetProperty("id").GetString()!);
         Assert.Equal(deckBefore.Count + 1, deckAfter.Count);
         Assert.Contains(choice, deckAfter);
 
