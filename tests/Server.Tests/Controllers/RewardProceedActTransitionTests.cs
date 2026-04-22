@@ -173,4 +173,38 @@ public class RewardProceedActTransitionTests : IClassFixture<TempDataFactory>
         var startId = body.RootElement.GetProperty("map").GetProperty("startNodeId").GetInt32();
         Assert.Equal(startId, run.GetProperty("currentNodeId").GetInt32());
     }
+
+    /// <summary>
+    /// Regression: On act transition the new map's Unknown tiles must be resolved and
+    /// exposed via unknownResolutions. Previously AdvanceAct wiped the dict to empty,
+    /// causing PostMove to throw when entering an Unknown tile on act 2+.
+    /// </summary>
+    [Fact]
+    public async Task Proceed_OnBossReward_NewActHasUnknownResolutions()
+    {
+        const string AccountId = "proc-boss-unknowns";
+        var client = await SetupRunWithBossRewardAsync(AccountId, act: 1);
+
+        var resp = await client.PostAsJsonAsync("/api/v1/runs/current/reward/proceed",
+            new RewardProceedRequestDto(ElapsedSeconds: 0));
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+
+        var body = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+        var run = body.RootElement.GetProperty("run");
+        var resolutions = run.GetProperty("unknownResolutions");
+        Assert.Equal(JsonValueKind.Object, resolutions.ValueKind);
+
+        // Any Unknown node in the new map must have a concrete resolution.
+        var unknownIds = new System.Collections.Generic.List<int>();
+        foreach (var n in body.RootElement.GetProperty("map").GetProperty("nodes").EnumerateArray())
+        {
+            if (n.GetProperty("kind").GetString() == "Unknown")
+                unknownIds.Add(n.GetProperty("id").GetInt32());
+        }
+        foreach (var id in unknownIds)
+        {
+            Assert.True(resolutions.TryGetProperty(id.ToString(System.Globalization.CultureInfo.InvariantCulture), out _),
+                $"Unknown node {id} has no resolution entry");
+        }
+    }
 }

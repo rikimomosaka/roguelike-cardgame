@@ -216,14 +216,20 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
 
   async function handleProceed() {
     if (!accountId || busy) return
-    setBusy(true)
-    try {
-      const next = await proceedReward(accountId, elapsedSeconds())
-      setRewardDismissed(false)
-      setSnap(next)
-    } finally {
-      setBusy(false)
+    // Boss reward triggers server-side act transition. Non-boss rewards dismiss locally
+    // so the player can re-open the reward popup by clicking the current tile.
+    if (activeReward?.isBossReward) {
+      setBusy(true)
+      try {
+        const next = await proceedReward(accountId, elapsedSeconds())
+        setRewardDismissed(false)
+        setSnap(next)
+      } finally {
+        setBusy(false)
+      }
+      return
     }
+    setRewardDismissed(true)
   }
 
   async function handleDiscardPotion(slotIndex: number) {

@@ -58,13 +58,15 @@ public class NodeEffectResolverTests
     }
 
     [Fact]
-    public void Resolve_Treasure_SetsActiveRewardWithRelicOnly()
+    public void Resolve_Treasure_SetsActiveRewardWithGoldAndRelic()
     {
         var cat = EmbeddedDataLoader.LoadCatalog();
         var s = TestRunStates.FreshDefault(cat);
         var next = NodeEffectResolver.Resolve(s, TileKind.Treasure, 2, cat, new SequentialRng(1UL));
         Assert.NotNull(next.ActiveReward);
-        Assert.Equal(0, next.ActiveReward!.Gold);
+        var treasureEntry = cat.RewardTables["act1"].NonBattle["treasure"];
+        Assert.InRange(next.ActiveReward!.Gold, treasureEntry.GoldMin, treasureEntry.GoldMax);
+        Assert.False(next.ActiveReward.GoldClaimed);
         Assert.Empty(next.ActiveReward.CardChoices);
         Assert.NotNull(next.ActiveReward.RelicId);
         Assert.False(next.ActiveReward.RelicClaimed);

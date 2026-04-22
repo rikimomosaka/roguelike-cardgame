@@ -12,7 +12,7 @@
   },
   "nonBattle": {
     "event":    { "gold": [10, 20] },
-    "treasure": { "gold": [0, 0] }
+    "treasure": { "gold": [55, 75] }
   },
   "potionDynamic": { "initialPercent": 40, "step": 10, "min": 0, "max": 100 },
   "epicChance":    { "initialBonus": 0, "perBattleIncrement": 1 },

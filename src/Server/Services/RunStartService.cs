@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Immutable;
 using System.Threading;
 using System.Threading.Tasks;
 using RoguelikeCardGame.Core.Battle;
@@ -99,5 +100,18 @@ public sealed class RunStartService
         var derived = ActMapSeedHelper.Derive(rngSeed, act);
         int seed = unchecked((int)(uint)derived);
         return _generator.Generate(new SystemRng(seed), _mapConfig);
+    }
+
+    /// <summary>
+    /// アクト遷移時に新マップの Unknown ノードを解決する。
+    /// 同じ (rngSeed, act, map) に対して決定的に同じ結果を返す。
+    /// </summary>
+    public ImmutableDictionary<int, TileKind> ResolveUnknownsForAct(
+        DungeonMap map, ulong rngSeed, int act)
+    {
+        var derived = ActMapSeedHelper.Derive(rngSeed, act);
+        int seed = unchecked((int)(uint)derived);
+        var rng = new SystemRng(unchecked(seed ^ 0x11E50));
+        return UnknownResolver.ResolveAll(map, _mapConfig.UnknownResolutionWeights, rng);
     }
 }

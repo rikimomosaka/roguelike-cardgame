@@ -263,9 +263,9 @@ describe('MapScreen', () => {
     expect(onDebugDamage).toHaveBeenCalled()
   })
 
-  it('clicking 進む on reward popup calls /reward/proceed and swaps snapshot', async () => {
-    // Regression (Bug ②): handleProceed must hit the server and apply the new snapshot,
-    // not just dismiss the popup locally.
+  it('clicking 次の層へ on boss reward popup calls /reward/proceed and swaps snapshot', async () => {
+    // Regression (previous): handleProceed must hit the server and apply the new snapshot
+    // for boss reward (act transition), not just dismiss the popup locally.
     const act2Snap = sampleSnapshot({ currentAct: 2, activeReward: null })
     fetchMock.mockImplementation((input: unknown) => {
       const url = String(input)
@@ -274,6 +274,28 @@ describe('MapScreen', () => {
       }
       return Promise.resolve(new Response(null, { status: 204 }))
     })
+    const bossReward = { ...sampleReward(), isBossReward: true }
+    render(
+      <AccountProvider>
+        <MapScreen
+          snapshot={sampleSnapshot({ activeReward: bossReward })}
+          onExitToMenu={() => {}}
+          onAbandon={() => {}}
+        />
+      </AccountProvider>,
+    )
+    fireEvent.click(screen.getByText('次の層へ'))
+    await waitFor(() => {
+      const call = fetchMock.mock.calls.find((args) =>
+        String(args[0]).includes('/runs/current/reward/proceed'),
+      )
+      expect(call).toBeDefined()
+    })
+  })
+
+  it('clicking 進む on non-boss reward popup does NOT call server; closes locally and re-opens on tile re-click', async () => {
+    // Regression (new Bug ②): non-boss reward must be dismissed locally so the tile is
+    // re-enterable with the claim status intact. The server call should happen on move.
     render(
       <AccountProvider>
         <MapScreen
@@ -284,11 +306,19 @@ describe('MapScreen', () => {
       </AccountProvider>,
     )
     fireEvent.click(screen.getByText('進む'))
+    // Reward popup dismissed locally — no /reward/proceed request.
+    const proceedCall = fetchMock.mock.calls.find((args) =>
+      String(args[0]).includes('/runs/current/reward/proceed'),
+    )
+    expect(proceedCall).toBeUndefined()
+    // Popup should be gone.
     await waitFor(() => {
-      const call = fetchMock.mock.calls.find((args) =>
-        String(args[0]).includes('/runs/current/reward/proceed'),
-      )
-      expect(call).toBeDefined()
+      expect(screen.queryByText('＋ 15 Gold')).toBeNull()
+    })
+    // Re-click current tile (node 0 / start). Popup should re-appear.
+    fireEvent.click(screen.getByTestId('map-node-0'))
+    await waitFor(() => {
+      expect(screen.getByText('＋ 15 Gold')).toBeDefined()
     })
   })
 

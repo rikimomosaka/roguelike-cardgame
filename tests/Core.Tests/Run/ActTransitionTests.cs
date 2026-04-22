@@ -81,6 +81,30 @@ public class ActTransitionTests
     }
 
     [Fact]
+    public void AdvanceAct_AppliesProvidedUnknownResolutions()
+    {
+        // Regression: new act map had UnknownResolutions cleared to Empty on transition,
+        // causing Unknown tiles in act 2+ to throw "Unknown tile should be pre-resolved".
+        var cat = EmbeddedDataLoader.LoadCatalog();
+        var s = TestRunStates.FreshDefault(cat);
+        var resolutions = ImmutableDictionary<int, TileKind>.Empty
+            .Add(42, TileKind.Enemy)
+            .Add(77, TileKind.Merchant);
+        var next = ActTransition.AdvanceAct(s, FakeMap(999), cat, new SystemRng(1), resolutions);
+        Assert.Equal(TileKind.Enemy, next.UnknownResolutions[42]);
+        Assert.Equal(TileKind.Merchant, next.UnknownResolutions[77]);
+    }
+
+    [Fact]
+    public void AdvanceAct_DefaultsUnknownResolutionsToEmpty_WhenNotProvided()
+    {
+        var cat = EmbeddedDataLoader.LoadCatalog();
+        var s = TestRunStates.FreshDefault(cat);
+        var next = ActTransition.AdvanceAct(s, FakeMap(999), cat, new SystemRng(1));
+        Assert.Empty(next.UnknownResolutions);
+    }
+
+    [Fact]
     public void FinishRun_SetsProgress_AndUpdatesSavedAtUtc()
     {
         var cat = EmbeddedDataLoader.LoadCatalog();

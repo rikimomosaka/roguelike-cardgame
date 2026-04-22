@@ -11,7 +11,8 @@ namespace RoguelikeCardGame.Core.Run;
 public static class ActTransition
 {
     public static RunState AdvanceAct(
-        RunState state, DungeonMap newMap, DataCatalog catalog, IRng rng)
+        RunState state, DungeonMap newMap, DataCatalog catalog, IRng rng,
+        ImmutableDictionary<int, TileKind>? unknownResolutions = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(newMap);
@@ -30,7 +31,7 @@ public static class ActTransition
             CurrentHp = state.MaxHp,
             CurrentNodeId = newMap.StartNodeId,
             VisitedNodeIds = ImmutableArray<int>.Empty,
-            UnknownResolutions = ImmutableDictionary<int, TileKind>.Empty,
+            UnknownResolutions = unknownResolutions ?? ImmutableDictionary<int, TileKind>.Empty,
             ActiveBattle = null,
             ActiveReward = null,
             ActiveMerchant = null,

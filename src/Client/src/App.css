@@ -360,7 +360,7 @@ main.map-screen {
   gap: 1.25rem;
   padding: 2rem;
   background: rgba(8, 10, 12, 0.92);
-  z-index: 100;
+  z-index: 110;
 }
 .reward-popup h2 { margin: 0; }
 .reward-list {

@@ -257,12 +257,13 @@ public sealed class RunsController : ControllerBase
         RunState updated;
         if (s.ActiveReward.IsBossReward && s.CurrentAct < RunConstants.MaxAct)
         {
-            // act 遷移: 新マップ生成 → AdvanceAct
+            // act 遷移: 新マップ生成 → Unknown 解決 → AdvanceAct
             int nextAct = s.CurrentAct + 1;
             var nextActSeed = unchecked((int)(uint)ActMapSeed.Derive(s.RngSeed, nextAct));
             var newMap = _runStart.RehydrateMap(s.RngSeed, nextAct);
+            var newResolutions = _runStart.ResolveUnknownsForAct(newMap, s.RngSeed, nextAct);
             var advanceRng = new SystemRng(unchecked(nextActSeed ^ 0xAC70));
-            updated = ActTransition.AdvanceAct(s, newMap, _data, advanceRng);
+            updated = ActTransition.AdvanceAct(s, newMap, _data, advanceRng, newResolutions);
             updated = updated with
             {
                 PlaySeconds = updated.PlaySeconds + elapsed,
