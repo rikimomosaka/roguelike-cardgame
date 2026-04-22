@@ -1,5 +1,6 @@
 import { type RefObject, useState } from 'react'
 import { abandonRun, heartbeat } from '../api/runs'
+import type { RunResultDto } from '../api/types'
 import { Button } from '../components/Button'
 import { useAccount } from '../context/AccountContext'
 import { SettingsScreen } from './SettingsScreen'
@@ -7,7 +8,7 @@ import { SettingsScreen } from './SettingsScreen'
 type Props = {
   onClose: () => void
   onExitToMenu: () => void
-  onAbandon: () => void
+  onAbandon: (result: RunResultDto | null) => void
   elapsedSecondsRef: RefObject<number>
 }
 
@@ -41,10 +42,10 @@ export function InGameMenuScreen({ onClose, onExitToMenu, onAbandon, elapsedSeco
     if (!accountId || busy) return
     setBusy(true)
     try {
-      await abandonRun(accountId, currentElapsed()).catch(() => {})
+      const result = await abandonRun(accountId, currentElapsed()).catch(() => null)
       // 同上 — abandon 後の cleanup heartbeat を 409 で空打ちさせないためリセット。
       elapsedSecondsRef.current = performance.now()
-      onAbandon()
+      onAbandon(result)
     } finally {
       setBusy(false)
     }

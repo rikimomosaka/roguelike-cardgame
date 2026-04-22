@@ -2,20 +2,22 @@
 import { useEffect, useState } from 'react'
 import { getAccount } from './api/accounts'
 import { ApiError } from './api/client'
-import type { RunSnapshotDto } from './api/types'
+import type { RunResultDto, RunSnapshotDto } from './api/types'
 import { Button } from './components/Button'
 import { useAccount } from './context/AccountContext'
 import { LoginScreen } from './screens/LoginScreen'
 import { MainMenuScreen } from './screens/MainMenuScreen'
 import { MapScreen } from './screens/MapScreen'
+import { RunResultScreen } from './screens/RunResultScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
 
 type Screen =
   | { kind: 'bootstrapping' }
   | { kind: 'login' }
-  | { kind: 'main-menu' }
+  | { kind: 'main-menu'; hasCurrentRun?: boolean }
   | { kind: 'settings' }
   | { kind: 'map'; snapshot: RunSnapshotDto }
+  | { kind: 'run-result'; result: RunResultDto }
   | { kind: 'bootstrap-error'; message: string }
 
 export default function App() {
@@ -63,6 +65,7 @@ export default function App() {
   if (screen.kind === 'main-menu') {
     return (
       <MainMenuScreen
+        hasCurrentRun={screen.hasCurrentRun}
         onOpenSettings={() => setScreen({ kind: 'settings' })}
         onLogout={() => { logout(); setScreen({ kind: 'login' }) }}
         onStartRun={(snap) => setScreen({ kind: 'map', snapshot: snap })}
@@ -74,7 +77,16 @@ export default function App() {
       <MapScreen
         snapshot={screen.snapshot}
         onExitToMenu={() => setScreen({ kind: 'main-menu' })}
-        onAbandon={() => setScreen({ kind: 'main-menu' })}
+        onAbandon={(r) => setScreen(r ? { kind: 'run-result', result: r } : { kind: 'main-menu', hasCurrentRun: false })}
+        onRunFinished={(r) => setScreen({ kind: 'run-result', result: r })}
+      />
+    )
+  }
+  if (screen.kind === 'run-result') {
+    return (
+      <RunResultScreen
+        result={screen.result}
+        onReturnToMenu={() => setScreen({ kind: 'main-menu', hasCurrentRun: false })}
       />
     )
   }

@@ -31,7 +31,7 @@ import { ActStartRelicScreen } from './ActStartRelicScreen'
 type Props = {
   snapshot: RunSnapshotDto
   onExitToMenu: () => void
-  onAbandon: () => void
+  onAbandon: (result: RunResultDto | null) => void
   onDebugDamage?: () => void
   onRunFinished?: (result: RunResultDto) => void
 }
@@ -180,10 +180,14 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
 
   async function handleWin() {
     if (!accountId) return
-    await winBattle(accountId, elapsedSeconds())
+    const resp = await winBattle(accountId, elapsedSeconds())
+    if ('outcome' in resp) {
+      onRunFinished?.(resp)
+      return
+    }
     setRewardDismissed(false)
     setPeekMap(false)
-    await refresh()
+    setSnap(resp)
   }
 
   async function handleClaimGold() {
