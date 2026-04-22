@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AccountProvider } from '../context/AccountContext'
-import type { BattleStateDto, RewardStateDto, RunSnapshotDto } from '../api/types'
+import type { BattleStateDto, CardInstanceDto, RewardStateDto, RunSnapshotDto } from '../api/types'
 import { MapScreen } from './MapScreen'
 
 function sampleSnapshot(
@@ -16,7 +16,7 @@ function sampleSnapshot(
       unknownResolutions: {},
       characterId: 'ironclad',
       currentHp: 80, maxHp: 80, gold: 99,
-      deck: [], relics: [], potions: ['', '', ''],
+      deck: [] as CardInstanceDto[], relics: [], potions: ['', '', ''],
       potionSlotCount: 3,
       activeBattle: null,
       activeReward: null,

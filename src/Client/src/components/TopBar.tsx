@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { CardInstanceDto } from '../api/types'
 import { PotionSlot } from './PotionSlot'
 import { useCardCatalog } from '../hooks/useCardCatalog'
 
@@ -7,7 +8,7 @@ type Props = {
   maxHp: number
   gold: number
   potions: string[]
-  deck: string[]
+  deck: CardInstanceDto[]
   onDiscardPotion: (slotIndex: number) => void
   onOpenMenu: () => void
   onTogglePeek?: () => void
@@ -28,7 +29,9 @@ export function TopBar({
   const [deckOpen, setDeckOpen] = useState(false)
   const { names } = useCardCatalog()
   const deckLabel = (id: string) => names[id] ?? id
-  const sortedDeck = [...deck].sort((a, b) => deckLabel(a).localeCompare(deckLabel(b), 'ja'))
+  const sortedDeck = [...deck].sort((a, b) =>
+    deckLabel(a.id).localeCompare(deckLabel(b.id), 'ja'),
+  )
   const deckOpenAria: 'true' | 'false' = deckOpen ? 'true' : 'false'
   const peekPressedAria: 'true' | 'false' = peekActive ? 'true' : 'false'
 
@@ -77,8 +80,10 @@ export function TopBar({
                 <p className="topbar__deck-empty">デッキは空です</p>
               ) : (
                 <ul className="topbar__deck-list">
-                  {sortedDeck.map((id, i) => (
-                    <li key={`${id}-${i}`}>{deckLabel(id)}</li>
+                  {sortedDeck.map((card, i) => (
+                    <li key={`${card.id}-${i}`}>
+                      {deckLabel(card.id)}{card.upgraded ? '+' : ''}
+                    </li>
                   ))}
                 </ul>
               )}

@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import type { CardInstanceDto } from '../api/types'
 import { TopBar } from './TopBar'
 
 function baseProps(overrides: Partial<Parameters<typeof TopBar>[0]> = {}) {
@@ -8,7 +9,11 @@ function baseProps(overrides: Partial<Parameters<typeof TopBar>[0]> = {}) {
     maxHp: 80,
     gold: 99,
     potions: ['', '', ''],
-    deck: ['card_strike', 'card_defend', 'card_strike'],
+    deck: [
+      { id: 'card_strike', upgraded: false },
+      { id: 'card_defend', upgraded: false },
+      { id: 'card_strike', upgraded: false },
+    ] as CardInstanceDto[],
     onDiscardPotion: vi.fn(),
     onOpenMenu: vi.fn(),
     ...overrides,
@@ -38,9 +43,27 @@ describe('TopBar', () => {
   })
 
   it('shows empty state when deck has no cards', () => {
-    render(<TopBar {...baseProps({ deck: [] })} />)
+    render(<TopBar {...baseProps({ deck: [] as CardInstanceDto[] })} />)
     fireEvent.click(screen.getByLabelText('デッキ (0枚)'))
     expect(screen.getByText('デッキは空です')).toBeDefined()
+  })
+
+  it('appends "+" to upgraded cards in the deck list', () => {
+    render(
+      <TopBar
+        {...baseProps({
+          deck: [
+            { id: 'card_strike', upgraded: false },
+            { id: 'card_strike', upgraded: true },
+          ] as CardInstanceDto[],
+        })}
+      />,
+    )
+    fireEvent.click(screen.getByLabelText('デッキ (2枚)'))
+    const dialog = screen.getByRole('dialog', { name: '現在のデッキ' })
+    const items = Array.from(dialog.querySelectorAll('li')).map((li) => li.textContent)
+    expect(items).toContain('card_strike')
+    expect(items).toContain('card_strike+')
   })
 
   it('invokes onOpenMenu when the gear button is clicked', () => {
