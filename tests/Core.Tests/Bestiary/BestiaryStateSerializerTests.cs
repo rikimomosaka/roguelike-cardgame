@@ -25,17 +25,46 @@ public class BestiaryStateSerializerTests
         Assert.True(original.EncounteredEnemyIds.SetEquals(restored.EncounteredEnemyIds));
     }
 
-    [Fact]
-    public void Serialize_EmitsIdsInAscendingOrder()
+    [Theory]
+    [InlineData("discoveredCardBaseIds")]
+    [InlineData("discoveredRelicIds")]
+    [InlineData("discoveredPotionIds")]
+    [InlineData("encounteredEnemyIds")]
+    public void Serialize_EmitsIdsInAscendingOrder(string fieldName)
     {
-        var s = BestiaryState.Empty with
+        var unsorted = ImmutableHashSet.Create("zap", "anger", "strike");
+        var s = fieldName switch
         {
-            DiscoveredCardBaseIds = ImmutableHashSet.Create("zap", "anger", "strike"),
+            "discoveredCardBaseIds" => BestiaryState.Empty with { DiscoveredCardBaseIds = unsorted },
+            "discoveredRelicIds" => BestiaryState.Empty with { DiscoveredRelicIds = unsorted },
+            "discoveredPotionIds" => BestiaryState.Empty with { DiscoveredPotionIds = unsorted },
+            "encounteredEnemyIds" => BestiaryState.Empty with { EncounteredEnemyIds = unsorted },
+            _ => throw new System.ArgumentException($"Unknown field: {fieldName}")
         };
         var json = BestiaryStateSerializer.Serialize(s);
         int iAnger = json.IndexOf("\"anger\"", System.StringComparison.Ordinal);
         int iStrike = json.IndexOf("\"strike\"", System.StringComparison.Ordinal);
         int iZap = json.IndexOf("\"zap\"", System.StringComparison.Ordinal);
+        Assert.True(iAnger >= 0 && iStrike >= 0 && iZap >= 0, $"IDs not found: {json}");
         Assert.True(iAnger < iStrike && iStrike < iZap, $"IDs not sorted: {json}");
+    }
+
+    [Fact]
+    public void Deserialize_NonStringArrayElement_IsIgnored()
+    {
+        // JSON with a numeric element mixed in — should not crash.
+        var json = """
+        {
+            "schemaVersion": 1,
+            "discoveredCardBaseIds": ["strike", 42, "defend"],
+            "discoveredRelicIds": [],
+            "discoveredPotionIds": [],
+            "encounteredEnemyIds": []
+        }
+        """;
+        var restored = BestiaryStateSerializer.Deserialize(json);
+        Assert.Contains("strike", restored.DiscoveredCardBaseIds);
+        Assert.Contains("defend", restored.DiscoveredCardBaseIds);
+        Assert.Equal(2, restored.DiscoveredCardBaseIds.Count);
     }
 }

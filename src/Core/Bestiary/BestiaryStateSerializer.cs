@@ -61,7 +61,8 @@ public static class BestiaryStateSerializer
         var builder = ImmutableHashSet.CreateBuilder<string>();
         foreach (var n in arr)
         {
-            var s = n?.GetValue<string>();
+            if (n is null || n.GetValueKind() != JsonValueKind.String) continue;
+            var s = n.GetValue<string>();
             if (!string.IsNullOrEmpty(s)) builder.Add(s);
         }
         return builder.ToImmutable();
