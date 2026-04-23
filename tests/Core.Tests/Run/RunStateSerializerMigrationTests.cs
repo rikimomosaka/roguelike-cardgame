@@ -77,6 +77,11 @@ public class RunStateSerializerMigrationTests
             json, ",\"runId\":\"[^\"]*\"", "");
         json = System.Text.RegularExpressions.Regex.Replace(
             json, ",\"activeActStartRelicChoice\":(null|\\{[^}]*\\})", "");
+        // Phase 8 bestiary fields を削除して v4 体裁を保つ
+        json = System.Text.RegularExpressions.Regex.Replace(json, ",\"seenCardBaseIds\":\\[[^\\]]*\\]", "");
+        json = System.Text.RegularExpressions.Regex.Replace(json, ",\"acquiredRelicIds\":\\[[^\\]]*\\]", "");
+        json = System.Text.RegularExpressions.Regex.Replace(json, ",\"acquiredPotionIds\":\\[[^\\]]*\\]", "");
+        json = System.Text.RegularExpressions.Regex.Replace(json, ",\"encounteredEnemyIds\":\\[[^\\]]*\\]", "");
         return json;
     }
 }
