@@ -27,7 +27,7 @@ public class RunStateFactoryTests
             encounterQueueBoss: ImmutableArray<string>.Empty,
             nowUtc: FixedNow);
 
-        Assert.Equal(5, state.SchemaVersion);
+        Assert.Equal(6, state.SchemaVersion);
         Assert.Equal(1, state.CurrentAct);
         Assert.Equal(0, state.CurrentNodeId);
         Assert.Empty(state.VisitedNodeIds);
