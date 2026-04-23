@@ -50,10 +50,17 @@ public sealed record RunState(
     RunProgress Progress,
     string RunId,                                   // ← Phase 7
     ActStartRelicChoice? ActiveActStartRelicChoice, // ← Phase 7
+
+    // --- Phase 8 additions (bestiary tracking) ---
+    ImmutableArray<string> SeenCardBaseIds,
+    ImmutableArray<string> AcquiredRelicIds,
+    ImmutableArray<string> AcquiredPotionIds,
+    ImmutableArray<string> EncounteredEnemyIds,
+
     int DiscardUsesSoFar = 0)
 {
-    /// <summary>Phase 7 の JSON スキーマバージョン。</summary>
-    public const int CurrentSchemaVersion = 5;
+    /// <summary>Phase 8 の JSON スキーマバージョン。</summary>
+    public const int CurrentSchemaVersion = 6;
 
     public static RunState NewSoloRun(
         DataCatalog catalog,
@@ -119,7 +126,11 @@ public sealed record RunState(
             SavedAtUtc: nowUtc,
             Progress: RunProgress.InProgress,
             RunId: runId ?? Guid.NewGuid().ToString(),
-            ActiveActStartRelicChoice: null);
+            ActiveActStartRelicChoice: null,
+            SeenCardBaseIds: ImmutableArray<string>.Empty,
+            AcquiredRelicIds: ImmutableArray<string>.Empty,
+            AcquiredPotionIds: ImmutableArray<string>.Empty,
+            EncounteredEnemyIds: ImmutableArray<string>.Empty);
     }
 
     /// <summary>構造的不変条件を検査する。違反があれば理由文字列、問題なければ null。</summary>
