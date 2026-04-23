@@ -9,11 +9,12 @@ type Props = {
   onLogout: () => void
   onStartRun?: (snapshot: RunSnapshotDto) => void
   hasCurrentRun?: boolean
+  onAchievements: () => void
 }
 
-type ComingSoonKind = 'multi' | 'achievements' | 'quit' | null
+type ComingSoonKind = 'multi' | 'quit' | null
 
-export function MainMenuScreen({ onOpenSettings, onLogout, onStartRun, hasCurrentRun }: Props) {
+export function MainMenuScreen({ onOpenSettings, onLogout, onStartRun, hasCurrentRun, onAchievements }: Props) {
   const { accountId } = useAccount()
   const [snapshot, setSnapshot] = useState<RunSnapshotDto | null>(null)
   const [dialog, setDialog] = useState<ComingSoonKind>(null)
@@ -68,7 +69,7 @@ export function MainMenuScreen({ onOpenSettings, onLogout, onStartRun, hasCurren
         <Button onClick={handleSingle}>シングルプレイ</Button>
         <Button onClick={() => setDialog('multi')}>マルチプレイ</Button>
         <Button onClick={onOpenSettings}>設定</Button>
-        <Button onClick={() => setDialog('achievements')}>実績</Button>
+        <Button onClick={onAchievements}>実績</Button>
         <Button variant="danger" onClick={() => setDialog('quit')}>終了</Button>
       </nav>
 

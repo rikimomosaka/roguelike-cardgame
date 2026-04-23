@@ -5,6 +5,7 @@ import { ApiError } from './api/client'
 import type { RunResultDto, RunSnapshotDto } from './api/types'
 import { Button } from './components/Button'
 import { useAccount } from './context/AccountContext'
+import { AchievementsScreen } from './screens/AchievementsScreen'
 import { LoginScreen } from './screens/LoginScreen'
 import { MainMenuScreen } from './screens/MainMenuScreen'
 import { MapScreen } from './screens/MapScreen'
@@ -16,6 +17,7 @@ type Screen =
   | { kind: 'login' }
   | { kind: 'main-menu'; hasCurrentRun?: boolean }
   | { kind: 'settings' }
+  | { kind: 'achievements' }
   | { kind: 'map'; snapshot: RunSnapshotDto }
   | { kind: 'run-result'; result: RunResultDto }
   | { kind: 'bootstrap-error'; message: string }
@@ -69,6 +71,15 @@ export default function App() {
         onOpenSettings={() => setScreen({ kind: 'settings' })}
         onLogout={() => { logout(); setScreen({ kind: 'login' }) }}
         onStartRun={(snap) => setScreen({ kind: 'map', snapshot: snap })}
+        onAchievements={() => setScreen({ kind: 'achievements' })}
+      />
+    )
+  }
+  if (screen.kind === 'achievements') {
+    return (
+      <AchievementsScreen
+        accountId={accountId!}
+        onBack={() => setScreen({ kind: 'main-menu' })}
       />
     )
   }
