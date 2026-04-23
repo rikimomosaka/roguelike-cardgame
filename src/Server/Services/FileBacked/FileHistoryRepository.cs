@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
@@ -47,10 +48,30 @@ public sealed class FileHistoryRepository : IHistoryRepository
         foreach (var path in Directory.EnumerateFiles(dir, "*.json"))
         {
             var json = await File.ReadAllTextAsync(path, Encoding.UTF8, ct);
-            var rec = JsonSerializer.Deserialize<RunHistoryRecord>(json, JsonOptions.Default);
+            var rec = DeserializeRecord(json);
             if (rec is not null) list.Add(rec);
         }
         list.Sort((a, b) => b.EndedAtUtc.CompareTo(a.EndedAtUtc));
         return list;
+    }
+
+    private static RunHistoryRecord? DeserializeRecord(string json)
+    {
+        JsonNode? node = JsonNode.Parse(json);
+        if (node is not JsonObject obj) return null;
+        int version = obj["schemaVersion"]?.GetValue<int>() ?? 1;
+        if (version == 1) { obj = MigrateV1ToV2(obj); version = 2; }
+        if (version != RunHistoryRecord.CurrentSchemaVersion) return null;
+        return JsonSerializer.Deserialize<RunHistoryRecord>(obj.ToJsonString(), JsonOptions.Default);
+    }
+
+    private static JsonObject MigrateV1ToV2(JsonObject obj)
+    {
+        obj["seenCardBaseIds"] = new JsonArray();
+        obj["acquiredRelicIds"] = new JsonArray();
+        obj["acquiredPotionIds"] = new JsonArray();
+        obj["encounteredEnemyIds"] = new JsonArray();
+        obj["schemaVersion"] = RunHistoryRecord.CurrentSchemaVersion;
+        return obj;
     }
 }
