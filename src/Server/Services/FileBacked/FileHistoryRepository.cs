@@ -6,6 +6,8 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using RoguelikeCardGame.Core.History;
 using RoguelikeCardGame.Core.Json;
@@ -17,13 +19,15 @@ namespace RoguelikeCardGame.Server.Services.FileBacked;
 public sealed class FileHistoryRepository : IHistoryRepository
 {
     private readonly string _root;
+    private readonly ILogger<FileHistoryRepository> _logger;
 
-    public FileHistoryRepository(IOptions<DataStorageOptions> options)
+    public FileHistoryRepository(IOptions<DataStorageOptions> options, ILogger<FileHistoryRepository>? logger = null)
     {
         var root = options.Value.RootDirectory;
         if (string.IsNullOrWhiteSpace(root))
             throw new ArgumentException("DataStorage:RootDirectory 未設定", nameof(options));
         _root = Path.Combine(root, "history");
+        _logger = logger ?? NullLogger<FileHistoryRepository>.Instance;
     }
 
     public async Task AppendAsync(string accountId, RunHistoryRecord record, CancellationToken ct)
@@ -47,9 +51,17 @@ public sealed class FileHistoryRepository : IHistoryRepository
         var list = new List<RunHistoryRecord>();
         foreach (var path in Directory.EnumerateFiles(dir, "*.json"))
         {
-            var json = await File.ReadAllTextAsync(path, Encoding.UTF8, ct);
-            var rec = DeserializeRecord(json);
-            if (rec is not null) list.Add(rec);
+            try
+            {
+                var json = await File.ReadAllTextAsync(path, Encoding.UTF8, ct);
+                var rec = DeserializeRecord(json);
+                if (rec is not null) list.Add(rec);
+                else _logger.LogWarning("history file {Path} skipped: unknown or unsupported schema", path);
+            }
+            catch (Exception ex) when (ex is IOException or JsonException or FormatException or InvalidOperationException)
+            {
+                _logger.LogWarning(ex, "history file {Path} skipped: {Message}", path, ex.Message);
+            }
         }
         list.Sort((a, b) => b.EndedAtUtc.CompareTo(a.EndedAtUtc));
         return list;

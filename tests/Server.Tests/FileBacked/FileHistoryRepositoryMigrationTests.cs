@@ -59,4 +59,78 @@ public class FileHistoryRepositoryMigrationTests : IDisposable
         Assert.Empty(rec.EncounteredEnemyIds);
         Assert.False(rec.SeenCardBaseIds.IsDefault);
     }
+
+    [Fact]
+    public async Task Load_V2_File_RoundTripsUnchanged()
+    {
+        var accountDir = Path.Combine(_root, "history", "acct");
+        Directory.CreateDirectory(accountDir);
+        var v2 = """
+        {
+          "schemaVersion": 2,
+          "accountId": "acct",
+          "runId": "r2",
+          "outcome": "Cleared",
+          "actReached": 2,
+          "nodesVisited": 10,
+          "playSeconds": 600,
+          "characterId": "default",
+          "finalHp": 50,
+          "finalMaxHp": 80,
+          "finalGold": 75,
+          "finalDeck": [],
+          "finalRelics": [],
+          "endedAtUtc": "2025-06-01T00:00:00+00:00",
+          "seenCardBaseIds": ["strike","defend"],
+          "acquiredRelicIds": ["burning_blood"],
+          "acquiredPotionIds": ["fire_potion"],
+          "encounteredEnemyIds": ["jaw_worm"]
+        }
+        """;
+        await File.WriteAllTextAsync(Path.Combine(accountDir, "20250601T000000000Z_r2.json"), v2, new UTF8Encoding(false));
+
+        var list = await _repo.ListAsync("acct", default);
+        var rec = Assert.Single(list);
+        Assert.Equal(new[] { "strike", "defend" }, rec.SeenCardBaseIds);
+        Assert.Equal(new[] { "burning_blood" }, rec.AcquiredRelicIds);
+        Assert.Equal(new[] { "fire_potion" }, rec.AcquiredPotionIds);
+        Assert.Equal(new[] { "jaw_worm" }, rec.EncounteredEnemyIds);
+    }
+
+    [Fact]
+    public async Task Load_CorruptFile_IsSkipped_OtherFilesStillLoad()
+    {
+        var accountDir = Path.Combine(_root, "history", "acct");
+        Directory.CreateDirectory(accountDir);
+        // Corrupt file
+        await File.WriteAllTextAsync(Path.Combine(accountDir, "20250101T000000000Z_bad.json"), "not { valid json", new UTF8Encoding(false));
+        // Valid v2 file
+        var v2 = """
+        {
+          "schemaVersion": 2,
+          "accountId": "acct",
+          "runId": "ok",
+          "outcome": "Abandoned",
+          "actReached": 1,
+          "nodesVisited": 3,
+          "playSeconds": 60,
+          "characterId": "default",
+          "finalHp": 60,
+          "finalMaxHp": 80,
+          "finalGold": 10,
+          "finalDeck": [],
+          "finalRelics": [],
+          "endedAtUtc": "2025-07-01T00:00:00+00:00",
+          "seenCardBaseIds": [],
+          "acquiredRelicIds": [],
+          "acquiredPotionIds": [],
+          "encounteredEnemyIds": []
+        }
+        """;
+        await File.WriteAllTextAsync(Path.Combine(accountDir, "20250701T000000000Z_ok.json"), v2, new UTF8Encoding(false));
+
+        var list = await _repo.ListAsync("acct", default);
+        var rec = Assert.Single(list);
+        Assert.Equal("ok", rec.RunId);
+    }
 }
