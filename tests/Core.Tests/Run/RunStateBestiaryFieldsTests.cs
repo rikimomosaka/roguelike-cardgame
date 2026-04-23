@@ -25,8 +25,6 @@ public class RunStateBestiaryFieldsTests
         Assert.Empty(state.AcquiredRelicIds);
         Assert.Empty(state.AcquiredPotionIds);
         Assert.Empty(state.EncounteredEnemyIds);
-        // Note: SeenCardBaseIds is NOT expected to be empty here because Task 6
-        // will populate it with the initial deck. For Task 3 we only verify
-        // it's initialized (not default) — emptiness is not part of this task.
+        Assert.Empty(state.SeenCardBaseIds);
     }
 }
