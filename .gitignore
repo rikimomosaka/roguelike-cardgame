@@ -30,6 +30,10 @@ Thumbs.db
 .aidesigner/*
 !.aidesigner/.gitkeep
 .superpowers/
+.playwright-mcp/
+
+# Playwright verification screenshots (repo-root)
+/*.png
 
 # Phase 2 file-backed stand-in database
 /src/Server/data-local/
