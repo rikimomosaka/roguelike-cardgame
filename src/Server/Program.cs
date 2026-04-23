@@ -27,6 +27,7 @@ builder.Services.AddSingleton<IAccountRepository, FileAccountRepository>();
 builder.Services.AddSingleton<IAudioSettingsRepository, FileAudioSettingsRepository>();
 builder.Services.AddSingleton<ISaveRepository, FileSaveRepository>();
 builder.Services.AddSingleton<IHistoryRepository, FileHistoryRepository>();
+builder.Services.AddSingleton<IBestiaryRepository, FileBestiaryRepository>();
 
 builder.Services.AddSingleton<MapGenerationConfig>(_ => MapGenerationConfigLoader.LoadAct1());
 builder.Services.AddSingleton<IDungeonMapGenerator, DungeonMapGenerator>();
