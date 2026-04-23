@@ -25,6 +25,6 @@ public class RunStateBestiaryFieldsTests
         Assert.Empty(state.AcquiredRelicIds);
         Assert.Empty(state.AcquiredPotionIds);
         Assert.Empty(state.EncounteredEnemyIds);
-        Assert.Empty(state.SeenCardBaseIds);
+        Assert.NotEmpty(state.SeenCardBaseIds); // 初期デッキのカード ID がシードされる
     }
 }

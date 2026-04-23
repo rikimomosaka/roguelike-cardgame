@@ -127,7 +127,7 @@ public sealed record RunState(
             Progress: RunProgress.InProgress,
             RunId: runId ?? Guid.NewGuid().ToString(),
             ActiveActStartRelicChoice: null,
-            SeenCardBaseIds: ImmutableArray<string>.Empty,
+            SeenCardBaseIds: ImmutableArray.CreateRange(ch.Deck.Distinct()),
             AcquiredRelicIds: ImmutableArray<string>.Empty,
             AcquiredPotionIds: ImmutableArray<string>.Empty,
             EncounteredEnemyIds: ImmutableArray<string>.Empty);

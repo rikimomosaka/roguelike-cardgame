@@ -80,7 +80,8 @@ public class BestiaryTrackerTests
     [Fact]
     public void NoteCardsSeen_NullOrEmptyStrings_Skipped()
     {
-        var s = Fresh();
+        // SeenCardBaseIds を空にリセットして、null/空文字スキップのみを検証する
+        var s = Fresh() with { SeenCardBaseIds = ImmutableArray<string>.Empty };
         s = BestiaryTracker.NoteCardsSeen(s, new[] { null!, "", "strike" });
         Assert.Equal(new[] { "strike" }, s.SeenCardBaseIds.ToArray());
     }
