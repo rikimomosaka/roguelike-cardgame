@@ -20,7 +20,7 @@ public class RunHistoryBuilderTests
             PlaySeconds = 456,
         };
         var rec = RunHistoryBuilder.From("acc_abc", s, nodesVisited: 7, RunProgress.GameOver);
-        Assert.Equal(1, rec.SchemaVersion);
+        Assert.Equal(2, rec.SchemaVersion);
         Assert.Equal("acc_abc", rec.AccountId);
         Assert.Equal(s.RunId, rec.RunId);
         Assert.Equal(RunProgress.GameOver, rec.Outcome);
