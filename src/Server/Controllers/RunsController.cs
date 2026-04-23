@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using RoguelikeCardGame.Core.Battle;
+using RoguelikeCardGame.Core.Bestiary;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Enemy;
 using RoguelikeCardGame.Core.History;
@@ -175,6 +176,10 @@ public sealed class RunsController : ControllerBase
             PlaySeconds = afterWin.PlaySeconds + elapsed,
             SavedAtUtc = DateTimeOffset.UtcNow,
         };
+        // Phase 8: プレイヤーに提示されたカード選択肢を SeenCardBaseIds に追加。
+        // ボス報酬は CardChoices が空のため、ガードで no-op 化する。
+        if (reward.CardChoices.Length > 0)
+            updated = BestiaryTracker.NoteCardsSeen(updated, reward.CardChoices);
         await _saves.SaveAsync(accountId, updated, ct);
         var winMap = _runStart.RehydrateMap(updated.RngSeed, updated.CurrentAct);
         return Ok(RunSnapshotDtoMapper.From(updated, winMap, _data));
