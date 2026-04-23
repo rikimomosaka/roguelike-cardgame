@@ -31,11 +31,12 @@ public static class RewardApplier
         if (idx < 0) throw new InvalidOperationException("All potion slots are full");
 
         var newPotions = s.Potions.SetItem(idx, r.PotionId);
-        return s with
+        var next = s with
         {
             Potions = newPotions,
             ActiveReward = r with { PotionClaimed = true },
         };
+        return Bestiary.BestiaryTracker.NotePotionsAcquired(next, new[] { r.PotionId });
     }
 
     public static RunState PickCard(RunState s, string cardId)
@@ -87,7 +88,8 @@ public static class RewardApplier
             Relics = newRelics,
             ActiveReward = r with { RelicClaimed = true },
         };
-        return Relics.NonBattleRelicEffects.ApplyOnPickup(s1, r.RelicId, catalog);
+        s1 = Relics.NonBattleRelicEffects.ApplyOnPickup(s1, r.RelicId, catalog);
+        return Bestiary.BestiaryTracker.NoteRelicsAcquired(s1, new[] { r.RelicId });
     }
 
     private static RewardState Require(RunState s)

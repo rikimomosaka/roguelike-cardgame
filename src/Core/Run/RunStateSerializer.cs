@@ -33,6 +33,7 @@ public static class RunStateSerializer
 
         if (version == 3) { obj = MigrateV3ToV4(obj); version = 4; }
         if (version == 4) { obj = MigrateV4ToV5(obj); version = 5; }
+        if (version == 5) { obj = MigrateV5ToV6(obj); version = 6; }
         if (version != RunState.CurrentSchemaVersion)
             throw new RunStateSerializerException(
                 $"未対応の schemaVersion: {version} (対応: {RunState.CurrentSchemaVersion})");
@@ -86,6 +87,16 @@ public static class RunStateSerializer
         // v4 セーブは Start が既に visited 済みなので VisitedNodeIds をそのまま引き継ぐ
         // (自然と act-start relic スキップとして扱われる、spec の migration ルール通り)
         // RewardState.isBossReward は JSON 側で default (false) のまま問題なし
+        obj["schemaVersion"] = 5;
+        return obj;
+    }
+
+    private static JsonObject MigrateV5ToV6(JsonObject obj)
+    {
+        obj["seenCardBaseIds"] = new JsonArray();
+        obj["acquiredRelicIds"] = new JsonArray();
+        obj["acquiredPotionIds"] = new JsonArray();
+        obj["encounteredEnemyIds"] = new JsonArray();
         obj["schemaVersion"] = RunState.CurrentSchemaVersion;
         return obj;
     }

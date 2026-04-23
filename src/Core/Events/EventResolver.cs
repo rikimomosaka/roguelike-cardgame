@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using RoguelikeCardGame.Core.Bestiary;
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Random;
@@ -66,7 +67,8 @@ public static class EventResolver
         var chosen = pool[rng.NextInt(0, pool.Length)];
         var newRelics = s.Relics.Append(chosen.Id).ToList();
         var s1 = s with { Relics = newRelics };
-        return NonBattleRelicEffects.ApplyOnPickup(s1, chosen.Id, catalog);
+        s1 = NonBattleRelicEffects.ApplyOnPickup(s1, chosen.Id, catalog);
+        return BestiaryTracker.NoteRelicsAcquired(s1, new[] { chosen.Id });
     }
 
     private static RunState GrantCardReward(RunState s, DataCatalog catalog, IRng rng)
@@ -82,6 +84,7 @@ public static class EventResolver
             PotionId: null, PotionClaimed: true,
             CardChoices: reward.CardChoices,
             CardStatus: CardRewardStatus.Pending);
-        return s with { ActiveReward = cardOnly, RewardRngState = newRngState };
+        var next = s with { ActiveReward = cardOnly, RewardRngState = newRngState };
+        return BestiaryTracker.NoteCardsSeen(next, reward.CardChoices);
     }
 }

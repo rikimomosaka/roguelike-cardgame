@@ -105,8 +105,15 @@ public static class RunSnapshotDtoMapper
             rec.Outcome.ToString(), rec.ActReached, rec.NodesVisited,
             rec.PlaySeconds, rec.CharacterId, rec.FinalHp, rec.FinalMaxHp, rec.FinalGold,
             deck, System.Linq.Enumerable.ToList(rec.FinalRelics),
-            rec.EndedAtUtc.ToString("O"));
+            rec.EndedAtUtc.ToString("O"),
+            SafeList(rec.SeenCardBaseIds),
+            SafeList(rec.AcquiredRelicIds),
+            SafeList(rec.AcquiredPotionIds),
+            SafeList(rec.EncounteredEnemyIds));
     }
+
+    private static IReadOnlyList<string> SafeList(System.Collections.Immutable.ImmutableArray<string> arr)
+        => arr.IsDefault ? System.Array.Empty<string>() : (IReadOnlyList<string>)arr.ToArray();
 }
 
 public sealed record MerchantInventoryDto(

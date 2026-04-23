@@ -22,11 +22,12 @@ public sealed class DebugController : ControllerBase
     private readonly IHistoryRepository _history;
     private readonly RunStartService _runStart;
     private readonly DataCatalog _data;
+    private readonly IBestiaryRepository _bestiary;
 
     public DebugController(
         IHostEnvironment env, IAccountRepository a, ISaveRepository s,
-        IHistoryRepository h, RunStartService rs, DataCatalog d)
-    { _env = env; _accounts = a; _saves = s; _history = h; _runStart = rs; _data = d; }
+        IHistoryRepository h, RunStartService rs, DataCatalog d, IBestiaryRepository b)
+    { _env = env; _accounts = a; _saves = s; _history = h; _runStart = rs; _data = d; _bestiary = b; }
 
     [HttpPost("damage")]
     public async Task<IActionResult> Damage([FromBody] DebugDamageRequestDto body, CancellationToken ct)
@@ -47,6 +48,7 @@ public sealed class DebugController : ControllerBase
             var finished = ActTransition.FinishRun(damaged, RunProgress.GameOver);
             var rec = RunHistoryBuilder.From(accountId, finished, finished.VisitedNodeIds.Length, RunProgress.GameOver);
             await _history.AppendAsync(accountId, rec, ct);
+            await _bestiary.MergeAsync(accountId, rec, ct);
             await _saves.DeleteAsync(accountId, ct);
             return Ok(RunSnapshotDtoMapper.ToResultDto(rec));
         }

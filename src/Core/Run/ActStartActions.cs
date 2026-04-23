@@ -51,6 +51,7 @@ public static class ActStartActions
             Relics = newRelics,
             ActiveActStartRelicChoice = null,
         };
-        return NonBattleRelicEffects.ApplyOnPickup(next, relicId, catalog);
+        next = NonBattleRelicEffects.ApplyOnPickup(next, relicId, catalog);
+        return Bestiary.BestiaryTracker.NoteRelicsAcquired(next, new[] { relicId });
     }
 }

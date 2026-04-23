@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using RoguelikeCardGame.Core.Battle;
+using RoguelikeCardGame.Core.Bestiary;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Enemy;
 using RoguelikeCardGame.Core.History;
@@ -29,14 +30,16 @@ public sealed class RunsController : ControllerBase
     private readonly RunStartService _runStart;
     private readonly DataCatalog _data;
     private readonly IHistoryRepository _history;
+    private readonly IBestiaryRepository _bestiary;
 
-    public RunsController(IAccountRepository accounts, ISaveRepository saves, RunStartService runStart, DataCatalog data, IHistoryRepository history)
+    public RunsController(IAccountRepository accounts, ISaveRepository saves, RunStartService runStart, DataCatalog data, IHistoryRepository history, IBestiaryRepository bestiary)
     {
         _accounts = accounts;
         _saves = saves;
         _runStart = runStart;
         _data = data;
         _history = history;
+        _bestiary = bestiary;
     }
 
     [HttpGet("current")]
@@ -138,6 +141,7 @@ public sealed class RunsController : ControllerBase
             }, RunProgress.Cleared);
             var rec = RunHistoryBuilder.From(accountId, finished, finished.VisitedNodeIds.Length, RunProgress.Cleared);
             await _history.AppendAsync(accountId, rec, ct);
+            await _bestiary.MergeAsync(accountId, rec, ct);
             await _saves.DeleteAsync(accountId, ct);
             return Ok(RunSnapshotDtoMapper.ToResultDto(rec));
         }
@@ -175,6 +179,10 @@ public sealed class RunsController : ControllerBase
             PlaySeconds = afterWin.PlaySeconds + elapsed,
             SavedAtUtc = DateTimeOffset.UtcNow,
         };
+        // Phase 8: プレイヤーに提示されたカード選択肢を SeenCardBaseIds に追加。
+        // ボス報酬は CardChoices が空のため、ガードで no-op 化する。
+        if (reward.CardChoices.Length > 0)
+            updated = BestiaryTracker.NoteCardsSeen(updated, reward.CardChoices);
         await _saves.SaveAsync(accountId, updated, ct);
         var winMap = _runStart.RehydrateMap(updated.RngSeed, updated.CurrentAct);
         return Ok(RunSnapshotDtoMapper.From(updated, winMap, _data));
@@ -351,6 +359,7 @@ public sealed class RunsController : ControllerBase
         }, RunProgress.Abandoned);
         var rec = RunHistoryBuilder.From(accountId, finished, finished.VisitedNodeIds.Length, RunProgress.Abandoned);
         await _history.AppendAsync(accountId, rec, ct);
+        await _bestiary.MergeAsync(accountId, rec, ct);
         await _saves.DeleteAsync(accountId, ct);
         return Ok(RunSnapshotDtoMapper.ToResultDto(rec));
     }

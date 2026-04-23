@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using RoguelikeCardGame.Core.Bestiary;
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Relics;
@@ -40,7 +41,8 @@ public static class MerchantActions
             Relics = s.Relics.Append(relicId).ToList(),
             ActiveMerchant = inv with { Relics = inv.Relics.SetItem(idx, soldOffer) },
         };
-        return NonBattleRelicEffects.ApplyOnPickup(s1, relicId, catalog);
+        s1 = NonBattleRelicEffects.ApplyOnPickup(s1, relicId, catalog);
+        return BestiaryTracker.NoteRelicsAcquired(s1, new[] { relicId });
     }
 
     public static RunState BuyPotion(RunState s, string potionId, DataCatalog catalog)
@@ -54,12 +56,13 @@ public static class MerchantActions
         for (int i = 0; i < s.Potions.Length; i++) if (s.Potions[i] == "") { slot = i; break; }
         if (slot < 0) throw new InvalidOperationException("All potion slots full");
         var soldOffer = offer with { Sold = true };
-        return s with
+        var next = s with
         {
             Gold = s.Gold - offer.Price,
             Potions = s.Potions.SetItem(slot, potionId),
             ActiveMerchant = inv with { Potions = inv.Potions.SetItem(idx, soldOffer) },
         };
+        return BestiaryTracker.NotePotionsAcquired(next, new[] { potionId });
     }
 
     public static RunState DiscardCard(RunState s, int deckIndex)

@@ -19,7 +19,11 @@ public sealed record RunHistoryRecord(
     int FinalGold,
     ImmutableArray<CardInstance> FinalDeck,
     ImmutableArray<string> FinalRelics,
-    DateTimeOffset EndedAtUtc)
+    DateTimeOffset EndedAtUtc,
+    ImmutableArray<string> SeenCardBaseIds,
+    ImmutableArray<string> AcquiredRelicIds,
+    ImmutableArray<string> AcquiredPotionIds,
+    ImmutableArray<string> EncounteredEnemyIds)
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
 }

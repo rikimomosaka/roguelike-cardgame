@@ -26,6 +26,10 @@ public static class RunHistoryBuilder
             FinalGold: state.Gold,
             FinalDeck: state.Deck,
             FinalRelics: state.Relics.ToImmutableArray(),
-            EndedAtUtc: DateTimeOffset.UtcNow);
+            EndedAtUtc: DateTimeOffset.UtcNow,
+            SeenCardBaseIds: state.SeenCardBaseIds.IsDefault ? ImmutableArray<string>.Empty : state.SeenCardBaseIds,
+            AcquiredRelicIds: state.AcquiredRelicIds.IsDefault ? ImmutableArray<string>.Empty : state.AcquiredRelicIds,
+            AcquiredPotionIds: state.AcquiredPotionIds.IsDefault ? ImmutableArray<string>.Empty : state.AcquiredPotionIds,
+            EncounteredEnemyIds: state.EncounteredEnemyIds.IsDefault ? ImmutableArray<string>.Empty : state.EncounteredEnemyIds);
     }
 }

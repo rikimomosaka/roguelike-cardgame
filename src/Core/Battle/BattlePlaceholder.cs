@@ -28,7 +28,8 @@ public static class BattlePlaceholder
             enemies.Add(new EnemyInstance(eid, hp, hp, def.InitialMoveId));
         }
         var battle = new BattleState(encounterId, enemies.ToImmutable(), BattleOutcome.Pending);
-        return selector(state, queueAfter) with { ActiveBattle = battle };
+        var next = selector(state, queueAfter) with { ActiveBattle = battle };
+        return Bestiary.BestiaryTracker.NoteEnemiesEncountered(next, encounter.EnemyIds);
     }
 
     public static RunState Win(RunState state)

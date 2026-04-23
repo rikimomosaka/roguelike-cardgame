@@ -18,6 +18,10 @@ const sample: RunResultDto = {
   finalDeck: [{ id: 'strike', upgraded: true }],
   finalRelics: ['coin_purse'],
   endedAtUtc: '2026-04-22T00:00:00Z',
+  seenCardBaseIds: [],
+  acquiredRelicIds: [],
+  acquiredPotionIds: [],
+  encounteredEnemyIds: [],
 }
 
 describe('RunResultScreen', () => {

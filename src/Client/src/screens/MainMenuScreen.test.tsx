@@ -4,13 +4,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AccountProvider } from '../context/AccountContext'
 import { MainMenuScreen } from './MainMenuScreen'
 
-function renderScreen(handlers: { onOpenSettings?: () => void; onLogout?: () => void } = {}) {
+function renderScreen(handlers: { onOpenSettings?: () => void; onLogout?: () => void; onAchievements?: () => void } = {}) {
   localStorage.setItem('rcg.accountId', 'alice')
   return render(
     <AccountProvider>
       <MainMenuScreen
         onOpenSettings={handlers.onOpenSettings ?? (() => {})}
         onLogout={handlers.onLogout ?? (() => {})}
+        onAchievements={handlers.onAchievements ?? (() => {})}
       />
     </AccountProvider>,
   )
@@ -94,6 +95,7 @@ describe('MainMenuScreen', () => {
         <MainMenuScreen
           onOpenSettings={() => {}}
           onLogout={() => {}}
+          onAchievements={() => {}}
           onStartRun={onStart}
         />
       </AccountProvider>,
@@ -119,6 +121,7 @@ describe('MainMenuScreen', () => {
         <MainMenuScreen
           onOpenSettings={() => {}}
           onLogout={() => {}}
+          onAchievements={() => {}}
           hasCurrentRun={false}
         />
       </AccountProvider>,
@@ -137,11 +140,38 @@ describe('MainMenuScreen', () => {
         <MainMenuScreen
           onOpenSettings={() => {}}
           onLogout={() => {}}
+          onAchievements={() => {}}
           hasCurrentRun={true}
         />
       </AccountProvider>,
     )
     await waitFor(() => expect(fetchMock).toHaveBeenCalled())
     expect(screen.getByText('保存済みラン有り')).toBeInTheDocument()
+  })
+})
+
+describe('MainMenuScreen 実績ボタン', () => {
+  let fetchMock: ReturnType<typeof vi.fn>
+  beforeEach(() => {
+    localStorage.clear()
+    fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }))
+    vi.stubGlobal('fetch', fetchMock)
+    localStorage.setItem('rcg.accountId', 'alice')
+  })
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('calls onAchievements when 実績 button clicked', () => {
+    const onAchievements = vi.fn()
+    render(
+      <AccountProvider>
+        <MainMenuScreen
+          onOpenSettings={() => {}}
+          onLogout={() => {}}
+          onAchievements={onAchievements}
+        />
+      </AccountProvider>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: '実績' }))
+    expect(onAchievements).toHaveBeenCalled()
   })
 })
