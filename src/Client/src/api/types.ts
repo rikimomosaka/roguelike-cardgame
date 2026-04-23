@@ -112,6 +112,10 @@ export type RunResultDto = {
   finalDeck: RunResultCardDto[]
   finalRelics: string[]
   endedAtUtc: string
+  seenCardBaseIds: string[]
+  acquiredRelicIds: string[]
+  acquiredPotionIds: string[]
+  encounteredEnemyIds: string[]
 }
 
 export type RunHistoryDto = RunResultDto[]
@@ -159,4 +163,16 @@ export type MapDto = {
 export type RunSnapshotDto = {
   run: RunStateDto
   map: MapDto
+}
+
+export type BestiaryDto = {
+  schemaVersion: number
+  discoveredCardBaseIds: string[]
+  discoveredRelicIds: string[]
+  discoveredPotionIds: string[]
+  encounteredEnemyIds: string[]
+  allKnownCardBaseIds: string[]
+  allKnownRelicIds: string[]
+  allKnownPotionIds: string[]
+  allKnownEnemyIds: string[]
 }
