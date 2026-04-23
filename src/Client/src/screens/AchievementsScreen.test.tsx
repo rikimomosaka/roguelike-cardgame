@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { AchievementsScreen } from './AchievementsScreen'
 import * as bestiaryApi from '../api/bestiary'
@@ -32,6 +32,8 @@ describe('AchievementsScreen', () => {
     vi.spyOn(bestiaryApi, 'getBestiary').mockResolvedValue(emptyBestiary)
     vi.spyOn(historyApi, 'getHistory').mockResolvedValue([oneRun])
   })
+
+  afterEach(() => { vi.restoreAllMocks() })
 
   it('fetches bestiary and history on mount in parallel', async () => {
     render(<AchievementsScreen accountId="a" onBack={() => { }} />)
