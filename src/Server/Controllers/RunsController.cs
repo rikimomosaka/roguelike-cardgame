@@ -30,14 +30,16 @@ public sealed class RunsController : ControllerBase
     private readonly RunStartService _runStart;
     private readonly DataCatalog _data;
     private readonly IHistoryRepository _history;
+    private readonly IBestiaryRepository _bestiary;
 
-    public RunsController(IAccountRepository accounts, ISaveRepository saves, RunStartService runStart, DataCatalog data, IHistoryRepository history)
+    public RunsController(IAccountRepository accounts, ISaveRepository saves, RunStartService runStart, DataCatalog data, IHistoryRepository history, IBestiaryRepository bestiary)
     {
         _accounts = accounts;
         _saves = saves;
         _runStart = runStart;
         _data = data;
         _history = history;
+        _bestiary = bestiary;
     }
 
     [HttpGet("current")]
@@ -139,6 +141,7 @@ public sealed class RunsController : ControllerBase
             }, RunProgress.Cleared);
             var rec = RunHistoryBuilder.From(accountId, finished, finished.VisitedNodeIds.Length, RunProgress.Cleared);
             await _history.AppendAsync(accountId, rec, ct);
+            await _bestiary.MergeAsync(accountId, rec, ct);
             await _saves.DeleteAsync(accountId, ct);
             return Ok(RunSnapshotDtoMapper.ToResultDto(rec));
         }
@@ -356,6 +359,7 @@ public sealed class RunsController : ControllerBase
         }, RunProgress.Abandoned);
         var rec = RunHistoryBuilder.From(accountId, finished, finished.VisitedNodeIds.Length, RunProgress.Abandoned);
         await _history.AppendAsync(accountId, rec, ct);
+        await _bestiary.MergeAsync(accountId, rec, ct);
         await _saves.DeleteAsync(accountId, ct);
         return Ok(RunSnapshotDtoMapper.ToResultDto(rec));
     }
