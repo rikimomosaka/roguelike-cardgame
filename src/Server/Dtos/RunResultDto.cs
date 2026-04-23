@@ -18,4 +18,8 @@ public sealed record RunResultDto(
     int FinalGold,
     IReadOnlyList<RunResultCardDto> FinalDeck,
     IReadOnlyList<string> FinalRelics,
-    string EndedAtUtc);
+    string EndedAtUtc,
+    IReadOnlyList<string> SeenCardBaseIds,
+    IReadOnlyList<string> AcquiredRelicIds,
+    IReadOnlyList<string> AcquiredPotionIds,
+    IReadOnlyList<string> EncounteredEnemyIds);
