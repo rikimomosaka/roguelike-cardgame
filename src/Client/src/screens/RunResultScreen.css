@@ -239,38 +239,37 @@
 }
 
 .rr__journey-node {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border: 1px solid var(--border-mid);
-  border-radius: var(--radius-sm);
-  image-rendering: pixelated;
+  border-radius: 50%;
+  background: #0a0604;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: var(--font-label);
   font-size: 14px;
   line-height: 1;
-  color: rgba(0, 0, 0, 0.78);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.15);
+  color: var(--border-light);
   font-weight: 700;
   position: relative;
 }
 
-.node--fight { background: #8a5a2a; }
-.node--elite { background: var(--state-danger); }
-.node--event { background: #7a4aa0; }
-.node--merchant { background: var(--gold); }
-.node--rest { background: #5a8a4a; }
+.node--fight { color: var(--fg-strong); }
+.node--elite { color: var(--state-danger-soft); border-color: var(--state-danger-soft); }
+.node--event { color: #c49ad9; }
+.node--merchant { color: var(--gold-warm); border-color: var(--gold-warm); }
+.node--rest { color: var(--state-heal-soft); border-color: var(--state-heal-soft); }
 .node--boss {
-  background: var(--state-danger);
+  color: var(--state-danger-soft);
   border-color: var(--gold);
-  box-shadow: 0 0 4px rgba(217, 97, 74, 0.6);
+  border-width: 2px;
+  box-shadow: 0 0 6px rgba(217, 97, 74, 0.6);
 }
-.node--treasure { background: var(--fg-muted); }
+.node--treasure { color: var(--rarity-l); }
 .node--start {
-  background: var(--bg-2);
-  border: 1px dashed var(--border-light);
-  color: var(--fg-dim);
+  color: var(--fg-muted);
+  border-style: dashed;
 }
 .node--empty {
   background: transparent;
@@ -294,34 +293,35 @@
 .rr__trail-legend span {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   white-space: nowrap;
 }
 
-.rr__trail-legend span::before {
-  content: "";
-  width: 10px;
-  height: 10px;
+.rr__trail-legend .lg__sym {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
   border: 1px solid var(--border-mid);
-  border-radius: 1px;
+  border-radius: 50%;
+  background: #0a0604;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--border-light);
   flex-shrink: 0;
 }
 
-.lg--fight::before { background: #8a5a2a; }
-.lg--elite::before { background: var(--state-danger); }
-.lg--event::before { background: #7a4aa0; }
-.lg--merchant::before { background: var(--gold); }
-.lg--rest::before { background: #5a8a4a; }
-.lg--treasure::before { background: var(--fg-muted); }
-.lg--boss::before {
-  background: var(--state-danger);
-  border-color: var(--gold);
-}
-.lg--start::before {
-  background: var(--bg-2);
-  border-style: dashed;
-  border-color: var(--border-light);
-}
+.lg--fight .lg__sym { color: var(--fg-strong); }
+.lg--elite .lg__sym { color: var(--state-danger-soft); border-color: var(--state-danger-soft); }
+.lg--event .lg__sym { color: #c49ad9; }
+.lg--merchant .lg__sym { color: var(--gold-warm); border-color: var(--gold-warm); }
+.lg--rest .lg__sym { color: var(--state-heal-soft); border-color: var(--state-heal-soft); }
+.lg--boss .lg__sym { color: var(--state-danger-soft); border-color: var(--gold); }
+.lg--treasure .lg__sym { color: var(--rarity-l); }
+.lg--start .lg__sym { color: var(--fg-muted); border-style: dashed; }
+
 
 /* ---------- Inventory grid ---------- */
 .rr__grid {

@@ -142,19 +142,36 @@
 .mc-card-slot {
   width: 128px;
   flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
   position: relative;
   margin: 0;
   padding: 0;
 }
 
-.mc-card-slot > .card {
+.mc-card-slot__btn {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+
+.mc-card-slot__btn > .card {
   width: 100% !important;
 }
 
-.mc-card-slot__buy {
+.mc-card-slot__btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.mc-card-slot__btn:disabled {
+  cursor: default;
+}
+
+.mc-card-slot__price {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -168,39 +185,36 @@
   font-size: 12px;
   letter-spacing: 2px;
   text-shadow: 0 1px 0 #000;
-  cursor: pointer;
-  transition: border-color 0.12s ease, background 0.12s ease, color 0.12s ease,
-    opacity 0.12s ease;
+  white-space: nowrap;
+  transition: border-color 0.12s ease, background 0.12s ease, color 0.12s ease;
 }
 
-.mc-card-slot__buy::before {
+.mc-card-slot__price::before {
   content: "◈";
   font-size: 13px;
   color: var(--gold);
   line-height: 1;
 }
 
-.mc-card-slot__buy:hover:not(:disabled) {
+.mc-card-slot__btn:hover:not(:disabled) .mc-card-slot__price {
   border-color: var(--gold);
   background: rgba(58, 36, 16, 0.55);
 }
 
-.mc-card-slot__buy:disabled {
-  cursor: default;
-  opacity: 0.45;
-}
-
-.mc-card-slot.is-sold .mc-card-slot__buy,
-.mc-card-slot.is-sold > .card {
+.mc-card-slot.is-sold .mc-card-slot__btn {
   opacity: 0.42;
 }
 
-.mc-card-slot.is-locked .mc-card-slot__buy {
+.mc-card-slot.is-locked .mc-card-slot__btn {
+  opacity: 0.6;
+}
+
+.mc-card-slot.is-locked .mc-card-slot__price {
   color: var(--state-danger);
   border-color: #7a2a1a;
 }
 
-.mc-card-slot.is-locked .mc-card-slot__buy::before {
+.mc-card-slot.is-locked .mc-card-slot__price::before {
   color: var(--state-danger);
 }
 
@@ -436,19 +450,23 @@
   color: var(--fg);
 }
 
-.mc-tile:hover:not(:disabled) {
+.mc-tile:hover:not([aria-disabled="true"]):not(.is-sold) {
   border-color: var(--border-hover);
   transform: translateY(-2px);
   box-shadow: 0 0 12px rgba(201, 152, 90, 0.3);
 }
 
-.mc-tile:disabled {
+.mc-tile[aria-disabled="true"] {
   cursor: not-allowed;
-  opacity: 0.45;
+  opacity: 0.55;
 }
 
 .mc-tile.is-sold {
-  opacity: 0.32;
+  cursor: default;
+  opacity: 0.45;
+  border-style: dashed;
+  justify-content: center;
+  background: rgba(10, 6, 4, 0.35);
 }
 
 .mc-tile__icon {
@@ -500,6 +518,7 @@
   color: var(--gold);
   text-shadow: 0 1px 0 #000;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .mc-tile__price::before {
@@ -507,6 +526,16 @@
   font-size: 13px;
   color: var(--gold);
   line-height: 1;
+}
+
+.mc-tile__price--sold {
+  color: var(--fg-dim);
+  border-style: dashed;
+  letter-spacing: 3px;
+}
+
+.mc-tile__price--sold::before {
+  content: "";
 }
 
 .mc-tile.is-locked .mc-tile__price {

@@ -97,7 +97,6 @@ function RelicChoice({ id, name, desc, disabled, isChosen, onChoose }: ChoicePro
     >
       <span className="ar-icon" aria-hidden="true">◆</span>
       <span className="ar-name">{name}</span>
-      {isChosen && <span className="ar-chosen-mark" aria-hidden="true">✓</span>}
     </button>
   )
 }

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import type { CardInstanceDto, MerchantInventoryDto, MerchantOfferDto } from '../api/types'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
+import type { CardRarity } from '../components/Card'
 import { cardDisplay } from '../components/cardDisplay'
 import { Popup } from '../components/Popup'
 import { useTooltipTarget } from '../components/Tooltip'
@@ -9,6 +10,26 @@ import type { TooltipContent } from '../components/Tooltip'
 import { useCardCatalog, usePotionCatalog } from '../hooks/useCardCatalog'
 import { useRelicCatalog } from '../hooks/useRelicCatalog'
 import './MerchantScreen.css'
+
+function relicRarityCode(rarity: string | undefined): CardRarity | undefined {
+  if (!rarity) return undefined
+  const r = rarity.toLowerCase()
+  if (r === 'rare' || r === 'r') return 'r'
+  if (r === 'epic' || r === 'e') return 'e'
+  if (r === 'legendary' || r === 'l') return 'l'
+  return 'c'
+}
+
+function potionRarityCode(n: number | undefined): CardRarity | undefined {
+  if (n === undefined) return undefined
+  switch (n) {
+    case 0: return 'c'
+    case 1: return 'r'
+    case 2: return 'e'
+    case 3: return 'l'
+    default: return 'c'
+  }
+}
 
 type Props = {
   gold: number
@@ -139,29 +160,31 @@ export function MerchantScreen(p: Props) {
       .join(' ')
     return (
       <li key={`card:${offer.id}`} className={classes}>
-        <Card
-          name={disp.name}
-          cost={disp.cost}
-          type={disp.type}
-          rarity={disp.rarity}
-          description={disp.description}
-          upgradedDescription={disp.upgradedDescription}
-          width={128}
-        />
         <button
           type="button"
-          className="mc-card-slot__buy"
+          className="mc-card-slot__btn"
           onClick={() => handleBuy('card', offer.id)}
           disabled={offer.sold || locked}
           aria-label={`Buy ${name}`}
         >
-          {offer.sold ? (
-            '売切'
-          ) : (
-            <>
-              <span className="mc-num">{offer.price}</span> ゴールド
-            </>
-          )}
+          <Card
+            name={disp.name}
+            cost={disp.cost}
+            type={disp.type}
+            rarity={disp.rarity}
+            description={disp.description}
+            upgradedDescription={disp.upgradedDescription}
+            width={128}
+          />
+          <span className="mc-card-slot__price">
+            {offer.sold ? (
+              '売切'
+            ) : (
+              <>
+                <span className="mc-num">{offer.price}</span> ゴールド
+              </>
+            )}
+          </span>
         </button>
       </li>
     )
@@ -211,6 +234,7 @@ export function MerchantScreen(p: Props) {
               offer={o}
               name={relicNames[o.id] ?? o.id}
               description={relicCatalog?.[o.id]?.description ?? null}
+              rarity={relicRarityCode(relicCatalog?.[o.id]?.rarity)}
               icon="◉"
               gold={p.gold}
               onBuy={handleBuy}
@@ -229,6 +253,7 @@ export function MerchantScreen(p: Props) {
               offer={o}
               name={potionNames[o.id] ?? o.id}
               description={potionCatalog?.[o.id]?.description ?? null}
+              rarity={potionRarityCode(potionCatalog?.[o.id]?.rarity)}
               icon="⚗"
               gold={p.gold}
               onBuy={handleBuy}
@@ -276,16 +301,17 @@ type TileProps = {
   offer: MerchantOfferDto
   name: string
   description: string | null
+  rarity?: CardRarity
   icon: string
   gold: number
   onBuy: (kind: 'relic' | 'potion', id: string) => void | Promise<void>
 }
 
-function RelicPotionTile({ kind, offer, name, description, icon, gold, onBuy }: TileProps) {
+function RelicPotionTile({ kind, offer, name, description, rarity, icon, gold, onBuy }: TileProps) {
   const tooltipContent = useMemo<TooltipContent | null>(() => {
-    if (!description) return null
-    return { name, desc: description }
-  }, [name, description])
+    if (offer.sold || !description) return null
+    return { name, rarity, desc: description }
+  }, [name, rarity, description, offer.sold])
   const tip = useTooltipTarget(tooltipContent)
   const locked = !offer.sold && gold < offer.price
   const classes = [
@@ -296,28 +322,36 @@ function RelicPotionTile({ kind, offer, name, description, icon, gold, onBuy }: 
   ]
     .filter(Boolean)
     .join(' ')
+
+  if (offer.sold) {
+    return (
+      <li className="mc-tile-wrap">
+        <div className={classes} aria-label={`${name} (売切)`}>
+          <span className="mc-tile__sr-name">{name}</span>
+          <span className="mc-tile__price mc-tile__price--sold">売切</span>
+        </div>
+      </li>
+    )
+  }
+
   return (
-    <li className="mc-tile-wrap">
+    <li
+      className="mc-tile-wrap"
+      onMouseEnter={tip.onMouseEnter}
+      onMouseMove={tip.onMouseMove}
+      onMouseLeave={tip.onMouseLeave}
+    >
       <button
         type="button"
         className={classes}
-        onClick={() => onBuy(kind, offer.id)}
-        disabled={offer.sold || locked}
+        onClick={() => { if (!locked) onBuy(kind, offer.id) }}
+        aria-disabled={locked ? 'true' : 'false'}
         aria-label={`Buy ${name}`}
-        onMouseEnter={tip.onMouseEnter}
-        onMouseMove={tip.onMouseMove}
-        onMouseLeave={tip.onMouseLeave}
       >
         <span className="mc-tile__icon" aria-hidden="true">{icon}</span>
         <span className="mc-tile__sr-name">{name}</span>
         <span className="mc-tile__price">
-          {offer.sold ? (
-            '売切'
-          ) : (
-            <>
-              <span className="mc-num">{offer.price}</span> ゴールド
-            </>
-          )}
+          <span className="mc-num">{offer.price}</span> ゴールド
         </span>
       </button>
     </li>

@@ -64,15 +64,15 @@ function kindClassFor(kind: TileKind, resolvedKind: TileKind | null): string {
 function nodeLabelFor(kind: TileKind, resolvedKind: TileKind | null): string | null {
   const k = kind === 'Unknown' && resolvedKind === null ? 'Unknown' : (resolvedKind ?? kind)
   switch (k) {
-    case 'Enemy': return 'ENEMY'
-    case 'Elite': return 'ELITE'
-    case 'Rest': return 'REST'
-    case 'Merchant': return 'SHOP'
-    case 'Treasure': return 'TREASURE'
-    case 'Event': return 'EVENT'
-    case 'Unknown': return 'UNKNOWN'
-    case 'Boss': return 'BOSS'
-    case 'Start': return 'START'
+    case 'Enemy': return '戦闘'
+    case 'Elite': return '精鋭'
+    case 'Rest': return '休憩'
+    case 'Merchant': return '商店'
+    case 'Treasure': return '宝箱'
+    case 'Event': return 'イベント'
+    case 'Unknown': return '未知'
+    case 'Boss': return 'ボス'
+    case 'Start': return '開始'
   }
 }
 
@@ -625,14 +625,14 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
           </div>
 
           <div className="map-screen__key" aria-hidden="true">
-            <div className="map-screen__key-title">MAP LEGEND</div>
-            <div className="map-screen__key-row"><span className="map-screen__key-sym">⚔</span><span>ENEMY</span></div>
-            <div className="map-screen__key-row"><span className="map-screen__key-sym k--elite">♛</span><span>ELITE</span></div>
-            <div className="map-screen__key-row"><span className="map-screen__key-sym k--rest">△</span><span>REST</span></div>
-            <div className="map-screen__key-row"><span className="map-screen__key-sym k--merchant">◆</span><span>SHOP</span></div>
-            <div className="map-screen__key-row"><span className="map-screen__key-sym k--treasure">◈</span><span>TREASURE</span></div>
-            <div className="map-screen__key-row"><span className="map-screen__key-sym">?</span><span>UNKNOWN</span></div>
-            <div className="map-screen__key-row"><span className="map-screen__key-sym k--boss">♛</span><span>BOSS</span></div>
+            <div className="map-screen__key-title">マップ凡例</div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym">⚔</span><span>戦闘</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym k--elite">♛</span><span>精鋭</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym k--rest">△</span><span>休憩</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym k--merchant">◆</span><span>商店</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym k--treasure">◈</span><span>宝箱</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym">?</span><span>未知</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym k--boss">♛</span><span>ボス</span></div>
           </div>
         </div>
 

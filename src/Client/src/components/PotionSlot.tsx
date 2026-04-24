@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { usePotionCatalog } from '../hooks/useCardCatalog'
+import type { CardRarity } from './Card'
 import { useTooltipTarget } from './Tooltip'
 import type { TooltipContent } from './Tooltip'
 
@@ -8,6 +9,16 @@ type Props = {
   slotIndex: number
   potionId: string
   onDiscard: () => void
+}
+
+function potionRarityCode(n: number): CardRarity {
+  switch (n) {
+    case 0: return 'c'
+    case 1: return 'r'
+    case 2: return 'e'
+    case 3: return 'l'
+    default: return 'c'
+  }
 }
 
 export function PotionSlot({ slotIndex, potionId, onDiscard }: Props) {
@@ -21,7 +32,9 @@ export function PotionSlot({ slotIndex, potionId, onDiscard }: Props) {
     const entry = potionCatalog?.[potionId]
     const name = entry?.name ?? potionId
     const desc = entry?.description ?? '—'
-    return { name, desc }
+    const rarity: CardRarity | undefined =
+      entry !== undefined ? potionRarityCode(entry.rarity) : undefined
+    return { name, rarity, desc }
   }, [filled, potionCatalog, potionId])
   const tip = useTooltipTarget(tooltipContent)
 

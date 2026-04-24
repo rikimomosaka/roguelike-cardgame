@@ -92,13 +92,15 @@ export function TopBar({
   return (
     <div className="topbar" role="status">
       <span className="topbar__group topbar__hp" data-hp={hpState}>
-        <span className="topbar__hp-label">HP {displayedHp}/{maxHp}</span>
-        <span className="topbar__hp-track" aria-hidden="true">
-          <span className="topbar__hp-fill" style={{ width: `${hpPct}%` }} />
+        <span className="topbar__hp-track">
+          <span className="topbar__hp-fill" style={{ width: `${hpPct}%` }} aria-hidden="true" />
+          <span className="topbar__hp-label">HP {displayedHp}/{maxHp}</span>
         </span>
       </span>
       <span className="topbar__group topbar__gold">
-        <span className="topbar__num">{displayedGold}</span> ゴールド
+        <span className="topbar__gold-text">
+          <span className="topbar__num">{displayedGold}</span> ゴールド
+        </span>
       </span>
       <ul className="topbar__relics" aria-label={`レリック (${relics.length}個)`}>
         {relics.map((id, i) => (

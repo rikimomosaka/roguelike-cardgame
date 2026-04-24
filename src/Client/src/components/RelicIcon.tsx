@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import type { CardRarity } from './Card'
 import { useTooltipTarget } from './Tooltip'
 import type { RelicCatalog } from '../api/catalog'
 import './RelicIcon.css'
@@ -13,10 +14,12 @@ export function RelicIcon({ id, catalog, names }: Props) {
   const entry = catalog?.[id] ?? null
   const name = entry?.name ?? names[id] ?? id
   const desc = entry?.description ?? ''
-  const rarityClass = entry ? `relic-icon--${rarityClassOf(entry.rarity)}` : ''
+  const rarityKey = entry ? rarityClassOf(entry.rarity) : 'common'
+  const rarityClass = `relic-icon--${rarityKey}`
+  const rarityCode = rarityCodeFromKey(rarityKey)
   const content = useMemo(
-    () => ({ name, desc: desc || '—' }),
-    [name, desc],
+    () => ({ name, rarity: rarityCode, desc: desc || '—' }),
+    [name, rarityCode, desc],
   )
   const tip = useTooltipTarget(content)
   return (
@@ -39,6 +42,15 @@ function rarityClassOf(rarity: string): string {
   if (r === 'epic' || r === 'e') return 'epic'
   if (r === 'legendary' || r === 'l') return 'legendary'
   return 'common'
+}
+
+function rarityCodeFromKey(key: string): CardRarity {
+  switch (key) {
+    case 'rare': return 'r'
+    case 'epic': return 'e'
+    case 'legendary': return 'l'
+    default: return 'c'
+  }
 }
 
 // Deterministic placeholder glyph until real dot-art sprites arrive.

@@ -175,14 +175,14 @@ export function RunResultScreen({ result, snapshot, onReturnToMenu }: Props) {
               </div>
 
               <div className="rr__trail-legend" aria-hidden="true">
-                <span className="lg--start">開始</span>
-                <span className="lg--boss">ボス</span>
-                <span className="lg--fight">戦闘</span>
-                <span className="lg--elite">精鋭</span>
-                <span className="lg--event">イベント</span>
-                <span className="lg--merchant">商店</span>
-                <span className="lg--rest">休憩</span>
-                <span className="lg--treasure">宝箱</span>
+                <span className="lg--start"><span className="lg__sym">●</span>開始</span>
+                <span className="lg--boss"><span className="lg__sym">♛</span>ボス</span>
+                <span className="lg--fight"><span className="lg__sym">⚔</span>戦闘</span>
+                <span className="lg--elite"><span className="lg__sym">♛</span>精鋭</span>
+                <span className="lg--event"><span className="lg__sym">?</span>イベント</span>
+                <span className="lg--merchant"><span className="lg__sym">◆</span>商店</span>
+                <span className="lg--rest"><span className="lg__sym">△</span>休憩</span>
+                <span className="lg--treasure"><span className="lg__sym">◈</span>宝箱</span>
               </div>
             </div>
           </div>
