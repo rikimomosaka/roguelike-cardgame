@@ -1,0 +1,493 @@
+/* =============================================================
+   AchievementsScreen — visual port of archives canonical mockups
+   - archives-cards-v12.html
+   - archives-relics-v1.html
+   - archives-potions-v1.html
+   - archives-enemies-v2.html
+   - archives-history-v5.html
+   Uses tokens from tokens.css. Card tiles use the shared <Card>
+   primitive; relic/potion/enemy tabs share a square .achievements__tile.
+   ============================================================= */
+
+.achievements {
+  aspect-ratio: var(--stage-aspect);
+  width: 100%;
+  max-width: var(--stage-max-width);
+  margin: 0 auto;
+  background:
+    radial-gradient(ellipse at 50% 20%, rgba(217, 97, 74, 0.18) 0%, transparent 60%),
+    linear-gradient(180deg, var(--bg-2) 0%, var(--bg-3) 50%, var(--bg-2) 100%);
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-lg);
+  position: relative;
+  overflow: hidden;
+  color: var(--fg);
+  font-family: var(--font-body);
+}
+
+.achievements__pattern {
+  position: absolute;
+  inset: 0;
+  opacity: 0.4;
+  background:
+    radial-gradient(circle at 25% 25%, rgba(201, 152, 90, 0.4) 1px, transparent 1.5px) 0 0 / 24px 24px,
+    radial-gradient(circle at 75% 75%, rgba(201, 152, 90, 0.2) 1px, transparent 1.5px) 0 0 / 24px 24px;
+  mask: radial-gradient(ellipse at 50% 50%, black 25%, transparent 90%);
+  -webkit-mask: radial-gradient(ellipse at 50% 50%, black 25%, transparent 90%);
+  pointer-events: none;
+}
+
+.achievements::before {
+  content: "";
+  position: absolute;
+  inset: 16px;
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.achievements__inner {
+  position: absolute;
+  inset: 36px;
+  display: flex;
+  flex-direction: column;
+  z-index: var(--z-stage);
+  gap: 10px;
+  min-height: 0;
+}
+
+/* ---------- Header (title + ornament) ---------- */
+.achievements__header {
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.achievements__title {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 26px;
+  letter-spacing: 12px;
+  line-height: 1;
+  color: var(--gold-soft);
+  text-shadow: 0 0 18px rgba(232, 200, 122, 0.5), 0 2px 0 #000;
+  margin: 0;
+}
+
+.achievements__ornament {
+  color: var(--gold-deep);
+  font-size: var(--fs-xs);
+  letter-spacing: 10px;
+  margin-top: 3px;
+}
+
+/* ---------- Tabs ---------- */
+.achievements__tabs {
+  display: flex;
+  gap: 0;
+  justify-content: center;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-mid);
+}
+
+.achievements__tab {
+  position: relative;
+  padding: 7px 22px 9px;
+  cursor: pointer;
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  letter-spacing: 4px;
+  color: var(--fg-dim);
+  background: transparent;
+  border: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  transition: color 0.12s ease;
+}
+
+.achievements__tab:hover {
+  color: var(--gold-deep);
+}
+
+.achievements__tab--active {
+  color: var(--gold-soft);
+}
+
+.achievements__tab--active::after {
+  content: "";
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  bottom: -1px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold-deep), transparent);
+}
+
+.achievements__tab-count {
+  font-family: var(--font-label);
+  font-size: var(--fs-xs);
+  color: #6a4a2a;
+  letter-spacing: 1px;
+}
+
+.achievements__tab--active .achievements__tab-count {
+  color: var(--gold-deep);
+}
+
+/* ---------- Content area (scroll host) ---------- */
+.achievements__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.achievements__panel {
+  background: rgba(10, 6, 4, 0.4);
+  border: 1px solid var(--border-dark);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  flex: 1;
+}
+
+.achievements__panel-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  border-bottom: 1px solid var(--border-dark);
+  padding-bottom: 4px;
+  flex-shrink: 0;
+}
+
+.achievements__panel-title {
+  font-family: 'Cinzel', serif;
+  font-size: var(--fs-sm);
+  letter-spacing: 5px;
+  color: var(--gold-deep);
+}
+
+.achievements__panel-sub {
+  font-family: var(--font-label);
+  font-size: var(--fs-xs);
+  color: var(--fg-dim);
+  letter-spacing: 1px;
+}
+
+/* Count badge (test asserts "X / Y 発見") */
+.achievements__count {
+  font-family: var(--font-label);
+  font-size: var(--fs-xs);
+  color: var(--fg-dim);
+  letter-spacing: 1px;
+  margin: 0;
+}
+
+/* ---------- Scroll area ---------- */
+.achievements__scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 4px 6px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-mid) transparent;
+}
+
+.achievements__scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.achievements__scroll::-webkit-scrollbar-thumb {
+  background: var(--border-mid);
+  border-radius: 3px;
+}
+
+/* ---------- Card grid (cards tab) ---------- */
+.achievements__card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 8px;
+  align-items: start;
+  justify-items: stretch;
+}
+
+.achievements__card-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: stretch;
+}
+
+.achievements__card-cell .card {
+  width: 100% !important;
+}
+
+.achievements__card-id {
+  font-family: var(--font-label);
+  font-size: var(--fs-xs);
+  color: var(--fg-dim);
+  letter-spacing: 1px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.achievements__card-locked-label {
+  display: inline-block;
+  padding: 2px 6px;
+  font-family: var(--font-label);
+  font-size: var(--fs-xs);
+  letter-spacing: 1px;
+  color: var(--fg-dim);
+}
+
+/* ---------- Tile grid (relics / potions / enemies) ---------- */
+.achievements__tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: 10px 8px;
+  align-items: start;
+}
+
+.achievements__tile-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: default;
+}
+
+.achievements__tile {
+  aspect-ratio: 1 / 1;
+  position: relative;
+  width: 100%;
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--bg-0);
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.achievements__tile-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 35%, rgba(201, 152, 90, 0.25) 0%, transparent 65%),
+    linear-gradient(180deg, #2a1a10 0%, #1a0f08 100%),
+    repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.18) 0 2px, transparent 2px 4px);
+  image-rendering: pixelated;
+}
+
+.achievements__tile-frame {
+  position: absolute;
+  inset: 2px;
+  border: 1px solid rgba(201, 152, 90, 0.5);
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+}
+
+.achievements__tile-art {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-label);
+  font-size: 24px;
+  line-height: 1;
+  color: var(--fg);
+  text-shadow: 0 2px 2px rgba(0, 0, 0, 0.8), 0 0 6px rgba(0, 0, 0, 0.6);
+}
+
+.achievements__tile-check {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-family: var(--font-label);
+  font-size: 12px;
+  line-height: 1;
+  color: var(--state-heal);
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+  z-index: 2;
+}
+
+.achievements__tile-name {
+  width: 100%;
+  min-height: 24px;
+  padding: 0 2px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: 11px;
+  letter-spacing: 0.3px;
+  line-height: 1.15;
+  color: var(--fg);
+  text-shadow: var(--text-shadow-pixel);
+  word-break: break-all;
+}
+
+.achievements__tile-cell.is-locked .achievements__tile {
+  filter: grayscale(1) brightness(0.4);
+}
+
+.achievements__tile-cell.is-locked .achievements__tile-art {
+  color: #3a2a1a;
+  font-size: 32px;
+}
+
+.achievements__tile-cell.is-locked .achievements__tile-name {
+  color: #5a4a3a;
+}
+
+/* ---------- History list ---------- */
+.achievements__history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.achievements__history-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.achievements__history-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--border-dark);
+  border-radius: var(--radius-sm);
+  background: rgba(10, 6, 4, 0.35);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.achievements__history-summary:hover {
+  border-color: var(--border-light);
+  background: rgba(58, 36, 16, 0.35);
+}
+
+.achievements__history-summary.is-open {
+  border-color: var(--gold);
+  background: rgba(201, 152, 90, 0.15);
+  box-shadow: 0 0 10px rgba(201, 152, 90, 0.25);
+}
+
+.achievements__history-outcome {
+  font-family: var(--font-label);
+  font-size: var(--fs-xs);
+  letter-spacing: 1px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  line-height: 1.1;
+  color: var(--fg-muted);
+  border: 1px solid var(--border-mid);
+  background: rgba(58, 36, 16, 0.28);
+  flex-shrink: 0;
+}
+
+.achievements__history-outcome--cleared {
+  color: var(--rarity-l);
+  border-color: var(--gold-border);
+  background: rgba(201, 168, 74, 0.18);
+}
+
+.achievements__history-outcome--gameover {
+  color: var(--state-danger-soft);
+  border-color: #a8552a;
+  background: rgba(168, 85, 42, 0.22);
+}
+
+.achievements__history-outcome--abandoned {
+  color: #c9a884;
+  border-color: #7a5a3a;
+  background: rgba(122, 90, 58, 0.25);
+}
+
+.achievements__history-meta {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+  min-width: 0;
+}
+
+.achievements__history-meta-k {
+  font-family: var(--font-label);
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: var(--fg-dim);
+  margin-right: 4px;
+}
+
+.achievements__history-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px dashed var(--border-dark);
+  border-radius: var(--radius-sm);
+  background: rgba(10, 6, 4, 0.5);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+}
+
+.achievements__history-detail p {
+  margin: 0;
+}
+
+.achievements__history-empty {
+  font-family: var(--font-body);
+  color: var(--fg-muted);
+  letter-spacing: 1px;
+  text-align: center;
+  padding: 24px 0;
+  margin: 0;
+}
+
+/* ---------- Footer ---------- */
+.achievements__footer {
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+  padding-top: 4px;
+}
+
+/* ---------- Loading / error placeholder ---------- */
+.achievements__placeholder {
+  position: absolute;
+  inset: 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  z-index: var(--z-stage);
+  font-family: var(--font-body);
+  color: var(--fg);
+  letter-spacing: 2px;
+}

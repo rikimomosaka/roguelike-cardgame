@@ -3,6 +3,8 @@ import { getBestiary } from '../api/bestiary'
 import { getHistory } from '../api/history'
 import type { BestiaryDto, RunResultDto } from '../api/types'
 import { Button } from '../components/Button'
+import { Card } from '../components/Card'
+import './AchievementsScreen.css'
 
 type Tab = 'cards' | 'relics' | 'potions' | 'enemies' | 'history'
 
@@ -31,90 +33,243 @@ export function AchievementsScreen({ accountId, onBack }: Props) {
 
   if (error) return (
     <main className="achievements">
-      <p>{error}</p>
-      <Button variant="secondary" onClick={onBack}>戻る</Button>
+      <div className="achievements__pattern" aria-hidden="true" />
+      <div className="achievements__placeholder">
+        <p>{error}</p>
+        <Button variant="secondary" onClick={onBack}>戻る</Button>
+      </div>
     </main>
   )
   if (bestiary === null || history === null) return (
-    <main className="achievements"><p>読み込み中...</p></main>
+    <main className="achievements">
+      <div className="achievements__pattern" aria-hidden="true" />
+      <div className="achievements__placeholder"><p>読み込み中...</p></div>
+    </main>
   )
+
+  const counts = {
+    cards: { found: bestiary.discoveredCardBaseIds.length, total: bestiary.allKnownCardBaseIds.length },
+    relics: { found: bestiary.discoveredRelicIds.length, total: bestiary.allKnownRelicIds.length },
+    potions: { found: bestiary.discoveredPotionIds.length, total: bestiary.allKnownPotionIds.length },
+    enemies: { found: bestiary.encounteredEnemyIds.length, total: bestiary.allKnownEnemyIds.length },
+    history: history.length,
+  }
 
   return (
     <main className="achievements">
-      <header className="achievements__tabs" role="tablist">
-        <TabButton label="カード" active={tab === 'cards'} onClick={() => setTab('cards')} />
-        <TabButton label="レリック" active={tab === 'relics'} onClick={() => setTab('relics')} />
-        <TabButton label="ポーション" active={tab === 'potions'} onClick={() => setTab('potions')} />
-        <TabButton label="モンスター" active={tab === 'enemies'} onClick={() => setTab('enemies')} />
-        <TabButton label="履歴" active={tab === 'history'} onClick={() => setTab('history')} />
-      </header>
-      <section className="achievements__content">
-        {tab === 'cards' && <BestiaryList
-          allIds={bestiary.allKnownCardBaseIds}
-          discovered={new Set(bestiary.discoveredCardBaseIds)}
-          unknownLabel="???" />}
-        {tab === 'relics' && <BestiaryList
-          allIds={bestiary.allKnownRelicIds}
-          discovered={new Set(bestiary.discoveredRelicIds)}
-          unknownLabel="???" />}
-        {tab === 'potions' && <BestiaryList
-          allIds={bestiary.allKnownPotionIds}
-          discovered={new Set(bestiary.discoveredPotionIds)}
-          unknownLabel="???" />}
-        {tab === 'enemies' && <BestiaryList
-          allIds={bestiary.allKnownEnemyIds}
-          discovered={new Set(bestiary.encounteredEnemyIds)}
-          unknownLabel="???" />}
-        {tab === 'history' && <HistoryList history={history} />}
-      </section>
-      <footer className="achievements__footer">
-        <Button variant="secondary" onClick={onBack}>戻る</Button>
-      </footer>
+      <div className="achievements__pattern" aria-hidden="true" />
+      <div className="achievements__inner">
+        <header className="achievements__header">
+          <h1 className="achievements__title">❖ ARCHIVES ❖</h1>
+          <div className="achievements__ornament" aria-hidden="true">✦ ✦ ✦</div>
+        </header>
+
+        <div className="achievements__tabs" role="tablist">
+          <TabButton label="カード" count={`${counts.cards.found} / ${counts.cards.total}`}
+            active={tab === 'cards'} onClick={() => setTab('cards')} />
+          <TabButton label="レリック" count={`${counts.relics.found} / ${counts.relics.total}`}
+            active={tab === 'relics'} onClick={() => setTab('relics')} />
+          <TabButton label="ポーション" count={`${counts.potions.found} / ${counts.potions.total}`}
+            active={tab === 'potions'} onClick={() => setTab('potions')} />
+          <TabButton label="モンスター" count={`${counts.enemies.found} / ${counts.enemies.total}`}
+            active={tab === 'enemies'} onClick={() => setTab('enemies')} />
+          <TabButton label="履歴" count={`${counts.history}`}
+            active={tab === 'history'} onClick={() => setTab('history')} />
+        </div>
+
+        <section className="achievements__content">
+          {tab === 'cards' && (
+            <CardsTab
+              allIds={bestiary.allKnownCardBaseIds}
+              discovered={new Set(bestiary.discoveredCardBaseIds)} />
+          )}
+          {tab === 'relics' && (
+            <TilesTab
+              title="レリック"
+              allIds={bestiary.allKnownRelicIds}
+              discovered={new Set(bestiary.discoveredRelicIds)}
+              glyph="◈" />
+          )}
+          {tab === 'potions' && (
+            <TilesTab
+              title="ポーション"
+              allIds={bestiary.allKnownPotionIds}
+              discovered={new Set(bestiary.discoveredPotionIds)}
+              glyph="⚗" />
+          )}
+          {tab === 'enemies' && (
+            <TilesTab
+              title="モンスター"
+              allIds={bestiary.allKnownEnemyIds}
+              discovered={new Set(bestiary.encounteredEnemyIds)}
+              glyph="☠" />
+          )}
+          {tab === 'history' && <HistoryList history={history} />}
+        </section>
+
+        <footer className="achievements__footer">
+          <Button variant="secondary" onClick={onBack}>戻る</Button>
+        </footer>
+      </div>
     </main>
   )
 }
 
-function TabButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+function TabButton({ label, count, active, onClick }: {
+  label: string; count?: string; active: boolean; onClick: () => void
+}) {
   return (
-    <button role="tab" aria-selected={active} onClick={onClick}
-      className={'achievements__tab' + (active ? ' achievements__tab--active' : '')}>
-      {label}
+    <button
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={'achievements__tab' + (active ? ' achievements__tab--active' : '')}
+    >
+      <span>{label}</span>
+      {count !== undefined && <span className="achievements__tab-count">{count}</span>}
     </button>
   )
 }
 
-function BestiaryList({ allIds, discovered, unknownLabel }: {
-  allIds: string[]; discovered: Set<string>; unknownLabel: string
-}) {
+/* ------------------------------------------------------------------
+   Cards tab — uses the shared <Card> primitive for each tile.
+   The primitive is itself the canonical v12 card; we pass locked/unknown
+   variant for undiscovered entries.
+   ------------------------------------------------------------------ */
+function CardsTab({ allIds, discovered }: { allIds: string[]; discovered: Set<string> }) {
   return (
-    <div>
-      <p className="achievements__count">{discovered.size} / {allIds.length} 発見</p>
-      <ul className="achievements__list">
-        {allIds.map(id => (
-          <li key={id} className="achievements__item">
-            {discovered.has(id) ? <span>✓ {id} ({id})</span> : <span>{unknownLabel} ({id})</span>}
-          </li>
-        ))}
-      </ul>
+    <div className="achievements__panel">
+      <div className="achievements__panel-title-row">
+        <div className="achievements__panel-title">▸ CARDS</div>
+        <p className="achievements__count">{discovered.size} / {allIds.length} 発見</p>
+      </div>
+      <div className="achievements__scroll">
+        <div className="achievements__card-grid">
+          {allIds.map(id => {
+            const isDiscovered = discovered.has(id)
+            if (isDiscovered) {
+              return (
+                <div key={id} className="achievements__card-cell">
+                  <Card
+                    name={id}
+                    cost={1}
+                    type="skill"
+                    rarity="c"
+                  />
+                  <span className="achievements__card-id">✓ {id} ({id})</span>
+                </div>
+              )
+            }
+            return (
+              <div key={id} className="achievements__card-cell">
+                <Card
+                  name="? ? ?"
+                  cost={0}
+                  type="skill"
+                  rarity="c"
+                  locked
+                />
+                <span className="achievements__card-id">??? ({id})</span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
     </div>
   )
 }
 
+/* ------------------------------------------------------------------
+   Tiles tab — relics / potions / enemies.
+   Square tile (v1 canonical) with art glyph, name under.
+   ------------------------------------------------------------------ */
+function TilesTab({ title, allIds, discovered, glyph }: {
+  title: string; allIds: string[]; discovered: Set<string>; glyph: string
+}) {
+  return (
+    <div className="achievements__panel">
+      <div className="achievements__panel-title-row">
+        <div className="achievements__panel-title">▸ {title.toUpperCase()}</div>
+        <p className="achievements__count">{discovered.size} / {allIds.length} 発見</p>
+      </div>
+      <div className="achievements__scroll">
+        <div className="achievements__tile-grid">
+          {allIds.map(id => {
+            const isDiscovered = discovered.has(id)
+            return (
+              <div
+                key={id}
+                className={'achievements__tile-cell' + (isDiscovered ? '' : ' is-locked')}
+              >
+                <div className="achievements__tile">
+                  <div className="achievements__tile-bg" aria-hidden="true" />
+                  <div className="achievements__tile-frame" aria-hidden="true" />
+                  <div className="achievements__tile-art" aria-hidden="true">
+                    {isDiscovered ? glyph : '?'}
+                  </div>
+                  {isDiscovered && (
+                    <span className="achievements__tile-check" aria-hidden="true">✓</span>
+                  )}
+                </div>
+                <div className="achievements__tile-name">
+                  {isDiscovered ? (
+                    <span>✓ {id} ({id})</span>
+                  ) : (
+                    <span>??? ({id})</span>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------
+   History tab — run rows with expand-on-click detail.
+   ------------------------------------------------------------------ */
 function HistoryList({ history }: { history: RunResultDto[] }) {
   const [expanded, setExpanded] = useState<string | null>(null)
-  if (history.length === 0) return <p>履歴なし</p>
+  if (history.length === 0) {
+    return (
+      <div className="achievements__panel">
+        <div className="achievements__panel-title-row">
+          <div className="achievements__panel-title">▸ RUN HISTORY</div>
+          <p className="achievements__count">0 件</p>
+        </div>
+        <p className="achievements__history-empty">履歴なし</p>
+      </div>
+    )
+  }
   return (
-    <ul className="achievements__history">
-      {history.map(run => (
-        <li key={run.runId}>
-          <button className="achievements__history-summary"
-            onClick={() => setExpanded(expanded === run.runId ? null : run.runId)}>
-            [{run.outcome}] Act{run.actReached} / {formatPlayTime(run.playSeconds)} / {run.endedAtUtc}
-          </button>
-          {expanded === run.runId && <HistoryDetail run={run} />}
-        </li>
-      ))}
-    </ul>
+    <div className="achievements__panel">
+      <div className="achievements__panel-title-row">
+        <div className="achievements__panel-title">▸ RUN HISTORY</div>
+        <p className="achievements__count">{history.length} 件</p>
+      </div>
+      <div className="achievements__scroll">
+        <ul className="achievements__history">
+          {history.map(run => {
+            const isOpen = expanded === run.runId
+            return (
+              <li key={run.runId} className="achievements__history-entry">
+                <button
+                  className={
+                    'achievements__history-summary' + (isOpen ? ' is-open' : '')
+                  }
+                  onClick={() => setExpanded(isOpen ? null : run.runId)}
+                >
+                  {`[${run.outcome}] Act${run.actReached} / ${formatPlayTime(run.playSeconds)} / ${run.endedAtUtc}`}
+                </button>
+                {isOpen && <HistoryDetail run={run} />}
+              </li>
+            )
+          })}
+        </ul>
+      </div>
+    </div>
   )
 }
 
