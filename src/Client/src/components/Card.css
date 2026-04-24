@@ -1,0 +1,171 @@
+/* =============================================================
+   Card — canonical from archives-cards-v12.html
+   Width is controlled via inline style (default 104px).
+   Height is derived from 1:1.4 aspect ratio.
+   ============================================================= */
+
+.card {
+  aspect-ratio: 1 / 1.4;
+  position: relative;
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--bg-0);
+  display: flex;
+  flex-direction: column;
+  padding: 3px 3px 4px;
+  box-sizing: border-box;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease;
+  cursor: default;
+  user-select: none;
+}
+
+.card[role='button'] { cursor: pointer; }
+.card[role='button']:hover { border-color: var(--border-hover); }
+
+.card.is-selected {
+  border-color: var(--gold);
+  box-shadow: 0 0 14px rgba(255, 213, 79, 0.5);
+}
+
+.card.is-locked {
+  filter: grayscale(1) brightness(0.45);
+  cursor: default;
+}
+.card.is-locked .card__name { color: #5a4a3a; }
+.card.is-locked .card__cost,
+.card.is-locked .card__type { display: none; }
+.card.is-locked .card__illust { font-size: 22px; color: #3a2a1a; }
+
+/* ---------- Background (by card type) ---------- */
+.card__bg {
+  position: absolute; inset: 0; z-index: 0;
+  background: repeating-linear-gradient(45deg, rgba(0,0,0,0.18) 0 2px, transparent 2px 4px);
+  image-rendering: pixelated;
+}
+.card--type-attack .card__bg {
+  background:
+    linear-gradient(180deg, #6a2a1a 0%, #3a1a10 100%),
+    repeating-linear-gradient(45deg, rgba(0,0,0,0.2) 0 2px, transparent 2px 4px);
+}
+.card--type-skill .card__bg {
+  background:
+    linear-gradient(180deg, #2a4a3a 0%, #10201a 100%),
+    repeating-linear-gradient(45deg, rgba(0,0,0,0.2) 0 2px, transparent 2px 4px);
+}
+.card--type-power .card__bg {
+  background:
+    linear-gradient(180deg, #4a2a5a 0%, #1a1025 100%),
+    repeating-linear-gradient(45deg, rgba(0,0,0,0.2) 0 2px, transparent 2px 4px);
+}
+.card--type-curse .card__bg {
+  background: linear-gradient(180deg, #1a1a1a 0%, #000 100%);
+}
+.card--type-status .card__bg {
+  background: linear-gradient(180deg, #3a3a4a 0%, #101018 100%);
+}
+
+/* ---------- Top strip (cost + name) ---------- */
+.card__top {
+  position: relative; z-index: 2;
+  height: 22px; flex-shrink: 0;
+}
+
+.card__cost {
+  position: absolute; left: 0; top: 0;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--fg-muted);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1;
+  color: var(--gold);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 4px rgba(255, 213, 79, 0.35);
+  text-shadow: var(--text-shadow-pixel);
+  z-index: 1;
+}
+
+.card__cost-n {
+  display: inline-block;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
+.card__name {
+  width: 100%; height: 22px;
+  padding: 0 4px 0 28px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  font-family: var(--font-body);
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  color: var(--fg);
+  text-shadow: var(--text-shadow-pixel);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.1;
+}
+
+.card__plus {
+  color: #7dffe8;
+  font-weight: 700;
+  margin-left: 1px;
+}
+
+/* ---------- Illustration (1:1 square) ---------- */
+.card__illust {
+  position: relative; z-index: 1;
+  aspect-ratio: 1 / 1;
+  width: calc(100% - 6px);
+  margin: 7px auto 0;
+  background:
+    repeating-linear-gradient(0deg, rgba(0,0,0,0.25) 0 2px, transparent 2px 4px),
+    var(--bg-2);
+  border: 1px solid rgba(201, 152, 90, 0.35);
+  image-rendering: pixelated;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-label);
+  font-size: 9px;
+  color: #6a4a2a;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+
+/* ---------- Bottom type label ---------- */
+.card__type {
+  position: relative; z-index: 2;
+  margin-top: auto;
+  text-align: center;
+  padding: 2px 0 1px;
+  font-family: var(--font-label);
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: var(--border-light);
+  text-shadow: 0 1px 0 #000;
+}
+
+/* ---------- Rarity (cost ring + name + illust frame) ---------- */
+.card--rarity-c .card__cost   { border-color: #d8d8d8; color: #f0f0f0; box-shadow: 0 0 4px rgba(216,216,216,0.3); }
+.card--rarity-c .card__name   { color: var(--rarity-c); }
+.card--rarity-c .card__illust { border-color: rgba(216,216,216,0.4); }
+
+.card--rarity-r .card__cost   { border-color: #5a8ac9; color: var(--rarity-r); box-shadow: 0 0 4px rgba(90,138,201,0.5); }
+.card--rarity-r .card__name   { color: var(--rarity-r); }
+.card--rarity-r .card__illust { border-color: rgba(90,138,201,0.55); }
+
+.card--rarity-e .card__cost   { border-color: #a06ad4; color: var(--rarity-e); box-shadow: 0 0 4px rgba(160,106,212,0.55); }
+.card--rarity-e .card__name   { color: var(--rarity-e); }
+.card--rarity-e .card__illust { border-color: rgba(160,106,212,0.6); }
+
+.card--rarity-l .card__cost   { border-color: #c9a838; color: var(--rarity-l); box-shadow: 0 0 6px rgba(255,229,138,0.6); }
+.card--rarity-l .card__name   { color: var(--rarity-l); }
+.card--rarity-l .card__illust { border-color: rgba(201,168,56,0.65); box-shadow: inset 0 0 6px rgba(201,168,56,0.2); }
