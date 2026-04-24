@@ -33,9 +33,9 @@ import './MapScreen.css'
 type Props = {
   snapshot: RunSnapshotDto
   onExitToMenu: () => void
-  onAbandon: (result: RunResultDto | null) => void
+  onAbandon: (result: RunResultDto | null, snapshot: RunSnapshotDto) => void
   onDebugDamage?: () => void
-  onRunFinished?: (result: RunResultDto) => void
+  onRunFinished?: (result: RunResultDto, snapshot: RunSnapshotDto) => void
 }
 
 const SHOP_MESSAGE_MS = 2500
@@ -118,6 +118,8 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
   const dragRef = useRef<{ startX: number; startY: number; startPan: { x: number; y: number }; moved: boolean } | null>(null)
   const stageRef = useRef<HTMLDivElement | null>(null)
   const mountedAt = useRef<number>(performance.now())
+  const snapRef = useRef<RunSnapshotDto>(snap)
+  useEffect(() => { snapRef.current = snap }, [snap])
 
   useEffect(() => {
     const stage = stageRef.current
@@ -178,9 +180,14 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
       if ('outcome' in resp) {
         const result = resp as RunResultDto
         if (result.outcome === 'GameOver') {
-          setPendingFinish({ kind: 'gameover', result, cause: 'hp' })
+          // Zero HP locally first so the topbar bar animates down, then
+          // show GAME OVER once the animation has had time to play out.
+          setSnap(s => ({ ...s, run: { ...s.run, currentHp: 0 } }))
+          window.setTimeout(() => {
+            setPendingFinish({ kind: 'gameover', result, cause: 'hp' })
+          }, 600)
         } else {
-          onRunFinished?.(result)
+          onRunFinished?.(result, snapRef.current)
         }
       } else {
         setSnap(resp as RunSnapshotDto)
@@ -248,9 +255,9 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
     if (!pendingFinish) return
     const t = window.setTimeout(() => {
       if (pendingFinish.kind === 'abandon') {
-        onAbandon(pendingFinish.result)
+        onAbandon(pendingFinish.result, snapRef.current)
       } else {
-        onRunFinished?.(pendingFinish.result)
+        onRunFinished?.(pendingFinish.result, snapRef.current)
       }
     }, 2000)
     return () => window.clearTimeout(t)
@@ -359,7 +366,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
     if (!accountId) return
     const resp = await winBattle(accountId, elapsedSeconds())
     if ('outcome' in resp) {
-      onRunFinished?.(resp)
+      onRunFinished?.(resp, snapRef.current)
       return
     }
     setRewardDismissed(false)
@@ -544,7 +551,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
                       ? '#d9b77a'
                       : '#b08a5a'
                   const opacity = visitedEdge ? 1 : nextEdge ? 0.95 : 0.75
-                  const strokeWidth = visitedEdge ? 0.7 : nextEdge ? 0.5 : 0.45
+                  const strokeWidth = nextEdge ? 0.5 : 0.45
                   const dash = visitedEdge
                     ? undefined
                     : nextEdge

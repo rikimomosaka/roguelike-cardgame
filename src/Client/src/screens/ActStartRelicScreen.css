@@ -113,38 +113,6 @@
   text-shadow: 0 1px 0 #000;
 }
 
-/* ---- Footer hint ---- */
-.ar-hint {
-  font-family: var(--font-body);
-  font-size: var(--fs-sm);
-  letter-spacing: 1.5px;
-  color: var(--fg-dim);
-  margin: 0 auto 0 0;
-}
-
-/* ---- Close button (header right) ---- */
-.ar-close {
-  width: 32px;
-  height: 32px;
-  display: grid;
-  place-items: center;
-  background: rgba(10, 6, 4, 0.55);
-  border: 1px solid var(--border-mid);
-  border-radius: var(--radius-sm);
-  color: var(--fg-muted);
-  font-family: var(--font-body);
-  font-size: 22px;
-  line-height: 1;
-  cursor: pointer;
-  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
-}
-
-.ar-close:hover {
-  border-color: var(--border-hover);
-  color: var(--gold-soft);
-  background: rgba(58, 36, 16, 0.55);
-}
-
 /* ---- Chosen marker on selected slot ---- */
 .ar-slot.is-chosen {
   border-color: var(--gold);

@@ -33,11 +33,17 @@
 
 .topbar__hp {
   gap: 10px;
+  width: 220px;
+  flex-shrink: 0;
+  justify-content: flex-start;
 }
 
 .topbar__hp-label {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  min-width: 96px;
+  display: inline-block;
+  text-align: left;
 }
 
 .topbar__hp-track {
@@ -91,6 +97,19 @@
 
 .topbar__gold {
   color: var(--gold-warm);
+  width: 120px;
+  flex-shrink: 0;
+  justify-content: flex-start;
+}
+
+.topbar__num {
+  font-variant-numeric: tabular-nums;
+}
+
+.topbar__gold .topbar__num {
+  min-width: 48px;
+  display: inline-block;
+  text-align: right;
 }
 
 .topbar__label {

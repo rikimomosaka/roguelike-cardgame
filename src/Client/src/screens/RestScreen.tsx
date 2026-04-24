@@ -125,12 +125,11 @@ export function RestScreen({ deck, completed, onHeal, onUpgrade, onClose }: Prop
       title="焚き火"
       subtitle={`休息所${completed ? '(使用済み)' : ''}`}
       width={640}
+      footerAlign="center"
       footer={
-        <div className="rs-footer">
-          <Button onClick={() => onClose()} aria-label="Close">
-            閉じる
-          </Button>
-        </div>
+        <Button onClick={() => onClose()} aria-label="Close">
+          閉じる
+        </Button>
       }
     >
       <div className="rs-fire" aria-hidden="true">✦</div>

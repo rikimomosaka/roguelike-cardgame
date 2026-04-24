@@ -40,18 +40,18 @@ export function RewardPopup(p: Props) {
         title="カードを選ぶ"
         subtitle="1 枚選択"
         width={680}
+        footerAlign="center"
         footer={
-          <button
-            type="button"
-            className="rw-picker__skip"
+          <Button
+            variant="secondary"
             onClick={async () => {
               if (r.cardStatus === 'Pending') await p.onSkipCard()
               setCardView(false)
             }}
+            aria-label="閉じる"
           >
-            <span className="rw-picker__skip-mark" aria-hidden="true">◂</span>
-            Skip
-          </button>
+            閉じる
+          </Button>
         }
       >
         <div className="rw-picker">
@@ -91,9 +91,10 @@ export function RewardPopup(p: Props) {
       variant="modal"
       title="報酬"
       width={620}
+      footerAlign="center"
       footer={
         <Button onClick={() => p.onProceed()}>
-          {r.isBossReward ? '次の層へ' : '進む'}
+          {r.isBossReward ? '次の層へ' : '閉じる'}
         </Button>
       }
     >

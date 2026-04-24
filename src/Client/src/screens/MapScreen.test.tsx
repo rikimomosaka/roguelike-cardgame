@@ -297,7 +297,7 @@ describe('MapScreen', () => {
     })
   })
 
-  it('clicking 進む on non-boss reward popup does NOT call server; closes locally and re-opens on tile re-click', async () => {
+  it('clicking 閉じる on non-boss reward popup does NOT call server; closes locally and re-opens on tile re-click', async () => {
     // Regression (new Bug ②): non-boss reward must be dismissed locally so the tile is
     // re-enterable with the claim status intact. The server call should happen on move.
     render(
@@ -309,7 +309,7 @@ describe('MapScreen', () => {
         />
       </AccountProvider>,
     )
-    fireEvent.click(screen.getByText('進む'))
+    fireEvent.click(screen.getByText('閉じる'))
     // Reward popup dismissed locally — no /reward/proceed request.
     const proceedCall = fetchMock.mock.calls.find((args) =>
       String(args[0]).includes('/runs/current/reward/proceed'),

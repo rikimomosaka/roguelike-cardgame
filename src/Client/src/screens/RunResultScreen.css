@@ -248,8 +248,10 @@
   align-items: center;
   justify-content: center;
   font-family: var(--font-label);
-  font-size: 9px;
-  color: rgba(0, 0, 0, 0.6);
+  font-size: 14px;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.78);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.15);
   font-weight: 700;
   position: relative;
 }

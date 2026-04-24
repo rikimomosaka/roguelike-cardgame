@@ -41,7 +41,7 @@ describe('RewardPopup', () => {
         {...handlers}
       />,
     )
-    const proceed = screen.getByText('進む') as HTMLButtonElement
+    const proceed = screen.getByText('閉じる') as HTMLButtonElement
     expect(proceed.disabled).toBe(false)
     fireEvent.click(proceed)
     expect(handlers.onProceed).toHaveBeenCalledTimes(1)
@@ -58,7 +58,7 @@ describe('RewardPopup', () => {
         {...handlers}
       />,
     )
-    expect((screen.getByText('進む') as HTMLButtonElement).disabled).toBe(false)
+    expect((screen.getByText('閉じる') as HTMLButtonElement).disabled).toBe(false)
   })
 
   it('allows reopening the card chooser after Skip to reclaim a card', async () => {
@@ -185,7 +185,7 @@ describe('RewardPopup', () => {
       />,
     )
     expect(screen.getByText('次の層へ')).toBeDefined()
-    expect(screen.queryByText('進む')).toBeNull()
+    expect(screen.queryByText('閉じる')).toBeNull()
   })
 
   it('proceed button shows "進む" when reward.isBossReward is false', () => {
@@ -199,11 +199,11 @@ describe('RewardPopup', () => {
         {...handlers}
       />,
     )
-    expect(screen.getByText('進む')).toBeDefined()
+    expect(screen.getByText('閉じる')).toBeDefined()
     expect(screen.queryByText('次の層へ')).toBeNull()
   })
 
-  it('card view shows only Skip button (no 戻る) when cardStatus is Pending', () => {
+  it('card view shows only 閉じる button (no 戻る) when cardStatus is Pending', () => {
     const handlers = baseHandlers()
     render(
       <RewardPopup
@@ -214,11 +214,11 @@ describe('RewardPopup', () => {
       />,
     )
     fireEvent.click(screen.getByText('✨ カード報酬'))
-    expect(screen.getByText('Skip')).toBeDefined()
+    expect(screen.getByText('閉じる')).toBeDefined()
     expect(screen.queryByText('戻る')).toBeNull()
   })
 
-  it('clicking Skip when Pending calls onSkipCard then closes card view', async () => {
+  it('clicking 閉じる when Pending calls onSkipCard then closes card view', async () => {
     const handlers = baseHandlers()
     render(
       <RewardPopup
@@ -229,15 +229,15 @@ describe('RewardPopup', () => {
       />,
     )
     fireEvent.click(screen.getByText('✨ カード報酬'))
-    fireEvent.click(screen.getByText('Skip'))
+    fireEvent.click(screen.getByText('閉じる'))
     await waitFor(() => expect(handlers.onSkipCard).toHaveBeenCalledTimes(1))
     await waitFor(() => expect(screen.queryByText('カードを選ぶ')).toBeNull())
   })
 
-  it('card view shows Skip (not 戻る) when reopened after Skipped and does not re-call onSkipCard', async () => {
-    // Regression (new Bug ③): After Skip, reopening the card view previously
-    // rendered only "戻る". It should render "Skip" only, and clicking it must
-    // not hit the server again (server rejects SkipCard when not Pending).
+  it('card view shows 閉じる (not 戻る) when reopened after Skipped and does not re-call onSkipCard', async () => {
+    // Regression: After Skip, reopening the card view must render "閉じる"
+    // and clicking it must not hit the server again (server rejects SkipCard
+    // when the reward is not Pending).
     const handlers = baseHandlers()
     render(
       <RewardPopup
@@ -248,9 +248,9 @@ describe('RewardPopup', () => {
       />,
     )
     fireEvent.click(screen.getByText('✨ カード報酬'))
-    expect(screen.getByText('Skip')).toBeDefined()
+    expect(screen.getByText('閉じる')).toBeDefined()
     expect(screen.queryByText('戻る')).toBeNull()
-    fireEvent.click(screen.getByText('Skip'))
+    fireEvent.click(screen.getByText('閉じる'))
     // onSkipCard は呼ばれてはならない（サーバ側 SkipCard は Pending 以外で 409）
     await waitFor(() => expect(screen.queryByText('カードを選ぶ')).toBeNull())
     expect(handlers.onSkipCard).not.toHaveBeenCalled()

@@ -3,6 +3,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import './Popup.css'
 
 export type PopupVariant = 'modal' | 'picker' | 'confirm'
+export type PopupFooterAlign = 'start' | 'center' | 'end'
 
 type Props = {
   open: boolean
@@ -11,6 +12,7 @@ type Props = {
   subtitle?: ReactNode
   headRight?: ReactNode
   footer?: ReactNode
+  footerAlign?: PopupFooterAlign
   width?: number | string
   variant?: PopupVariant
   closeOnEsc?: boolean
@@ -25,6 +27,7 @@ export function Popup({
   subtitle,
   headRight,
   footer,
+  footerAlign = 'end',
   width = 620,
   variant = 'modal',
   closeOnEsc = true,
@@ -75,7 +78,11 @@ export function Popup({
           </header>
         )}
         <div className="popup__body">{children}</div>
-        {footer ? <footer className="popup__foot">{footer}</footer> : null}
+        {footer ? (
+          <footer className={`popup__foot popup__foot--${footerAlign}`}>
+            {footer}
+          </footer>
+        ) : null}
       </div>
     </div>
   )

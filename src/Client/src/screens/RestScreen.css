@@ -183,14 +183,6 @@
   letter-spacing: 1px;
 }
 
-/* ---- Close-only footer variation ---- */
-.rs-footer {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 10px;
-}
-
 /* ---- Upgrade picker body ---- */
 .rs-picker-hint {
   font-family: var(--font-body);

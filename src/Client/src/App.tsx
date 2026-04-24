@@ -21,7 +21,7 @@ type Screen =
   | { kind: 'settings' }
   | { kind: 'achievements' }
   | { kind: 'map'; snapshot: RunSnapshotDto }
-  | { kind: 'run-result'; result: RunResultDto }
+  | { kind: 'run-result'; result: RunResultDto; snapshot?: RunSnapshotDto }
   | { kind: 'bootstrap-error'; message: string }
 
 export default function App() {
@@ -97,8 +97,8 @@ export default function App() {
       <MapScreen
         snapshot={screen.snapshot}
         onExitToMenu={() => setScreen({ kind: 'main-menu' })}
-        onAbandon={(r) => setScreen(r ? { kind: 'run-result', result: r } : { kind: 'main-menu', hasCurrentRun: false })}
-        onRunFinished={(r) => setScreen({ kind: 'run-result', result: r })}
+        onAbandon={(r, snapshot) => setScreen(r ? { kind: 'run-result', result: r, snapshot } : { kind: 'main-menu', hasCurrentRun: false })}
+        onRunFinished={(r, snapshot) => setScreen({ kind: 'run-result', result: r, snapshot })}
       />
     )
   }
@@ -106,6 +106,7 @@ export default function App() {
     return (
       <RunResultScreen
         result={screen.result}
+        snapshot={screen.snapshot}
         onReturnToMenu={() => setScreen({ kind: 'main-menu', hasCurrentRun: false })}
       />
     )

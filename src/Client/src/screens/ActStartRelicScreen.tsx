@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Button } from '../components/Button'
 import { Popup } from '../components/Popup'
 import { useTooltipTarget } from '../components/Tooltip'
 import type { TooltipContent } from '../components/Tooltip'
@@ -32,25 +33,13 @@ export function ActStartRelicScreen({ choices, relicNames, relicDescriptions, on
       open
       variant="modal"
       title="レリックを選ぶ"
-      subtitle={chosen ? '選択しました — 閉じるボタンを押してください' : '1 つを選べ'}
       width={900}
       closeOnEsc={false}
-      headRight={
-        <button
-          type="button"
-          className="ar-close"
-          onClick={onClose}
-          aria-label="閉じる"
-        >
-          ×
-        </button>
-      }
+      footerAlign="center"
       footer={
-        <span className="ar-hint">
-          {chosen
-            ? '一覧を見て準備ができたら閉じてください'
-            : '1 つを選んでください'}
-        </span>
+        <Button onClick={onClose} aria-label="閉じる">
+          閉じる
+        </Button>
       }
     >
       <ul className="ar-slots">

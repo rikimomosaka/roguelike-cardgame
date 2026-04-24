@@ -174,6 +174,7 @@ export function MerchantScreen(p: Props) {
       title="商人"
       width={820}
       headRight={<span className="mc-gold"><span className="mc-num">{p.gold}</span> ゴールド</span>}
+      footerAlign="center"
       footer={
         <Button onClick={() => p.onLeave()} aria-label="Leave">
           立ち去る
@@ -296,26 +297,29 @@ function RelicPotionTile({ kind, offer, name, description, icon, gold, onBuy }: 
     .filter(Boolean)
     .join(' ')
   return (
-    <li
-      className={classes}
-      onMouseEnter={tip.onMouseEnter}
-      onMouseMove={tip.onMouseMove}
-      onMouseLeave={tip.onMouseLeave}
-    >
-      <div className="mc-tile__head">
+    <li className="mc-tile-wrap">
+      <button
+        type="button"
+        className={classes}
+        onClick={() => onBuy(kind, offer.id)}
+        disabled={offer.sold || locked}
+        aria-label={`Buy ${name}`}
+        onMouseEnter={tip.onMouseEnter}
+        onMouseMove={tip.onMouseMove}
+        onMouseLeave={tip.onMouseLeave}
+      >
         <span className="mc-tile__icon" aria-hidden="true">{icon}</span>
-        <span className="mc-tile__name">{name}</span>
-      </div>
-      <div className="mc-tile__buy-row">
-        <span className="mc-tile__price"><span className="mc-num">{offer.price}</span> ゴールド</span>
-        <Button
-          onClick={() => onBuy(kind, offer.id)}
-          disabled={offer.sold || locked}
-          aria-label={`Buy ${name}`}
-        >
-          {offer.sold ? '売切' : '購入'}
-        </Button>
-      </div>
+        <span className="mc-tile__sr-name">{name}</span>
+        <span className="mc-tile__price">
+          {offer.sold ? (
+            '売切'
+          ) : (
+            <>
+              <span className="mc-num">{offer.price}</span> ゴールド
+            </>
+          )}
+        </span>
+      </button>
     </li>
   )
 }

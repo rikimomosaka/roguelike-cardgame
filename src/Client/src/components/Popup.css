@@ -162,10 +162,13 @@
 .popup__foot {
   flex-shrink: 0;
   display: flex;
-  justify-content: flex-end;
   align-items: center;
   gap: 10px;
   padding: 10px 14px;
   border-top: 1px solid var(--border-mid);
   background: rgba(10, 6, 4, 0.4);
 }
+
+.popup__foot--start  { justify-content: flex-start; }
+.popup__foot--center { justify-content: center; }
+.popup__foot--end    { justify-content: flex-end; }

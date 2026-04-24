@@ -1,9 +1,60 @@
-import type { RunResultDto } from '../api/types'
+import type { RunResultDto, RunSnapshotDto, TileKind } from '../api/types'
 import './RunResultScreen.css'
 
 type Props = {
   result: RunResultDto
+  snapshot?: RunSnapshotDto
   onReturnToMenu: () => void
+}
+
+function journeyIcon(kind: TileKind, resolvedKind: TileKind | null): string {
+  const k = kind === 'Unknown' && resolvedKind === null ? 'Unknown' : (resolvedKind ?? kind)
+  switch (k) {
+    case 'Start': return '●'
+    case 'Enemy': return '⚔'
+    case 'Elite': return '♛'
+    case 'Merchant': return '◆'
+    case 'Rest': return '△'
+    case 'Treasure': return '◈'
+    case 'Event': return '?'
+    case 'Unknown': return '?'
+    case 'Boss': return '♛'
+  }
+}
+
+function journeyNodeClass(kind: TileKind, resolvedKind: TileKind | null): string {
+  const k = kind === 'Unknown' && resolvedKind === null ? 'Unknown' : (resolvedKind ?? kind)
+  switch (k) {
+    case 'Start': return 'node--start'
+    case 'Enemy': return 'node--fight'
+    case 'Elite': return 'node--elite'
+    case 'Event': return 'node--event'
+    case 'Merchant': return 'node--merchant'
+    case 'Rest': return 'node--rest'
+    case 'Treasure': return 'node--treasure'
+    case 'Boss': return 'node--boss'
+    case 'Unknown': return 'node--empty'
+  }
+}
+
+function journeyTooltip(kind: TileKind, resolvedKind: TileKind | null): string {
+  const k = kind === 'Unknown' && resolvedKind === null ? 'Unknown' : (resolvedKind ?? kind)
+  switch (k) {
+    case 'Start': return '開始地点'
+    case 'Enemy': return '敵との戦闘'
+    case 'Elite': return 'エリート戦'
+    case 'Merchant': return '商人'
+    case 'Rest': return '休憩'
+    case 'Treasure': return '宝箱'
+    case 'Event': return 'イベント'
+    case 'Unknown': return '未知'
+    case 'Boss': return 'ボス戦'
+  }
+}
+
+function actLabel(act: number): string {
+  const romans = ['I', 'II', 'III', 'IV', 'V', 'VI']
+  return romans[act - 1] ?? String(act)
 }
 
 function formatSeconds(total: number): string {
@@ -25,7 +76,7 @@ function outcomeClass(outcome: string): string {
   }
 }
 
-export function RunResultScreen({ result, onReturnToMenu }: Props) {
+export function RunResultScreen({ result, snapshot, onReturnToMenu }: Props) {
   const relicCount = result.finalRelics.length
   const deckCount = result.finalDeck.length
 
@@ -78,26 +129,49 @@ export function RunResultScreen({ result, onReturnToMenu }: Props) {
                 <div className="rr__trail-header">
                   <span>走行履歴</span>
                 </div>
-                {/*
-                  Per-node trail data is not yet wired through RunResultDto;
-                  render compact act-summary placeholder rows so the layout
-                  from the canonical mockup is preserved visually.
-                */}
-                <div className="rr__journey-row">
-                  <div className="rr__journey-act-label">
-                    ACT {result.actReached >= 1 ? 'I' : '-'}
+                {snapshot ? (
+                  <div className="rr__journey-row">
+                    <div className="rr__journey-act-label">
+                      ACT {actLabel(snapshot.run.currentAct)}
+                    </div>
+                    <div className="rr__journey-nodes">
+                      {snapshot.run.visitedNodeIds.map((nid, i) => {
+                        const node = snapshot.map.nodes.find(x => x.id === nid)
+                        if (!node) return null
+                        const resolved = snapshot.run.unknownResolutions[nid] ?? null
+                        const icon = journeyIcon(node.kind, resolved)
+                        const cls = journeyNodeClass(node.kind, resolved)
+                        const tip = journeyTooltip(node.kind, resolved)
+                        return (
+                          <div
+                            key={`${nid}-${i}`}
+                            className={`rr__journey-node ${cls}`}
+                            title={tip}
+                            aria-label={tip}
+                          >
+                            <span aria-hidden="true">{icon}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
-                  <div className="rr__journey-nodes" aria-hidden="true">
-                    {Array.from({ length: 17 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className={`rr__journey-node ${i === 0 ? 'node--start' : 'node--empty'}`}
-                      >
-                        {i === 0 ? 'S' : ''}
-                      </div>
-                    ))}
+                ) : (
+                  <div className="rr__journey-row">
+                    <div className="rr__journey-act-label">
+                      ACT {result.actReached >= 1 ? actLabel(result.actReached) : '-'}
+                    </div>
+                    <div className="rr__journey-nodes" aria-hidden="true">
+                      {Array.from({ length: 17 }).map((_, i) => (
+                        <div
+                          key={i}
+                          className={`rr__journey-node ${i === 0 ? 'node--start' : 'node--empty'}`}
+                        >
+                          {i === 0 ? 'S' : ''}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               <div className="rr__trail-legend" aria-hidden="true">
