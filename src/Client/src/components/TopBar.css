@@ -1,0 +1,182 @@
+/* =============================================================
+   TopBar — visual port of map-screen-v4.html top HUD
+   Uses tokens from tokens.css. Rendered as a fixed bar at the top
+   of the game stage (MapScreen + Battle peek etc.).
+   ============================================================= */
+
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--z-topbar);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background: rgba(10, 6, 4, 0.92);
+  border-bottom: 1px solid var(--border-mid);
+  color: var(--fg);
+  font-family: var(--font-body);
+}
+
+.topbar__group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-dark);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel);
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.topbar__hp {
+  color: var(--state-danger-soft);
+}
+
+.topbar__gold {
+  color: var(--gold-warm);
+}
+
+.topbar__label {
+  font-family: var(--font-label);
+  font-size: 13px;
+  letter-spacing: var(--ls-label);
+  color: var(--fg-muted);
+}
+
+.topbar__relics {
+  flex: 1;
+  min-width: 0;
+  list-style: none;
+  margin: 0;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border-dark);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel);
+  overflow: hidden;
+}
+
+.topbar__relic {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-sm);
+  background: rgba(10, 6, 4, 0.6);
+  color: var(--gold-warm);
+  font-family: var(--font-body);
+  font-size: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.topbar__potions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-dark);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel);
+}
+
+.topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.topbar__btn {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-mid);
+  color: var(--fg-muted);
+  border-radius: var(--radius-sm);
+  padding: 7px 14px;
+  font-family: var(--font-label);
+  font-size: 14px;
+  letter-spacing: var(--ls-wide);
+  cursor: pointer;
+  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+
+.topbar__btn:hover {
+  border-color: var(--border-hover);
+  color: var(--gold-soft);
+  background: rgba(201, 152, 90, 0.12);
+}
+
+.topbar__btn[aria-pressed='true'] {
+  border-color: var(--gold-deep);
+  color: var(--gold-soft);
+  background: rgba(201, 152, 90, 0.18);
+}
+
+.topbar__deck-wrap {
+  position: relative;
+}
+
+.topbar__deck-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 16rem;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 10px 12px;
+  background: rgba(20, 14, 10, 0.98);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  z-index: var(--z-picker);
+  color: var(--fg);
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.6), 0 0 12px rgba(201, 152, 90, 0.2);
+}
+
+.topbar__deck-menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--border-mid);
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 3px;
+  color: var(--gold-soft);
+}
+
+.topbar__deck-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-family: var(--font-body);
+  font-size: 13px;
+}
+
+.topbar__deck-list li {
+  padding: 3px 6px;
+  background: rgba(10, 6, 4, 0.6);
+  border: 1px solid var(--border-dark);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+}
+
+.topbar__deck-empty {
+  margin: 0;
+  color: var(--fg-dim);
+  font-family: var(--font-label);
+  font-size: 12px;
+  letter-spacing: 2px;
+}

@@ -3,6 +3,7 @@ import type { CardInstanceDto } from '../api/types'
 import { PotionSlot } from './PotionSlot'
 import { useCardCatalog } from '../hooks/useCardCatalog'
 import { useRelicCatalog } from '../hooks/useRelicCatalog'
+import './TopBar.css'
 
 type Props = {
   currentHp: number
@@ -41,14 +42,14 @@ export function TopBar({
 
   return (
     <div className="topbar" role="status">
-      <span className="topbar__hp">
+      <span className="topbar__group topbar__hp">
         HP {currentHp}/{maxHp}
       </span>
-      <span className="topbar__gold">Gold {gold}</span>
+      <span className="topbar__group topbar__gold">Gold {gold}</span>
       <ul className="topbar__relics" aria-label={`レリック (${relics.length}個)`}>
         {relics.map((id, i) => (
           <li key={`${id}-${i}`} className="topbar__relic" title={relicNames[id] ?? id}>
-            💎 {relicNames[id] ?? id}
+            <span aria-hidden="true">♆</span> {relicNames[id] ?? id}
           </li>
         ))}
       </ul>
@@ -72,7 +73,7 @@ export function TopBar({
             aria-pressed={deckOpenAria}
             onClick={() => setDeckOpen((v) => !v)}
           >
-            🃏 {deck.length}
+            DECK {deck.length}
           </button>
           {deckOpen && (
             <div className="topbar__deck-menu" role="dialog" aria-label="現在のデッキ">
@@ -109,7 +110,7 @@ export function TopBar({
             aria-pressed={peekPressedAria}
             onClick={onTogglePeek}
           >
-            {peekActive ? '⚔' : '🗺'}
+            {peekActive ? 'BATTLE' : 'MAP'}
           </button>
         )}
         <button
@@ -118,7 +119,7 @@ export function TopBar({
           aria-label="メニュー"
           onClick={onOpenMenu}
         >
-          ⚙
+          MENU
         </button>
       </div>
     </div>

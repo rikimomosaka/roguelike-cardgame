@@ -27,6 +27,7 @@ import { MerchantScreen } from './MerchantScreen'
 import { EventScreen } from './EventScreen'
 import { RestScreen } from './RestScreen'
 import { ActStartRelicScreen } from './ActStartRelicScreen'
+import './MapScreen.css'
 
 type Props = {
   snapshot: RunSnapshotDto
@@ -36,25 +37,41 @@ type Props = {
   onRunFinished?: (result: RunResultDto) => void
 }
 
-const NODE_R = 20
-const COL_W = 100
-const ROW_H = 50
-const LEFT_PAD = 50
-const TOP_PAD = 30
 const SHOP_MESSAGE_MS = 2500
+const MAX_ROW = 16
 
 function iconFor(kind: TileKind, resolvedKind: TileKind | null): string {
   const k = kind === 'Unknown' && resolvedKind === null ? 'Unknown' : (resolvedKind ?? kind)
   switch (k) {
     case 'Start': return '●'
     case 'Enemy': return '⚔'
-    case 'Elite': return '⚔⚔'
-    case 'Merchant': return '商'
-    case 'Rest': return '火'
-    case 'Treasure': return '宝'
-    case 'Event': return 'E'
+    case 'Elite': return '♛'
+    case 'Merchant': return '◆'
+    case 'Rest': return '△'
+    case 'Treasure': return '◈'
+    case 'Event': return '?'
     case 'Unknown': return '?'
-    case 'Boss': return '王'
+    case 'Boss': return '♛'
+  }
+}
+
+function kindClassFor(kind: TileKind, resolvedKind: TileKind | null): string {
+  const k = kind === 'Unknown' && resolvedKind === null ? 'Unknown' : (resolvedKind ?? kind)
+  return `k--${k.toLowerCase()}`
+}
+
+function nodeLabelFor(kind: TileKind, resolvedKind: TileKind | null): string | null {
+  const k = kind === 'Unknown' && resolvedKind === null ? 'Unknown' : (resolvedKind ?? kind)
+  switch (k) {
+    case 'Enemy': return 'ENEMY'
+    case 'Elite': return 'ELITE'
+    case 'Rest': return 'REST'
+    case 'Merchant': return 'SHOP'
+    case 'Treasure': return 'TREASURE'
+    case 'Event': return 'EVENT'
+    case 'Unknown': return 'UNKNOWN'
+    case 'Boss': return 'BOSS'
+    case 'Start': return 'START'
   }
 }
 
@@ -156,12 +173,18 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
     return false
   }
 
-  function posOf(n: MapNodeDto): { cx: number; cy: number } {
-    const maxRow = 16
-    return {
-      cx: LEFT_PAD + n.column * COL_W,
-      cy: TOP_PAD + (maxRow - n.row) * ROW_H,
-    }
+  // Map grid -> % coords for HTML positioning. Rows go bottom-up so
+  // row 0 = START (bottom) and row 16 = BOSS (top).
+  function posPct(n: MapNodeDto, maxCol: number): { left: string; top: string } {
+    // Horizontal: distribute columns across 14%–86% so nodes don't clip the stage edges.
+    const colSpan = Math.max(1, maxCol)
+    const xPct = 14 + (n.column / colSpan) * 72
+    const yPct = 4 + ((MAX_ROW - n.row) / MAX_ROW) * 94
+    return { left: `${xPct}%`, top: `${yPct}%` }
+  }
+
+  function rowYPct(row: number): number {
+    return 4 + ((MAX_ROW - row) / MAX_ROW) * 94
   }
 
   async function handleClick(n: MapNodeDto) {
@@ -308,10 +331,22 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
   function handleCloseRest() { setRestDismissed(true) }
 
   const resolved = snap.run.unknownResolutions
-  const maxCol = Math.max(...snap.map.nodes.map((n) => n.column))
-  const width = LEFT_PAD * 2 + maxCol * COL_W
-  const height = TOP_PAD * 2 + 16 * ROW_H
+  const maxCol = Math.max(1, ...snap.map.nodes.map((n) => n.column))
   const atBoss = currentNode.kind === 'Boss'
+
+  // Floor label rows: every 3rd row, plus START (0) and BOSS (16) and current.
+  const floorRows = new Set<number>([0, 3, 6, 9, 12, 14, MAX_ROW])
+  floorRows.add(currentNode.row)
+  const floorRowList = Array.from(floorRows).sort((a, b) => a - b)
+
+  // Node coordinates in viewBox units (0-100) for SVG edge rendering.
+  function posViewBox(n: MapNodeDto): { x: number; y: number } {
+    const colSpan = Math.max(1, maxCol)
+    return {
+      x: 14 + (n.column / colSpan) * 72,
+      y: 4 + ((MAX_ROW - n.row) / MAX_ROW) * 94,
+    }
+  }
 
   return (
     <>
@@ -328,62 +363,137 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
         peekActive={peekMap}
       />
       <main className="map-screen">
-        <svg viewBox={`0 0 ${width} ${height}`} className="map-screen__svg">
-          {snap.map.nodes.map((n) =>
-            n.outgoingNodeIds.map((toId) => {
-              const to = snap.map.nodes.find((x) => x.id === toId)!
-              const a = posOf(n)
-              const b = posOf(to)
-              const visitedEdge = visited.has(n.id) && visited.has(toId)
+        <div className="map-screen__pattern" aria-hidden="true" />
+
+        <div className="map-screen__stage">
+          <div className="map-screen__act-badge" aria-hidden="true">
+            <span className="k">ACT</span>
+            <span className="v">{snap.run.currentAct}</span>
+            <span className="sep">·</span>
+            <span className="k">FLOOR</span>
+            <span className="v">{currentNode.row} / {MAX_ROW}</span>
+          </div>
+
+          <div className="map-screen__inner">
+            <svg
+              className="map-screen__svg"
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              {snap.map.nodes.map((n) =>
+                n.outgoingNodeIds.map((toId) => {
+                  const to = snap.map.nodes.find((x) => x.id === toId)
+                  if (!to) return null
+                  const a = posViewBox(n)
+                  const b = posViewBox(to)
+                  const visitedEdge = visited.has(n.id) && visited.has(toId)
+                  const nextEdge = n.id === snap.run.currentNodeId
+                    && currentNode.outgoingNodeIds.includes(toId)
+                  const stroke = visitedEdge
+                    ? '#c9985a'
+                    : nextEdge
+                      ? '#8a6a3a'
+                      : '#3a2410'
+                  const opacity = visitedEdge ? 0.85 : nextEdge ? 0.85 : 0.6
+                  const strokeWidth = visitedEdge ? 0.5 : nextEdge ? 0.4 : 0.3
+                  const dash = visitedEdge
+                    ? undefined
+                    : nextEdge
+                      ? '1.2 1'
+                      : undefined
+                  return (
+                    <line
+                      key={`${n.id}-${toId}`}
+                      x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                      stroke={stroke}
+                      strokeOpacity={opacity}
+                      strokeWidth={strokeWidth}
+                      strokeLinecap="round"
+                      strokeDasharray={dash}
+                    />
+                  )
+                }),
+              )}
+            </svg>
+
+            {floorRowList.map((row) => {
+              const isNow = row === currentNode.row
+              const top = rowYPct(row)
+              const label = row === 0 ? 'START' : row === MAX_ROW ? 'BOSS' : `F${row}`
               return (
-                <line
-                  key={`${n.id}-${toId}`}
-                  x1={a.cx} y1={a.cy} x2={b.cx} y2={b.cy}
-                  stroke={visitedEdge ? '#888' : '#444'}
-                  strokeWidth={visitedEdge ? 3 : 2}
-                />
-              )
-            }),
-          )}
-          {snap.map.nodes.map((n) => {
-            const { cx, cy } = posOf(n)
-            const isCurrent = n.id === snap.run.currentNodeId
-            const isVisited = visited.has(n.id)
-            const selectable = isSelectable(n)
-            const reopen = isCurrentReopenable(n)
-            const startEntry = isActStartEntry(n)
-            const clickable = selectable || reopen || startEntry
-            const resolvedKind: TileKind | null = isVisited ? (resolved[n.id] ?? null) : null
-            return (
-              <g
-                key={n.id}
-                data-testid={`map-node-${n.id}`}
-                data-current={isCurrent ? 'true' : 'false'}
-                data-selectable={selectable ? 'true' : 'false'}
-                data-visited={isVisited ? 'true' : 'false'}
-                data-reopen-reward={reopen ? 'true' : 'false'}
-                data-start-entry={startEntry ? 'true' : 'false'}
-                onClick={() => handleClick(n)}
-                style={{ cursor: clickable ? 'pointer' : 'default' }}
-              >
-                <circle
-                  cx={cx} cy={cy} r={NODE_R}
-                  fill={isVisited ? '#444' : '#222'}
-                  stroke={isCurrent ? 'gold' : selectable ? '#4ae' : '#666'}
-                  strokeWidth={isCurrent ? 4 : selectable ? 3 : 1}
-                />
-                <text
-                  x={cx} y={cy + 5}
-                  textAnchor="middle"
-                  fill={isVisited ? '#aaa' : '#eee'}
-                  fontSize="14"
+                <div
+                  key={`floor-${row}`}
+                  className={`map-screen__floor-label${isNow ? ' is-now' : ''}`}
+                  style={{ top: `${top}%` }}
+                  aria-hidden="true"
                 >
-                  {iconFor(n.kind, resolvedKind)}
-                </text>
-              </g>
-            )
-          })}
-        </svg>
+                  {label}{isNow ? ' ◂' : ''}
+                </div>
+              )
+            })}
+
+            {snap.map.nodes.map((n) => {
+              const { left, top } = posPct(n, maxCol)
+              const isCurrent = n.id === snap.run.currentNodeId
+              const isVisited = visited.has(n.id)
+              const selectable = isSelectable(n)
+              const reopen = isCurrentReopenable(n)
+              const startEntry = isActStartEntry(n)
+              const clickable = selectable || reopen || startEntry
+              const resolvedKind: TileKind | null = isVisited ? (resolved[n.id] ?? null) : null
+
+              const stateClass = isCurrent
+                ? 'is-current'
+                : isVisited
+                  ? 'is-past'
+                  : selectable
+                    ? 'is-next'
+                    : 'is-far'
+
+              const classes = [
+                'map-screen__node',
+                stateClass,
+                kindClassFor(n.kind, resolvedKind),
+                reopen ? 'is-reopen' : '',
+              ].filter(Boolean).join(' ')
+
+              const label = (isCurrent || selectable) ? nodeLabelFor(n.kind, resolvedKind) : null
+
+              return (
+                <button
+                  key={n.id}
+                  type="button"
+                  data-testid={`map-node-${n.id}`}
+                  data-current={isCurrent ? 'true' : 'false'}
+                  data-selectable={selectable ? 'true' : 'false'}
+                  data-visited={isVisited ? 'true' : 'false'}
+                  data-reopen-reward={reopen ? 'true' : 'false'}
+                  data-start-entry={startEntry ? 'true' : 'false'}
+                  onClick={() => handleClick(n)}
+                  disabled={!clickable}
+                  className={classes}
+                  style={{ left, top, cursor: clickable ? 'pointer' : 'default' }}
+                  aria-label={`マス ${n.id} (${n.kind})`}
+                >
+                  <span aria-hidden="true">{iconFor(n.kind, resolvedKind)}</span>
+                  {label && <span className="map-screen__node-label">{label}</span>}
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="map-screen__key" aria-hidden="true">
+            <div className="map-screen__key-title">MAP LEGEND</div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym">⚔</span><span>ENEMY</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym k--elite">♛</span><span>ELITE</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym k--rest">△</span><span>REST</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym k--merchant">◆</span><span>SHOP</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym k--treasure">◈</span><span>TREASURE</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym">?</span><span>UNKNOWN</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym k--boss">♛</span><span>BOSS</span></div>
+          </div>
+        </div>
 
         {atBoss && !activeBattle && !activeReward && (
           <p className="map-screen__dev-note">
@@ -396,7 +506,9 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
         )}
 
         {import.meta.env.DEV && (
-          <Button onClick={onDebugDamage ?? internalDebugDamage} aria-label="DEBUG -10HP">DEBUG -10HP</Button>
+          <div className="map-screen__debug">
+            <Button onClick={onDebugDamage ?? internalDebugDamage} aria-label="DEBUG -10HP">DEBUG -10HP</Button>
+          </div>
         )}
       </main>
 
