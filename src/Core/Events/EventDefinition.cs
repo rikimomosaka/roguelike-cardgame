@@ -5,5 +5,8 @@ namespace RoguelikeCardGame.Core.Events;
 public sealed record EventDefinition(
     string Id,
     string Name,
-    string Description,
-    ImmutableArray<EventChoice> Choices);
+    string StartMessage,
+    ImmutableArray<EventChoice> Choices,
+    ImmutableArray<int> Tiers,
+    EventRarity Rarity = EventRarity.Common,
+    EventCondition? Condition = null);

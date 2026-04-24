@@ -1,19 +1,24 @@
 {
   "id": "blessing_fountain",
   "name": "祝福の泉",
-  "description": "清らかな泉が湧き出ている。いくつかの噂を耳にした。",
+  "tiers": [1, 2, 3],
+  "rarity": "common",
+  "startMessage": "清らかな泉が湧き出ている。いくつかの噂を耳にした。",
   "choices": [
     {
       "label": "水を飲む（HP +15）",
-      "effects": [ { "type": "heal", "amount": 15 } ]
+      "effects": [ { "type": "heal", "amount": 15 } ],
+      "resultMessage": "冷たい泉の水を口に含むと、傷が癒え体に力が戻ってきた。"
     },
     {
       "label": "コインを投げ入れる（最大HP +5）",
-      "effects": [ { "type": "gainMaxHp", "amount": 5 } ]
+      "effects": [ { "type": "gainMaxHp", "amount": 5 } ],
+      "resultMessage": "コインが波紋を広げると、泉から温かな祝福が立ち上り、体の芯が強くなった気がする。"
     },
     {
       "label": "立ち去る",
-      "effects": []
+      "effects": [],
+      "resultMessage": "泉に背を向け、先を急ぐことにした。"
     }
   ]
 }

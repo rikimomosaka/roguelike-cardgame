@@ -96,7 +96,18 @@ public sealed class CatalogController : ControllerBase
             .Select(e => new EventDto(
                 Id: e.Id,
                 Name: e.Name,
-                Description: e.Description,
+                StartMessage: e.StartMessage,
+                Tiers: e.Tiers.IsDefault
+                    ? System.Array.Empty<int>()
+                    : (IReadOnlyList<int>)e.Tiers.ToArray(),
+                Rarity: e.Rarity.ToString(),
+                ConditionSummary: e.Condition switch
+                {
+                    EventCondition.MinGold(var g) => $"requires {g} gold",
+                    EventCondition.MinHp(var h) => $"requires {h} HP",
+                    null => null,
+                    _ => "requires condition",
+                },
                 Choices: e.Choices.Select(c => new EventChoiceDto(
                     Label: c.Label,
                     ConditionSummary: c.Condition switch
@@ -106,7 +117,8 @@ public sealed class CatalogController : ControllerBase
                         null => null,
                         _ => "requires condition",
                     },
-                    EffectSummaries: c.Effects.Select(EffectLabel).ToList()))
+                    EffectSummaries: c.Effects.Select(EffectLabel).ToList(),
+                    ResultMessage: c.ResultMessage))
                 .ToList()))
             .ToList();
         return Ok(list);

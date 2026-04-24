@@ -97,15 +97,18 @@ public class EventControllerTests : IClassFixture<TempDataFactory>
 
         Assert.Equal("blessing_fountain", root.GetProperty("eventId").GetString());
         Assert.False(string.IsNullOrEmpty(root.GetProperty("name").GetString()));
-        Assert.False(string.IsNullOrEmpty(root.GetProperty("description").GetString()));
+        Assert.False(string.IsNullOrEmpty(root.GetProperty("startMessage").GetString()));
 
         // blessing_fountain には 3 つの選択肢がある（水を飲む / コインを投げ入れる / 立ち去る）
         var choices = root.GetProperty("choices");
         Assert.Equal(3, choices.GetArrayLength());
 
-        // 全選択肢にラベルが存在することを確認
+        // 全選択肢にラベルと resultMessage が存在することを確認
         foreach (var c in choices.EnumerateArray())
+        {
             Assert.False(string.IsNullOrEmpty(c.GetProperty("label").GetString()));
+            Assert.False(string.IsNullOrEmpty(c.GetProperty("resultMessage").GetString()));
+        }
     }
 
     // ─── POST /event/choose ──────────────────────────────────────────────────

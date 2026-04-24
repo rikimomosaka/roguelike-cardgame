@@ -26,8 +26,8 @@ public static class EventInstanceDtoFactory
                 EventCondition.MinHp cond => s.CurrentHp >= cond.Amount,
                 _ => false,
             };
-            return new Dtos.EventChoiceSnapshotDto(c.Label, summary, met);
+            return new Dtos.EventChoiceSnapshotDto(c.Label, summary, met, c.ResultMessage);
         }).ToList();
-        return new Dtos.EventInstanceDto(inst.EventId, def.Name, def.Description, choices, inst.ChosenIndex);
+        return new Dtos.EventInstanceDto(inst.EventId, def.Name, def.StartMessage, choices, inst.ChosenIndex);
     }
 }

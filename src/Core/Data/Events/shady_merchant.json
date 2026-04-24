@@ -1,7 +1,9 @@
 {
   "id": "shady_merchant",
   "name": "怪しい商人",
-  "description": "フードを目深にかぶった商人が、レリックを売ると持ちかけてきた。",
+  "tiers": [2, 3],
+  "rarity": "uncommon",
+  "startMessage": "フードを目深にかぶった商人が、レリックを売ると持ちかけてきた。",
   "choices": [
     {
       "label": "50 ゴールドで買う",
@@ -9,7 +11,8 @@
       "effects": [
         { "type": "payGold", "amount": 50 },
         { "type": "gainRelicRandom", "rarity": 1 }
-      ]
+      ],
+      "resultMessage": "差し出された品物は、粗末な布で包まれていた。開いてみると、そこそこ価値のあるレリックだった。"
     },
     {
       "label": "200 ゴールドで特上品",
@@ -17,11 +20,13 @@
       "effects": [
         { "type": "payGold", "amount": 200 },
         { "type": "gainRelicRandom", "rarity": 2 }
-      ]
+      ],
+      "resultMessage": "商人はにやりと笑い、奥から豪奢な箱を取り出した。中には一級品のレリックが収まっている。"
     },
     {
       "label": "断る",
-      "effects": []
+      "effects": [],
+      "resultMessage": "商人は肩をすくめ、フードの奥で舌打ちした。"
     }
   ]
 }

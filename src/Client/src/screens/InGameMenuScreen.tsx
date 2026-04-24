@@ -1,4 +1,4 @@
-import { type RefObject, useState } from 'react'
+import { type RefObject, useEffect, useState } from 'react'
 import { abandonRun, heartbeat } from '../api/runs'
 import type { RunResultDto } from '../api/types'
 import { Popup } from '../components/Popup'
@@ -51,6 +51,30 @@ export function InGameMenuScreen({ onClose, onExitToMenu, onAbandon, elapsedSeco
       setBusy(false)
     }
   }
+
+  useEffect(() => {
+    if (mode !== 'main') return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return
+      const tag = (e.target as HTMLElement | null)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      const key = e.key.toLowerCase()
+      if (key === 's') {
+        e.preventDefault()
+        setMode('settings')
+      } else if (key === 'q') {
+        if (busy) return
+        e.preventDefault()
+        void exit()
+      } else if (key === 'x') {
+        e.preventDefault()
+        setMode('confirm-abandon')
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, busy, accountId])
 
   if (mode === 'settings') {
     return (

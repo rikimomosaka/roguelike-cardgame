@@ -1,22 +1,27 @@
 {
   "id": "old_library",
   "name": "古びた図書館",
-  "description": "埃の積もった本棚の奥に、誰かの手記が眠っている。",
+  "tiers": [1, 2, 3],
+  "rarity": "uncommon",
+  "startMessage": "埃の積もった本棚の奥に、誰かの手記が眠っている。",
   "choices": [
     {
       "label": "読みふける（カード報酬）",
-      "effects": [ { "type": "grantCardReward" } ]
+      "effects": [ { "type": "grantCardReward" } ],
+      "resultMessage": "古い手記に綴られた知識をじっくり読み解いた。新たな技が閃いた。"
     },
     {
       "label": "ページを破って持ち去る（最大HP -5, 50 ゴールド）",
       "effects": [
         { "type": "loseMaxHp", "amount": 5 },
         { "type": "gainGold", "amount": 50 }
-      ]
+      ],
+      "resultMessage": "罪悪感に胸が痛むが、金になりそうなページを引き抜いてポケットに押し込んだ。"
     },
     {
       "label": "何もせず立ち去る",
-      "effects": []
+      "effects": [],
+      "resultMessage": "埃の香りを胸いっぱいに吸い込み、静かに図書館を後にした。"
     }
   ]
 }

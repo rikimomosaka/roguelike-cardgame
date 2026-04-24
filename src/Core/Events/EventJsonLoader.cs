@@ -25,7 +25,13 @@ public static class EventJsonLoader
             var root = doc.RootElement;
             string id = GetString(root, "id");
             string name = GetString(root, "name");
-            string desc = GetString(root, "description");
+            string startMessage = GetString(root, "startMessage");
+            var tiers = ParseTiers(root, id);
+            var rarity = ParseEventRarity(GetString(root, "rarity"), id);
+            EventCondition? eventCondition = null;
+            if (root.TryGetProperty("condition", out var eventCondEl) && eventCondEl.ValueKind == JsonValueKind.Object)
+                eventCondition = ParseCondition(eventCondEl, id);
+
             if (!root.TryGetProperty("choices", out var choicesEl) || choicesEl.ValueKind != JsonValueKind.Array)
                 throw new EventJsonException($"event \"{id}\" に choices 配列がありません。");
             if (choicesEl.GetArrayLength() < 1)
@@ -35,14 +41,43 @@ public static class EventJsonLoader
             foreach (var ch in choicesEl.EnumerateArray())
             {
                 string label = GetString(ch, "label");
+                string resultMessage = GetString(ch, "resultMessage");
                 EventCondition? cond = null;
                 if (ch.TryGetProperty("condition", out var condEl) && condEl.ValueKind == JsonValueKind.Object)
                     cond = ParseCondition(condEl, id);
                 var effects = ParseEffects(ch, id);
-                choices.Add(new EventChoice(label, cond, effects));
+                choices.Add(new EventChoice(label, cond, effects, resultMessage));
             }
-            return new EventDefinition(id, name, desc, choices.ToImmutable());
+            return new EventDefinition(id, name, startMessage, choices.ToImmutable(), tiers, rarity, eventCondition);
         }
+    }
+
+    private static ImmutableArray<int> ParseTiers(JsonElement root, string eventId)
+    {
+        if (!root.TryGetProperty("tiers", out var tiersEl) || tiersEl.ValueKind != JsonValueKind.Array)
+            throw new EventJsonException($"event \"{eventId}\" に tiers 配列がありません。");
+        var list = new List<int>();
+        foreach (var t in tiersEl.EnumerateArray())
+        {
+            if (t.ValueKind != JsonValueKind.Number)
+                throw new EventJsonException($"event \"{eventId}\" の tiers は整数配列でなければなりません。");
+            int n = t.GetInt32();
+            if (n < 1 || n > 3)
+                throw new EventJsonException($"event \"{eventId}\" の tier {n} は 1..3 の範囲外。");
+            list.Add(n);
+        }
+        return list.ToImmutableArray();
+    }
+
+    private static EventRarity ParseEventRarity(string raw, string eventId)
+    {
+        return raw.ToLowerInvariant() switch
+        {
+            "common" => EventRarity.Common,
+            "uncommon" => EventRarity.Uncommon,
+            "rare" => EventRarity.Rare,
+            _ => throw new EventJsonException($"event \"{eventId}\" の rarity \"{raw}\" は無効。"),
+        };
     }
 
     private static EventCondition ParseCondition(JsonElement el, string eventId)

@@ -68,7 +68,7 @@ public static class NodeEffectResolver
     private static RunState StartEvent(RunState s, DataCatalog data, IRng rng)
     {
         var pool = ImmutableArray.CreateRange(data.Events.Values);
-        var def = EventPool.Pick(pool, rng);
+        var def = EventPool.Pick(pool, s.CurrentAct, s, rng);
         var inst = new EventInstance(def.Id, def.Choices);
         return s with { ActiveEvent = inst };
     }

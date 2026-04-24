@@ -36,12 +36,16 @@ public sealed record RunStateDto(
     string SavedAtUtc,
     ActStartRelicChoiceDto? ActiveActStartRelicChoice);
 
-public sealed record EventChoiceSnapshotDto(string Label, string? ConditionSummary, bool ConditionMet);
+public sealed record EventChoiceSnapshotDto(
+    string Label,
+    string? ConditionSummary,
+    bool ConditionMet,
+    string ResultMessage);
 
 public sealed record EventInstanceDto(
     string EventId,
     string Name,
-    string Description,
+    string StartMessage,
     IReadOnlyList<EventChoiceSnapshotDto> Choices,
     int? ChosenIndex);
 

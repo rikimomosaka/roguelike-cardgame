@@ -27,12 +27,13 @@ export type EventChoiceSnapshotDto = {
   label: string
   conditionSummary: string | null
   conditionMet: boolean
+  resultMessage: string
 }
 
 export type EventInstanceDto = {
   eventId: string
   name: string
-  description: string
+  startMessage: string
   choices: EventChoiceSnapshotDto[]
   chosenIndex: number | null
 }

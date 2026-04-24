@@ -61,4 +61,23 @@ describe('InGameMenuScreen', () => {
     })
     await waitFor(() => expect(onAbandon).toHaveBeenCalled())
   })
+
+  it('S キーで設定画面へ遷移する', () => {
+    render(<Wrapper onExitToMenu={() => {}} onAbandon={() => {}} onClose={() => {}} />)
+    fireEvent.keyDown(window, { key: 's' })
+    expect(screen.getByText('設 定')).toBeInTheDocument()
+  })
+
+  it('Q キーで exit を呼ぶ', async () => {
+    const onExit = vi.fn()
+    render(<Wrapper onExitToMenu={onExit} onAbandon={() => {}} onClose={() => {}} />)
+    fireEvent.keyDown(window, { key: 'q' })
+    await waitFor(() => expect(onExit).toHaveBeenCalled())
+  })
+
+  it('X キーで放棄確認ダイアログを開く', () => {
+    render(<Wrapper onExitToMenu={() => {}} onAbandon={() => {}} onClose={() => {}} />)
+    fireEvent.keyDown(window, { key: 'x' })
+    expect(screen.getByText(/本当にこのランを放棄/)).toBeInTheDocument()
+  })
 })

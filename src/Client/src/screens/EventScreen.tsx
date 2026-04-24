@@ -11,24 +11,27 @@ type Props = {
 
 export function EventScreen({ event, onChoose, onClose }: Props) {
   const resolved = event.chosenIndex !== null
+  const message =
+    resolved && event.chosenIndex !== null
+      ? event.choices[event.chosenIndex]?.resultMessage ?? event.startMessage
+      : event.startMessage
   return (
     <Popup
       open
       variant="modal"
       title={event.name}
       width={720}
+      footerAlign="center"
       footer={
-        resolved ? (
-          <Button onClick={() => onClose()} aria-label="Close">
-            閉じる
-          </Button>
-        ) : undefined
+        <Button onClick={() => onClose()} aria-label="Close">
+          閉じる
+        </Button>
       }
     >
       <div className="ev-art" aria-hidden="true">
         ✦
       </div>
-      <p className="ev-narrative">{event.description}</p>
+      <p className="ev-narrative">{message}</p>
       <ul className="ev-choices">
         {event.choices.map((c, i) => {
           const chosen = event.chosenIndex === i

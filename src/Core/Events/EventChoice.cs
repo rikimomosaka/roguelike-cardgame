@@ -5,4 +5,5 @@ namespace RoguelikeCardGame.Core.Events;
 public sealed record EventChoice(
     string Label,
     EventCondition? Condition,
-    ImmutableArray<EventEffect> Effects);
+    ImmutableArray<EventEffect> Effects,
+    string ResultMessage = "");

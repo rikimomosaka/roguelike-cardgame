@@ -219,10 +219,10 @@ describe('MapScreen', () => {
     const event = {
       eventId: 'blessing_fountain',
       name: 'Blessing Fountain',
-      description: 'A mystical fountain offers its gifts.',
+      startMessage: 'A mystical fountain offers its gifts.',
       choices: [
-        { label: 'Drink', conditionSummary: null, conditionMet: true },
-        { label: 'Walk by', conditionSummary: null, conditionMet: true },
+        { label: 'Drink', conditionSummary: null, conditionMet: true, resultMessage: 'Healed.' },
+        { label: 'Walk by', conditionSummary: null, conditionMet: true, resultMessage: 'Walked on.' },
       ],
       chosenIndex: null,
     }
