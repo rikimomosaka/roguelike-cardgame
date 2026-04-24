@@ -13,9 +13,11 @@
   aspect-ratio: var(--stage-aspect);
   display: flex;
   flex-direction: column;
-  background: transparent;
-  border: 1px solid var(--border-mid);
-  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(ellipse at 50% 35%, rgba(217, 97, 74, 0.18) 0%, transparent 60%),
+    linear-gradient(180deg, var(--bg-2) 0%, var(--bg-3) 50%, var(--bg-2) 100%);
+  border: none;
+  border-radius: 0;
   overflow: hidden;
   color: var(--fg);
   font-family: var(--font-body);

@@ -3,6 +3,7 @@ import type { CardInstanceDto } from '../api/types'
 import { Card } from './Card'
 import { cardDisplay } from './cardDisplay'
 import { PotionSlot } from './PotionSlot'
+import { RelicIcon } from './RelicIcon'
 import { useCardCatalog } from '../hooks/useCardCatalog'
 import { useRelicCatalog } from '../hooks/useRelicCatalog'
 import './TopBar.css'
@@ -36,7 +37,7 @@ export function TopBar({
 }: Props) {
   const [deckOpen, setDeckOpen] = useState(false)
   const { names, catalog } = useCardCatalog()
-  const { names: relicNames } = useRelicCatalog()
+  const { names: relicNames, catalog: relicCatalog } = useRelicCatalog()
   const deckLabel = (id: string) => names[id] ?? id
   const sortedDeck = [...deck].sort((a, b) =>
     deckLabel(a.id).localeCompare(deckLabel(b.id), 'ja'),
@@ -58,8 +59,8 @@ export function TopBar({
       </span>
       <ul className="topbar__relics" aria-label={`レリック (${relics.length}個)`}>
         {relics.map((id, i) => (
-          <li key={`${id}-${i}`} className="topbar__relic" title={relicNames[id] ?? id}>
-            <span aria-hidden="true">♆</span> {relicNames[id] ?? id}
+          <li key={`${id}-${i}`} className="topbar__relic">
+            <RelicIcon id={id} catalog={relicCatalog} names={relicNames} />
           </li>
         ))}
       </ul>

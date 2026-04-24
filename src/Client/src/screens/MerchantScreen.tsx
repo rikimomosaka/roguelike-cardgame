@@ -30,57 +30,95 @@ export function MerchantScreen(p: Props) {
   const { names: relicNames } = useRelicCatalog()
   const { names: potionNames } = usePotionCatalog()
   const [mode, setMode] = useState<'shop' | 'discard'>('shop')
+  const [confirming, setConfirming] = useState<{ index: number; name: string } | null>(null)
 
   const canDiscard =
     !p.inventory.discardSlotUsed && p.gold >= p.inventory.discardPrice
 
   if (mode === 'discard') {
     return (
-      <Popup
-        open
-        variant="picker"
-        title={`カードを除去 (${p.inventory.discardPrice} ゴールド)`}
-        subtitle={`デッキから 1 枚`}
-        width={760}
-        footer={
-          <Button
-            variant="secondary"
-            onClick={() => setMode('shop')}
-            aria-label="Back"
-          >
-            戻る
-          </Button>
-        }
-      >
-        <ul className="mc-picker-body">
-          {p.deck.map((c, i) => {
-            const name = cardNames[c.id] ?? c.id
-            return (
-              <li key={i} className="mc-picker-item">
-                <Card
-                  name={name}
-                  cost={1}
-                  type={inferCardType(c.id)}
-                  rarity={inferCardRarity(c.id)}
-                  upgraded={c.upgraded}
-                  width={128}
-                />
+      <>
+        <Popup
+          open
+          variant="picker"
+          title={`カードを除去 (${p.inventory.discardPrice} ゴールド)`}
+          subtitle={`カードをクリックして除去`}
+          width={760}
+          footer={
+            <Button
+              variant="secondary"
+              onClick={() => setMode('shop')}
+              aria-label="Back"
+            >
+              戻る
+            </Button>
+          }
+        >
+          <ul className="mc-picker-body">
+            {p.deck.map((c, i) => {
+              const name = cardNames[c.id] ?? c.id
+              return (
+                <li key={i} className="mc-picker-item">
+                  <button
+                    type="button"
+                    className="mc-picker-card"
+                    onClick={() => setConfirming({ index: i, name })}
+                    disabled={!canDiscard}
+                    aria-label={`Discard ${name} at index ${i}`}
+                  >
+                    <Card
+                      name={name}
+                      cost={1}
+                      type={inferCardType(c.id)}
+                      rarity={inferCardRarity(c.id)}
+                      upgraded={c.upgraded}
+                      width={128}
+                    />
+                    <span className="mc-picker-card__overlay" aria-hidden="true">
+                      <span className="mc-picker-card__overlay-label">除去</span>
+                    </span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </Popup>
+        {confirming && (
+          <Popup
+            open
+            variant="confirm"
+            title="削除しますか?"
+            width={420}
+            footer={
+              <>
+                <Button
+                  variant="secondary"
+                  onClick={() => setConfirming(null)}
+                  aria-label="Cancel discard"
+                >
+                  いいえ
+                </Button>
                 <Button
                   variant="danger"
                   onClick={async () => {
-                    await p.onDiscard(i)
+                    const idx = confirming.index
+                    setConfirming(null)
+                    await p.onDiscard(idx)
                     setMode('shop')
                   }}
-                  disabled={!canDiscard}
-                  aria-label={`Discard ${name} at index ${i}`}
+                  aria-label="Confirm discard"
                 >
-                  除去
+                  はい
                 </Button>
-              </li>
-            )
-          })}
-        </ul>
-      </Popup>
+              </>
+            }
+          >
+            <p className="mc-confirm-text">
+              <strong>{confirming.name}</strong> をデッキから除去します。
+            </p>
+          </Popup>
+        )}
+      </>
     )
   }
 

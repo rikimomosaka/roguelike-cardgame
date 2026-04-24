@@ -6,6 +6,7 @@ import './styles/tokens.css'
 import './App.css'
 import App from './App.tsx'
 import { AccountProvider } from './context/AccountContext'
+import { TooltipHost } from './components/Tooltip'
 
 const DESIGN_W = 1280
 const DESIGN_H = 720
@@ -26,9 +27,11 @@ function AppStage({ children }: { children: ReactNode }) {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AccountProvider>
-      <AppStage>
-        <App />
-      </AppStage>
+      <TooltipHost>
+        <AppStage>
+          <App />
+        </AppStage>
+      </TooltipHost>
     </AccountProvider>
   </StrictMode>,
 )

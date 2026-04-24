@@ -98,7 +98,7 @@ describe('MerchantScreen', () => {
     expect(screen.queryByRole('button', { name: /discard strike/i })).toBeNull()
   })
 
-  it('除去モーダルで除去を選ぶと onDiscard が呼ばれ shop へ戻る', async () => {
+  it('除去モーダルで除去を選ぶと確認ダイアログが出て、はいで onDiscard が呼ばれる', async () => {
     const handlers = baseHandlers()
     render(
       <MerchantScreen
@@ -110,6 +110,14 @@ describe('MerchantScreen', () => {
     )
     fireEvent.click(screen.getByRole('button', { name: /open discard view/i }))
     fireEvent.click(screen.getByRole('button', { name: /discard strike at index 0/i }))
+    // 確認ダイアログが表示される
+    expect(screen.getByRole('dialog', { name: '削除しますか?' })).toBeDefined()
+    // キャンセルすると onDiscard は呼ばれない
+    fireEvent.click(screen.getByRole('button', { name: /cancel discard/i }))
+    expect(handlers.onDiscard).not.toHaveBeenCalled()
+    // 再度開いて確定
+    fireEvent.click(screen.getByRole('button', { name: /discard strike at index 0/i }))
+    fireEvent.click(screen.getByRole('button', { name: /confirm discard/i }))
     await waitFor(() => expect(handlers.onDiscard).toHaveBeenCalledWith(0))
   })
 

@@ -1,0 +1,40 @@
+/* =============================================================
+   RelicIcon — square dot-art relic icon with hover tooltip.
+   Placeholder glyph render until proper sprites arrive.
+   ============================================================= */
+
+.relic-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  background: rgba(10, 6, 4, 0.75);
+  border: 1px solid var(--border-mid);
+  border-radius: 3px;
+  color: var(--gold-warm);
+  image-rendering: pixelated;
+  cursor: help;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease;
+  outline: none;
+}
+
+.relic-icon:hover,
+.relic-icon:focus-visible {
+  border-color: var(--gold);
+  box-shadow: 0 0 6px rgba(201, 152, 90, 0.45);
+  transform: translateY(-1px);
+}
+
+.relic-icon__sprite {
+  font-family: var(--font-label);
+  font-size: 16px;
+  line-height: 1;
+  text-shadow: 0 0 4px currentColor, 0 1px 0 #000;
+}
+
+.relic-icon--common { color: var(--rarity-c, #c9985a); }
+.relic-icon--rare { color: var(--rarity-r, #7ab7d9); border-color: var(--rarity-r-border, #3a6a8a); }
+.relic-icon--epic { color: var(--rarity-e, #c080e0); border-color: #6a3a8a; }
+.relic-icon--legendary { color: var(--rarity-l, #ffd54f); border-color: var(--gold, #ffd54f); }
