@@ -1,0 +1,202 @@
+/* =============================================================
+   InGameMenuScreen — ported from ingame-menu-v1.html (canonical).
+   Wraps shared <Popup variant="modal"> for the main menu and
+   <Popup variant="confirm"> for the abandon confirmation.
+   Preserves test-asserted strings/roles:
+   - buttons by name: "続ける", "メニューに戻る", "あきらめる", "放棄する"
+   - text: /本当にこのランを放棄/
+   ============================================================= */
+
+/* ---- Menu item list ---- */
+.im-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.im-items > li {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.im-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  background: rgba(20, 12, 6, 0.65);
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 0.14s ease, box-shadow 0.14s ease,
+    transform 0.14s ease, opacity 0.14s ease;
+  text-align: left;
+  color: var(--fg);
+  font-family: var(--font-body);
+}
+
+.im-item:hover:not(:disabled) {
+  border-color: var(--border-hover);
+  box-shadow: 0 0 10px rgba(201, 152, 90, 0.3);
+  transform: translateX(3px);
+}
+
+.im-item:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.im-item.im-item--danger:hover:not(:disabled) {
+  border-color: var(--state-danger);
+  box-shadow: var(--glow-danger);
+}
+
+.im-item-icon {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-sm);
+  background: rgba(10, 6, 4, 0.6);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-label);
+  font-size: 20px;
+  line-height: 1;
+  text-shadow: 0 0 5px currentColor, 0 1px 0 #000;
+}
+
+.im-item--resume .im-item-icon {
+  color: var(--state-heal);
+  border-color: #2a6a3a;
+}
+
+.im-item--settings .im-item-icon {
+  color: var(--fg-muted);
+  border-color: var(--border-mid);
+}
+
+.im-item--save .im-item-icon {
+  color: var(--state-block);
+  border-color: #4a6a8a;
+}
+
+.im-item--danger .im-item-icon {
+  color: var(--state-danger);
+  border-color: #7a2a1a;
+}
+
+.im-item-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.im-item-name {
+  font-family: var(--font-body);
+  font-size: 15px;
+  letter-spacing: 2px;
+  color: var(--fg);
+  text-shadow: 0 1px 0 #000;
+}
+
+.im-item--danger .im-item-name {
+  color: var(--state-danger-soft);
+}
+
+.im-item-desc {
+  font-family: var(--font-body);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  color: var(--fg-dim);
+}
+
+.im-item-hotkey {
+  flex-shrink: 0;
+  font-family: var(--font-label);
+  font-size: var(--fs-xs);
+  letter-spacing: 2px;
+  color: var(--fg-dim);
+  padding: 2px 7px;
+  border: 1px solid var(--border-mid);
+  border-radius: 1px;
+  background: rgba(10, 6, 4, 0.5);
+  line-height: 1.2;
+}
+
+/* ---- Abandon confirm body ---- */
+.im-confirm-body {
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--fg);
+  text-align: center;
+  padding: 6px 4px 4px;
+  margin: 0;
+}
+
+.im-confirm-body em {
+  color: var(--state-danger-soft);
+  font-style: normal;
+}
+
+/* ---- Confirm footer buttons ---- */
+.im-confirm-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+}
+
+.im-confirm-btn {
+  flex: 1;
+  padding: 8px 14px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  letter-spacing: 4px;
+  cursor: pointer;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease,
+    color 0.12s ease, background 0.12s ease, opacity 0.12s ease;
+  text-shadow: 0 1px 0 #000;
+  border-radius: var(--radius-sm);
+}
+
+.im-confirm-btn--cancel {
+  background: rgba(58, 36, 16, 0.55);
+  border: 1px solid var(--border-mid);
+  color: var(--fg-muted);
+}
+
+.im-confirm-btn--cancel:hover:not(:disabled) {
+  border-color: var(--border-hover);
+  color: var(--gold-soft);
+}
+
+.im-confirm-btn--danger {
+  background: rgba(90, 30, 20, 0.55);
+  border: 1px solid #7a2a1a;
+  color: var(--state-danger-soft);
+}
+
+.im-confirm-btn--danger:hover:not(:disabled) {
+  border-color: var(--state-danger);
+  color: #ffb0a0;
+  box-shadow: var(--glow-danger);
+}
+
+.im-confirm-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---- Settings sub-popup wrapper (embeds existing SettingsScreen) ---- */
+.im-settings-wrap {
+  margin: -12px -14px;
+}
