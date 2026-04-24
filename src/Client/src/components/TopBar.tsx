@@ -112,6 +112,8 @@ export function TopBar({
                           cost={disp.cost}
                           type={disp.type}
                           rarity={disp.rarity}
+                          description={disp.description}
+                          upgradedDescription={disp.upgradedDescription}
                           upgraded={card.upgraded}
                           width={112}
                         />
@@ -131,7 +133,7 @@ export function TopBar({
           onClick={onTogglePeek}
           disabled={peekDisabled || !onTogglePeek}
         >
-          {peekActive ? 'BATTLE' : 'MAP'}
+          MAP
         </button>
         <button
           type="button"

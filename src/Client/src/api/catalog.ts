@@ -8,6 +8,8 @@ export type CardCatalogEntry = {
   cardType: string
   cost: number | null
   upgradable: boolean
+  description: string
+  upgradedDescription: string | null
 }
 
 export type PotionCatalogEntry = {
@@ -16,6 +18,7 @@ export type PotionCatalogEntry = {
   rarity: number
   usableInBattle: boolean
   usableOutOfBattle: boolean
+  description: string
 }
 
 export type CardCatalog = Record<string, CardCatalogEntry>

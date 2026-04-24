@@ -1,22 +1,13 @@
 import { useState } from 'react'
 import type { RewardStateDto } from '../api/types'
 import { Button } from '../components/Button'
-import { Card, type CardRarity, type CardType } from '../components/Card'
+import { Card } from '../components/Card'
+import { cardDisplay } from '../components/cardDisplay'
 import { Popup } from '../components/Popup'
 import { PotionSlot } from '../components/PotionSlot'
 import { useCardCatalog, usePotionCatalog } from '../hooks/useCardCatalog'
 import { useRelicCatalog } from '../hooks/useRelicCatalog'
 import './RewardPopup.css'
-
-// The card catalog does not yet expose per-card type/rarity in all environments
-// (tests run with no catalog loaded → card IDs render raw). Neutral defaults
-// keep the Card primitive visually correct.
-function inferType(_id: string): CardType {
-  return 'skill'
-}
-function inferRarity(_id: string): CardRarity {
-  return 'c'
-}
 
 type Props = {
   reward: RewardStateDto
@@ -35,7 +26,7 @@ export function RewardPopup(p: Props) {
   const [cardView, setCardView] = useState(false)
   const r = p.reward
   const cardResolved = r.cardStatus === 'Claimed'
-  const { names: cardNames } = useCardCatalog()
+  const { names: cardNames, catalog: cardCatalog } = useCardCatalog()
   const { names: potionNames } = usePotionCatalog()
   const { names: relicNames } = useRelicCatalog()
   const cardLabel = (id: string) => cardNames[id] ?? id
@@ -64,26 +55,31 @@ export function RewardPopup(p: Props) {
         }
       >
         <div className="rw-picker">
-          {r.cardChoices.map(cid => (
-            <button
-              key={cid}
-              type="button"
-              className="rw-picker__card"
-              onClick={async () => {
-                await p.onPickCard(cid)
-                setCardView(false)
-              }}
-              aria-label={cardLabel(cid)}
-            >
-              <Card
-                name={cardLabel(cid)}
-                cost={1}
-                type={inferType(cid)}
-                rarity={inferRarity(cid)}
-                width={140}
-              />
-            </button>
-          ))}
+          {r.cardChoices.map(cid => {
+            const disp = cardDisplay(cid, cardCatalog, cardLabel(cid))
+            return (
+              <button
+                key={cid}
+                type="button"
+                className="rw-picker__card"
+                onClick={async () => {
+                  await p.onPickCard(cid)
+                  setCardView(false)
+                }}
+                aria-label={cardLabel(cid)}
+              >
+                <Card
+                  name={disp.name}
+                  cost={disp.cost}
+                  type={disp.type}
+                  rarity={disp.rarity}
+                  description={disp.description}
+                  upgradedDescription={disp.upgradedDescription}
+                  width={140}
+                />
+              </button>
+            )
+          })}
         </div>
       </Popup>
     )

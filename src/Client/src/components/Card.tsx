@@ -1,4 +1,7 @@
+import { useMemo } from 'react'
 import type { CSSProperties, MouseEventHandler, ReactNode } from 'react'
+import { useTooltipTarget } from './Tooltip'
+import type { TooltipContent } from './Tooltip'
 import './Card.css'
 
 export type CardType = 'attack' | 'skill' | 'power' | 'curse' | 'status'
@@ -15,6 +18,8 @@ type Props = {
   locked?: boolean
   width?: number
   className?: string
+  description?: string
+  upgradedDescription?: string | null
   onClick?: MouseEventHandler<HTMLDivElement>
   onMouseEnter?: MouseEventHandler<HTMLDivElement>
   onMouseLeave?: MouseEventHandler<HTMLDivElement>
@@ -31,6 +36,8 @@ export function Card({
   locked,
   width = 104,
   className,
+  description,
+  upgradedDescription,
   onClick,
   onMouseEnter,
   onMouseLeave,
@@ -49,13 +56,30 @@ export function Card({
   const style: CSSProperties = { width: `${width}px` }
   const typeLabel = type.toUpperCase()
 
+  const activeDesc = upgraded && upgradedDescription ? upgradedDescription : description
+  const tooltipContent = useMemo<TooltipContent | null>(() => {
+    if (!activeDesc) return null
+    return { name: upgraded ? `${name}+` : name, rarity, desc: activeDesc }
+  }, [activeDesc, name, rarity, upgraded])
+  const tip = useTooltipTarget(tooltipContent)
+
+  const combinedEnter: MouseEventHandler<HTMLDivElement> = (e) => {
+    tip.onMouseEnter(e)
+    onMouseEnter?.(e)
+  }
+  const combinedLeave: MouseEventHandler<HTMLDivElement> = (e) => {
+    tip.onMouseLeave()
+    onMouseLeave?.(e)
+  }
+
   return (
     <div
       className={classes}
       style={style}
       onClick={onClick}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
+      onMouseEnter={combinedEnter}
+      onMouseMove={tip.onMouseMove}
+      onMouseLeave={combinedLeave}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
     >

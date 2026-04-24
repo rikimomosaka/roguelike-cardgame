@@ -163,10 +163,15 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
 
   const internalDebugDamage = useCallback(async () => {
     if (!accountId) return
-    const resp = await applyDebugDamage(accountId, 10)
-    if ('outcome' in resp) onRunFinished?.(resp as RunResultDto)
-    else setSnap(resp as RunSnapshotDto)
-  }, [accountId, onRunFinished])
+    try {
+      const resp = await applyDebugDamage(accountId, 10)
+      if ('outcome' in resp) onRunFinished?.(resp as RunResultDto)
+      else setSnap(resp as RunSnapshotDto)
+    } catch (err) {
+      console.error('[DEBUG -10HP] applyDebugDamage failed:', err)
+      await refresh()
+    }
+  }, [accountId, onRunFinished, refresh])
 
   useEffect(() => {
     return () => {
@@ -458,10 +463,10 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
                   const stroke = visitedEdge
                     ? '#c9985a'
                     : nextEdge
-                      ? '#8a6a3a'
-                      : '#3a2410'
-                  const opacity = visitedEdge ? 0.85 : nextEdge ? 0.85 : 0.6
-                  const strokeWidth = visitedEdge ? 0.5 : nextEdge ? 0.4 : 0.3
+                      ? '#d9b77a'
+                      : '#b08a5a'
+                  const opacity = visitedEdge ? 0.9 : nextEdge ? 0.95 : 0.75
+                  const strokeWidth = visitedEdge ? 0.55 : nextEdge ? 0.5 : 0.45
                   const dash = visitedEdge
                     ? undefined
                     : nextEdge

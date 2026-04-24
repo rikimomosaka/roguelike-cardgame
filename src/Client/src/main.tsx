@@ -11,6 +11,10 @@ import { TooltipHost } from './components/Tooltip'
 const DESIGN_W = 1280
 const DESIGN_H = 720
 
+document.addEventListener('contextmenu', (e) => {
+  e.preventDefault()
+})
+
 function AppStage({ children }: { children: ReactNode }) {
   useEffect(() => {
     function update() {

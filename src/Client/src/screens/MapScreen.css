@@ -93,7 +93,10 @@ main.map-screen {
 /* ---------- Map inner (holds nodes, edges, labels) ---------- */
 .map-screen__inner {
   position: absolute;
-  inset: 0;
+  left: 0;
+  right: 0;
+  top: -50%;
+  height: 200%;
   transform-origin: 50% 50%;
   will-change: transform;
 }
@@ -111,15 +114,15 @@ main.map-screen {
 /* ---------- Nodes ---------- */
 .map-screen__node {
   position: absolute;
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: 1px solid var(--border-mid);
   background: rgba(10, 6, 4, 0.85);
   display: grid;
   place-items: center;
   font-family: var(--font-label);
-  font-size: 14px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--border-light);
   transform: translate(-50%, -50%);
@@ -141,8 +144,8 @@ main.map-screen {
   box-shadow:
     0 0 14px rgba(255, 213, 79, 0.55),
     inset 0 0 8px rgba(255, 213, 79, 0.25);
-  width: 36px;
-  height: 36px;
+  width: 52px;
+  height: 52px;
 }
 
 .map-screen__node.is-next {
@@ -173,9 +176,9 @@ main.map-screen {
 }
 
 .map-screen__node.k--boss {
-  width: 42px;
-  height: 42px;
-  font-size: 18px;
+  width: 64px;
+  height: 64px;
+  font-size: 26px;
   border-width: 2px;
 }
 
@@ -203,9 +206,9 @@ main.map-screen {
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  margin-top: 3px;
+  margin-top: 5px;
   font-family: var(--font-label);
-  font-size: 8px;
+  font-size: 12px;
   letter-spacing: 1px;
   color: var(--border-light);
   white-space: nowrap;

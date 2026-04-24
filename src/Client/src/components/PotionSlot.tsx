@@ -1,5 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { usePotionCatalog } from '../hooks/useCardCatalog'
+import { useTooltipTarget } from './Tooltip'
+import type { TooltipContent } from './Tooltip'
 
 type Props = {
   slotIndex: number
@@ -12,6 +15,15 @@ export function PotionSlot({ slotIndex, potionId, onDiscard }: Props) {
   const [menuPos, setMenuPos] = useState<{ left: number; top: number } | null>(null)
   const iconRef = useRef<HTMLButtonElement>(null)
   const filled = potionId !== ''
+  const { catalog: potionCatalog } = usePotionCatalog()
+  const tooltipContent = useMemo<TooltipContent | null>(() => {
+    if (!filled) return null
+    const entry = potionCatalog?.[potionId]
+    const name = entry?.name ?? potionId
+    const desc = entry?.description ?? '—'
+    return { name, desc }
+  }, [filled, potionCatalog, potionId])
+  const tip = useTooltipTarget(tooltipContent)
 
   useEffect(() => {
     if (!menuOpen || !iconRef.current) return
@@ -45,6 +57,9 @@ export function PotionSlot({ slotIndex, potionId, onDiscard }: Props) {
         ref={iconRef}
         className="potion-slot__icon"
         onClick={() => setMenuOpen(v => !v)}
+        onMouseEnter={tip.onMouseEnter}
+        onMouseMove={tip.onMouseMove}
+        onMouseLeave={tip.onMouseLeave}
       >
         🧪
       </button>

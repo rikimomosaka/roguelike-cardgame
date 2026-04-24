@@ -282,18 +282,17 @@
   inset: 0;
   display: grid;
   place-items: center;
-  background: rgba(122, 42, 26, 0.0);
+  background: transparent;
   border: 2px solid transparent;
   border-radius: var(--radius-md);
   opacity: 0;
-  transition: opacity 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+  transition: opacity 0.12s ease, border-color 0.12s ease;
   pointer-events: none;
 }
 
 .mc-picker-card:not(:disabled):hover .mc-picker-card__overlay,
 .mc-picker-card:not(:disabled):focus-visible .mc-picker-card__overlay {
   opacity: 1;
-  background: rgba(122, 42, 26, 0.55);
   border-color: var(--state-danger-soft);
 }
 
@@ -303,14 +302,18 @@
 
 .mc-picker-card__overlay-label {
   font-family: var(--font-label);
-  font-size: 18px;
+  font-weight: 700;
+  font-size: 26px;
   letter-spacing: 8px;
-  color: #ffe1b0;
-  text-shadow: 0 0 8px rgba(0, 0, 0, 0.8), 0 1px 0 #000;
-  padding: 6px 18px;
-  background: rgba(10, 6, 4, 0.7);
-  border: 1px solid var(--state-danger-soft);
-  border-radius: var(--radius-sm);
+  color: rgba(230, 70, 60, 0.85);
+  text-shadow:
+    0 0 10px rgba(0, 0, 0, 0.9),
+    0 0 4px rgba(0, 0, 0, 0.9),
+    0 1px 0 #000;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
 }
 
 .mc-confirm-text {

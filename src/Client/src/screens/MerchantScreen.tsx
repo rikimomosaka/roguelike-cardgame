@@ -1,20 +1,12 @@
 import { useState } from 'react'
 import type { CardInstanceDto, MerchantInventoryDto, MerchantOfferDto } from '../api/types'
 import { Button } from '../components/Button'
-import { Card, type CardRarity, type CardType } from '../components/Card'
+import { Card } from '../components/Card'
+import { cardDisplay } from '../components/cardDisplay'
 import { Popup } from '../components/Popup'
 import { useCardCatalog, usePotionCatalog } from '../hooks/useCardCatalog'
 import { useRelicCatalog } from '../hooks/useRelicCatalog'
 import './MerchantScreen.css'
-
-// Tests run with no catalog loaded → card IDs render raw.
-// Neutral defaults keep the Card primitive visually correct.
-function inferCardType(_id: string): CardType {
-  return 'skill'
-}
-function inferCardRarity(_id: string): CardRarity {
-  return 'c'
-}
 
 type Props = {
   gold: number
@@ -26,7 +18,7 @@ type Props = {
 }
 
 export function MerchantScreen(p: Props) {
-  const { names: cardNames } = useCardCatalog()
+  const { names: cardNames, catalog: cardCatalog } = useCardCatalog()
   const { names: relicNames } = useRelicCatalog()
   const { names: potionNames } = usePotionCatalog()
   const [mode, setMode] = useState<'shop' | 'discard'>('shop')
@@ -57,6 +49,7 @@ export function MerchantScreen(p: Props) {
           <ul className="mc-picker-body">
             {p.deck.map((c, i) => {
               const name = cardNames[c.id] ?? c.id
+              const disp = cardDisplay(c.id, cardCatalog, name)
               return (
                 <li key={i} className="mc-picker-item">
                   <button
@@ -67,15 +60,17 @@ export function MerchantScreen(p: Props) {
                     aria-label={`Discard ${name} at index ${i}`}
                   >
                     <Card
-                      name={name}
-                      cost={1}
-                      type={inferCardType(c.id)}
-                      rarity={inferCardRarity(c.id)}
+                      name={disp.name}
+                      cost={disp.cost}
+                      type={disp.type}
+                      rarity={disp.rarity}
+                      description={disp.description}
+                      upgradedDescription={disp.upgradedDescription}
                       upgraded={c.upgraded}
                       width={128}
                     />
                     <span className="mc-picker-card__overlay" aria-hidden="true">
-                      <span className="mc-picker-card__overlay-label">除去</span>
+                      <span className="mc-picker-card__overlay-label">削除</span>
                     </span>
                   </button>
                 </li>
@@ -124,6 +119,7 @@ export function MerchantScreen(p: Props) {
 
   const cardSlot = (offer: MerchantOfferDto) => {
     const name = cardNames[offer.id] ?? offer.id
+    const disp = cardDisplay(offer.id, cardCatalog, name)
     const locked = !offer.sold && p.gold < offer.price
     const classes = [
       'mc-card-slot',
@@ -135,10 +131,12 @@ export function MerchantScreen(p: Props) {
     return (
       <li key={`card:${offer.id}`} className={classes}>
         <Card
-          name={name}
-          cost={1}
-          type={inferCardType(offer.id)}
-          rarity={inferCardRarity(offer.id)}
+          name={disp.name}
+          cost={disp.cost}
+          type={disp.type}
+          rarity={disp.rarity}
+          description={disp.description}
+          upgradedDescription={disp.upgradedDescription}
           width={128}
         />
         <button
@@ -234,20 +232,31 @@ export function MerchantScreen(p: Props) {
       <section className="mc-section">
         <div className="mc-section__label">SERVICE</div>
         <ul className="mc-rows">
-          <li className="mc-row mc-row--service">
-            <div className="mc-row__icon" aria-hidden="true">✂</div>
-            <div className="mc-row__body">
-              <div className="mc-row__name">カード除去</div>
-            </div>
-            <div className="mc-row__price"><span className="mc-num">{p.inventory.discardPrice}</span> ゴールド</div>
-            <Button
-              onClick={() => setMode('discard')}
-              disabled={!canDiscard}
-              aria-label="Open discard view"
-            >
-              {p.inventory.discardSlotUsed ? '売切' : '除去'}
-            </Button>
-          </li>
+          {(() => {
+            const locked = !p.inventory.discardSlotUsed && p.gold < p.inventory.discardPrice
+            const classes = [
+              'mc-row',
+              'mc-row--service',
+              p.inventory.discardSlotUsed && 'is-sold',
+              locked && 'is-locked',
+            ].filter(Boolean).join(' ')
+            return (
+              <li className={classes}>
+                <div className="mc-row__icon" aria-hidden="true">✂</div>
+                <div className="mc-row__body">
+                  <div className="mc-row__name">カード除去</div>
+                </div>
+                <div className="mc-row__price"><span className="mc-num">{p.inventory.discardPrice}</span> ゴールド</div>
+                <Button
+                  onClick={() => setMode('discard')}
+                  disabled={!canDiscard}
+                  aria-label="Open discard view"
+                >
+                  {p.inventory.discardSlotUsed ? '売切' : '除去'}
+                </Button>
+              </li>
+            )
+          })()}
         </ul>
       </section>
     </Popup>

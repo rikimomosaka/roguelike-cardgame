@@ -8,6 +8,14 @@ html, body {
   height: 100%;
   overflow: hidden;
   background: #000;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+input, textarea, [contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 #root {

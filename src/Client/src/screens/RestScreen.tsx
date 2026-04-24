@@ -59,6 +59,8 @@ export function RestScreen({ deck, completed, onHeal, onUpgrade, onClose }: Prop
                       cost={disp.cost}
                       type={disp.type}
                       rarity={disp.rarity}
+                      description={disp.description}
+                      upgradedDescription={disp.upgradedDescription}
                       upgraded={e.card.upgraded}
                       width={128}
                     />

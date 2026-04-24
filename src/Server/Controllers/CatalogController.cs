@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
+using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Events;
 using RoguelikeCardGame.Server.Dtos;
@@ -23,14 +24,17 @@ public sealed class CatalogController : ControllerBase
         int Rarity,
         string CardType,
         int? Cost,
-        bool Upgradable);
+        bool Upgradable,
+        string Description,
+        string? UpgradedDescription);
 
     public sealed record PotionCatalogEntryDto(
         string Id,
         string Name,
         int Rarity,
         bool UsableInBattle,
-        bool UsableOutOfBattle);
+        bool UsableOutOfBattle,
+        string Description);
 
     [HttpGet("cards")]
     public IActionResult GetCards()
@@ -45,7 +49,9 @@ public sealed class CatalogController : ControllerBase
                 (int)def.Rarity,
                 def.CardType.ToString(),
                 def.Cost,
-                def.UpgradedEffects is not null);
+                def.UpgradedEffects is not null,
+                DescribeEffects(def.Effects),
+                def.UpgradedEffects is null ? null : DescribeEffects(def.UpgradedEffects));
         }
         return Ok(result);
     }
@@ -61,7 +67,8 @@ public sealed class CatalogController : ControllerBase
                 def.Name,
                 (int)def.Rarity,
                 def.UsableInBattle,
-                def.UsableOutOfBattle);
+                def.UsableOutOfBattle,
+                DescribePotionEffects(def));
         }
         return Ok(result);
     }
@@ -104,6 +111,35 @@ public sealed class CatalogController : ControllerBase
             .ToList();
         return Ok(list);
     }
+
+    private static string DescribeEffects(IReadOnlyList<CardEffect> effects)
+    {
+        if (effects.Count == 0) return string.Empty;
+        return string.Join(" / ", effects.Select(CardEffectLabel));
+    }
+
+    private static string DescribePotionEffects(Core.Potions.PotionDefinition def)
+    {
+        var scope = def.UsableInBattle && def.UsableOutOfBattle
+            ? ""
+            : def.UsableInBattle
+                ? "[戦闘中] "
+                : def.UsableOutOfBattle
+                    ? "[戦闘外] "
+                    : "";
+        return scope + DescribeEffects(def.Effects);
+    }
+
+    private static string CardEffectLabel(CardEffect e) => e switch
+    {
+        DamageEffect d => $"{d.Amount} ダメージ",
+        GainBlockEffect b => $"ブロック +{b.Amount}",
+        GainMaxHpEffect m => $"最大HP +{m.Amount}",
+        GainGoldEffect g => $"+{g.Amount} ゴールド",
+        RestHealBonusEffect r => $"休憩時の回復 +{r.Amount}",
+        UnknownEffect u => $"(未実装: {u.Type})",
+        _ => "(効果)",
+    };
 
     private static string EffectLabel(EventEffect e) => e switch
     {

@@ -6,6 +6,8 @@ export type CardDisplay = {
   cost: number | string
   type: CardType
   rarity: CardRarity
+  description: string
+  upgradedDescription: string | null
 }
 
 const TYPE_MAP: Record<string, CardType> = {
@@ -38,6 +40,8 @@ export function cardDisplay(
       cost: 1,
       type: 'skill',
       rarity: 'c',
+      description: '',
+      upgradedDescription: null,
     }
   }
   return {
@@ -45,5 +49,7 @@ export function cardDisplay(
     cost: entry.cost ?? 0,
     type: TYPE_MAP[entry.cardType.toLowerCase()] ?? 'skill',
     rarity: rarityFromNumber(entry.rarity),
+    description: entry.description ?? '',
+    upgradedDescription: entry.upgradedDescription ?? null,
   }
 }
