@@ -1,0 +1,151 @@
+/* =============================================================
+   RewardPopup — ported from reward-v3.html (canonical).
+   Wraps the shared <Popup variant="modal"> shell. The tile row's
+   icon (left) and CTA chip (right) are rendered via CSS
+   pseudo-elements so the <button> element's text content stays
+   equal to its human-readable label (required by DOM queries in
+   RewardPopup.test.tsx which do `getByText(...) as HTMLButtonElement`).
+   ============================================================= */
+
+.rw-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rw-list > li {
+  margin: 0;
+  padding: 0;
+}
+
+/* ---------- Reward row (icon + button + cta) ---------- */
+.rw-row {
+  position: relative;
+}
+
+.rw-tile {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 74px 10px 60px; /* room for ::before icon and ::after CTA */
+  background: rgba(20, 12, 6, 0.65);
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 15px;
+  letter-spacing: 1px;
+  text-align: left;
+  text-shadow: 0 1px 0 #000;
+  cursor: pointer;
+  transition: border-color 0.14s ease, box-shadow 0.14s ease, transform 0.14s ease, opacity 0.14s ease;
+  min-height: 58px;
+  position: relative;
+}
+
+.rw-tile:hover:not(:disabled) {
+  border-color: var(--border-hover);
+  box-shadow: 0 0 10px rgba(201, 152, 90, 0.25);
+  transform: translateX(3px);
+}
+
+.rw-tile:disabled {
+  opacity: 0.32;
+  cursor: default;
+}
+
+/* ---------- Icon (::before) ---------- */
+.rw-tile::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-sm);
+  background: rgba(10, 6, 4, 0.6);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-label);
+  font-size: 22px;
+  line-height: 1;
+  text-shadow: 0 0 5px currentColor, 0 1px 0 #000;
+}
+
+.rw-row--gold   .rw-tile::before { content: '◈'; color: var(--gold); border-color: var(--gold-border); }
+.rw-row--potion .rw-tile::before { content: '⚗'; color: var(--rarity-r); border-color: var(--rarity-r-border); }
+.rw-row--relic  .rw-tile::before { content: '◉'; color: var(--rarity-c); border-color: var(--border-light); }
+.rw-row--card   .rw-tile::before { content: '⚔'; color: #ff9a8a; border-color: #8a3a2a; }
+
+/* ---------- CTA chip (::after) ---------- */
+.rw-tile::after {
+  content: '入手';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-label);
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--fg-muted);
+  padding: 5px 12px;
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-sm);
+  background: rgba(10, 6, 4, 0.55);
+  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+
+.rw-row--card .rw-tile::after { content: '選ぶ'; }
+
+.rw-tile:disabled::after { content: '入手済'; }
+.rw-row--card .rw-tile:disabled::after { content: '入手済'; }
+
+.rw-tile:hover:not(:disabled)::after {
+  border-color: var(--gold);
+  color: var(--gold);
+  background: rgba(58, 36, 16, 0.55);
+}
+
+/* ---------- Card picker body ---------- */
+.rw-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 8px 2px;
+}
+
+.rw-picker__card {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.16s ease, filter 0.16s ease;
+  display: inline-flex;
+}
+
+.rw-picker__card:hover {
+  transform: translateY(-6px) scale(1.03);
+  filter: drop-shadow(0 0 16px rgba(201, 152, 90, 0.45));
+}
+
+.rw-picker__card:focus-visible {
+  outline: 1px solid var(--gold);
+  outline-offset: 4px;
+}
+
+/* ---------- Potion slots row (kept as bottom strip) ---------- */
+.rw-potion-slots {
+  display: flex;
+  gap: 8px;
+  padding: 6px 2px 2px;
+  justify-content: flex-start;
+}

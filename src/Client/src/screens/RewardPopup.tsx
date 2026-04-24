@@ -1,9 +1,22 @@
 import { useState } from 'react'
 import type { RewardStateDto } from '../api/types'
 import { Button } from '../components/Button'
+import { Card, type CardRarity, type CardType } from '../components/Card'
+import { Popup } from '../components/Popup'
 import { PotionSlot } from '../components/PotionSlot'
 import { useCardCatalog, usePotionCatalog } from '../hooks/useCardCatalog'
 import { useRelicCatalog } from '../hooks/useRelicCatalog'
+import './RewardPopup.css'
+
+// The card catalog does not yet expose per-card type/rarity in all environments
+// (tests run with no catalog loaded → card IDs render raw). Neutral defaults
+// keep the Card primitive visually correct.
+function inferType(_id: string): CardType {
+  return 'skill'
+}
+function inferRarity(_id: string): CardRarity {
+  return 'c'
+}
 
 type Props = {
   reward: RewardStateDto
@@ -30,85 +43,123 @@ export function RewardPopup(p: Props) {
 
   if (cardView && !cardResolved) {
     return (
-      <div className="reward-popup" role="dialog" aria-modal="true">
-        <h2>カードを選ぶ</h2>
-        <div className="reward-card-choices">
+      <Popup
+        open
+        variant="picker"
+        title="カードを選ぶ"
+        subtitle={`${r.cardChoices.length} 枚から 1 枚`}
+        width={680}
+        footer={
+          <Button
+            onClick={async () => {
+              if (r.cardStatus === 'Pending') await p.onSkipCard()
+              setCardView(false)
+            }}
+          >
+            Skip
+          </Button>
+        }
+      >
+        <div className="rw-picker">
           {r.cardChoices.map(cid => (
-            <Button
+            <button
               key={cid}
+              type="button"
+              className="rw-picker__card"
               onClick={async () => {
                 await p.onPickCard(cid)
                 setCardView(false)
               }}
+              aria-label={cardLabel(cid)}
             >
-              {cardLabel(cid)}
-            </Button>
+              <Card
+                name={cardLabel(cid)}
+                cost={1}
+                type={inferType(cid)}
+                rarity={inferRarity(cid)}
+                width={140}
+              />
+            </button>
           ))}
         </div>
-        {/* Skip は報酬全体の画面へ戻るボタンを兼ねる。Pending のときだけ
-            サーバへ skip を通知し、以降は単にローカルで閉じるのみ。 */}
-        <Button
-          onClick={async () => {
-            if (r.cardStatus === 'Pending') await p.onSkipCard()
-            setCardView(false)
-          }}
-        >
-          Skip
-        </Button>
-      </div>
+      </Popup>
     )
   }
 
   return (
-    <div className="reward-popup" role="dialog" aria-modal="true">
-      <h2>報酬</h2>
-      <ul className="reward-list">
+    <Popup
+      open
+      variant="modal"
+      title="報酬"
+      width={620}
+      footer={
+        <Button onClick={() => p.onProceed()}>
+          {r.isBossReward ? '次の層へ' : '進む'}
+        </Button>
+      }
+    >
+      <ul className="rw-list">
         {r.gold > 0 && (
-          <li>
-            <Button disabled={r.goldClaimed} onClick={() => p.onClaimGold()}>
+          <li className="rw-row rw-row--gold">
+            <button
+              type="button"
+              className="rw-tile"
+              disabled={r.goldClaimed}
+              onClick={() => p.onClaimGold()}
+            >
               {r.goldClaimed ? '✓' : '＋'} {r.gold} Gold
-            </Button>
+            </button>
           </li>
         )}
         {r.potionId && (
-          <li>
-            <Button disabled={r.potionClaimed} onClick={() => p.onClaimPotion()}>
+          <li className="rw-row rw-row--potion">
+            <button
+              type="button"
+              className="rw-tile"
+              disabled={r.potionClaimed}
+              onClick={() => p.onClaimPotion()}
+            >
               {r.potionClaimed ? '✓' : '🧪'} {potionLabel(r.potionId)}
-            </Button>
+            </button>
           </li>
         )}
         {r.cardChoices.length > 0 && (
-          <li>
-            <Button
+          <li className="rw-row rw-row--card">
+            <button
+              type="button"
+              className="rw-tile"
               disabled={cardResolved}
               onClick={() => setCardView(true)}
             >
               {cardResolved ? '✓' : '✨'} カードの報酬
-            </Button>
+            </button>
           </li>
         )}
         {r.relicId && (
-          <li>
-            <Button
+          <li className="rw-row rw-row--relic">
+            <button
+              type="button"
+              className="rw-tile"
               disabled={r.relicClaimed}
               onClick={() => p.onClaimRelic()}
             >
               {r.relicClaimed ? '✓' : '💎'} レリック: {relicNames[r.relicId] ?? r.relicId}
-            </Button>
+            </button>
           </li>
         )}
       </ul>
-      <div className="reward-popup__potion-slots">
-        {p.potions.map((id, i) => (
-          <PotionSlot
-            key={i}
-            slotIndex={i}
-            potionId={id}
-            onDiscard={() => p.onDiscardPotion(i)}
-          />
-        ))}
-      </div>
-      <Button onClick={() => p.onProceed()}>{r.isBossReward ? '次の層へ' : '進む'}</Button>
-    </div>
+      {p.potions.length > 0 && (
+        <div className="rw-potion-slots">
+          {p.potions.map((id, i) => (
+            <PotionSlot
+              key={i}
+              slotIndex={i}
+              potionId={id}
+              onDiscard={() => p.onDiscardPotion(i)}
+            />
+          ))}
+        </div>
+      )}
+    </Popup>
   )
 }
