@@ -38,11 +38,12 @@
 
 .popup__panel {
   position: absolute;
-  left: 50%; top: 50%;
-  transform: translate(-50%, -50%);
+  left: 50%;
   /* TopBar は z-index 200 でモーダル(20)より上に乗るため、
-     パネルの上端が TopBar と重ならないよう 120px (上下各 60px) を確保する */
-  max-height: min(82%, calc(100% - 120px));
+     パネル全体を TopBar の下側へ少し押し下げて上端が重ならないようにする。 */
+  top: calc(50% + 36px);
+  transform: translate(-50%, -50%);
+  max-height: min(82%, calc(100% - 160px));
   display: flex;
   flex-direction: column;
   background:
