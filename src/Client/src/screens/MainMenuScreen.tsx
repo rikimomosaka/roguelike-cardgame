@@ -3,6 +3,7 @@ import { getCurrentRun, startNewRun } from '../api/runs'
 import type { RunSnapshotDto } from '../api/types'
 import { Button } from '../components/Button'
 import { useAccount } from '../context/AccountContext'
+import './MainMenuScreen.css'
 
 type Props = {
   onOpenSettings: () => void
@@ -60,20 +61,75 @@ export function MainMenuScreen({ onOpenSettings, onLogout, onStartRun, hasCurren
 
   return (
     <main className="main-menu">
+      <div className="main-menu__pattern" aria-hidden="true" />
+
       <header className="main-menu__header">
-        <span className="main-menu__account">{accountId}</span>
-        <button className="btn btn--secondary" onClick={onLogout}>ログアウト</button>
+        <span>
+          <span className="main-menu__account-mark" aria-hidden="true">▸</span>
+          <span className="main-menu__account">{accountId}</span>
+        </span>
+        {effectiveHasRun && <p className="main-menu__badge">保存済みラン有り</p>}
       </header>
 
-      <nav className="main-menu__buttons">
-        <Button onClick={handleSingle}>シングルプレイ</Button>
-        <Button onClick={() => setDialog('multi')}>マルチプレイ</Button>
-        <Button onClick={onOpenSettings}>設定</Button>
-        <Button onClick={onAchievements}>実績</Button>
-        <Button variant="danger" onClick={() => setDialog('quit')}>終了</Button>
-      </nav>
+      <div className="main-menu__center">
+        <div className="main-menu__title-block">
+          <div className="main-menu__ornament-top" aria-hidden="true">✦ ✦ ✦</div>
+          <h1 className="main-menu__title">ROGUELIKE</h1>
+          <div className="main-menu__subtitle">CARD GAME</div>
+        </div>
 
-      {effectiveHasRun && <p className="main-menu__badge">保存済みラン有り</p>}
+        <div className="main-menu__divider" aria-hidden="true" />
+
+        <nav className="main-menu__buttons">
+          <button
+            type="button"
+            className="main-menu__btn main-menu__btn--primary"
+            onClick={handleSingle}
+          >
+            <span className="main-menu__btn-mark" aria-hidden="true">▸</span>
+            シングルプレイ
+          </button>
+          <button
+            type="button"
+            className="main-menu__btn"
+            onClick={() => setDialog('multi')}
+          >
+            <span className="main-menu__btn-mark" aria-hidden="true">▸</span>
+            マルチプレイ
+          </button>
+          <button
+            type="button"
+            className="main-menu__btn"
+            onClick={onOpenSettings}
+          >
+            <span className="main-menu__btn-mark" aria-hidden="true">▸</span>
+            設定
+          </button>
+          <button
+            type="button"
+            className="main-menu__btn"
+            onClick={onAchievements}
+          >
+            <span className="main-menu__btn-mark" aria-hidden="true">▸</span>
+            実績
+          </button>
+          <button
+            type="button"
+            className="main-menu__btn main-menu__btn--danger"
+            onClick={() => setDialog('quit')}
+          >
+            <span className="main-menu__btn-mark" aria-hidden="true">▸</span>
+            終了
+          </button>
+        </nav>
+      </div>
+
+      <div className="main-menu__footer">
+        <span className="main-menu__footer-version">v0.8.0 · PHASE 08</span>
+        <button type="button" className="main-menu__logout" onClick={onLogout}>
+          ログアウト<span aria-hidden="true"> ▸</span>
+        </button>
+      </div>
 
       {dialog && (
         <div role="dialog" aria-label="準備中" className="main-menu__dialog">
