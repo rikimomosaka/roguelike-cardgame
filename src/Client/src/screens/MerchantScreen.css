@@ -28,6 +28,14 @@
   text-shadow: 0 0 6px rgba(255, 213, 79, 0.5);
 }
 
+/* Numeric readability: use a dedicated dot-digit font for gold figures */
+.mc-num {
+  font-family: var(--font-digit);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.05em;
+  letter-spacing: 1px;
+}
+
 /* ---------- Sections ---------- */
 .mc-section {
   display: flex;

@@ -33,7 +33,7 @@ describe('MerchantScreen', () => {
     expect(screen.getAllByText('strike').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('coin_purse')).toBeDefined()
     expect(screen.getByText('heal_potion_small')).toBeDefined()
-    expect(screen.getAllByText(/50 g/).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText((_, el) => /50\s*ゴールド/.test(el?.textContent ?? '')).length).toBeGreaterThanOrEqual(1)
   })
 
   it('gold 不足時は購入ボタンが disabled', () => {

@@ -42,27 +42,32 @@ main.map-screen {
   z-index: 0;
 }
 
-.map-screen::before {
+.map-screen__body::before {
   content: "";
   position: absolute;
-  inset: 16px;
+  inset: 12px;
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-sm);
   pointer-events: none;
   z-index: 1;
 }
 
-/* ---------- Stage (the scrollable/pannable map viewport) ---------- */
-.map-screen__stage {
+/* ---------- Body wrapper (sits inside the shared frame, below TopBar) ---------- */
+.map-screen__body {
   position: relative;
   flex: 1 1 auto;
-  margin: 16px;
-  z-index: var(--z-stage);
-  background: radial-gradient(ellipse at 50% 50%, rgba(10, 6, 4, 0.35) 0%, rgba(10, 6, 4, 0.55) 80%);
-  border: 1px solid var(--border-dark);
-  border-radius: var(--radius-md);
-  overflow: hidden;
   min-height: 0;
+  overflow: hidden;
+}
+
+/* ---------- Stage (the scrollable/pannable map viewport) ---------- */
+.map-screen__stage {
+  position: absolute;
+  inset: 16px;
+  z-index: var(--z-stage);
+  background: transparent;
+  border: none;
+  overflow: hidden;
 }
 
 .map-screen__stage::before,
@@ -140,24 +145,6 @@ main.map-screen {
   height: 100%;
   pointer-events: none;
   z-index: 2;
-}
-
-/* ---------- Floor labels (row indicators on the left) ---------- */
-.map-screen__floor-label {
-  position: absolute;
-  left: 6px;
-  transform: translateY(-50%);
-  font-family: var(--font-label);
-  font-size: 11px;
-  letter-spacing: 1px;
-  color: var(--border-mid);
-  font-variant-numeric: tabular-nums;
-  z-index: 2;
-  pointer-events: none;
-}
-
-.map-screen__floor-label.is-now {
-  color: var(--fg-strong);
 }
 
 /* ---------- Nodes ---------- */

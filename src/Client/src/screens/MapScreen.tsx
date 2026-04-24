@@ -243,9 +243,6 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
     return { left: `${xPct}%`, top: `${yPct}%` }
   }
 
-  function rowYPct(row: number): number {
-    return 4 + ((MAX_ROW - row) / MAX_ROW) * 94
-  }
 
   async function handleClick(n: MapNodeDto) {
     if (!accountId || busy) return
@@ -395,10 +392,6 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
   const atBoss = currentNode.kind === 'Boss'
 
   // Floor label rows: every 3rd row, plus START (0) and BOSS (16) and current.
-  const floorRows = new Set<number>([0, 3, 6, 9, 12, 14, MAX_ROW])
-  floorRows.add(currentNode.row)
-  const floorRowList = Array.from(floorRows).sort((a, b) => a - b)
-
   // Node coordinates in viewBox units (0-100) for SVG edge rendering.
   function posViewBox(n: MapNodeDto): { x: number; y: number } {
     const colSpan = Math.max(1, maxCol)
@@ -410,20 +403,22 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
 
   return (
     <>
-      <TopBar
-        currentHp={snap.run.currentHp}
-        maxHp={snap.run.maxHp}
-        gold={snap.run.gold}
-        potions={snap.run.potions}
-        deck={snap.run.deck}
-        relics={snap.run.relics}
-        onDiscardPotion={handleDiscardPotion}
-        onOpenMenu={() => setMenuOpen(true)}
-        onTogglePeek={activeBattle ? () => setPeekMap(v => !v) : undefined}
-        peekActive={peekMap}
-      />
       <main className="map-screen">
-        <div className="map-screen__pattern" aria-hidden="true" />
+        <TopBar
+          currentHp={snap.run.currentHp}
+          maxHp={snap.run.maxHp}
+          gold={snap.run.gold}
+          potions={snap.run.potions}
+          deck={snap.run.deck}
+          relics={snap.run.relics}
+          onDiscardPotion={handleDiscardPotion}
+          onOpenMenu={() => setMenuOpen(true)}
+          onTogglePeek={activeBattle ? () => setPeekMap(v => !v) : () => {}}
+          peekActive={peekMap}
+          peekDisabled={!activeBattle}
+        />
+        <div className="map-screen__body">
+          <div className="map-screen__pattern" aria-hidden="true" />
 
         <div
           className="map-screen__stage"
@@ -487,22 +482,6 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
                 }),
               )}
             </svg>
-
-            {floorRowList.map((row) => {
-              const isNow = row === currentNode.row
-              const top = rowYPct(row)
-              const label = row === 0 ? 'START' : row === MAX_ROW ? 'BOSS' : `F${row}`
-              return (
-                <div
-                  key={`floor-${row}`}
-                  className={`map-screen__floor-label${isNow ? ' is-now' : ''}`}
-                  style={{ top: `${top}%` }}
-                  aria-hidden="true"
-                >
-                  {label}{isNow ? ' ◂' : ''}
-                </div>
-              )
-            })}
 
             {snap.map.nodes.map((n) => {
               const { left, top } = posPct(n, maxCol)
@@ -582,6 +561,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
             <Button onClick={onDebugDamage ?? internalDebugDamage} aria-label="DEBUG -10HP">DEBUG -10HP</Button>
           </div>
         )}
+        </div>
       </main>
 
       {activeBattle && !peekMap && (

@@ -88,6 +88,7 @@
   /* ---------- Typography ---------- */
   --font-body: 'DotGothic16', 'Courier New', monospace;
   --font-label: 'Pixelify Sans', 'Courier New', monospace;
+  --font-digit: 'Silkscreen', 'Courier New', monospace;
 
   --fs-xs: 10px;
   --fs-sm: 12px;

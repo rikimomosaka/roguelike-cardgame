@@ -89,12 +89,15 @@ describe('TopBar', () => {
     expect(list.querySelectorAll('li').length).toBe(0)
   })
 
-  it('renders the map-peek button only when onTogglePeek is provided', () => {
+  it('always renders the map-peek button; disabled without onTogglePeek', () => {
     const onTogglePeek = vi.fn()
     const { rerender } = render(<TopBar {...baseProps()} />)
-    expect(screen.queryByLabelText('マップを見る')).toBeNull()
+    const btn = screen.getByLabelText('マップを見る') as HTMLButtonElement
+    expect(btn.disabled).toBe(true)
     rerender(<TopBar {...baseProps({ onTogglePeek })} />)
-    fireEvent.click(screen.getByLabelText('マップを見る'))
+    const enabled = screen.getByLabelText('マップを見る') as HTMLButtonElement
+    expect(enabled.disabled).toBe(false)
+    fireEvent.click(enabled)
     expect(onTogglePeek).toHaveBeenCalledTimes(1)
   })
 })

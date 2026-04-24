@@ -200,7 +200,7 @@ main.map-screen {
   box-shadow: 0 0 18px rgba(0, 0, 0, 0.6), 0 0 12px rgba(201, 152, 90, 0.2);
   z-index: var(--z-tooltip);
   min-width: 112px;
-  font-family: var(--font-label);
+  font-family: var(--font-body);
 }
 .potion-slot__menu button {
   padding: 6px 10px;
@@ -210,8 +210,8 @@ main.map-screen {
   border-radius: var(--radius-sm);
   cursor: pointer;
   font-family: inherit;
-  font-size: 13px;
-  letter-spacing: 2px;
+  font-size: 14px;
+  letter-spacing: 1px;
   transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
 }
 .potion-slot__menu button:hover {

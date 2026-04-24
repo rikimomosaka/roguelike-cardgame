@@ -39,7 +39,7 @@ export function MerchantScreen(p: Props) {
       <Popup
         open
         variant="picker"
-        title={`カードを除去 (${p.inventory.discardPrice} g)`}
+        title={`カードを除去 (${p.inventory.discardPrice} ゴールド)`}
         subtitle={`デッキから 1 枚`}
         width={760}
         footer={
@@ -110,7 +110,13 @@ export function MerchantScreen(p: Props) {
           disabled={offer.sold || locked}
           aria-label={`Buy ${name}`}
         >
-          {offer.sold ? '売切' : `${offer.price} g`}
+          {offer.sold ? (
+            '売切'
+          ) : (
+            <>
+              <span className="mc-num">{offer.price}</span> ゴールド
+            </>
+          )}
         </button>
       </li>
     )
@@ -137,7 +143,7 @@ export function MerchantScreen(p: Props) {
         <div className="mc-row__body">
           <div className="mc-row__name">{name}</div>
         </div>
-        <div className="mc-row__price">{offer.price} g</div>
+        <div className="mc-row__price"><span className="mc-num">{offer.price}</span> ゴールド</div>
         <Button
           onClick={() => p.onBuy(kind, offer.id)}
           disabled={offer.sold || locked}
@@ -155,7 +161,7 @@ export function MerchantScreen(p: Props) {
       variant="modal"
       title="商人"
       width={820}
-      headRight={<span className="mc-gold">{p.gold}</span>}
+      headRight={<span className="mc-gold"><span className="mc-num">{p.gold}</span> ゴールド</span>}
       footer={
         <Button onClick={() => p.onLeave()} aria-label="Leave">
           立ち去る
@@ -195,13 +201,13 @@ export function MerchantScreen(p: Props) {
             <div className="mc-row__body">
               <div className="mc-row__name">カード除去</div>
             </div>
-            <div className="mc-row__price">{p.inventory.discardPrice} g</div>
+            <div className="mc-row__price"><span className="mc-num">{p.inventory.discardPrice}</span> ゴールド</div>
             <Button
               onClick={() => setMode('discard')}
               disabled={!canDiscard}
               aria-label="Open discard view"
             >
-              除去 ({p.inventory.discardPrice} g
+              除去 ({p.inventory.discardPrice} ゴールド
               {p.inventory.discardSlotUsed ? ' / 使用済み' : '、1回のみ'})
             </Button>
           </li>

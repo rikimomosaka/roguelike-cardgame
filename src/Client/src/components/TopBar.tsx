@@ -16,6 +16,7 @@ type Props = {
   onOpenMenu: () => void
   onTogglePeek?: () => void
   peekActive?: boolean
+  peekDisabled?: boolean
 }
 
 export function TopBar({
@@ -29,6 +30,7 @@ export function TopBar({
   onOpenMenu,
   onTogglePeek,
   peekActive,
+  peekDisabled,
 }: Props) {
   const [deckOpen, setDeckOpen] = useState(false)
   const { names } = useCardCatalog()
@@ -106,17 +108,16 @@ export function TopBar({
             </div>
           )}
         </div>
-        {onTogglePeek && (
-          <button
-            type="button"
-            className="topbar__btn"
-            aria-label={peekActive ? '戦闘に戻る' : 'マップを見る'}
-            aria-pressed={peekPressedAria}
-            onClick={onTogglePeek}
-          >
-            {peekActive ? 'BATTLE' : 'MAP'}
-          </button>
-        )}
+        <button
+          type="button"
+          className="topbar__btn"
+          aria-label={peekActive ? '戦闘に戻る' : 'マップを見る'}
+          aria-pressed={peekPressedAria}
+          onClick={onTogglePeek}
+          disabled={peekDisabled || !onTogglePeek}
+        >
+          {peekActive ? 'BATTLE' : 'MAP'}
+        </button>
         <button
           type="button"
           className="topbar__btn"
