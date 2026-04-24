@@ -1,0 +1,174 @@
+/* =============================================================
+   Design Tokens — Roguelike Card Game
+   Source: docs/design/ui-handoff-to-aidesigner.md §2
+   Canonical visual: .superpowers/brainstorm/14705-1776939312/content/
+   ============================================================= */
+
+:root {
+  color-scheme: dark;
+
+  /* ---------- Base background / surface ---------- */
+  --bg-0: #0a0604;        /* near-black, deepest */
+  --bg-1: #10080a;        /* panel base */
+  --bg-2: #1a0f0a;        /* stage gradient start/end */
+  --bg-3: #2a1810;        /* stage gradient middle */
+  --bg-panel: rgba(10, 6, 4, 0.5);
+  --bg-panel-deep: rgba(10, 6, 4, 0.85);
+
+  /* ---------- Text ---------- */
+  --fg: #e6c18a;          /* main body text */
+  --fg-strong: #ffd54f;   /* accent / emphasis */
+  --fg-muted: #c9985a;    /* labels, captions */
+  --fg-dim: #8a6a3a;      /* placeholder, disabled */
+  --fg-white: #fff;       /* HP numerals, high-contrast overlays */
+
+  /* ---------- Border / frame ---------- */
+  --border-dark: #3a2410;
+  --border-mid: #5a3a1a;
+  --border-light: #8a6a3a;
+  --border-hover: #c9985a;
+
+  /* ---------- Gold accent system ---------- */
+  --gold: #ffd54f;
+  --gold-warm: #ffd27a;
+  --gold-deep: #c9985a;
+  --gold-border: #a88a2a;
+  --gold-soft: #e8c87a;
+
+  /* ---------- Rarity: COMMON ---------- */
+  --rarity-c: #eaeaea;
+  --rarity-c-border: #8a6a3a;
+  --rarity-c-bg: rgba(234, 234, 234, 0.08);
+
+  /* ---------- Rarity: RARE ---------- */
+  --rarity-r: #9ecbff;
+  --rarity-r-border: #5a7a9a;
+  --rarity-r-bg: rgba(158, 203, 255, 0.08);
+
+  /* ---------- Rarity: EPIC ---------- */
+  --rarity-e: #e4a8ff;
+  --rarity-e-border: #8a5a9a;
+  --rarity-e-bg: rgba(228, 168, 255, 0.08);
+
+  /* ---------- Rarity: LEGENDARY ---------- */
+  --rarity-l: #ffe58a;
+  --rarity-l-border: #a88a2a;
+  --rarity-l-bg: rgba(255, 229, 138, 0.1);
+
+  /* ---------- State colors ---------- */
+  --state-heal: #6adf89;      /* +HP, gains, confirm */
+  --state-heal-soft: #8fd08f;
+  --state-danger: #d96153;    /* damage, abandon, destroy */
+  --state-danger-soft: #ff9a8a;
+  --state-block: #9ecbff;     /* shield, save, info */
+  --state-cure: #9ad0d0;      /* card remove, cleanse */
+  --state-curse: #a068c4;     /* curse cards, relic frames */
+  --state-curse-soft: #e4a8ff;
+
+  /* ---------- HP level gradient (status bars) ---------- */
+  --hp-lv3: #6bb86b;   /* > 60% */
+  --hp-lv2: #d1a638;   /* 30-60% */
+  --hp-lv1: #c97240;   /* 15-30% */
+  --hp-lv0: #c04848;   /* < 15% */
+
+  /* ---------- Intent colors (enemy actions) ---------- */
+  --intent-attack: #ff9a8a;
+  --intent-defend: #9ecbff;
+  --intent-buff: #e4a8ff;
+  --intent-heal: #8fd08f;
+  --intent-unknown: #8a6a3a;
+
+  /* ---------- Card type gradients ---------- */
+  --card-type-attack: linear-gradient(180deg, #6a2a1a 0%, #3a1a10 100%);
+  --card-type-skill:  linear-gradient(180deg, #2a4a3a 0%, #10201a 100%);
+  --card-type-power:  linear-gradient(180deg, #4a2a5a 0%, #1a1025 100%);
+  --card-type-curse:  linear-gradient(180deg, #3a1a3a 0%, #1a1025 100%);
+  --card-type-status: linear-gradient(180deg, #2a2a2a 0%, #101010 100%);
+
+  /* ---------- Typography ---------- */
+  --font-body: 'DotGothic16', 'Courier New', monospace;
+  --font-label: 'Pixelify Sans', 'Courier New', monospace;
+
+  --fs-xs: 10px;
+  --fs-sm: 12px;
+  --fs-md: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 19px;
+  --fs-2xl: 24px;
+  --fs-3xl: 32px;
+  --fs-hero: 44px;
+
+  --ls-label: 2.5px;      /* Pixelify Sans caps */
+  --ls-tight: 0.5px;
+  --ls-wide: 3px;
+
+  /* ---------- Radii ---------- */
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+
+  /* ---------- Glow / shadow ---------- */
+  --glow-gold: 0 0 10px rgba(255, 213, 79, 0.45);
+  --glow-gold-strong: 0 0 16px rgba(255, 213, 79, 0.6), inset 0 0 12px rgba(201, 152, 90, 0.25);
+  --glow-rare: 0 0 6px rgba(158, 203, 255, 0.3);
+  --glow-epic: 0 0 6px rgba(228, 168, 255, 0.35);
+  --glow-legendary: 0 0 8px rgba(255, 229, 138, 0.4);
+  --glow-danger: 0 0 10px rgba(217, 97, 74, 0.45);
+  --text-shadow-pixel: -1px 0 0 #000, 1px 0 0 #000, 0 -1px 0 #000, 0 1px 0 #000;
+
+  /* ---------- Z-index layers ---------- */
+  --z-bg: 0;
+  --z-stage: 2;
+  --z-hud: 5;
+  --z-overlay-dim: 10;
+  --z-overlay-modal: 20;
+  --z-picker: 30;
+  --z-confirm: 40;
+  --z-topbar: 200;
+  --z-tooltip: 10000;  /* always on top */
+
+  /* ---------- Stage dimensions ---------- */
+  --stage-max-width: 1200px;
+  --stage-aspect: 16 / 9;
+}
+
+/* =============================================================
+   Base reset + body
+   ============================================================= */
+html, body, #root {
+  margin: 0;
+  min-height: 100vh;
+}
+
+body {
+  background: var(--bg-0);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: var(--fs-md);
+  -webkit-font-smoothing: antialiased;
+  image-rendering: pixelated;
+}
+
+/* Pixelify Sans numerics should read cleanly */
+.num, [data-numeric] {
+  font-family: var(--font-body);
+  font-variant-numeric: tabular-nums;
+}
+
+/* =============================================================
+   Utility: virtual game screen (16:9, centered)
+   ============================================================= */
+.stage {
+  position: relative;
+  width: 100%;
+  max-width: var(--stage-max-width);
+  margin: 0 auto;
+  aspect-ratio: var(--stage-aspect);
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(217, 97, 74, 0.12) 0%, transparent 70%),
+    linear-gradient(180deg, var(--bg-2) 0%, var(--bg-3) 50%, var(--bg-2) 100%);
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  color: var(--fg);
+}
