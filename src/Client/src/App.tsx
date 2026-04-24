@@ -4,8 +4,10 @@ import { getAccount } from './api/accounts'
 import { ApiError } from './api/client'
 import type { RunResultDto, RunSnapshotDto } from './api/types'
 import { Button } from './components/Button'
+import { TooltipHost } from './components/Tooltip'
 import { useAccount } from './context/AccountContext'
 import { AchievementsScreen } from './screens/AchievementsScreen'
+import { BattleScreen } from './screens/BattleScreen'
 import { LoginScreen } from './screens/LoginScreen'
 import { MainMenuScreen } from './screens/MainMenuScreen'
 import { MapScreen } from './screens/MapScreen'
@@ -23,6 +25,13 @@ type Screen =
   | { kind: 'bootstrap-error'; message: string }
 
 export default function App() {
+  if (typeof window !== 'undefined' && window.location.search.includes('demo=battle')) {
+    return (
+      <TooltipHost>
+        <BattleScreen />
+      </TooltipHost>
+    )
+  }
   const { accountId, logout } = useAccount()
   const [screen, setScreen] = useState<Screen>({ kind: 'bootstrapping' })
 
