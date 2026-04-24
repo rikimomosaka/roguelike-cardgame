@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import type { CardInstanceDto } from '../api/types'
 import { Button } from '../components/Button'
+import { Popup } from '../components/Popup'
 import { useCardCatalog } from '../hooks/useCardCatalog'
+import './RestScreen.css'
 
 type Props = {
   deck: CardInstanceDto[]
@@ -21,41 +23,114 @@ export function RestScreen({ deck, completed, onHeal, onUpgrade, onClose }: Prop
       .filter(e => !e.card.upgraded && !!e.def?.upgradable)
 
     return (
-      <div className="rest-screen" role="dialog" aria-modal="true">
-        <h2>強化するカードを選ぶ</h2>
-        <ul>
-          {candidates.map(e => {
-            const name = names[e.card.id] ?? e.card.id
-            return (
-              <li key={e.index}>
-                <Button
-                  onClick={() => onUpgrade(e.index)}
-                  disabled={completed}
-                  aria-label={`Upgrade ${name} at ${e.index}`}
-                >
-                  {name} を強化 (#{e.index})
-                </Button>
-              </li>
-            )
-          })}
-        </ul>
-        <Button onClick={() => setMode('choose')} aria-label="Back">戻る</Button>
-      </div>
+      <Popup
+        open
+        variant="modal"
+        title="鍛える"
+        subtitle="デッキから 1 枚を強化する"
+        width={720}
+        footer={
+          <div className="rs-footer">
+            <Button
+              variant="secondary"
+              onClick={() => setMode('choose')}
+              aria-label="Back"
+            >
+              戻る
+            </Button>
+          </div>
+        }
+      >
+        {candidates.length === 0 ? (
+          <p className="rs-picker-empty">強化できるカードがありません</p>
+        ) : (
+          <>
+            <p className="rs-picker-hint">カードを選んで強化</p>
+            <ul className="rs-picker-body">
+              {candidates.map(e => {
+                const name = names[e.card.id] ?? e.card.id
+                return (
+                  <li key={e.index} className="rs-picker-item">
+                    <div className="rs-upgrade-name">{name}</div>
+                    <button
+                      type="button"
+                      className="rs-upgrade-btn"
+                      onClick={() => onUpgrade(e.index)}
+                      disabled={completed}
+                      aria-label={`Upgrade ${name} at ${e.index}`}
+                    >
+                      強化 (#{e.index})
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </>
+        )}
+      </Popup>
     )
   }
 
   return (
-    <div className="rest-screen" role="dialog" aria-modal="true">
-      <h2>休息所{completed ? '(使用済み)' : ''}</h2>
-      <Button onClick={() => onHeal()} aria-label="Heal" disabled={completed}>
-        回復 (+30% max HP)
-      </Button>
-      <Button onClick={() => setMode('upgrade')} aria-label="Upgrade card" disabled={completed}>
-        カードを強化
-      </Button>
-      <Button onClick={() => onClose()} aria-label="Close">
-        閉じる
-      </Button>
-    </div>
+    <Popup
+      open
+      variant="modal"
+      title="焚き火"
+      subtitle={`休息所${completed ? '(使用済み)' : ''}`}
+      width={640}
+      footer={
+        <div className="rs-footer">
+          <Button onClick={() => onClose()} aria-label="Close">
+            閉じる
+          </Button>
+        </div>
+      }
+    >
+      <div className="rs-fire" aria-hidden="true">✦</div>
+      <ul className="rs-choices">
+        <li>
+          <button
+            type="button"
+            className="rs-choice rs-choice--heal"
+            onClick={() => onHeal()}
+            disabled={completed}
+            aria-label="Heal"
+          >
+            <span className="rs-choice-icon" aria-hidden="true">☾</span>
+            <span className="rs-choice-body">
+              <span className="rs-choice-name">休息</span>
+              <span className="rs-choice-desc">
+                最大 HP の 30% を回復する{completed ? '(使用済み)' : ''}
+              </span>
+              <span className="rs-choice-tags">
+                <span className="rs-tag rs-tag--heal">HP +30%</span>
+                {completed ? <span className="rs-tag rs-tag--used">使用済み</span> : null}
+              </span>
+            </span>
+          </button>
+        </li>
+        <li>
+          <button
+            type="button"
+            className="rs-choice rs-choice--upgrade"
+            onClick={() => setMode('upgrade')}
+            disabled={completed}
+            aria-label="Upgrade card"
+          >
+            <span className="rs-choice-icon" aria-hidden="true">✦</span>
+            <span className="rs-choice-body">
+              <span className="rs-choice-name">鍛える</span>
+              <span className="rs-choice-desc">
+                デッキから 1 枚を強化する{completed ? '(使用済み)' : ''}
+              </span>
+              <span className="rs-choice-tags">
+                <span className="rs-tag rs-tag--upgrade">+ カード強化 x1</span>
+                {completed ? <span className="rs-tag rs-tag--used">使用済み</span> : null}
+              </span>
+            </span>
+          </button>
+        </li>
+      </ul>
+    </Popup>
   )
 }
