@@ -1,0 +1,64 @@
+/* =============================================================
+   Tooltip — cursor-follow floating panel.
+   z-index 10000 keeps it above popups and piles modals.
+   ============================================================= */
+
+.tip {
+  position: fixed;
+  left: var(--tip-left, 0);
+  top: var(--tip-top, 0);
+  z-index: var(--z-tooltip);
+  pointer-events: none;
+  max-width: 300px;
+  padding: 10px 12px;
+  background: rgba(10, 6, 4, 0.96);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 12px rgba(201, 152, 90, 0.25);
+  font-family: var(--font-body);
+  color: var(--fg);
+  font-size: 14px;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.1s ease, transform 0.1s ease;
+}
+
+.tip.is-on {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.tip__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.tip__name {
+  font-family: var(--font-body);
+  font-size: 17px;
+  letter-spacing: 1.5px;
+  color: var(--gold-soft);
+}
+
+.tip__rare {
+  font-family: var(--font-label);
+  font-size: 13px;
+  letter-spacing: 2px;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  border: 1px solid;
+}
+
+.tip__rare--c { color: var(--rarity-c); border-color: var(--rarity-c-border); background: var(--rarity-c-bg); }
+.tip__rare--r { color: var(--rarity-r); border-color: var(--rarity-r-border); background: var(--rarity-r-bg); }
+.tip__rare--e { color: var(--rarity-e); border-color: var(--rarity-e-border); background: var(--rarity-e-bg); }
+.tip__rare--l { color: var(--rarity-l); border-color: var(--rarity-l-border); background: var(--rarity-l-bg); }
+
+.tip__desc {
+  color: var(--fg-muted);
+  font-size: 15px;
+  line-height: 1.55;
+}
