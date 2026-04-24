@@ -110,7 +110,7 @@ export function RewardPopup(p: Props) {
               disabled={r.goldClaimed}
               onClick={() => p.onClaimGold()}
             >
-              {r.goldClaimed ? '✓' : '＋'} {r.gold} Gold
+              {r.goldClaimed ? '✓' : '＋'} <span className="rw-num">{r.gold}</span> ゴールド
             </button>
           </li>
         )}

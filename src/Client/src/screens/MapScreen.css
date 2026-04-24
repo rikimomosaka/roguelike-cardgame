@@ -13,15 +13,14 @@
   aspect-ratio: var(--stage-aspect);
   display: flex;
   flex-direction: column;
-  background:
-    radial-gradient(ellipse at 50% 35%, rgba(201, 152, 90, 0.12) 0%, transparent 65%),
-    linear-gradient(180deg, var(--bg-3) 0%, var(--bg-2) 100%);
+  background: transparent;
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-lg);
   overflow: hidden;
   color: var(--fg);
   font-family: var(--font-body);
   padding: 0;
+  transform: translateZ(0);
 }
 
 main.map-screen {
@@ -30,26 +29,7 @@ main.map-screen {
 }
 
 .map-screen__pattern {
-  position: absolute;
-  inset: 0;
-  opacity: 0.4;
-  background:
-    radial-gradient(circle at 25% 25%, rgba(201, 152, 90, 0.4) 1px, transparent 1.5px) 0 0 / 24px 24px,
-    radial-gradient(circle at 75% 75%, rgba(201, 152, 90, 0.2) 1px, transparent 1.5px) 0 0 / 24px 24px;
-  mask: radial-gradient(ellipse at 50% 50%, black 25%, transparent 90%);
-  -webkit-mask: radial-gradient(ellipse at 50% 50%, black 25%, transparent 90%);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.map-screen__body::before {
-  content: "";
-  position: absolute;
-  inset: 12px;
-  border: 1px solid var(--border-mid);
-  border-radius: var(--radius-sm);
-  pointer-events: none;
-  z-index: 1;
+  display: none;
 }
 
 /* ---------- Body wrapper (sits inside the shared frame, below TopBar) ---------- */
@@ -63,32 +43,11 @@ main.map-screen {
 /* ---------- Stage (the scrollable/pannable map viewport) ---------- */
 .map-screen__stage {
   position: absolute;
-  inset: 16px;
+  inset: 0;
   z-index: var(--z-stage);
   background: transparent;
   border: none;
   overflow: hidden;
-}
-
-.map-screen__stage::before,
-.map-screen__stage::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 40px;
-  z-index: 4;
-  pointer-events: none;
-}
-
-.map-screen__stage::before {
-  top: 0;
-  background: linear-gradient(180deg, rgba(10, 6, 4, 0.9), transparent);
-}
-
-.map-screen__stage::after {
-  bottom: 0;
-  background: linear-gradient(0deg, rgba(10, 6, 4, 0.9), transparent);
 }
 
 /* ---------- Act badge (top-left) ---------- */
@@ -343,5 +302,5 @@ main.map-screen {
   position: absolute;
   left: 12px;
   bottom: 12px;
-  z-index: 6;
+  z-index: 210;
 }

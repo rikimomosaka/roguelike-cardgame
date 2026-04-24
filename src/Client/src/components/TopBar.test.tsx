@@ -25,7 +25,9 @@ describe('TopBar', () => {
   it('shows HP and Gold', () => {
     render(<TopBar {...baseProps()} />)
     expect(screen.getByText('HP 80/80')).toBeDefined()
-    expect(screen.getByText('Gold 99')).toBeDefined()
+    expect(
+      screen.getAllByText((_, el) => /99\s*ゴールド/.test(el?.textContent ?? '')).length,
+    ).toBeGreaterThan(0)
   })
 
   it('renders the deck count on the deck button', () => {
@@ -62,9 +64,9 @@ describe('TopBar', () => {
     )
     fireEvent.click(screen.getByLabelText('デッキ (2枚)'))
     const dialog = screen.getByRole('dialog', { name: '現在のデッキ' })
-    const items = Array.from(dialog.querySelectorAll('li')).map((li) => li.textContent)
-    expect(items).toContain('card_strike')
-    expect(items).toContain('card_strike+')
+    const items = Array.from(dialog.querySelectorAll('li')).map((li) => li.textContent ?? '')
+    expect(items.some(t => /card_strike(?!\+)/.test(t))).toBe(true)
+    expect(items.some(t => t.includes('card_strike+'))).toBe(true)
   })
 
   it('invokes onOpenMenu when the gear button is clicked', () => {

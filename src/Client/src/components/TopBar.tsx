@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import type { CardInstanceDto } from '../api/types'
+import { Card } from './Card'
+import { cardDisplay } from './cardDisplay'
 import { PotionSlot } from './PotionSlot'
 import { useCardCatalog } from '../hooks/useCardCatalog'
 import { useRelicCatalog } from '../hooks/useRelicCatalog'
@@ -33,7 +35,7 @@ export function TopBar({
   peekDisabled,
 }: Props) {
   const [deckOpen, setDeckOpen] = useState(false)
-  const { names } = useCardCatalog()
+  const { names, catalog } = useCardCatalog()
   const { names: relicNames } = useRelicCatalog()
   const deckLabel = (id: string) => names[id] ?? id
   const sortedDeck = [...deck].sort((a, b) =>
@@ -51,7 +53,9 @@ export function TopBar({
           <span className="topbar__hp-fill" style={{ width: `${hpPct}%` }} />
         </span>
       </span>
-      <span className="topbar__group topbar__gold">Gold {gold}</span>
+      <span className="topbar__group topbar__gold">
+        <span className="topbar__num">{gold}</span> ゴールド
+      </span>
       <ul className="topbar__relics" aria-label={`レリック (${relics.length}個)`}>
         {relics.map((id, i) => (
           <li key={`${id}-${i}`} className="topbar__relic" title={relicNames[id] ?? id}>
@@ -98,11 +102,21 @@ export function TopBar({
                 <p className="topbar__deck-empty">デッキは空です</p>
               ) : (
                 <ul className="topbar__deck-list">
-                  {sortedDeck.map((card, i) => (
-                    <li key={`${card.id}-${i}`}>
-                      {deckLabel(card.id)}{card.upgraded ? '+' : ''}
-                    </li>
-                  ))}
+                  {sortedDeck.map((card, i) => {
+                    const disp = cardDisplay(card.id, catalog, deckLabel(card.id))
+                    return (
+                      <li key={`${card.id}-${i}`} className="topbar__deck-item">
+                        <Card
+                          name={disp.name}
+                          cost={disp.cost}
+                          type={disp.type}
+                          rarity={disp.rarity}
+                          upgraded={card.upgraded}
+                          width={112}
+                        />
+                      </li>
+                    )
+                  })}
                 </ul>
               )}
             </div>

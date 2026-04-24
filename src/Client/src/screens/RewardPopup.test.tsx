@@ -170,7 +170,7 @@ describe('RewardPopup', () => {
         {...handlers}
       />,
     )
-    expect(screen.queryByText(/0 Gold/)).toBeNull()
+    expect(screen.queryByText((_, el) => /0\s*ゴールド/.test(el?.textContent ?? ''))).toBeNull()
   })
 
   it('proceed button shows "次の層へ" when reward.isBossReward is true', () => {

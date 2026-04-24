@@ -285,7 +285,7 @@ function HistoryDetail({ run }: { run: RunResultDto }) {
   return (
     <div className="achievements__history-detail">
       <p>最終 HP: {run.finalHp}/{run.finalMaxHp}</p>
-      <p>最終 Gold: {run.finalGold}</p>
+      <p>最終ゴールド: {run.finalGold}</p>
       <p>最終デッキ: {run.finalDeck.length === 0
         ? '（なし）'
         : run.finalDeck.map(c => c.id + (c.upgraded ? '+' : '')).join(', ')}</p>

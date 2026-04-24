@@ -147,7 +147,9 @@ describe('MapScreen', () => {
       </AccountProvider>,
     )
     expect(screen.getByText('HP 80/80')).toBeDefined()
-    expect(screen.getByText('Gold 99')).toBeDefined()
+    expect(
+      screen.getAllByText((_, el) => /99\s*ゴールド/.test(el?.textContent ?? '')).length,
+    ).toBeGreaterThan(0)
   })
 
   it('overlays BattleOverlay when run has activeBattle', () => {
@@ -175,7 +177,9 @@ describe('MapScreen', () => {
       </AccountProvider>,
     )
     expect(screen.getByText('報酬')).toBeDefined()
-    expect(screen.getByText('＋ 15 Gold')).toBeDefined()
+    expect(
+      screen.getAllByText((_, el) => /＋\s*15\s*ゴールド/.test(el?.textContent ?? '')).length,
+    ).toBeGreaterThan(0)
   })
 
   it('blocks node selection while battle is active', () => {
@@ -313,12 +317,16 @@ describe('MapScreen', () => {
     expect(proceedCall).toBeUndefined()
     // Popup should be gone.
     await waitFor(() => {
-      expect(screen.queryByText('＋ 15 Gold')).toBeNull()
+      expect(
+        screen.queryAllByText((_, el) => /＋\s*15\s*ゴールド/.test(el?.textContent ?? '')).length,
+      ).toBe(0)
     })
     // Re-click current tile (node 0 / start). Popup should re-appear.
     fireEvent.click(screen.getByTestId('map-node-0'))
     await waitFor(() => {
-      expect(screen.getByText('＋ 15 Gold')).toBeDefined()
+      expect(
+      screen.getAllByText((_, el) => /＋\s*15\s*ゴールド/.test(el?.textContent ?? '')).length,
+    ).toBeGreaterThan(0)
     })
   })
 

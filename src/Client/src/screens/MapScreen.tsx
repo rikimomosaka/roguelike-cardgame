@@ -402,7 +402,6 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
   }
 
   return (
-    <>
       <main className="map-screen">
         <TopBar
           currentHp={snap.run.currentHp}
@@ -561,77 +560,80 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
             <Button onClick={onDebugDamage ?? internalDebugDamage} aria-label="DEBUG -10HP">DEBUG -10HP</Button>
           </div>
         )}
+
+        {activeBattle && !peekMap && (
+          <BattleOverlay
+            battle={activeBattle}
+            onWin={handleWin}
+            onDebugDamage={onDebugDamage ?? internalDebugDamage}
+          />
+        )}
+
+        {rewardVisible && activeReward && (
+          <RewardPopup
+            reward={activeReward}
+            potions={snap.run.potions}
+            potionSlotCount={snap.run.potionSlotCount}
+            onClaimGold={handleClaimGold}
+            onClaimPotion={handleClaimPotion}
+            onPickCard={handlePickCard}
+            onSkipCard={handleSkipCard}
+            onProceed={handleProceed}
+            onDiscardPotion={handleDiscardPotion}
+            onClaimRelic={handleClaimRelic}
+          />
+        )}
+
+        {menuOpen && (
+          <InGameMenuScreen
+            onClose={() => setMenuOpen(false)}
+            onExitToMenu={onExitToMenu}
+            onAbandon={onAbandon}
+            elapsedSecondsRef={mountedAt}
+          />
+        )}
+
+        {merchantVisible && activeMerchant && (
+          <MerchantScreen
+            gold={snap.run.gold}
+            deck={snap.run.deck}
+            inventory={activeMerchant}
+            onBuy={handleBuy}
+            onDiscard={handleDiscardAtMerchant}
+            onLeave={handleLeaveMerchant}
+          />
+        )}
+
+        {eventVisible && activeEvent && (
+          <EventScreen
+            event={activeEvent}
+            onChoose={handleChooseEvent}
+            onClose={handleCloseEvent}
+          />
+        )}
+
+        {restVisible && (
+          <RestScreen
+            deck={snap.run.deck}
+            completed={snap.run.activeRestCompleted}
+            onHeal={handleRestHeal}
+            onUpgrade={handleRestUpgrade}
+            onClose={handleCloseRest}
+          />
+        )}
+
+        {snap.run.activeActStartRelicChoice && (
+          <ActStartRelicScreen
+            choices={snap.run.activeActStartRelicChoice.relicIds}
+            relicNames={relicNames}
+            onChoose={async (relicId) => {
+              if (!accountId) return
+              const next = await chooseActStartRelic(accountId, relicId)
+              setSnap(next)
+            }}
+          />
+        )}
         </div>
       </main>
-
-      {activeBattle && !peekMap && (
-        <BattleOverlay battle={activeBattle} onWin={handleWin} />
-      )}
-
-      {rewardVisible && activeReward && (
-        <RewardPopup
-          reward={activeReward}
-          potions={snap.run.potions}
-          potionSlotCount={snap.run.potionSlotCount}
-          onClaimGold={handleClaimGold}
-          onClaimPotion={handleClaimPotion}
-          onPickCard={handlePickCard}
-          onSkipCard={handleSkipCard}
-          onProceed={handleProceed}
-          onDiscardPotion={handleDiscardPotion}
-          onClaimRelic={handleClaimRelic}
-        />
-      )}
-
-      {menuOpen && (
-        <InGameMenuScreen
-          onClose={() => setMenuOpen(false)}
-          onExitToMenu={onExitToMenu}
-          onAbandon={onAbandon}
-          elapsedSecondsRef={mountedAt}
-        />
-      )}
-
-      {merchantVisible && activeMerchant && (
-        <MerchantScreen
-          gold={snap.run.gold}
-          deck={snap.run.deck}
-          inventory={activeMerchant}
-          onBuy={handleBuy}
-          onDiscard={handleDiscardAtMerchant}
-          onLeave={handleLeaveMerchant}
-        />
-      )}
-
-      {eventVisible && activeEvent && (
-        <EventScreen
-          event={activeEvent}
-          onChoose={handleChooseEvent}
-          onClose={handleCloseEvent}
-        />
-      )}
-
-      {restVisible && (
-        <RestScreen
-          deck={snap.run.deck}
-          completed={snap.run.activeRestCompleted}
-          onHeal={handleRestHeal}
-          onUpgrade={handleRestUpgrade}
-          onClose={handleCloseRest}
-        />
-      )}
-
-      {snap.run.activeActStartRelicChoice && (
-        <ActStartRelicScreen
-          choices={snap.run.activeActStartRelicChoice.relicIds}
-          relicNames={relicNames}
-          onChoose={async (relicId) => {
-            if (!accountId) return
-            const next = await chooseActStartRelic(accountId, relicId)
-            setSnap(next)
-          }}
-        />
-      )}
-    </>
   )
 }

@@ -207,8 +207,7 @@ export function MerchantScreen(p: Props) {
               disabled={!canDiscard}
               aria-label="Open discard view"
             >
-              除去 ({p.inventory.discardPrice} ゴールド
-              {p.inventory.discardSlotUsed ? ' / 使用済み' : '、1回のみ'})
+              {p.inventory.discardSlotUsed ? '売切' : '除去'}
             </Button>
           </li>
         </ul>

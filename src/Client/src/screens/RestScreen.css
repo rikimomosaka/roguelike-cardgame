@@ -222,6 +222,10 @@
   list-style: none;
 }
 
+.rs-picker-item > .card {
+  width: 100% !important;
+}
+
 .rs-picker-empty {
   font-family: var(--font-body);
   font-size: var(--fs-sm);

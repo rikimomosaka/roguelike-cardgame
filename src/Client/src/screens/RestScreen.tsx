@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { CardInstanceDto } from '../api/types'
 import { Button } from '../components/Button'
+import { Card } from '../components/Card'
+import { cardDisplay } from '../components/cardDisplay'
 import { Popup } from '../components/Popup'
 import { useCardCatalog } from '../hooks/useCardCatalog'
 import './RestScreen.css'
@@ -49,18 +51,25 @@ export function RestScreen({ deck, completed, onHeal, onUpgrade, onClose }: Prop
             <ul className="rs-picker-body">
               {candidates.map(e => {
                 const name = names[e.card.id] ?? e.card.id
+                const disp = cardDisplay(e.card.id, catalog, name)
                 return (
                   <li key={e.index} className="rs-picker-item">
-                    <div className="rs-upgrade-name">{name}</div>
-                    <button
-                      type="button"
-                      className="rs-upgrade-btn"
+                    <Card
+                      name={disp.name}
+                      cost={disp.cost}
+                      type={disp.type}
+                      rarity={disp.rarity}
+                      upgraded={e.card.upgraded}
+                      width={128}
+                    />
+                    <Button
+                      variant="primary"
                       onClick={() => onUpgrade(e.index)}
                       disabled={completed}
                       aria-label={`Upgrade ${name} at ${e.index}`}
                     >
-                      強化 (#{e.index})
-                    </button>
+                      強化
+                    </Button>
                   </li>
                 )
               })}

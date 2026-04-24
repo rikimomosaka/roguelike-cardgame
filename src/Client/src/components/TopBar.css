@@ -151,7 +151,7 @@
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  min-width: 16rem;
+  width: min(640px, 90vw);
   max-height: 60vh;
   overflow-y: auto;
   padding: 10px 12px;
@@ -183,18 +183,20 @@
   margin: 0;
   padding: 0;
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  flex-wrap: wrap;
+  gap: 6px;
   font-family: var(--font-body);
   font-size: 13px;
 }
 
-.topbar__deck-list li {
-  padding: 3px 6px;
-  background: rgba(10, 6, 4, 0.6);
-  border: 1px solid var(--border-dark);
-  border-radius: var(--radius-sm);
-  color: var(--fg);
+.topbar__deck-item {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.topbar__deck-item > .card {
+  width: 112px !important;
 }
 
 .topbar__deck-empty {
