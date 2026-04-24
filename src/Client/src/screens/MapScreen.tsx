@@ -108,7 +108,13 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
   const [peekMap, setPeekMap] = useState(false)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
-  const [actBanner, setActBanner] = useState<number | null>(snapshot.run.currentAct)
+  const [actBanner, setActBanner] = useState<number | null>(null)
+  const [actStartRelicDismissed, setActStartRelicDismissed] = useState(false)
+  const [pendingFinish, setPendingFinish] = useState<
+    | { kind: 'gameover'; result: RunResultDto; cause: 'hp' }
+    | { kind: 'abandon'; result: RunResultDto | null }
+    | null
+  >(null)
   const dragRef = useRef<{ startX: number; startY: number; startPan: { x: number; y: number }; moved: boolean } | null>(null)
   const stageRef = useRef<HTMLDivElement | null>(null)
   const mountedAt = useRef<number>(performance.now())
@@ -169,8 +175,16 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
     if (!accountId) return
     try {
       const resp = await applyDebugDamage(accountId, 10)
-      if ('outcome' in resp) onRunFinished?.(resp as RunResultDto)
-      else setSnap(resp as RunSnapshotDto)
+      if ('outcome' in resp) {
+        const result = resp as RunResultDto
+        if (result.outcome === 'GameOver') {
+          setPendingFinish({ kind: 'gameover', result, cause: 'hp' })
+        } else {
+          onRunFinished?.(result)
+        }
+      } else {
+        setSnap(resp as RunSnapshotDto)
+      }
     } catch (err) {
       console.error('[DEBUG -10HP] applyDebugDamage failed:', err)
       await refresh()
@@ -199,11 +213,17 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
     return () => window.clearTimeout(h)
   }, [shopMessage])
 
-  // Act transition: reset pan so START is centered, show ACT START banner for 1s.
+  // Act transition: reset pan so START is centered. Show ACT X START banner for
+  // 2s only when the player is currently AT the start node (i.e. the first
+  // moment of an act, or when restoring a saved run that was paused at the
+  // start). Mid-act snapshots — including saved runs resumed from anywhere
+  // else on the map — must not show the banner.
   // Start node (row 0) sits at y% = 4 + 94 = 98 inside a 300%-tall inner container
   // that is offset top: -100%. So in body coords, start = -100% + 98% * 300% = 194%.
   // To center it at 50% of body, pan.y = 50% - 194% = -144% of body height.
   const currentActValue = snap.run.currentAct
+  const startNodeId = snap.map.startNodeId
+  const atStartNode = snap.run.currentNodeId === startNodeId
   useEffect(() => {
     const stage = stageRef.current
     if (stage) {
@@ -211,10 +231,30 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
       setPan({ x: 0, y: -1.44 * h })
     }
     setZoom(1)
+    if (!atStartNode) {
+      setActBanner(null)
+      return
+    }
     setActBanner(currentActValue)
-    const t = window.setTimeout(() => setActBanner(null), 1000)
+    const t = window.setTimeout(() => setActBanner(null), 2000)
     return () => window.clearTimeout(t)
-  }, [currentActValue])
+  }, [currentActValue, atStartNode])
+
+  // GAME OVER intermission: show the end-of-run banner for 2s before the
+  // parent transitions to the result screen. Triggered for HP=0 (gameover)
+  // and abandon. Cleared (boss kill) bypasses this and goes straight to the
+  // result screen — the user's spec only asks for GAME OVER.
+  useEffect(() => {
+    if (!pendingFinish) return
+    const t = window.setTimeout(() => {
+      if (pendingFinish.kind === 'abandon') {
+        onAbandon(pendingFinish.result)
+      } else {
+        onRunFinished?.(pendingFinish.result)
+      }
+    }, 2000)
+    return () => window.clearTimeout(t)
+  }, [pendingFinish, onAbandon, onRunFinished])
 
   const currentNode = snap.map.nodes.find((n) => n.id === snap.run.currentNodeId)!
   const visited = new Set(snap.run.visitedNodeIds)
@@ -228,12 +268,16 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
   const merchantVisible = activeMerchant !== null && !merchantDismissed
   const eventVisible = activeEvent !== null && !eventDismissed
   const restVisible = activeRestPending && !restDismissed
+  const actStartRelicVisible = activeActStartRelicChoice !== null && !actStartRelicDismissed
+  // 選択未完了の間は (popup を一旦閉じていても) 移動を禁止する。
+  const choicePending = activeActStartRelicChoice !== null
   const blockedByModal = activeBattle !== null
     || rewardVisible
     || merchantVisible
     || eventVisible
     || restVisible
-    || activeActStartRelicChoice !== null
+    || choicePending
+    || pendingFinish !== null
 
   // Start タイルが未通過のときは、まず Start マスを踏んでレリック選択イベントを
   // 発動させる必要がある。それまでは次マスを選べないようにする。
@@ -256,6 +300,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
     if (activeMerchant !== null && merchantDismissed) return true
     if (activeEvent !== null && eventDismissed) return true
     if (activeRestPending && restDismissed) return true
+    if (activeActStartRelicChoice !== null && actStartRelicDismissed) return true
     return false
   }
 
@@ -285,6 +330,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
       setMerchantDismissed(false)
       setEventDismissed(false)
       setRestDismissed(false)
+      setActStartRelicDismissed(false)
       return
     }
     if (!isSelectable(n)) return
@@ -303,6 +349,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
       setMerchantDismissed(false)
       setEventDismissed(false)
       setRestDismissed(false)
+      setActStartRelicDismissed(false)
     } finally {
       setBusy(false)
     }
@@ -480,15 +527,24 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
                   const a = posViewBox(n)
                   const b = posViewBox(to)
                   const visitedEdge = visited.has(n.id) && visited.has(toId)
-                  const nextEdge = n.id === snap.run.currentNodeId
+                  // Hide "next" highlighting on outgoing edges from a Start
+                  // tile that hasn't been entered yet — the player must step
+                  // on Start first; only then do the next-tile previews appear.
+                  const startEntryActive = currentNode.kind === 'Start' && !visited.has(currentNode.id)
+                  const nextEdge = !startEntryActive
+                    && n.id === snap.run.currentNodeId
                     && currentNode.outgoingNodeIds.includes(toId)
+                  // Visited (history) edges use a clearly distinct, brighter
+                  // color so the player can read where they came from at a
+                  // glance. Next-edge stays gold-toned to match the next-tile
+                  // pulse glow.
                   const stroke = visitedEdge
-                    ? '#c9985a'
+                    ? '#9bd8ff'
                     : nextEdge
                       ? '#d9b77a'
                       : '#b08a5a'
-                  const opacity = visitedEdge ? 0.9 : nextEdge ? 0.95 : 0.75
-                  const strokeWidth = visitedEdge ? 0.55 : nextEdge ? 0.5 : 0.45
+                  const opacity = visitedEdge ? 1 : nextEdge ? 0.95 : 0.75
+                  const strokeWidth = visitedEdge ? 0.7 : nextEdge ? 0.5 : 0.45
                   const dash = visitedEdge
                     ? undefined
                     : nextEdge
@@ -532,6 +588,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
                 stateClass,
                 kindClassFor(n.kind, resolvedKind),
                 reopen ? 'is-reopen' : '',
+                startEntry ? 'is-pulse' : '',
               ].filter(Boolean).join(' ')
 
               const label = (isCurrent || selectable) ? nodeLabelFor(n.kind, resolvedKind) : null
@@ -588,6 +645,17 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
           </div>
         )}
 
+        {pendingFinish !== null && (
+          <div className="map-screen__gameover" role="status" aria-live="polite">
+            <span className="map-screen__gameover-title">GAME OVER</span>
+            <span className="map-screen__gameover-cause">
+              {pendingFinish.kind === 'abandon'
+                ? 'ゲームを諦めた'
+                : '体力が0になった'}
+            </span>
+          </div>
+        )}
+
         {import.meta.env.DEV && (
           <div className="map-screen__debug">
             <Button onClick={onDebugDamage ?? internalDebugDamage} aria-label="DEBUG -10HP">DEBUG -10HP</Button>
@@ -621,7 +689,10 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
           <InGameMenuScreen
             onClose={() => setMenuOpen(false)}
             onExitToMenu={onExitToMenu}
-            onAbandon={onAbandon}
+            onAbandon={(result) => {
+              setMenuOpen(false)
+              setPendingFinish({ kind: 'abandon', result })
+            }}
             elapsedSecondsRef={mountedAt}
           />
         )}
@@ -655,15 +726,20 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
           />
         )}
 
-        {snap.run.activeActStartRelicChoice && (
+        {actStartRelicVisible && activeActStartRelicChoice && (
           <ActStartRelicScreen
-            choices={snap.run.activeActStartRelicChoice.relicIds}
+            choices={activeActStartRelicChoice.relicIds}
             relicNames={relicNames}
             relicDescriptions={relicDescriptions}
             onChoose={async (relicId) => {
               if (!accountId) return
-              const next = await chooseActStartRelic(accountId, relicId)
-              setSnap(next)
+              // 選択後も popup を開いたままにし、手動で閉じてもらう。
+              // snap は閉じる時に refresh するため、ここでは更新しない。
+              await chooseActStartRelic(accountId, relicId)
+            }}
+            onClose={async () => {
+              setActStartRelicDismissed(true)
+              await refresh()
             }}
           />
         )}

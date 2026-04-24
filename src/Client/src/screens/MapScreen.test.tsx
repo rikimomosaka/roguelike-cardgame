@@ -340,7 +340,7 @@ describe('MapScreen', () => {
         />
       </AccountProvider>,
     )
-    expect(screen.getByText(/層開始のレリックを選ぶ/)).toBeDefined()
+    expect(screen.getByText(/レリックを選ぶ/)).toBeDefined()
   })
 
   it('at act start (Start not visited, choice null), Start is the only clickable tile', () => {
@@ -388,7 +388,7 @@ describe('MapScreen', () => {
       expect(call).toBeDefined()
     })
     await waitFor(() => {
-      expect(screen.getByText(/層開始のレリックを選ぶ/)).toBeDefined()
+      expect(screen.getByText(/レリックを選ぶ/)).toBeDefined()
     })
   })
 })

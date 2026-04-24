@@ -166,6 +166,20 @@
   background: rgba(201, 152, 90, 0.18);
 }
 
+.topbar__btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  color: var(--fg-dim);
+  border-color: var(--border-dark);
+  background: rgba(10, 6, 4, 0.55);
+}
+
+.topbar__btn:disabled:hover {
+  border-color: var(--border-dark);
+  color: var(--fg-dim);
+  background: rgba(10, 6, 4, 0.55);
+}
+
 .topbar__deck-wrap {
   position: relative;
 }

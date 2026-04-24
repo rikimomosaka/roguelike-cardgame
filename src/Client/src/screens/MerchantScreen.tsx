@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { CardInstanceDto, MerchantInventoryDto, MerchantOfferDto } from '../api/types'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import { cardDisplay } from '../components/cardDisplay'
 import { Popup } from '../components/Popup'
+import { useTooltipTarget } from '../components/Tooltip'
+import type { TooltipContent } from '../components/Tooltip'
 import { useCardCatalog, usePotionCatalog } from '../hooks/useCardCatalog'
 import { useRelicCatalog } from '../hooks/useRelicCatalog'
 import './MerchantScreen.css'
@@ -19,13 +21,19 @@ type Props = {
 
 export function MerchantScreen(p: Props) {
   const { names: cardNames, catalog: cardCatalog } = useCardCatalog()
-  const { names: relicNames } = useRelicCatalog()
-  const { names: potionNames } = usePotionCatalog()
+  const { names: relicNames, catalog: relicCatalog } = useRelicCatalog()
+  const { names: potionNames, catalog: potionCatalog } = usePotionCatalog()
   const [mode, setMode] = useState<'shop' | 'discard'>('shop')
   const [confirming, setConfirming] = useState<{ index: number; name: string } | null>(null)
+  const [purchased, setPurchased] = useState(false)
 
   const canDiscard =
     !p.inventory.discardSlotUsed && p.gold >= p.inventory.discardPrice
+
+  async function handleBuy(kind: 'card' | 'relic' | 'potion', id: string) {
+    await p.onBuy(kind, id)
+    setPurchased(true)
+  }
 
   if (mode === 'discard') {
     return (
@@ -99,6 +107,7 @@ export function MerchantScreen(p: Props) {
                     const idx = confirming.index
                     setConfirming(null)
                     await p.onDiscard(idx)
+                    setPurchased(true)
                     setMode('shop')
                   }}
                   aria-label="Confirm discard"
@@ -142,7 +151,7 @@ export function MerchantScreen(p: Props) {
         <button
           type="button"
           className="mc-card-slot__buy"
-          onClick={() => p.onBuy('card', offer.id)}
+          onClick={() => handleBuy('card', offer.id)}
           disabled={offer.sold || locked}
           aria-label={`Buy ${name}`}
         >
@@ -154,39 +163,6 @@ export function MerchantScreen(p: Props) {
             </>
           )}
         </button>
-      </li>
-    )
-  }
-
-  const row = (
-    kind: 'relic' | 'potion',
-    offer: MerchantOfferDto,
-    name: string,
-    icon: string,
-  ) => {
-    const locked = !offer.sold && p.gold < offer.price
-    const classes = [
-      'mc-row',
-      `mc-row--${kind}`,
-      offer.sold && 'is-sold',
-      locked && 'is-locked',
-    ]
-      .filter(Boolean)
-      .join(' ')
-    return (
-      <li key={`${kind}:${offer.id}`} className={classes}>
-        <div className="mc-row__icon" aria-hidden="true">{icon}</div>
-        <div className="mc-row__body">
-          <div className="mc-row__name">{name}</div>
-        </div>
-        <div className="mc-row__price"><span className="mc-num">{offer.price}</span> ゴールド</div>
-        <Button
-          onClick={() => p.onBuy(kind, offer.id)}
-          disabled={offer.sold || locked}
-          aria-label={`Buy ${name}`}
-        >
-          {offer.sold ? '売切' : '購入'}
-        </Button>
       </li>
     )
   }
@@ -204,6 +180,19 @@ export function MerchantScreen(p: Props) {
         </Button>
       }
     >
+      <div className="mc-shopkeeper" aria-hidden="false">
+        <div className="mc-shopkeeper__avatar" aria-hidden="true">
+          <span className="mc-shopkeeper__sprite">商</span>
+        </div>
+        <div className="mc-shopkeeper__line" role="status" aria-live="polite">
+          <span className="mc-shopkeeper__quote">
+            {purchased
+              ? 'お買い上げありがとうございます。'
+              : 'いらっしゃいませ。'}
+          </span>
+        </div>
+      </div>
+
       <section className="mc-section">
         <div className="mc-section__label">CARDS</div>
         <ul className="mc-cards">
@@ -213,19 +202,37 @@ export function MerchantScreen(p: Props) {
 
       <section className="mc-section">
         <div className="mc-section__label">RELICS</div>
-        <ul className="mc-rows">
-          {p.inventory.relics.map(o =>
-            row('relic', o, relicNames[o.id] ?? o.id, '◉'),
-          )}
+        <ul className="mc-tile-grid">
+          {p.inventory.relics.map(o => (
+            <RelicPotionTile
+              key={`relic:${o.id}`}
+              kind="relic"
+              offer={o}
+              name={relicNames[o.id] ?? o.id}
+              description={relicCatalog?.[o.id]?.description ?? null}
+              icon="◉"
+              gold={p.gold}
+              onBuy={handleBuy}
+            />
+          ))}
         </ul>
       </section>
 
       <section className="mc-section">
         <div className="mc-section__label">POTIONS</div>
-        <ul className="mc-rows">
-          {p.inventory.potions.map(o =>
-            row('potion', o, potionNames[o.id] ?? o.id, '⚗'),
-          )}
+        <ul className="mc-tile-grid">
+          {p.inventory.potions.map(o => (
+            <RelicPotionTile
+              key={`potion:${o.id}`}
+              kind="potion"
+              offer={o}
+              name={potionNames[o.id] ?? o.id}
+              description={potionCatalog?.[o.id]?.description ?? null}
+              icon="⚗"
+              gold={p.gold}
+              onBuy={handleBuy}
+            />
+          ))}
         </ul>
       </section>
 
@@ -260,5 +267,55 @@ export function MerchantScreen(p: Props) {
         </ul>
       </section>
     </Popup>
+  )
+}
+
+type TileProps = {
+  kind: 'relic' | 'potion'
+  offer: MerchantOfferDto
+  name: string
+  description: string | null
+  icon: string
+  gold: number
+  onBuy: (kind: 'relic' | 'potion', id: string) => void | Promise<void>
+}
+
+function RelicPotionTile({ kind, offer, name, description, icon, gold, onBuy }: TileProps) {
+  const tooltipContent = useMemo<TooltipContent | null>(() => {
+    if (!description) return null
+    return { name, desc: description }
+  }, [name, description])
+  const tip = useTooltipTarget(tooltipContent)
+  const locked = !offer.sold && gold < offer.price
+  const classes = [
+    'mc-tile',
+    `mc-tile--${kind}`,
+    offer.sold && 'is-sold',
+    locked && 'is-locked',
+  ]
+    .filter(Boolean)
+    .join(' ')
+  return (
+    <li
+      className={classes}
+      onMouseEnter={tip.onMouseEnter}
+      onMouseMove={tip.onMouseMove}
+      onMouseLeave={tip.onMouseLeave}
+    >
+      <div className="mc-tile__head">
+        <span className="mc-tile__icon" aria-hidden="true">{icon}</span>
+        <span className="mc-tile__name">{name}</span>
+      </div>
+      <div className="mc-tile__buy-row">
+        <span className="mc-tile__price"><span className="mc-num">{offer.price}</span> ゴールド</span>
+        <Button
+          onClick={() => onBuy(kind, offer.id)}
+          disabled={offer.sold || locked}
+          aria-label={`Buy ${name}`}
+        >
+          {offer.sold ? '売切' : '購入'}
+        </Button>
+      </div>
+    </li>
   )
 }

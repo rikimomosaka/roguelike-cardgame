@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { CardInstanceDto } from '../api/types'
 import { Card } from './Card'
 import { cardDisplay } from './cardDisplay'
@@ -7,6 +7,40 @@ import { RelicIcon } from './RelicIcon'
 import { useCardCatalog } from '../hooks/useCardCatalog'
 import { useRelicCatalog } from '../hooks/useRelicCatalog'
 import './TopBar.css'
+
+// Tween a number from its previous value to the new value over `durationMs`.
+// Used for HP/Gold so changes count up/down visibly instead of snapping.
+function useAnimatedNumber(target: number, durationMs = 450): number {
+  const [display, setDisplay] = useState<number>(target)
+  const fromRef = useRef<number>(target)
+  const toRef = useRef<number>(target)
+  const startRef = useRef<number>(0)
+  const rafRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (target === toRef.current) return
+    fromRef.current = display
+    toRef.current = target
+    startRef.current = performance.now()
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
+    const step = (now: number) => {
+      const t = Math.min(1, (now - startRef.current) / durationMs)
+      // ease-out cubic
+      const eased = 1 - Math.pow(1 - t, 3)
+      const v = fromRef.current + (toRef.current - fromRef.current) * eased
+      setDisplay(t === 1 ? toRef.current : v)
+      if (t < 1) rafRef.current = requestAnimationFrame(step)
+      else rafRef.current = null
+    }
+    rafRef.current = requestAnimationFrame(step)
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target, durationMs])
+
+  return display
+}
 
 type Props = {
   currentHp: number
@@ -47,20 +81,24 @@ export function TopBar({
   const deckOpenAria: 'true' | 'false' = deckOpen ? 'true' : 'false'
   const peekPressedAria: 'true' | 'false' = peekActive ? 'true' : 'false'
   const menuPressedAria: 'true' | 'false' = menuActive ? 'true' : 'false'
-  const hpPct = Math.max(0, Math.min(100, maxHp > 0 ? (currentHp / maxHp) * 100 : 0))
+  const animatedHp = useAnimatedNumber(currentHp)
+  const animatedGold = useAnimatedNumber(gold)
+  const displayedHp = Math.round(animatedHp)
+  const displayedGold = Math.round(animatedGold)
+  const hpPct = Math.max(0, Math.min(100, maxHp > 0 ? (animatedHp / maxHp) * 100 : 0))
   const hpState: 'high' | 'mid' | 'low' | 'crit' =
     hpPct > 60 ? 'high' : hpPct > 30 ? 'mid' : hpPct > 15 ? 'low' : 'crit'
 
   return (
     <div className="topbar" role="status">
       <span className="topbar__group topbar__hp" data-hp={hpState}>
-        <span className="topbar__hp-label">HP {currentHp}/{maxHp}</span>
+        <span className="topbar__hp-label">HP {displayedHp}/{maxHp}</span>
         <span className="topbar__hp-track" aria-hidden="true">
           <span className="topbar__hp-fill" style={{ width: `${hpPct}%` }} />
         </span>
       </span>
       <span className="topbar__group topbar__gold">
-        <span className="topbar__num">{gold}</span> ゴールド
+        <span className="topbar__num">{displayedGold}</span> ゴールド
       </span>
       <ul className="topbar__relics" aria-label={`レリック (${relics.length}個)`}>
         {relics.map((id, i) => (
