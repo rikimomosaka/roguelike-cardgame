@@ -19,6 +19,47 @@
   font-family: var(--font-body);
 }
 
+/* Embedded mode: render inline inside a Popup without frame/aspect-ratio.
+   Used by the in-run menu where the settings view lives inside a 520px modal. */
+.settings-screen--embedded {
+  aspect-ratio: auto;
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+  position: static;
+}
+
+.settings-screen--embedded::before {
+  content: none;
+}
+
+.settings-screen--embedded .settings-screen__content {
+  position: static;
+  inset: auto;
+  padding: 0;
+  gap: 12px;
+}
+
+.settings-screen--embedded .settings-screen__section {
+  width: 100%;
+}
+
+.settings-screen--embedded .settings-screen__body {
+  gap: 8px;
+  justify-content: flex-start;
+  flex: initial;
+}
+
+.settings-screen--embedded .settings-screen__placeholder {
+  position: static;
+  inset: auto;
+  padding: 24px 8px;
+}
+
 .settings-screen__pattern {
   position: absolute;
   inset: 0;

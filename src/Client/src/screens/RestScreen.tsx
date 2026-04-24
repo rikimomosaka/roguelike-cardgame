@@ -17,6 +17,7 @@ type Props = {
 
 export function RestScreen({ deck, completed, onHeal, onUpgrade, onClose }: Props) {
   const [mode, setMode] = useState<'choose' | 'upgrade'>('choose')
+  const [confirming, setConfirming] = useState<{ index: number; name: string } | null>(null)
   const { names, catalog } = useCardCatalog()
 
   if (mode === 'upgrade') {
@@ -25,14 +26,14 @@ export function RestScreen({ deck, completed, onHeal, onUpgrade, onClose }: Prop
       .filter(e => !e.card.upgraded && !!e.def?.upgradable)
 
     return (
-      <Popup
-        open
-        variant="modal"
-        title="鍛える"
-        subtitle="デッキから 1 枚を強化する"
-        width={720}
-        footer={
-          <div className="rs-footer">
+      <>
+        <Popup
+          open
+          variant="picker"
+          title="カードを強化"
+          subtitle="カードをクリックして強化"
+          width={760}
+          footer={
             <Button
               variant="secondary"
               onClick={() => setMode('choose')}
@@ -40,45 +41,80 @@ export function RestScreen({ deck, completed, onHeal, onUpgrade, onClose }: Prop
             >
               戻る
             </Button>
-          </div>
-        }
-      >
-        {candidates.length === 0 ? (
-          <p className="rs-picker-empty">強化できるカードがありません</p>
-        ) : (
-          <>
-            <p className="rs-picker-hint">カードを選んで強化</p>
+          }
+        >
+          {candidates.length === 0 ? (
+            <p className="rs-picker-empty">強化できるカードがありません</p>
+          ) : (
             <ul className="rs-picker-body">
               {candidates.map(e => {
                 const name = names[e.card.id] ?? e.card.id
                 const disp = cardDisplay(e.card.id, catalog, name)
                 return (
                   <li key={e.index} className="rs-picker-item">
-                    <Card
-                      name={disp.name}
-                      cost={disp.cost}
-                      type={disp.type}
-                      rarity={disp.rarity}
-                      description={disp.description}
-                      upgradedDescription={disp.upgradedDescription}
-                      upgraded={e.card.upgraded}
-                      width={128}
-                    />
-                    <Button
-                      variant="primary"
-                      onClick={() => onUpgrade(e.index)}
+                    <button
+                      type="button"
+                      className="rs-picker-card"
+                      onClick={() => setConfirming({ index: e.index, name })}
                       disabled={completed}
                       aria-label={`Upgrade ${name} at ${e.index}`}
                     >
-                      強化
-                    </Button>
+                      <Card
+                        name={disp.name}
+                        cost={disp.cost}
+                        type={disp.type}
+                        rarity={disp.rarity}
+                        description={disp.description}
+                        upgradedDescription={disp.upgradedDescription}
+                        upgraded={e.card.upgraded}
+                        width={128}
+                      />
+                      <span className="rs-picker-card__overlay" aria-hidden="true">
+                        <span className="rs-picker-card__overlay-label">強化</span>
+                      </span>
+                    </button>
                   </li>
                 )
               })}
             </ul>
-          </>
+          )}
+        </Popup>
+        {confirming && (
+          <Popup
+            open
+            variant="confirm"
+            title="強化しますか?"
+            width={420}
+            footer={
+              <>
+                <Button
+                  variant="secondary"
+                  onClick={() => setConfirming(null)}
+                  aria-label="Cancel upgrade"
+                >
+                  いいえ
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={async () => {
+                    const idx = confirming.index
+                    setConfirming(null)
+                    await onUpgrade(idx)
+                    setMode('choose')
+                  }}
+                  aria-label="Confirm upgrade"
+                >
+                  はい
+                </Button>
+              </>
+            }
+          >
+            <p className="rs-confirm-text">
+              <strong>{confirming.name}</strong> を強化します。
+            </p>
+          </Popup>
         )}
-      </Popup>
+      </>
     )
   }
 

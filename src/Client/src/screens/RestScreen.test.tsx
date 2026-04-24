@@ -47,12 +47,14 @@ describe('RestScreen', () => {
     })
   })
 
-  it('selecting upgrade card calls onUpgrade with correct index', async () => {
+  it('selecting upgrade card then confirming calls onUpgrade with correct index', async () => {
     const onUpgrade = vi.fn()
     render(<RestScreen deck={deck} completed={false} onHeal={vi.fn()} onUpgrade={onUpgrade} onClose={vi.fn()} />)
     fireEvent.click(screen.getByRole('button', { name: /upgrade card/i }))
-    const btn = await screen.findByRole('button', { name: /upgrade strike at 0/i })
-    fireEvent.click(btn)
+    const pick = await screen.findByRole('button', { name: /upgrade strike at 0/i })
+    fireEvent.click(pick)
+    const confirm = await screen.findByRole('button', { name: /confirm upgrade/i })
+    fireEvent.click(confirm)
     await waitFor(() => expect(onUpgrade).toHaveBeenCalledWith(0))
   })
 

@@ -5,6 +5,7 @@ import './SettingsScreen.css'
 
 type Props = {
   onBack: () => void
+  embedded?: boolean
 }
 
 type SliderRowProps = {
@@ -43,13 +44,16 @@ function SliderRow({ label, value, onChange }: SliderRowProps) {
   )
 }
 
-export function SettingsScreen({ onBack }: Props) {
+export function SettingsScreen({ onBack, embedded }: Props) {
   const { accountId } = useAccount()
 
   if (!accountId) {
+    const rootClass = embedded
+      ? 'settings-screen settings-screen--embedded'
+      : 'settings-screen'
     return (
-      <main className="settings-screen">
-        <div className="settings-screen__pattern" aria-hidden="true" />
+      <main className={rootClass}>
+        {!embedded && <div className="settings-screen__pattern" aria-hidden="true" />}
         <div className="settings-screen__placeholder">
           <p>ログインが必要です。</p>
           <button type="button" className="settings-screen__back" onClick={onBack}>
@@ -61,15 +65,16 @@ export function SettingsScreen({ onBack }: Props) {
     )
   }
 
-  return <SettingsScreenInner onBack={onBack} accountId={accountId} />
+  return <SettingsScreenInner onBack={onBack} accountId={accountId} embedded={embedded} />
 }
 
 type InnerProps = {
   onBack: () => void
   accountId: string
+  embedded?: boolean
 }
 
-function SettingsScreenInner({ onBack, accountId }: InnerProps) {
+function SettingsScreenInner({ onBack, accountId, embedded }: InnerProps) {
   const { settings, update, saveStatus } = useAudioSettings(accountId)
 
   const statusClass =
@@ -88,15 +93,21 @@ function SettingsScreenInner({ onBack, accountId }: InnerProps) {
           ? '保存に失敗しました'
           : '未変更'
 
+  const rootClass = embedded
+    ? 'settings-screen settings-screen--embedded'
+    : 'settings-screen'
+
   return (
-    <main className="settings-screen">
-      <div className="settings-screen__pattern" aria-hidden="true" />
+    <main className={rootClass}>
+      {!embedded && <div className="settings-screen__pattern" aria-hidden="true" />}
 
       <div className="settings-screen__content">
-        <header className="settings-screen__header">
-          <h2 className="settings-screen__title">❖ SETTINGS ❖</h2>
-          <div className="settings-screen__ornament" aria-hidden="true">✦ ✦ ✦</div>
-        </header>
+        {!embedded && (
+          <header className="settings-screen__header">
+            <h2 className="settings-screen__title">❖ SETTINGS ❖</h2>
+            <div className="settings-screen__ornament" aria-hidden="true">✦ ✦ ✦</div>
+          </header>
+        )}
 
         <div className="settings-screen__body">
           <section className="settings-screen__section">

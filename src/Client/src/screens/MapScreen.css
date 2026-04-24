@@ -90,13 +90,16 @@ main.map-screen {
   padding: 0 4px;
 }
 
-/* ---------- Map inner (holds nodes, edges, labels) ---------- */
+/* ---------- Map inner (holds nodes, edges, labels) ----------
+   Inner is stretched vertically so rows have more visual spacing.
+   top offset + height pair centers the inner's midpoint on the body center
+   (-((h-1)/2) * 100% + h * 100%, h = inner height multiplier). */
 .map-screen__inner {
   position: absolute;
   left: 0;
   right: 0;
-  top: -50%;
-  height: 200%;
+  top: -100%;
+  height: 300%;
   transform-origin: 50% 50%;
   will-change: transform;
 }
@@ -114,15 +117,16 @@ main.map-screen {
 /* ---------- Nodes ---------- */
 .map-screen__node {
   position: absolute;
-  width: 44px;
-  height: 44px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   border: 1px solid var(--border-mid);
-  background: rgba(10, 6, 4, 0.85);
+  /* Fully opaque — otherwise SVG edges show through the node center. */
+  background: #0a0604;
   display: grid;
   place-items: center;
   font-family: var(--font-label);
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--border-light);
   transform: translate(-50%, -50%);
@@ -134,31 +138,45 @@ main.map-screen {
 .map-screen__node.is-past {
   color: #6a4a2a;
   border-color: var(--border-dark);
-  background: rgba(10, 6, 4, 0.7);
+  background: #120b06;
 }
 
 .map-screen__node.is-current {
   color: var(--fg-strong);
   border-color: var(--fg-strong);
-  background: rgba(255, 213, 79, 0.2);
+  background: #3a2a10;
   box-shadow:
     0 0 14px rgba(255, 213, 79, 0.55),
     inset 0 0 8px rgba(255, 213, 79, 0.25);
-  width: 52px;
-  height: 52px;
+  width: 68px;
+  height: 68px;
+  font-size: 28px;
 }
 
 .map-screen__node.is-next {
   color: var(--gold-soft);
   border-color: var(--border-hover);
-  background: rgba(201, 152, 90, 0.15);
+  background: #241610;
   box-shadow: 0 0 10px rgba(201, 152, 90, 0.4);
   cursor: pointer;
+  animation: map-next-pulse 1.4s ease-in-out infinite;
 }
 
 .map-screen__node.is-next:hover {
   border-color: var(--fg-strong);
   box-shadow: 0 0 14px rgba(255, 213, 79, 0.55);
+  animation: none;
+}
+
+@keyframes map-next-pulse {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow: 0 0 10px rgba(201, 152, 90, 0.4);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.1);
+    box-shadow: 0 0 18px rgba(255, 213, 79, 0.7);
+  }
 }
 
 .map-screen__node.is-far {
@@ -176,9 +194,9 @@ main.map-screen {
 }
 
 .map-screen__node.k--boss {
-  width: 64px;
-  height: 64px;
-  font-size: 26px;
+  width: 80px;
+  height: 80px;
+  font-size: 32px;
   border-width: 2px;
 }
 
@@ -308,4 +326,46 @@ main.map-screen {
   left: 12px;
   bottom: 12px;
   z-index: 210;
+}
+
+/* ---------- Act start banner ---------- */
+.map-screen__act-banner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 80;
+  padding: 22px 0;
+  text-align: center;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(10, 6, 4, 0.88) 18%,
+    rgba(10, 6, 4, 0.88) 82%,
+    transparent 100%
+  );
+  border-top: 1px solid rgba(201, 152, 90, 0.4);
+  border-bottom: 1px solid rgba(201, 152, 90, 0.4);
+  pointer-events: none;
+  animation: map-act-banner-fade 1s ease-out forwards;
+}
+
+.map-screen__act-banner-text {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 42px;
+  letter-spacing: 14px;
+  color: var(--gold-soft);
+  text-shadow:
+    0 0 24px rgba(255, 213, 79, 0.6),
+    0 0 12px rgba(255, 213, 79, 0.4),
+    0 2px 0 #000;
+}
+
+@keyframes map-act-banner-fade {
+  0%   { opacity: 0; transform: translateY(-50%) scale(0.94); }
+  18%  { opacity: 1; transform: translateY(-50%) scale(1); }
+  78%  { opacity: 1; transform: translateY(-50%) scale(1); }
+  100% { opacity: 0; transform: translateY(-50%) scale(1.02); }
 }

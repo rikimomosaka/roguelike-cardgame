@@ -76,17 +76,30 @@ export function TooltipHost({ children }: { children: ReactNode }) {
 
 export function useTooltipTarget(content: TooltipContent | null) {
   const ctx = useContext(TooltipContext)
+  const showingRef = useRef(false)
+  useEffect(() => {
+    return () => {
+      if (showingRef.current) {
+        ctx?.hide()
+        showingRef.current = false
+      }
+    }
+  }, [ctx])
   return useMemo(
     () => ({
       onMouseEnter: (e: MouseEvent) => {
         if (!ctx || !content) return
         ctx.show(content, { x: e.clientX, y: e.clientY })
+        showingRef.current = true
       },
       onMouseMove: (e: MouseEvent) => {
         if (!ctx || !content) return
         ctx.move({ x: e.clientX, y: e.clientY })
       },
-      onMouseLeave: () => ctx?.hide(),
+      onMouseLeave: () => {
+        ctx?.hide()
+        showingRef.current = false
+      },
     }),
     [ctx, content],
   )

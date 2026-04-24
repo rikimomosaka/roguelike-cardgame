@@ -94,7 +94,10 @@ function nodeTooltipFor(kind: TileKind, resolvedKind: TileKind | null): string {
 export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, onRunFinished }: Props) {
   const { accountId } = useAccount()
   const [snap, setSnap] = useState<RunSnapshotDto>(snapshot)
-  const { names: relicNames } = useRelicCatalog()
+  const { names: relicNames, catalog: relicCatalog } = useRelicCatalog()
+  const relicDescriptions = relicCatalog
+    ? Object.fromEntries(Object.entries(relicCatalog).map(([k, v]) => [k, v.description]))
+    : undefined
   const [menuOpen, setMenuOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [shopMessage, setShopMessage] = useState<string | null>(null)
@@ -105,6 +108,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
   const [peekMap, setPeekMap] = useState(false)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
+  const [actBanner, setActBanner] = useState<number | null>(snapshot.run.currentAct)
   const dragRef = useRef<{ startX: number; startY: number; startPan: { x: number; y: number }; moved: boolean } | null>(null)
   const stageRef = useRef<HTMLDivElement | null>(null)
   const mountedAt = useRef<number>(performance.now())
@@ -194,6 +198,23 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
     const h = window.setTimeout(() => setShopMessage(null), SHOP_MESSAGE_MS)
     return () => window.clearTimeout(h)
   }, [shopMessage])
+
+  // Act transition: reset pan so START is centered, show ACT START banner for 1s.
+  // Start node (row 0) sits at y% = 4 + 94 = 98 inside a 300%-tall inner container
+  // that is offset top: -100%. So in body coords, start = -100% + 98% * 300% = 194%.
+  // To center it at 50% of body, pan.y = 50% - 194% = -144% of body height.
+  const currentActValue = snap.run.currentAct
+  useEffect(() => {
+    const stage = stageRef.current
+    if (stage) {
+      const h = stage.clientHeight
+      setPan({ x: 0, y: -1.44 * h })
+    }
+    setZoom(1)
+    setActBanner(currentActValue)
+    const t = window.setTimeout(() => setActBanner(null), 1000)
+    return () => window.clearTimeout(t)
+  }, [currentActValue])
 
   const currentNode = snap.map.nodes.find((n) => n.id === snap.run.currentNodeId)!
   const visited = new Set(snap.run.visitedNodeIds)
@@ -416,7 +437,8 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
           deck={snap.run.deck}
           relics={snap.run.relics}
           onDiscardPotion={handleDiscardPotion}
-          onOpenMenu={() => setMenuOpen(true)}
+          onOpenMenu={() => setMenuOpen(v => !v)}
+          menuActive={menuOpen}
           onTogglePeek={activeBattle ? () => setPeekMap(v => !v) : () => {}}
           peekActive={peekMap}
           peekDisabled={!activeBattle}
@@ -560,6 +582,12 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
           <div className="map-screen__shop-toast" role="status">{shopMessage}</div>
         )}
 
+        {actBanner !== null && (
+          <div className="map-screen__act-banner" role="status" aria-live="polite">
+            <span className="map-screen__act-banner-text">ACT {actBanner} START</span>
+          </div>
+        )}
+
         {import.meta.env.DEV && (
           <div className="map-screen__debug">
             <Button onClick={onDebugDamage ?? internalDebugDamage} aria-label="DEBUG -10HP">DEBUG -10HP</Button>
@@ -631,6 +659,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
           <ActStartRelicScreen
             choices={snap.run.activeActStartRelicChoice.relicIds}
             relicNames={relicNames}
+            relicDescriptions={relicDescriptions}
             onChoose={async (relicId) => {
               if (!accountId) return
               const next = await chooseActStartRelic(accountId, relicId)

@@ -17,6 +17,7 @@ type Props = {
   relics: string[]
   onDiscardPotion: (slotIndex: number) => void
   onOpenMenu: () => void
+  menuActive?: boolean
   onTogglePeek?: () => void
   peekActive?: boolean
   peekDisabled?: boolean
@@ -31,6 +32,7 @@ export function TopBar({
   relics,
   onDiscardPotion,
   onOpenMenu,
+  menuActive,
   onTogglePeek,
   peekActive,
   peekDisabled,
@@ -44,11 +46,14 @@ export function TopBar({
   )
   const deckOpenAria: 'true' | 'false' = deckOpen ? 'true' : 'false'
   const peekPressedAria: 'true' | 'false' = peekActive ? 'true' : 'false'
+  const menuPressedAria: 'true' | 'false' = menuActive ? 'true' : 'false'
   const hpPct = Math.max(0, Math.min(100, maxHp > 0 ? (currentHp / maxHp) * 100 : 0))
+  const hpState: 'high' | 'mid' | 'low' | 'crit' =
+    hpPct > 60 ? 'high' : hpPct > 30 ? 'mid' : hpPct > 15 ? 'low' : 'crit'
 
   return (
     <div className="topbar" role="status">
-      <span className="topbar__group topbar__hp">
+      <span className="topbar__group topbar__hp" data-hp={hpState}>
         <span className="topbar__hp-label">HP {currentHp}/{maxHp}</span>
         <span className="topbar__hp-track" aria-hidden="true">
           <span className="topbar__hp-fill" style={{ width: `${hpPct}%` }} />
@@ -139,6 +144,7 @@ export function TopBar({
           type="button"
           className="topbar__btn"
           aria-label="メニュー"
+          aria-pressed={menuPressedAria}
           onClick={onOpenMenu}
         >
           MENU

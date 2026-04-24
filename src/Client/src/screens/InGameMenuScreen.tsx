@@ -58,11 +58,11 @@ export function InGameMenuScreen({ onClose, onExitToMenu, onAbandon, elapsedSeco
         open
         variant="modal"
         title="設 定"
-        width={520}
+        width={560}
         closeOnEsc={false}
       >
         <div className="im-settings-wrap">
-          <SettingsScreen onBack={() => setMode('main')} />
+          <SettingsScreen onBack={() => setMode('main')} embedded />
         </div>
       </Popup>
     )

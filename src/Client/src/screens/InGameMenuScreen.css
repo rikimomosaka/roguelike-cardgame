@@ -198,5 +198,5 @@
 
 /* ---- Settings sub-popup wrapper (embeds existing SettingsScreen) ---- */
 .im-settings-wrap {
-  margin: -12px -14px;
+  margin: 0;
 }
