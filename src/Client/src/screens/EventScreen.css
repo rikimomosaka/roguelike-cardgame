@@ -1,0 +1,145 @@
+/* =============================================================
+   EventScreen — ported from event-v1.html (canonical).
+   Wraps shared <Popup variant="modal">.
+   Preserves test-asserted strings/roles:
+   - event.name rendered as title
+   - event.description rendered as narrative
+   - each choice is a <button> with label (+ optional conditionSummary)
+   - disabled when chosenIndex is set or conditionMet=false
+   ============================================================= */
+
+/* ---- Art (placeholder illustration) ---- */
+.ev-art {
+  align-self: center;
+  width: 200px;
+  aspect-ratio: 1 / 1;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.25) 0 2px,
+      transparent 2px 4px
+    ),
+    radial-gradient(circle at 50% 45%, rgba(255, 213, 79, 0.12), transparent 70%),
+    var(--bg-2);
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-sm);
+  display: grid;
+  place-items: center;
+  image-rendering: pixelated;
+  font-family: var(--font-label);
+  font-size: 72px;
+  color: var(--fg-muted);
+  text-shadow: 0 0 12px rgba(201, 152, 90, 0.5), 0 2px 0 #000;
+  margin: 0 0 4px;
+}
+
+/* ---- Narrative ---- */
+.ev-narrative {
+  font-family: var(--font-body);
+  font-size: var(--fs-md);
+  line-height: 1.8;
+  letter-spacing: 0.8px;
+  color: var(--fg);
+  padding: 0 4px;
+  text-align: justify;
+  margin: 0;
+}
+
+.ev-narrative em {
+  color: var(--gold);
+  font-style: normal;
+  text-shadow: 0 0 6px rgba(255, 213, 79, 0.3);
+}
+
+/* ---- Choices ---- */
+.ev-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ev-choices > li {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ev-choice {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  background: rgba(20, 12, 6, 0.65);
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 0.14s ease, box-shadow 0.14s ease,
+    transform 0.14s ease, opacity 0.14s ease;
+  text-align: left;
+  color: var(--fg);
+  font-family: var(--font-body);
+}
+
+.ev-choice:hover:not(:disabled) {
+  border-color: var(--border-hover);
+  box-shadow: 0 0 10px rgba(201, 152, 90, 0.25);
+  transform: translateX(3px);
+}
+
+.ev-choice:disabled,
+.ev-choice[aria-disabled='true'] {
+  opacity: 0.32;
+  cursor: not-allowed;
+}
+
+.ev-choice__label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  letter-spacing: 1px;
+  color: var(--fg);
+  text-shadow: 0 1px 0 #000;
+}
+
+.ev-choice__label::before {
+  content: '▸';
+  color: var(--border-light);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.ev-choice:hover:not(:disabled) .ev-choice__label::before {
+  color: var(--gold);
+}
+
+.ev-choice--chosen .ev-choice__label::before {
+  content: '✓';
+  color: var(--state-heal);
+}
+
+.ev-choice__cond {
+  font-family: var(--font-label);
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--fg-dim);
+  border: 1px solid var(--border-mid);
+  border-radius: 1px;
+  background: rgba(10, 6, 4, 0.4);
+  padding: 2px 7px;
+  line-height: 1.3;
+  align-self: flex-start;
+  margin-left: 18px;
+}
+
+/* ---- Chosen state highlight ---- */
+.ev-choice--chosen {
+  border-color: var(--border-light);
+  background: rgba(58, 36, 16, 0.55);
+  box-shadow: inset 0 0 10px rgba(201, 152, 90, 0.2);
+}

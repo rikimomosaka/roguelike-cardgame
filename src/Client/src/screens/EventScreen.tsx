@@ -1,5 +1,7 @@
 import type { EventInstanceDto } from '../api/types'
 import { Button } from '../components/Button'
+import { Popup } from '../components/Popup'
+import './EventScreen.css'
 
 type Props = {
   event: EventInstanceDto
@@ -10,32 +12,47 @@ type Props = {
 export function EventScreen({ event, onChoose, onClose }: Props) {
   const resolved = event.chosenIndex !== null
   return (
-    <div className="event-screen" role="dialog" aria-modal="true">
-      <h2>{event.name}</h2>
-      <p>{event.description}</p>
-      <ul className="event-choices">
+    <Popup
+      open
+      variant="modal"
+      title={event.name}
+      width={720}
+      footer={
+        resolved ? (
+          <Button onClick={() => onClose()} aria-label="Close">
+            閉じる
+          </Button>
+        ) : undefined
+      }
+    >
+      <div className="ev-art" aria-hidden="true">
+        ✦
+      </div>
+      <p className="ev-narrative">{event.description}</p>
+      <ul className="ev-choices">
         {event.choices.map((c, i) => {
           const chosen = event.chosenIndex === i
+          const disabled = resolved || !c.conditionMet
           return (
-            <li key={i} className={chosen ? 'event-choice--chosen' : undefined}>
-              <Button
+            <li key={i}>
+              <button
+                type="button"
+                className={
+                  'ev-choice' + (chosen ? ' ev-choice--chosen' : '')
+                }
                 onClick={() => onChoose(i)}
-                disabled={resolved || !c.conditionMet}
-                aria-disabled={resolved || !c.conditionMet}
+                disabled={disabled}
+                aria-disabled={disabled ? 'true' : 'false'}
               >
-                {chosen ? '✓ ' : ''}
-                {c.label}
-                {c.conditionSummary ? ` (${c.conditionSummary})` : ''}
-              </Button>
+                <span className="ev-choice__label">
+                  {c.label}
+                  {c.conditionSummary ? ` (${c.conditionSummary})` : ''}
+                </span>
+              </button>
             </li>
           )
         })}
       </ul>
-      {resolved && (
-        <Button onClick={() => onClose()} aria-label="Close">
-          閉じる
-        </Button>
-      )}
-    </div>
+    </Popup>
   )
 }
