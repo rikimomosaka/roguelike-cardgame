@@ -39,11 +39,15 @@ export function TopBar({
   )
   const deckOpenAria: 'true' | 'false' = deckOpen ? 'true' : 'false'
   const peekPressedAria: 'true' | 'false' = peekActive ? 'true' : 'false'
+  const hpPct = Math.max(0, Math.min(100, maxHp > 0 ? (currentHp / maxHp) * 100 : 0))
 
   return (
     <div className="topbar" role="status">
       <span className="topbar__group topbar__hp">
-        HP {currentHp}/{maxHp}
+        <span className="topbar__hp-label">HP {currentHp}/{maxHp}</span>
+        <span className="topbar__hp-track" aria-hidden="true">
+          <span className="topbar__hp-fill" style={{ width: `${hpPct}%` }} />
+        </span>
       </span>
       <span className="topbar__group topbar__gold">Gold {gold}</span>
       <ul className="topbar__relics" aria-label={`レリック (${relics.length}個)`}>

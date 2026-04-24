@@ -1,5 +1,4 @@
 // src/Client/src/screens/SettingsScreen.tsx
-import { useState } from 'react'
 import { useAccount } from '../context/AccountContext'
 import { useAudioSettings } from '../hooks/useAudioSettings'
 import './SettingsScreen.css'
@@ -7,21 +6,6 @@ import './SettingsScreen.css'
 type Props = {
   onBack: () => void
 }
-
-type Language = 'ja' | 'en'
-type TextSpeed = 'slow' | 'normal' | 'fast' | 'instant'
-
-const LANGUAGE_CHOICES: ReadonlyArray<{ value: Language; label: string }> = [
-  { value: 'ja', label: '日本語' },
-  { value: 'en', label: 'ENGLISH' },
-]
-
-const TEXT_SPEED_CHOICES: ReadonlyArray<{ value: TextSpeed; label: string }> = [
-  { value: 'slow', label: 'SLOW' },
-  { value: 'normal', label: 'NORMAL' },
-  { value: 'fast', label: 'FAST' },
-  { value: 'instant', label: 'INSTANT' },
-]
 
 type SliderRowProps = {
   label: string
@@ -62,10 +46,6 @@ function SliderRow({ label, value, onChange }: SliderRowProps) {
 export function SettingsScreen({ onBack }: Props) {
   const { accountId } = useAccount()
 
-  // Visual-only local state; not wired to any backend.
-  const [language, setLanguage] = useState<Language>('ja')
-  const [textSpeed, setTextSpeed] = useState<TextSpeed>('normal')
-
   if (!accountId) {
     return (
       <main className="settings-screen">
@@ -81,33 +61,15 @@ export function SettingsScreen({ onBack }: Props) {
     )
   }
 
-  return <SettingsScreenInner
-    onBack={onBack}
-    accountId={accountId}
-    language={language}
-    setLanguage={setLanguage}
-    textSpeed={textSpeed}
-    setTextSpeed={setTextSpeed}
-  />
+  return <SettingsScreenInner onBack={onBack} accountId={accountId} />
 }
 
 type InnerProps = {
   onBack: () => void
   accountId: string
-  language: Language
-  setLanguage: (l: Language) => void
-  textSpeed: TextSpeed
-  setTextSpeed: (s: TextSpeed) => void
 }
 
-function SettingsScreenInner({
-  onBack,
-  accountId,
-  language,
-  setLanguage,
-  textSpeed,
-  setTextSpeed,
-}: InnerProps) {
+function SettingsScreenInner({ onBack, accountId }: InnerProps) {
   const { settings, update, saveStatus } = useAudioSettings(accountId)
 
   const statusClass =
@@ -170,58 +132,6 @@ function SettingsScreenInner({
             )}
           </section>
 
-          <section className="settings-screen__section">
-            <div className="settings-screen__section-title">
-              <span>▸ DISPLAY</span>
-              <span className="settings-screen__section-title-sub">言語・表示</span>
-            </div>
-
-            <div className="settings-screen__select-row">
-              <div className="settings-screen__slider-label">
-                <span className="settings-screen__slider-label-mark" aria-hidden="true">❖</span>
-                LANGUAGE
-              </div>
-              <div className="settings-screen__select-choices" role="radiogroup" aria-label="LANGUAGE">
-                {LANGUAGE_CHOICES.map((c) => (
-                  <button
-                    key={c.value}
-                    type="button"
-                    role="radio"
-                    aria-checked={language === c.value}
-                    className={
-                      'settings-screen__choice' + (language === c.value ? ' is-on' : '')
-                    }
-                    onClick={() => setLanguage(c.value)}
-                  >
-                    {c.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="settings-screen__select-row">
-              <div className="settings-screen__slider-label">
-                <span className="settings-screen__slider-label-mark" aria-hidden="true">❖</span>
-                TEXT SPEED
-              </div>
-              <div className="settings-screen__select-choices" role="radiogroup" aria-label="TEXT SPEED">
-                {TEXT_SPEED_CHOICES.map((c) => (
-                  <button
-                    key={c.value}
-                    type="button"
-                    role="radio"
-                    aria-checked={textSpeed === c.value}
-                    className={
-                      'settings-screen__choice' + (textSpeed === c.value ? ' is-on' : '')
-                    }
-                    onClick={() => setTextSpeed(c.value)}
-                  >
-                    {c.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </section>
         </div>
 
         <footer className="settings-screen__footer">

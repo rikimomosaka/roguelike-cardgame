@@ -13,6 +13,7 @@ export function BattleOverlay({ battle, onWin, onDebugDamage }: Props) {
 
   return (
     <div className="battle-overlay" role="dialog" aria-modal="true">
+      <h2 className="battle-overlay__title">❖ BATTLE ❖</h2>
       <div className="battle-overlay__enemies">
         {battle.enemies.map((e, i) => (
           <div className="battle-enemy" key={i}>
@@ -27,7 +28,9 @@ export function BattleOverlay({ battle, onWin, onDebugDamage }: Props) {
         ))}
       </div>
       <div className="battle-overlay__actions">
-        <Button
+        <button
+          type="button"
+          className="battle-overlay__victory"
           disabled={busy}
           onClick={async () => {
             setBusy(true)
@@ -39,7 +42,7 @@ export function BattleOverlay({ battle, onWin, onDebugDamage }: Props) {
           }}
         >
           勝利
-        </Button>
+        </button>
         {import.meta.env.DEV && onDebugDamage && (
           <Button onClick={onDebugDamage} aria-label="DEBUG -10HP">DEBUG -10HP</Button>
         )}

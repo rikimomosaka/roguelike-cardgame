@@ -30,7 +30,7 @@ describe('MainMenuScreen', () => {
   it('renders 5 menu buttons and current account id', async () => {
     renderScreen()
     expect(screen.getByText('alice')).toBeInTheDocument()
-    for (const label of ['シングルプレイ', 'マルチプレイ', '設定', '実績', '終了']) {
+    for (const label of ['はじめから', 'シングル', 'マルチ', '実績', '設定']) {
       expect(screen.getByRole('button', { name: label })).toBeInTheDocument()
     }
     await waitFor(() => expect(fetchMock).toHaveBeenCalled())
@@ -45,7 +45,7 @@ describe('MainMenuScreen', () => {
 
   it('shows coming-soon dialog for multiplayer / achievements', async () => {
     renderScreen()
-    fireEvent.click(screen.getByRole('button', { name: 'マルチプレイ' }))
+    fireEvent.click(screen.getByRole('button', { name: 'マルチ' }))
     expect(await screen.findByText(/準備中/)).toBeInTheDocument()
   })
 
@@ -69,7 +69,7 @@ describe('MainMenuScreen', () => {
     renderScreen()
     await waitFor(() => expect(screen.getByText('保存済みラン有り')).toBeInTheDocument())
 
-    fireEvent.click(screen.getByRole('button', { name: 'シングルプレイ' }))
+    fireEvent.click(screen.getByRole('button', { name: 'シングル' }))
     expect(await screen.findByText(/進行中のランがあります/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '続きから' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '新規で上書き' })).toBeInTheDocument()
@@ -100,7 +100,7 @@ describe('MainMenuScreen', () => {
         />
       </AccountProvider>,
     )
-    fireEvent.click(await screen.findByRole('button', { name: 'シングルプレイ' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'シングル' }))
     await waitFor(() => expect(onStart).toHaveBeenCalled())
   })
 

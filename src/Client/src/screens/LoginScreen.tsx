@@ -23,6 +23,7 @@ export function LoginScreen({ onLoggedIn }: Props) {
   const { login } = useAccount()
   const [tab, setTab] = useState<Tab>('new')
   const [id, setId] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
 
@@ -106,6 +107,24 @@ export function LoginScreen({ onLoggedIn }: Props) {
               onChange={(e) => setId(e.target.value)}
               maxLength={32}
               disabled={pending}
+              autoComplete="username"
+            />
+          </div>
+
+          <div className="login-screen__field">
+            <div className="login-screen__field-label" aria-hidden="true">
+              <span className="login-screen__field-mark">▸</span>
+              パスワード
+            </div>
+            <input
+              type="password"
+              aria-label="パスワード"
+              className="login-screen__input"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              maxLength={64}
+              disabled={pending}
+              autoComplete={tab === 'new' ? 'new-password' : 'current-password'}
             />
           </div>
 

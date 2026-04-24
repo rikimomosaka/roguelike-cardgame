@@ -23,7 +23,7 @@ main {
 }
 
 main.map-screen {
-  padding-top: 4.5rem;
+  padding: 0;
 }
 
 .btn {
@@ -35,6 +35,8 @@ main.map-screen {
   border-radius: 0.4rem;
   cursor: pointer;
   font-size: 1rem;
+  font-family: inherit;
+  letter-spacing: inherit;
 }
 .btn:hover { background: rgba(122, 162, 247, 0.1); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -187,29 +189,36 @@ main.map-screen {
 }
 .potion-slot__icon:hover { background: rgba(122, 162, 247, 0.15); }
 .potion-slot__menu {
-  position: absolute;
-  top: 2.5rem;
-  right: 0;
+  position: fixed;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  padding: 0.4rem;
-  background: #1f2429;
-  border: 1px solid var(--accent);
-  border-radius: 0.3rem;
-  z-index: 20;
-  min-width: 6rem;
+  gap: 6px;
+  padding: 8px;
+  background: rgba(20, 14, 10, 0.98);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.6), 0 0 12px rgba(201, 152, 90, 0.2);
+  z-index: var(--z-tooltip);
+  min-width: 112px;
+  font-family: var(--font-label);
 }
 .potion-slot__menu button {
-  padding: 0.3rem 0.6rem;
-  background: transparent;
+  padding: 6px 10px;
+  background: rgba(10, 6, 4, 0.6);
   color: var(--fg);
-  border: 1px solid var(--muted);
-  border-radius: 0.2rem;
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 0.9rem;
+  font-family: inherit;
+  font-size: 13px;
+  letter-spacing: 2px;
+  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
 }
-.potion-slot__menu button:hover { background: rgba(122, 162, 247, 0.12); }
+.potion-slot__menu button:hover {
+  border-color: var(--gold-deep);
+  color: var(--gold-soft);
+  background: rgba(201, 152, 90, 0.14);
+}
 
 /* ==========================================================
    MapScreen layout + toasts
@@ -278,7 +287,7 @@ main.map-screen {
 }
 
 /* ==========================================================
-   BattleOverlay
+   BattleOverlay — themed stand-in battle view (full impl pending)
    ========================================================== */
 .battle-overlay {
   position: fixed;
@@ -290,14 +299,34 @@ main.map-screen {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2rem;
-  padding: 2rem;
-  background: var(--bg);
+  gap: 32px;
+  padding: 40px 24px;
+  background:
+    radial-gradient(ellipse at 50% 38%, rgba(217, 97, 74, 0.14) 0%, transparent 62%),
+    linear-gradient(180deg, var(--bg-2) 0%, var(--bg-3) 100%);
+  color: var(--fg);
+  font-family: var(--font-body);
   z-index: 100;
+}
+.battle-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 16px;
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+}
+.battle-overlay__title {
+  font-family: var(--font-body);
+  font-size: 18px;
+  letter-spacing: 12px;
+  color: var(--gold);
+  text-shadow: 0 0 12px rgba(255, 213, 79, 0.4), 0 2px 0 #000;
+  margin: 0;
 }
 .battle-overlay__enemies {
   display: flex;
-  gap: 2rem;
+  gap: 28px;
   flex-wrap: wrap;
   justify-content: center;
 }
@@ -305,12 +334,13 @@ main.map-screen {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
-  padding: 1rem 1.25rem;
-  background: #1f2429;
-  border: 1px solid var(--muted);
-  border-radius: 0.4rem;
-  min-width: 10rem;
+  gap: 10px;
+  padding: 14px 18px;
+  background: rgba(10, 6, 4, 0.55);
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-sm);
+  min-width: 11rem;
+  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.45);
 }
 .battle-enemy__image {
   width: 6rem;
@@ -318,17 +348,54 @@ main.map-screen {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #0c0e10;
-  border: 1px solid var(--muted);
-  border-radius: 0.3rem;
-  font-size: 0.8rem;
-  color: var(--muted);
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-label);
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--fg-muted);
   text-align: center;
   padding: 0.25rem;
 }
-.battle-enemy__name { font-weight: bold; }
-.battle-enemy__hp { color: #8fd08f; font-variant-numeric: tabular-nums; }
-.battle-overlay__actions { display: flex; gap: 1rem; }
+.battle-enemy__name {
+  font-family: var(--font-body);
+  font-size: 14px;
+  letter-spacing: 2px;
+  color: var(--fg);
+  text-shadow: 0 1px 0 #000;
+}
+.battle-enemy__hp {
+  font-family: var(--font-label);
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: var(--state-ok, #8fd08f);
+  font-variant-numeric: tabular-nums;
+}
+.battle-overlay__actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.battle-overlay__victory {
+  background: rgba(201, 152, 90, 0.12);
+  border: 1px solid var(--gold-deep);
+  color: #ffe1b0;
+  padding: 12px 42px;
+  font-family: var(--font-body);
+  font-size: 18px;
+  letter-spacing: 8px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 18px rgba(201, 152, 90, 0.3), inset 0 0 10px rgba(201, 152, 90, 0.12);
+  transition: border-color 0.12s ease, background 0.12s ease, transform 0.12s ease;
+}
+.battle-overlay__victory:hover:not(:disabled) {
+  border-color: var(--gold-warm);
+  background: rgba(201, 152, 90, 0.18);
+  transform: translateY(-1px);
+}
+.battle-overlay__victory:disabled { opacity: 0.5; cursor: default; }
 
 .battle-peek {
   position: fixed;

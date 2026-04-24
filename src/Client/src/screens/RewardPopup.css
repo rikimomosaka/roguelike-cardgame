@@ -149,3 +149,33 @@
   padding: 6px 2px 2px;
   justify-content: flex-start;
 }
+
+/* ---------- Skip button (themed, centered in footer) ---------- */
+.popup__panel--picker .popup__foot { justify-content: center; }
+
+.rw-picker__skip {
+  background: rgba(10, 6, 4, 0.35);
+  border: 1px solid var(--border-mid);
+  color: var(--fg);
+  padding: 10px 28px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  letter-spacing: 4px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.rw-picker__skip:hover {
+  border-color: var(--gold-deep);
+  background: rgba(201, 152, 90, 0.10);
+}
+.rw-picker__skip-mark {
+  font-family: var(--font-label);
+  font-size: 11px;
+  color: var(--fg-dim);
+  letter-spacing: 0;
+}
+.rw-picker__skip:hover .rw-picker__skip-mark { color: var(--gold-deep); }

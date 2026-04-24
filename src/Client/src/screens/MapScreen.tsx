@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { PointerEvent as ReactPointerEvent } from 'react'
 import { getCurrentRun, heartbeat, moveToNode } from '../api/runs'
 import { winBattle } from '../api/battle'
 import {
@@ -75,6 +76,21 @@ function nodeLabelFor(kind: TileKind, resolvedKind: TileKind | null): string | n
   }
 }
 
+function nodeTooltipFor(kind: TileKind, resolvedKind: TileKind | null): string {
+  const k = kind === 'Unknown' && resolvedKind === null ? 'Unknown' : (resolvedKind ?? kind)
+  switch (k) {
+    case 'Enemy': return '敵との戦闘'
+    case 'Elite': return 'エリート戦 (強敵)'
+    case 'Rest': return '休憩 (回復 or 強化)'
+    case 'Merchant': return '商人 (購入)'
+    case 'Treasure': return '宝箱 (レリック入手)'
+    case 'Event': return 'イベント'
+    case 'Unknown': return '未知のマス'
+    case 'Boss': return 'ボス戦'
+    case 'Start': return '開始地点'
+  }
+}
+
 export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, onRunFinished }: Props) {
   const { accountId } = useAccount()
   const [snap, setSnap] = useState<RunSnapshotDto>(snapshot)
@@ -87,7 +103,51 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
   const [eventDismissed, setEventDismissed] = useState(false)
   const [restDismissed, setRestDismissed] = useState(false)
   const [peekMap, setPeekMap] = useState(false)
+  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const [zoom, setZoom] = useState(1)
+  const dragRef = useRef<{ startX: number; startY: number; startPan: { x: number; y: number }; moved: boolean } | null>(null)
+  const stageRef = useRef<HTMLDivElement | null>(null)
   const mountedAt = useRef<number>(performance.now())
+
+  useEffect(() => {
+    const stage = stageRef.current
+    if (!stage) return
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      setZoom(z => Math.max(0.6, Math.min(2.0, z + (e.deltaY < 0 ? 0.1 : -0.1))))
+    }
+    stage.addEventListener('wheel', onWheel, { passive: false })
+    return () => stage.removeEventListener('wheel', onWheel)
+  }, [])
+
+  function onStagePointerDown(e: ReactPointerEvent<HTMLDivElement>) {
+    if (e.button !== 0) return
+    const target = e.target as HTMLElement
+    if (target.closest('.map-screen__node')) return
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startPan: pan,
+      moved: false,
+    }
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+
+  function onStagePointerMove(e: ReactPointerEvent<HTMLDivElement>) {
+    const d = dragRef.current
+    if (!d) return
+    const dx = e.clientX - d.startX
+    const dy = e.clientY - d.startY
+    if (!d.moved && Math.hypot(dx, dy) > 3) d.moved = true
+    setPan({ x: d.startPan.x + dx, y: d.startPan.y + dy })
+  }
+
+  function onStagePointerUp(e: ReactPointerEvent<HTMLDivElement>) {
+    dragRef.current = null
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    }
+  }
 
   const elapsedSeconds = useCallback(() => {
     const e = Math.floor((performance.now() - mountedAt.current) / 1000)
@@ -365,7 +425,15 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
       <main className="map-screen">
         <div className="map-screen__pattern" aria-hidden="true" />
 
-        <div className="map-screen__stage">
+        <div
+          className="map-screen__stage"
+          ref={stageRef}
+          onPointerDown={onStagePointerDown}
+          onPointerMove={onStagePointerMove}
+          onPointerUp={onStagePointerUp}
+          onPointerCancel={onStagePointerUp}
+          style={{ cursor: dragRef.current ? 'grabbing' : 'grab' }}
+        >
           <div className="map-screen__act-badge" aria-hidden="true">
             <span className="k">ACT</span>
             <span className="v">{snap.run.currentAct}</span>
@@ -374,7 +442,10 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
             <span className="v">{currentNode.row} / {MAX_ROW}</span>
           </div>
 
-          <div className="map-screen__inner">
+          <div
+            className="map-screen__inner"
+            style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
+          >
             <svg
               className="map-screen__svg"
               viewBox="0 0 100 100"
@@ -474,7 +545,8 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
                   disabled={!clickable}
                   className={classes}
                   style={{ left, top, cursor: clickable ? 'pointer' : 'default' }}
-                  aria-label={`マス ${n.id} (${n.kind})`}
+                  aria-label={`マス ${n.id} (${nodeTooltipFor(n.kind, resolvedKind)})`}
+                  title={nodeTooltipFor(n.kind, resolvedKind)}
                 >
                   <span aria-hidden="true">{iconFor(n.kind, resolvedKind)}</span>
                   {label && <span className="map-screen__node-label">{label}</span>}

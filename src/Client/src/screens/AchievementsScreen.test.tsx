@@ -69,8 +69,8 @@ describe('AchievementsScreen', () => {
   it('back button fires onBack', async () => {
     const onBack = vi.fn()
     render(<AchievementsScreen accountId="a" onBack={onBack} />)
-    await screen.findByText('戻る')
-    fireEvent.click(screen.getByText('戻る'))
+    const back = await screen.findByRole('button', { name: /メニューへ戻る/ })
+    fireEvent.click(back)
     expect(onBack).toHaveBeenCalled()
   })
 })

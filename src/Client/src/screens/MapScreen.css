@@ -11,9 +11,11 @@
   max-width: var(--stage-max-width);
   margin: 0 auto;
   aspect-ratio: var(--stage-aspect);
+  display: flex;
+  flex-direction: column;
   background:
-    radial-gradient(ellipse at 50% 35%, rgba(217, 97, 74, 0.18) 0%, transparent 65%),
-    linear-gradient(180deg, var(--bg-2) 0%, var(--bg-3) 50%, var(--bg-2) 100%);
+    radial-gradient(ellipse at 50% 35%, rgba(201, 152, 90, 0.12) 0%, transparent 65%),
+    linear-gradient(180deg, var(--bg-3) 0%, var(--bg-2) 100%);
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -22,10 +24,7 @@
   padding: 0;
 }
 
-/* Reset the App.css `main` + `main.map-screen` defaults to accommodate
-   the TopBar (fixed, height ~56px) and let the stage sit below it. */
 main.map-screen {
-  margin-top: 72px;
   padding: 0;
   max-width: var(--stage-max-width);
 }
@@ -55,13 +54,15 @@ main.map-screen {
 
 /* ---------- Stage (the scrollable/pannable map viewport) ---------- */
 .map-screen__stage {
-  position: absolute;
-  inset: 32px;
+  position: relative;
+  flex: 1 1 auto;
+  margin: 16px;
   z-index: var(--z-stage);
   background: radial-gradient(ellipse at 50% 50%, rgba(10, 6, 4, 0.35) 0%, rgba(10, 6, 4, 0.55) 80%);
   border: 1px solid var(--border-dark);
   border-radius: var(--radius-md);
   overflow: hidden;
+  min-height: 0;
 }
 
 .map-screen__stage::before,
@@ -112,7 +113,10 @@ main.map-screen {
 }
 
 .map-screen__act-badge .v {
+  font-family: var(--font-body);
+  color: var(--gold);
   font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 4px rgba(255, 213, 79, 0.35), 0 1px 0 #000;
 }
 
 .map-screen__act-badge .sep {

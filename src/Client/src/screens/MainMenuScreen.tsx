@@ -13,7 +13,7 @@ type Props = {
   onAchievements: () => void
 }
 
-type ComingSoonKind = 'multi' | 'quit' | null
+type ComingSoonKind = 'multi' | null
 
 export function MainMenuScreen({ onOpenSettings, onLogout, onStartRun, hasCurrentRun, onAchievements }: Props) {
   const { accountId } = useAccount()
@@ -84,10 +84,18 @@ export function MainMenuScreen({ onOpenSettings, onLogout, onStartRun, hasCurren
           <button
             type="button"
             className="main-menu__btn main-menu__btn--primary"
+            onClick={effectiveHasRun ? continueRun : () => void startFresh(false)}
+          >
+            <span className="main-menu__btn-mark" aria-hidden="true">▸</span>
+            {effectiveHasRun ? 'つづきから' : 'はじめから'}
+          </button>
+          <button
+            type="button"
+            className="main-menu__btn"
             onClick={handleSingle}
           >
             <span className="main-menu__btn-mark" aria-hidden="true">▸</span>
-            シングルプレイ
+            シングル
           </button>
           <button
             type="button"
@@ -95,15 +103,7 @@ export function MainMenuScreen({ onOpenSettings, onLogout, onStartRun, hasCurren
             onClick={() => setDialog('multi')}
           >
             <span className="main-menu__btn-mark" aria-hidden="true">▸</span>
-            マルチプレイ
-          </button>
-          <button
-            type="button"
-            className="main-menu__btn"
-            onClick={onOpenSettings}
-          >
-            <span className="main-menu__btn-mark" aria-hidden="true">▸</span>
-            設定
+            マルチ
           </button>
           <button
             type="button"
@@ -115,11 +115,11 @@ export function MainMenuScreen({ onOpenSettings, onLogout, onStartRun, hasCurren
           </button>
           <button
             type="button"
-            className="main-menu__btn main-menu__btn--danger"
-            onClick={() => setDialog('quit')}
+            className="main-menu__btn"
+            onClick={onOpenSettings}
           >
             <span className="main-menu__btn-mark" aria-hidden="true">▸</span>
-            終了
+            設定
           </button>
         </nav>
       </div>
@@ -134,7 +134,6 @@ export function MainMenuScreen({ onOpenSettings, onLogout, onStartRun, hasCurren
       {dialog && (
         <div role="dialog" aria-label="準備中" className="main-menu__dialog">
           <p>準備中です。</p>
-          {dialog === 'quit' && <p>このタブを閉じてください。</p>}
           <Button variant="secondary" onClick={() => setDialog(null)}>閉じる</Button>
         </div>
       )}

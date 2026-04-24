@@ -2,9 +2,17 @@ import { useEffect, useState } from 'react'
 import { getBestiary } from '../api/bestiary'
 import { getHistory } from '../api/history'
 import type { BestiaryDto, RunResultDto } from '../api/types'
-import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import './AchievementsScreen.css'
+
+function BackButton({ onBack }: { onBack: () => void }) {
+  return (
+    <button type="button" className="achievements__back" onClick={onBack}>
+      <span className="achievements__back-mark" aria-hidden="true">◂</span>
+      メニューへ戻る
+    </button>
+  )
+}
 
 type Tab = 'cards' | 'relics' | 'potions' | 'enemies' | 'history'
 
@@ -36,7 +44,7 @@ export function AchievementsScreen({ accountId, onBack }: Props) {
       <div className="achievements__pattern" aria-hidden="true" />
       <div className="achievements__placeholder">
         <p>{error}</p>
-        <Button variant="secondary" onClick={onBack}>戻る</Button>
+        <BackButton onBack={onBack} />
       </div>
     </main>
   )
@@ -108,7 +116,7 @@ export function AchievementsScreen({ accountId, onBack }: Props) {
         </section>
 
         <footer className="achievements__footer">
-          <Button variant="secondary" onClick={onBack}>戻る</Button>
+          <BackButton onBack={onBack} />
         </footer>
       </div>
     </main>
