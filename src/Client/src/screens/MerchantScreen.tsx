@@ -149,22 +149,29 @@ export function MerchantScreen(p: Props) {
 
   const cardSlot = (offer: MerchantOfferDto) => {
     const name = cardNames[offer.id] ?? offer.id
+    if (offer.sold) {
+      // レリック / ポーションの売切タイルと同じく、カード絵は消して売切プレースホルダを出す
+      return (
+        <li key={`card:${offer.id}`} className="mc-card-slot is-sold">
+          <div className="mc-card-slot__placeholder" aria-label={`${name} (売切)`}>
+            <span className="mc-card-slot__placeholder-body">
+              <span className="mc-card-slot__placeholder-mark" aria-hidden="true">売切</span>
+            </span>
+            <span className="mc-card-slot__price mc-card-slot__price--sold">売切</span>
+          </div>
+        </li>
+      )
+    }
     const disp = cardDisplay(offer.id, cardCatalog, name)
-    const locked = !offer.sold && p.gold < offer.price
-    const classes = [
-      'mc-card-slot',
-      offer.sold && 'is-sold',
-      locked && 'is-locked',
-    ]
-      .filter(Boolean)
-      .join(' ')
+    const locked = p.gold < offer.price
+    const classes = ['mc-card-slot', locked && 'is-locked'].filter(Boolean).join(' ')
     return (
       <li key={`card:${offer.id}`} className={classes}>
         <button
           type="button"
           className="mc-card-slot__btn"
           onClick={() => handleBuy('card', offer.id)}
-          disabled={offer.sold || locked}
+          disabled={locked}
           aria-label={`Buy ${name}`}
         >
           <Card
@@ -177,13 +184,7 @@ export function MerchantScreen(p: Props) {
             width={128}
           />
           <span className="mc-card-slot__price">
-            {offer.sold ? (
-              '売切'
-            ) : (
-              <>
-                <span className="mc-num">{offer.price}</span> ゴールド
-              </>
-            )}
+            <span className="mc-num">{offer.price}</span> ゴールド
           </span>
         </button>
       </li>

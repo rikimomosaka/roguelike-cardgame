@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { ActStartRelicScreen } from './ActStartRelicScreen'
 
 describe('ActStartRelicScreen', () => {
-  it('renders 3 relic buttons and calls onChoose', () => {
+  it('renders 3 relic buttons', () => {
     const onChoose = vi.fn().mockResolvedValue(undefined)
     render(
       <ActStartRelicScreen
@@ -15,8 +15,6 @@ describe('ActStartRelicScreen', () => {
     )
     const buttons = screen.getAllByRole('button', { name: /Relic \d/i })
     expect(buttons).toHaveLength(3)
-    fireEvent.click(buttons[1])
-    expect(onChoose).toHaveBeenCalledWith('r2')
   })
 
   it('has dialog role', () => {
@@ -32,23 +30,97 @@ describe('ActStartRelicScreen', () => {
     expect(dlg.getAttribute('aria-modal')).toBe('true')
   })
 
-  it('does not auto-close on choose; user must click 閉じる to close', async () => {
+  it('クリックでレリックを選択状態にする（aria-pressed=true）', () => {
+    render(
+      <ActStartRelicScreen
+        choices={['r1', 'r2']}
+        relicNames={{ r1: 'A', r2: 'B' }}
+        onChoose={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+    const a = screen.getByRole('button', { name: 'A' })
+    fireEvent.click(a)
+    expect(a.getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('別のレリックをクリックすると選択が切り替わる', () => {
+    render(
+      <ActStartRelicScreen
+        choices={['r1', 'r2']}
+        relicNames={{ r1: 'A', r2: 'B' }}
+        onChoose={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+    const a = screen.getByRole('button', { name: 'A' })
+    const b = screen.getByRole('button', { name: 'B' })
+    fireEvent.click(a)
+    fireEvent.click(b)
+    expect(a.getAttribute('aria-pressed')).toBe('false')
+    expect(b.getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('選択中のレリックをもう一度クリックすると解除される', () => {
+    render(
+      <ActStartRelicScreen
+        choices={['r1']}
+        relicNames={{ r1: 'A' }}
+        onChoose={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+    const a = screen.getByRole('button', { name: 'A' })
+    fireEvent.click(a)
+    fireEvent.click(a)
+    expect(a.getAttribute('aria-pressed')).toBe('false')
+  })
+
+  it('未選択時は閉じるボタン、選択中は決定ボタンが出る', () => {
+    render(
+      <ActStartRelicScreen
+        choices={['r1']}
+        relicNames={{ r1: 'A' }}
+        onChoose={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+    expect(screen.getByRole('button', { name: '閉じる' })).toBeDefined()
+    fireEvent.click(screen.getByRole('button', { name: 'A' }))
+    expect(screen.queryByRole('button', { name: '閉じる' })).toBeNull()
+    expect(screen.getByRole('button', { name: '決定' })).toBeDefined()
+  })
+
+  it('決定を押すと選んでいた relic で onChoose → onClose が呼ばれる', async () => {
     const onChoose = vi.fn().mockResolvedValue(undefined)
     const onClose = vi.fn()
     render(
       <ActStartRelicScreen
-        choices={['r1', 'r2', 'r3']}
-        relicNames={{ r1: 'A', r2: 'B', r3: 'C' }}
+        choices={['r1', 'r2']}
+        relicNames={{ r1: 'A', r2: 'B' }}
         onChoose={onChoose}
         onClose={onClose}
       />,
     )
     fireEvent.click(screen.getByRole('button', { name: 'B' }))
+    fireEvent.click(screen.getByRole('button', { name: '決定' }))
     await waitFor(() => expect(onChoose).toHaveBeenCalledWith('r2'))
-    // onClose は自動的には呼ばれない (手動クローズ専用)
-    expect(onClose).not.toHaveBeenCalled()
-    // 閉じるボタンを明示的に押す
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+  })
+
+  it('閉じる（未選択）を押しても onChoose は呼ばれない', () => {
+    const onChoose = vi.fn()
+    const onClose = vi.fn()
+    render(
+      <ActStartRelicScreen
+        choices={['r1']}
+        relicNames={{ r1: 'A' }}
+        onChoose={onChoose}
+        onClose={onClose}
+      />,
+    )
     fireEvent.click(screen.getByRole('button', { name: '閉じる' }))
+    expect(onChoose).not.toHaveBeenCalled()
     expect(onClose).toHaveBeenCalled()
   })
 

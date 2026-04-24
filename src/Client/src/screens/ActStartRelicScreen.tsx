@@ -14,15 +14,20 @@ type Props = {
 }
 
 export function ActStartRelicScreen({ choices, relicNames, relicDescriptions, onChoose, onClose }: Props) {
-  const [chosen, setChosen] = useState<string | null>(null)
+  const [selected, setSelected] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  async function handleChoose(id: string) {
-    if (chosen || busy) return
+  function toggle(id: string) {
+    if (busy) return
+    setSelected(prev => (prev === id ? null : id))
+  }
+
+  async function handleConfirm() {
+    if (!selected || busy) return
     setBusy(true)
     try {
-      await onChoose(id)
-      setChosen(id)
+      await onChoose(selected)
+      onClose()
     } finally {
       setBusy(false)
     }
@@ -37,9 +42,15 @@ export function ActStartRelicScreen({ choices, relicNames, relicDescriptions, on
       closeOnEsc={false}
       footerAlign="center"
       footer={
-        <Button onClick={onClose} aria-label="閉じる">
-          閉じる
-        </Button>
+        selected !== null ? (
+          <Button onClick={() => void handleConfirm()} disabled={busy} aria-label="決定">
+            決定
+          </Button>
+        ) : (
+          <Button onClick={onClose} aria-label="閉じる">
+            閉じる
+          </Button>
+        )
       }
     >
       <ul className="ar-slots">
@@ -52,9 +63,9 @@ export function ActStartRelicScreen({ choices, relicNames, relicDescriptions, on
                 id={id}
                 name={name}
                 desc={desc}
-                disabled={busy || (chosen !== null && chosen !== id)}
-                isChosen={chosen === id}
-                onChoose={handleChoose}
+                disabled={busy}
+                isSelected={selected === id}
+                onClick={toggle}
               />
             </li>
           )
@@ -69,18 +80,18 @@ type ChoiceProps = {
   name: string
   desc: string | null
   disabled: boolean
-  isChosen: boolean
-  onChoose: (id: string) => void
+  isSelected: boolean
+  onClick: (id: string) => void
 }
 
-function RelicChoice({ id, name, desc, disabled, isChosen, onChoose }: ChoiceProps) {
+function RelicChoice({ id, name, desc, disabled, isSelected, onClick }: ChoiceProps) {
   const tooltipContent = useMemo<TooltipContent | null>(() => {
     if (!desc) return null
     return { name, desc }
   }, [name, desc])
   const tip = useTooltipTarget(tooltipContent)
 
-  const className = ['ar-slot', isChosen ? 'is-chosen' : '']
+  const className = ['ar-slot', isSelected ? 'is-chosen' : '']
     .filter(Boolean)
     .join(' ')
 
@@ -88,8 +99,9 @@ function RelicChoice({ id, name, desc, disabled, isChosen, onChoose }: ChoicePro
     <button
       type="button"
       className={className}
-      onClick={() => onChoose(id)}
+      onClick={() => onClick(id)}
       aria-label={name}
+      aria-pressed={isSelected}
       disabled={disabled}
       onMouseEnter={tip.onMouseEnter}
       onMouseMove={tip.onMouseMove}

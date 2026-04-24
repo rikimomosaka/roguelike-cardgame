@@ -740,8 +740,6 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
             relicDescriptions={relicDescriptions}
             onChoose={async (relicId) => {
               if (!accountId) return
-              // 選択後も popup を開いたままにし、手動で閉じてもらう。
-              // snap は閉じる時に refresh するため、ここでは更新しない。
               await chooseActStartRelic(accountId, relicId)
             }}
             onClose={async () => {

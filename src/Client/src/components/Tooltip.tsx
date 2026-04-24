@@ -77,6 +77,14 @@ export function TooltipHost({ children }: { children: ReactNode }) {
 export function useTooltipTarget(content: TooltipContent | null) {
   const ctx = useContext(TooltipContext)
   const showingRef = useRef(false)
+  // content が null になったら（例: 商品が売切に変化した瞬間）、
+  // 現在マウスが乗っていてもツールチップを消す。
+  useEffect(() => {
+    if (!content && showingRef.current) {
+      ctx?.hide()
+      showingRef.current = false
+    }
+  }, [ctx, content])
   useEffect(() => {
     return () => {
       if (showingRef.current) {
