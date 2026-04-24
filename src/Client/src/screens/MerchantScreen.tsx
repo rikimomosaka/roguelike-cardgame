@@ -1,8 +1,20 @@
 import { useState } from 'react'
 import type { CardInstanceDto, MerchantInventoryDto, MerchantOfferDto } from '../api/types'
 import { Button } from '../components/Button'
+import { Card, type CardRarity, type CardType } from '../components/Card'
+import { Popup } from '../components/Popup'
 import { useCardCatalog, usePotionCatalog } from '../hooks/useCardCatalog'
 import { useRelicCatalog } from '../hooks/useRelicCatalog'
+import './MerchantScreen.css'
+
+// Tests run with no catalog loaded → card IDs render raw.
+// Neutral defaults keep the Card primitive visually correct.
+function inferCardType(_id: string): CardType {
+  return 'skill'
+}
+function inferCardRarity(_id: string): CardRarity {
+  return 'c'
+}
 
 type Props = {
   gold: number
@@ -24,15 +36,37 @@ export function MerchantScreen(p: Props) {
 
   if (mode === 'discard') {
     return (
-      <div className="merchant-screen" role="dialog" aria-modal="true">
-        <h2>カードを除去 ({p.inventory.discardPrice} g)</h2>
-        <ul>
+      <Popup
+        open
+        variant="picker"
+        title={`カードを除去 (${p.inventory.discardPrice} g)`}
+        subtitle={`デッキから 1 枚`}
+        width={760}
+        footer={
+          <Button
+            variant="secondary"
+            onClick={() => setMode('shop')}
+            aria-label="Back"
+          >
+            戻る
+          </Button>
+        }
+      >
+        <ul className="mc-picker-body">
           {p.deck.map((c, i) => {
             const name = cardNames[c.id] ?? c.id
             return (
-              <li key={i}>
-                <span>{name}{c.upgraded ? '+' : ''}</span>
+              <li key={i} className="mc-picker-item">
+                <Card
+                  name={name}
+                  cost={1}
+                  type={inferCardType(c.id)}
+                  rarity={inferCardRarity(c.id)}
+                  upgraded={c.upgraded}
+                  width={128}
+                />
                 <Button
+                  variant="danger"
                   onClick={async () => {
                     await p.onDiscard(i)
                     setMode('shop')
@@ -46,62 +80,133 @@ export function MerchantScreen(p: Props) {
             )
           })}
         </ul>
-        <Button onClick={() => setMode('shop')} aria-label="Back">戻る</Button>
-      </div>
+      </Popup>
+    )
+  }
+
+  const cardSlot = (offer: MerchantOfferDto) => {
+    const name = cardNames[offer.id] ?? offer.id
+    const locked = !offer.sold && p.gold < offer.price
+    const classes = [
+      'mc-card-slot',
+      offer.sold && 'is-sold',
+      locked && 'is-locked',
+    ]
+      .filter(Boolean)
+      .join(' ')
+    return (
+      <li key={`card:${offer.id}`} className={classes}>
+        <Card
+          name={name}
+          cost={1}
+          type={inferCardType(offer.id)}
+          rarity={inferCardRarity(offer.id)}
+          width={128}
+        />
+        <button
+          type="button"
+          className="mc-card-slot__buy"
+          onClick={() => p.onBuy('card', offer.id)}
+          disabled={offer.sold || locked}
+          aria-label={`Buy ${name}`}
+        >
+          {offer.sold ? '売切' : `${offer.price} g`}
+        </button>
+      </li>
     )
   }
 
   const row = (
-    kind: 'card' | 'relic' | 'potion',
+    kind: 'relic' | 'potion',
     offer: MerchantOfferDto,
     name: string,
-  ) => (
-    <li key={`${kind}:${offer.id}`} className={`merchant-offer${offer.sold ? ' sold' : ''}`}>
-      <span>{name}</span>
-      <span>{offer.price} g</span>
-      <Button
-        onClick={() => p.onBuy(kind, offer.id)}
-        disabled={offer.sold || p.gold < offer.price}
-        aria-label={`Buy ${name}`}
-      >
-        {offer.sold ? '売切' : '購入'}
-      </Button>
-    </li>
-  )
+    icon: string,
+  ) => {
+    const locked = !offer.sold && p.gold < offer.price
+    const classes = [
+      'mc-row',
+      `mc-row--${kind}`,
+      offer.sold && 'is-sold',
+      locked && 'is-locked',
+    ]
+      .filter(Boolean)
+      .join(' ')
+    return (
+      <li key={`${kind}:${offer.id}`} className={classes}>
+        <div className="mc-row__icon" aria-hidden="true">{icon}</div>
+        <div className="mc-row__body">
+          <div className="mc-row__name">{name}</div>
+        </div>
+        <div className="mc-row__price">{offer.price} g</div>
+        <Button
+          onClick={() => p.onBuy(kind, offer.id)}
+          disabled={offer.sold || locked}
+          aria-label={`Buy ${name}`}
+        >
+          {offer.sold ? '売切' : '購入'}
+        </Button>
+      </li>
+    )
+  }
 
   return (
-    <div className="merchant-screen" role="dialog" aria-modal="true">
-      <h2>商人 (Gold: {p.gold})</h2>
-
-      <section>
-        <h3>カード</h3>
-        <ul>{p.inventory.cards.map(o => row('card', o, cardNames[o.id] ?? o.id))}</ul>
-      </section>
-
-      <section>
-        <h3>レリック</h3>
-        <ul>{p.inventory.relics.map(o => row('relic', o, relicNames[o.id] ?? o.id))}</ul>
-      </section>
-
-      <section>
-        <h3>ポーション</h3>
-        <ul>{p.inventory.potions.map(o => row('potion', o, potionNames[o.id] ?? o.id))}</ul>
-      </section>
-
-      <section>
-        <Button
-          onClick={() => setMode('discard')}
-          disabled={!canDiscard}
-          aria-label="Open discard view"
-        >
-          除去 ({p.inventory.discardPrice} g
-          {p.inventory.discardSlotUsed ? ' / 使用済み' : '、1回のみ'})
+    <Popup
+      open
+      variant="modal"
+      title="商人"
+      width={820}
+      headRight={<span className="mc-gold">{p.gold}</span>}
+      footer={
+        <Button onClick={() => p.onLeave()} aria-label="Leave">
+          立ち去る
         </Button>
+      }
+    >
+      <section className="mc-section">
+        <div className="mc-section__label">CARDS</div>
+        <ul className="mc-cards">
+          {p.inventory.cards.map(o => cardSlot(o))}
+        </ul>
       </section>
 
-      <Button onClick={() => p.onLeave()} aria-label="Leave">
-        立ち去る
-      </Button>
-    </div>
+      <section className="mc-section">
+        <div className="mc-section__label">RELICS</div>
+        <ul className="mc-rows">
+          {p.inventory.relics.map(o =>
+            row('relic', o, relicNames[o.id] ?? o.id, '◉'),
+          )}
+        </ul>
+      </section>
+
+      <section className="mc-section">
+        <div className="mc-section__label">POTIONS</div>
+        <ul className="mc-rows">
+          {p.inventory.potions.map(o =>
+            row('potion', o, potionNames[o.id] ?? o.id, '⚗'),
+          )}
+        </ul>
+      </section>
+
+      <section className="mc-section">
+        <div className="mc-section__label">SERVICE</div>
+        <ul className="mc-rows">
+          <li className="mc-row mc-row--service">
+            <div className="mc-row__icon" aria-hidden="true">✂</div>
+            <div className="mc-row__body">
+              <div className="mc-row__name">カード除去</div>
+            </div>
+            <div className="mc-row__price">{p.inventory.discardPrice} g</div>
+            <Button
+              onClick={() => setMode('discard')}
+              disabled={!canDiscard}
+              aria-label="Open discard view"
+            >
+              除去 ({p.inventory.discardPrice} g
+              {p.inventory.discardSlotUsed ? ' / 使用済み' : '、1回のみ'})
+            </Button>
+          </li>
+        </ul>
+      </section>
+    </Popup>
   )
 }

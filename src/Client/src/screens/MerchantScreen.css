@@ -1,0 +1,254 @@
+/* =============================================================
+   MerchantScreen — ported from merchant-v1.html (canonical).
+   Wraps shared <Popup variant="modal"> (shop) and <Popup variant="picker">
+   (card removal). Preserves test-asserted strings/roles:
+   - Offer names rendered as plain text (strike, coin_purse, heal_potion_small)
+   - Price rendered as "NN g"
+   - aria-labels: "Buy <name>", "Discard <name> at index N", "Open discard view",
+     "Back", "Leave"
+   ============================================================= */
+
+/* ---------- Head: gold indicator on the right ---------- */
+.mc-gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-label);
+  font-size: 15px;
+  letter-spacing: 2px;
+  color: var(--gold);
+  text-shadow: 0 0 6px rgba(255, 213, 79, 0.4), 0 1px 0 #000;
+}
+
+.mc-gold::before {
+  content: "◈";
+  font-size: 18px;
+  color: var(--gold);
+  line-height: 1;
+  text-shadow: 0 0 6px rgba(255, 213, 79, 0.5);
+}
+
+/* ---------- Sections ---------- */
+.mc-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+}
+
+.mc-section__label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-label);
+  font-size: 11px;
+  letter-spacing: 4px;
+  color: var(--fg-dim);
+  text-shadow: 0 1px 0 #000;
+}
+
+.mc-section__label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--border-mid) 0%, transparent 100%);
+}
+
+/* ---------- Card row ---------- */
+.mc-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-start;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mc-card-slot {
+  width: 128px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+  margin: 0;
+  padding: 0;
+}
+
+.mc-card-slot > .card {
+  width: 100% !important;
+}
+
+.mc-card-slot__buy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 3px 0;
+  background: rgba(10, 6, 4, 0.55);
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-sm);
+  color: var(--gold);
+  font-family: var(--font-label);
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-shadow: 0 1px 0 #000;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease, color 0.12s ease,
+    opacity 0.12s ease;
+}
+
+.mc-card-slot__buy::before {
+  content: "◈";
+  font-size: 13px;
+  color: var(--gold);
+  line-height: 1;
+}
+
+.mc-card-slot__buy:hover:not(:disabled) {
+  border-color: var(--gold);
+  background: rgba(58, 36, 16, 0.55);
+}
+
+.mc-card-slot__buy:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.mc-card-slot.is-sold .mc-card-slot__buy,
+.mc-card-slot.is-sold > .card {
+  opacity: 0.42;
+}
+
+.mc-card-slot.is-locked .mc-card-slot__buy {
+  color: var(--state-danger);
+  border-color: #7a2a1a;
+}
+
+.mc-card-slot.is-locked .mc-card-slot__buy::before {
+  color: var(--state-danger);
+}
+
+/* ---------- Relic / Potion / Service row ---------- */
+.mc-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mc-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: rgba(20, 12, 6, 0.65);
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-sm);
+  transition: border-color 0.14s ease, box-shadow 0.14s ease, opacity 0.14s ease;
+  margin: 0;
+}
+
+.mc-row.is-sold {
+  opacity: 0.32;
+}
+
+.mc-row__icon {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-sm);
+  background: rgba(10, 6, 4, 0.6);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-label);
+  font-size: 22px;
+  line-height: 1;
+  color: var(--fg-muted);
+  text-shadow: 0 0 5px currentColor, 0 1px 0 #000;
+}
+
+.mc-row--relic .mc-row__icon { color: var(--rarity-c); border-color: var(--border-light); }
+.mc-row--potion .mc-row__icon { color: var(--rarity-r); border-color: var(--rarity-r-border); }
+.mc-row--service .mc-row__icon { color: var(--state-danger-soft); border-color: #8a3a2a; }
+
+.mc-row__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.mc-row__name {
+  font-family: var(--font-body);
+  font-size: 15px;
+  letter-spacing: 1px;
+  color: var(--fg);
+  text-shadow: 0 1px 0 #000;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.mc-row__price {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-sm);
+  background: rgba(10, 6, 4, 0.55);
+  font-family: var(--font-label);
+  font-size: 13px;
+  letter-spacing: 2px;
+  color: var(--gold);
+  text-shadow: 0 1px 0 #000;
+}
+
+.mc-row__price::before {
+  content: "◈";
+  font-size: 14px;
+  color: var(--gold);
+  line-height: 1;
+}
+
+.mc-row.is-locked .mc-row__price {
+  color: var(--state-danger);
+  border-color: #7a2a1a;
+}
+
+.mc-row.is-locked .mc-row__price::before {
+  color: var(--state-danger);
+}
+
+.mc-row__buy {
+  flex-shrink: 0;
+}
+
+/* ---------- Discard picker ---------- */
+.mc-picker-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 4px 2px;
+}
+
+.mc-picker-item {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  width: 128px;
+  margin: 0;
+  padding: 0;
+}
+
+.mc-picker-item > .card {
+  width: 100% !important;
+}
