@@ -67,6 +67,10 @@ public static class RelicJsonLoader
         "OnBattleStart" => RelicTrigger.OnBattleStart,
         "OnBattleEnd" => RelicTrigger.OnBattleEnd,
         "OnMapTileResolved" => RelicTrigger.OnMapTileResolved,
+        "OnTurnStart" => RelicTrigger.OnTurnStart,
+        "OnTurnEnd" => RelicTrigger.OnTurnEnd,
+        "OnCardPlay" => RelicTrigger.OnCardPlay,
+        "OnEnemyDeath" => RelicTrigger.OnEnemyDeath,
         _ => throw new RelicJsonException($"trigger の値 \"{s}\" は無効です (relic id={id})。"),
     };
 

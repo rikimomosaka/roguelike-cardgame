@@ -48,4 +48,52 @@ public class RelicJsonLoaderTests
         Assert.Equal("attack", dmg.Action);
         Assert.Equal(7, dmg.Amount);
     }
+
+    [Fact]
+    public void ParseRelicWithOnTurnStartTrigger()
+    {
+        var json = """
+        {
+          "id":"r1","name":"r1","rarity":1,"trigger":"OnTurnStart","effects":[]
+        }
+        """;
+        var def = RelicJsonLoader.Parse(json);
+        Assert.Equal(RelicTrigger.OnTurnStart, def.Trigger);
+    }
+
+    [Fact]
+    public void ParseRelicWithOnTurnEndTrigger()
+    {
+        var json = """
+        {
+          "id":"r2","name":"r2","rarity":1,"trigger":"OnTurnEnd","effects":[]
+        }
+        """;
+        var def = RelicJsonLoader.Parse(json);
+        Assert.Equal(RelicTrigger.OnTurnEnd, def.Trigger);
+    }
+
+    [Fact]
+    public void ParseRelicWithOnCardPlayTrigger()
+    {
+        var json = """
+        {
+          "id":"r3","name":"r3","rarity":1,"trigger":"OnCardPlay","effects":[]
+        }
+        """;
+        var def = RelicJsonLoader.Parse(json);
+        Assert.Equal(RelicTrigger.OnCardPlay, def.Trigger);
+    }
+
+    [Fact]
+    public void ParseRelicWithOnEnemyDeathTrigger()
+    {
+        var json = """
+        {
+          "id":"r4","name":"r4","rarity":1,"trigger":"OnEnemyDeath","effects":[]
+        }
+        """;
+        var def = RelicJsonLoader.Parse(json);
+        Assert.Equal(RelicTrigger.OnEnemyDeath, def.Trigger);
+    }
 }
