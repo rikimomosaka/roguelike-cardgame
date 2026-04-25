@@ -126,7 +126,8 @@ public class CardJsonLoaderTests
           "id":"hb","name":"重撃","rarity":1,"cardType":"Attack",
           "cost":2,"upgradedCost":1,
           "effects":[{"action":"attack","scope":"single","side":"enemy","amount":12}]
-        }""";
+        }
+        """;
         var def = CardJsonLoader.Parse(json);
         Assert.Equal(2, def.Cost);
         Assert.Equal(1, def.UpgradedCost);
@@ -142,7 +143,8 @@ public class CardJsonLoaderTests
           "id":"c","name":"呪い","rarity":1,"cardType":"Curse",
           "cost":null,
           "effects":[]
-        }""";
+        }
+        """;
         var def = CardJsonLoader.Parse(json);
         Assert.False(def.IsUpgradable);
         Assert.Null(def.UpgradedCost);
@@ -158,7 +160,8 @@ public class CardJsonLoaderTests
           "cost":5,
           "keywords":["wild"],
           "effects":[{"action":"attack","scope":"single","side":"enemy","amount":12}]
-        }""";
+        }
+        """;
         var def = CardJsonLoader.Parse(json);
         Assert.NotNull(def.Keywords);
         Assert.Contains("wild", def.Keywords);
@@ -172,7 +175,8 @@ public class CardJsonLoaderTests
           "id":"s","name":"傷","rarity":1,"cardType":"Status",
           "cost":null,
           "effects":[]
-        }""";
+        }
+        """;
         var def = CardJsonLoader.Parse(json);
         Assert.Equal(CardType.Status, def.CardType);
     }
@@ -185,7 +189,8 @@ public class CardJsonLoaderTests
           "id":"c","name":"呪い","rarity":1,"cardType":"Curse",
           "cost":null,
           "effects":[]
-        }""";
+        }
+        """;
         var def = CardJsonLoader.Parse(json);
         Assert.Equal(CardType.Curse, def.CardType);
     }
