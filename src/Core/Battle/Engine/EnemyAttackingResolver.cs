@@ -34,14 +34,29 @@ internal static class EnemyAttackingResolver
                 if (eff.Action == "attack")
                 {
                     // 敵 attack は scope=all 直書き運用。生存味方全員に着弾
-                    foreach (var ally in state.Allies.Where(a => a.IsAlive).OrderBy(a => a.SlotIndex).ToList())
+                    // InstanceId ベースで検索することで、per-effect 状態変更後も正しくインデックスを取得できる
+                    // (スナップショット参照の IndexOf はフェーズ 10.2.B 以降のステータス tick で破綻する)
+                    var allyIdsAtStart = state.Allies
+                        .Where(a => a.IsAlive)
+                        .OrderBy(a => a.SlotIndex)
+                        .Select(a => a.InstanceId)
+                        .ToList();
+
+                    foreach (var allyId in allyIdsAtStart)
                     {
-                        var (updated, evs, _) = DealDamageHelper.Apply(
-                            currentEnemyState, ally, eff.Amount, scopeNote: "enemy_attack", orderBase: order);
-                        state = state with
+                        // 最新の state からこの ally を再フェッチ
+                        int idx = -1;
+                        for (int i = 0; i < state.Allies.Length; i++)
                         {
-                            Allies = state.Allies.SetItem(state.Allies.IndexOf(ally), updated),
-                        };
+                            if (state.Allies[i].InstanceId == allyId) { idx = i; break; }
+                        }
+                        if (idx < 0) continue; // ally が削除された（10.2.A では起きないが防御的）
+                        var currentAlly = state.Allies[idx];
+                        if (!currentAlly.IsAlive) continue; // 前の effect で既に死亡
+
+                        var (updated, evs, _) = DealDamageHelper.Apply(
+                            currentEnemyState, currentAlly, eff.Amount, scopeNote: "enemy_attack", orderBase: order);
+                        state = state with { Allies = state.Allies.SetItem(idx, updated) };
                         events.AddRange(evs);
                         order += evs.Count;
                     }

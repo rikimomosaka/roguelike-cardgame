@@ -112,4 +112,34 @@ public class EnemyAttackingResolverTests
         Assert.Equal(70, next.Allies[0].CurrentHp);
         Assert.DoesNotContain(events, e => e.Kind == BattleEventKind.AttackFire);
     }
+
+    [Fact]
+    public void Multi_ally_attack_hits_all_allies_correctly()
+    {
+        // Regression test for Phase 10.2.A latent bug:
+        // The original implementation used state.Allies.IndexOf(ally) on snapshot
+        // references. With multiple allies and per-effect state mutations, the
+        // snapshot becomes stale. The fix uses InstanceId-based lookup.
+        var hero = BattleFixtures.Hero();
+        var summon = new CombatActor("summon_inst", "test_summon", ActorSide.Ally,
+            SlotIndex: 1, CurrentHp: 10, MaxHp: 10,
+            BlockPool.Empty, AttackPool.Empty, AttackPool.Empty, AttackPool.Empty, null);
+        var s = new BattleState(
+            Turn: 1, Phase: BattlePhase.EnemyAttacking, Outcome: BattleOutcome.Pending,
+            Allies: ImmutableArray.Create(hero, summon),
+            Enemies: ImmutableArray.Create(BattleFixtures.Goblin()),
+            TargetAllyIndex: 0, TargetEnemyIndex: 0,
+            Energy: 0, EnergyMax: 3,
+            DrawPile: ImmutableArray<BattleCardInstance>.Empty,
+            Hand: ImmutableArray<BattleCardInstance>.Empty,
+            DiscardPile: ImmutableArray<BattleCardInstance>.Empty,
+            ExhaustPile: ImmutableArray<BattleCardInstance>.Empty,
+            EncounterId: "enc_test");
+        var cat = BattleFixtures.MinimalCatalog(
+            enemies: new[] { BattleFixtures.GoblinDef(hp: 20, attack: 5) });
+        var (next, _) = EnemyAttackingResolver.Resolve(s, Rng(), cat);
+        // Both allies should take 5 damage
+        Assert.Equal(65, next.Allies[0].CurrentHp); // hero: 70 - 5
+        Assert.Equal(5, next.Allies[1].CurrentHp);  // summon: 10 - 5
+    }
 }
