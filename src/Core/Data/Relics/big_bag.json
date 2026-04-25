@@ -3,6 +3,7 @@
   "name": "大きなバッグ",
   "rarity": 1,
   "trigger": "Passive",
-  "description": "容量たっぷりの大型カバン。なんでも詰め込める安心感が、肩の力を抜いてくれる。",
-  "effects": []
+  "description": "[未実装] 容量たっぷりの大型カバン。なんでも詰め込める安心感が、肩の力を抜いてくれる。",
+  "effects": [],
+  "implemented": false
 }

@@ -3,6 +3,7 @@
   "name": "ガントレット",
   "rarity": 1,
   "trigger": "Passive",
-  "description": "革と金属を重ねた頑丈な小手。握り拳の重みが、すこしだけ増した気がする。",
-  "effects": []
+  "description": "[未実装] 革と金属を重ねた頑丈な小手。握り拳の重みが、すこしだけ増した気がする。",
+  "effects": [],
+  "implemented": false
 }

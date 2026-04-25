@@ -3,6 +3,7 @@
   "name": "魔力のタロット",
   "rarity": 2,
   "trigger": "Passive",
-  "description": "神秘的な絵柄が踊るタロットカード。一枚引けば、魔力の流れが見えてくる気がする。",
-  "effects": []
+  "description": "[未実装] 神秘的な絵柄が踊るタロットカード。一枚引けば、魔力の流れが見えてくる気がする。",
+  "effects": [],
+  "implemented": false
 }

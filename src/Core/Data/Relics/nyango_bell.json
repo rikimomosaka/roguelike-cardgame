@@ -3,6 +3,7 @@
   "name": "ニャンゴの鈴",
   "rarity": 1,
   "trigger": "Passive",
-  "description": "猫を呼び寄せる小さな鈴。鳴らすと、不思議と幸運がそっと寄り添ってくる。",
-  "effects": []
+  "description": "[未実装] 猫を呼び寄せる小さな鈴。鳴らすと、不思議と幸運がそっと寄り添ってくる。",
+  "effects": [],
+  "implemented": false
 }

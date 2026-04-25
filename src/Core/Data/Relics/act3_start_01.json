@@ -4,5 +4,6 @@
   "rarity": 2,
   "trigger": "OnPickup",
   "description": "微かに七色を放つ星型の結晶。英雄の証として伝えられているが、由来は誰も知らない。",
-  "effects": [{ "action": "gainMaxHp", "scope": "self", "amount": 20 }]
+  "effects": [{ "action": "gainMaxHp", "scope": "self", "amount": 20 }],
+  "implemented": true
 }

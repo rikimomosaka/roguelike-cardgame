@@ -3,6 +3,7 @@
   "name": "儀式の盃",
   "rarity": 2,
   "trigger": "Passive",
-  "description": "古代の祭祀に使われた荘厳な盃。中をのぞくと、自分の影が誇らしげに微笑む。",
-  "effects": []
+  "description": "[未実装] 古代の祭祀に使われた荘厳な盃。中をのぞくと、自分の影が誇らしげに微笑む。",
+  "effects": [],
+  "implemented": false
 }

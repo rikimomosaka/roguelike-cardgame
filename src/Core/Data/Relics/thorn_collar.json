@@ -3,6 +3,7 @@
   "name": "茨の首輪",
   "rarity": 1,
   "trigger": "Passive",
-  "description": "棘付きの首輪。痛みと引き換えに、敵への鋭い気迫を授けてくれる。",
-  "effects": []
+  "description": "[未実装] 棘付きの首輪。痛みと引き換えに、敵への鋭い気迫を授けてくれる。",
+  "effects": [],
+  "implemented": false
 }

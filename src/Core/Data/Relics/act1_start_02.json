@@ -4,5 +4,6 @@
   "rarity": 1,
   "trigger": "OnPickup",
   "description": "縁が擦り切れた銀貨。長い旅路を共にしたかのような重みがある。",
-  "effects": [{ "action": "gainGold", "scope": "self", "amount": 75 }]
+  "effects": [{ "action": "gainGold", "scope": "self", "amount": 75 }],
+  "implemented": true
 }

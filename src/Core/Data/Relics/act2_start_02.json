@@ -4,5 +4,6 @@
   "rarity": 1,
   "trigger": "OnPickup",
   "description": "豪商が用いたという封蝋印。押された証文には金が集まると噂される。",
-  "effects": [{ "action": "gainGold", "scope": "self", "amount": 100 }]
+  "effects": [{ "action": "gainGold", "scope": "self", "amount": 100 }],
+  "implemented": true
 }
