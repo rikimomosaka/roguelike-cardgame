@@ -205,11 +205,15 @@ public sealed record RelicDefinition(
     bool Implemented = true);
 
 public enum RelicTrigger {
-    OnPickup, Passive, OnBattleStart,
-    OnTurnStart,                                // 新規
-    OnTurnEnd,                                  // 新規
-    OnCardPlay,                                 // 新規（全カードプレイで発動、条件絞りは将来拡張）
-    OnEnemyDeath                                // 新規
+    OnPickup           = 0,
+    Passive            = 1,
+    OnBattleStart      = 2,
+    OnBattleEnd        = 3,                       // 既存（burning_blood 等で使用）
+    OnMapTileResolved  = 4,                       // 既存（traveler_boots 等で使用）
+    OnTurnStart        = 5,                       // 新規
+    OnTurnEnd          = 6,                       // 新規
+    OnCardPlay         = 7,                       // 新規
+    OnEnemyDeath       = 8,                       // 新規
 }
 ```
 
@@ -217,8 +221,9 @@ public enum RelicTrigger {
 
 - effect の **scope は `Self / Random / All` のみ**（`Single` は禁止、プレイヤー選択を要するため）
 - すべての effect は完全自動発動可能（プレイヤー操作を要求しない）
-- 効果実装が複雑で Phase 10 で対応しないレリックは `Implemented: false` にし、description プレフィックスに `[未実装]` を付ける
+- 効果実装が複雑で Phase 10 で対応しないレリックは `Implemented: false` にし、description プレフィックスに `[未実装] ` を付ける（半角スペース込み）
 - `Implemented: false` のレリックは取得・所持は通常通り可能、図鑑にも掲載されるが効果は発動しない
+- **`NonBattleRelicEffects.cs` 内でも早期 return される**（OnPickup / OnMapTileResolved / Passive のいずれの戦闘外発火タイミングでも no-op）
 
 ### 2-8. PotionDefinition の更新
 
