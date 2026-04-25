@@ -13,6 +13,7 @@ public static class NonBattleRelicEffects
     public static RunState ApplyOnPickup(RunState s, string relicId, DataCatalog catalog)
     {
         if (!catalog.TryGetRelic(relicId, out var def)) return s;
+        if (!def.Implemented) return s;
         if (def.Trigger != RelicTrigger.OnPickup) return s;
         return ApplyEffects(s, def);
     }
@@ -22,6 +23,7 @@ public static class NonBattleRelicEffects
         foreach (var id in s.Relics)
         {
             if (!catalog.TryGetRelic(id, out var def)) continue;
+            if (!def.Implemented) continue;
             if (def.Trigger != RelicTrigger.OnMapTileResolved) continue;
             s = ApplyEffects(s, def);
         }
@@ -34,6 +36,7 @@ public static class NonBattleRelicEffects
         foreach (var id in s.Relics)
         {
             if (!catalog.TryGetRelic(id, out var def)) continue;
+            if (!def.Implemented) continue;
             if (def.Trigger != RelicTrigger.Passive) continue;
             foreach (var eff in def.Effects)
                 if (eff.Action == "restHealBonus") bonus += eff.Amount;
