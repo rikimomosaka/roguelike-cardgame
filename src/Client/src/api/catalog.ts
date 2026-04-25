@@ -16,8 +16,7 @@ export type PotionCatalogEntry = {
   id: string
   name: string
   rarity: number
-  usableInBattle: boolean
-  usableOutOfBattle: boolean
+  usableOutsideBattle: boolean
   description: string
 }
 

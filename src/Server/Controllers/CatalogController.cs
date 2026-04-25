@@ -32,8 +32,7 @@ public sealed class CatalogController : ControllerBase
         string Id,
         string Name,
         int Rarity,
-        bool UsableInBattle,
-        bool UsableOutOfBattle,
+        bool UsableOutsideBattle,
         string Description);
 
     [HttpGet("cards")]
@@ -66,8 +65,7 @@ public sealed class CatalogController : ControllerBase
                 def.Id,
                 def.Name,
                 (int)def.Rarity,
-                def.UsableInBattle,
-                def.UsableOutOfBattle,
+                def.IsUsableOutsideBattle,
                 DescribePotionEffects(def));
         }
         return Ok(result);
@@ -132,14 +130,8 @@ public sealed class CatalogController : ControllerBase
 
     private static string DescribePotionEffects(Core.Potions.PotionDefinition def)
     {
-        var scope = def.UsableInBattle && def.UsableOutOfBattle
-            ? ""
-            : def.UsableInBattle
-                ? "[戦闘中] "
-                : def.UsableOutOfBattle
-                    ? "[戦闘外] "
-                    : "";
-        return scope + DescribeEffects(def.Effects);
+        var prefix = def.IsUsableOutsideBattle ? "" : "[戦闘中] ";
+        return prefix + DescribeEffects(def.Effects);
     }
 
     private static string CardEffectLabel(CardEffect e) => e.Action switch

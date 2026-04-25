@@ -36,14 +36,9 @@ public static class PotionJsonLoader
                     throw new PotionJsonException($"rarity の値 {rawRarity} は無効です (potion id={id})。");
                 var rarity = (CardRarity)rawRarity;
 
-                // usableInBattle: 必須 boolean
-                var usableInBattle = GetRequiredBool(root, "usableInBattle", id);
-                // usableOutOfBattle: 必須 boolean
-                var usableOutOfBattle = GetRequiredBool(root, "usableOutOfBattle", id);
-
                 var effects = ParseEffects(root, "effects", id);
 
-                return new PotionDefinition(id, name, rarity, usableInBattle, usableOutOfBattle, effects);
+                return new PotionDefinition(id, name, rarity, effects);
             }
             catch (PotionJsonException)
             {
@@ -94,14 +89,4 @@ public static class PotionJsonLoader
         return v.GetInt32();
     }
 
-    private static bool GetRequiredBool(JsonElement el, string key, string? id)
-    {
-        if (!el.TryGetProperty(key, out var v) ||
-            (v.ValueKind != JsonValueKind.True && v.ValueKind != JsonValueKind.False))
-        {
-            var ctx = id is null ? "" : $" (potion id={id})";
-            throw new PotionJsonException($"必須フィールド \"{key}\" (boolean) がありません。{ctx}");
-        }
-        return v.GetBoolean();
-    }
 }

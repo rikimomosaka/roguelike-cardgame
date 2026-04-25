@@ -197,9 +197,7 @@ public static class JsonFixtures
       "id": "block_potion",
       "name": "ブロックポーション",
       "rarity": 1,
-      "usableInBattle": true,
-      "usableOutOfBattle": false,
-      "effects": [ { "action": "block", "scope": "self", "amount": 12 } ]
+      "effects": [ { "action": "block", "scope": "self", "amount": 12, "battleOnly": true } ]
     }
     """;
 
@@ -208,18 +206,7 @@ public static class JsonFixtures
       "id": "fire_potion",
       "name": "ファイアポーション",
       "rarity": 1,
-      "usableInBattle": true,
-      "usableOutOfBattle": false,
-      "effects": [ { "action": "attack", "scope": "single", "side": "enemy", "amount": 20 } ]
-    }
-    """;
-
-    public const string PotionMissingUsableFlagsJson = """
-    {
-      "id": "bad_potion",
-      "name": "バッド",
-      "rarity": 1,
-      "effects": []
+      "effects": [ { "action": "attack", "scope": "single", "side": "enemy", "amount": 20, "battleOnly": true } ]
     }
     """;
 
