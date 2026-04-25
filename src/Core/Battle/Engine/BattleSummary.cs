@@ -1,5 +1,3 @@
-using RoguelikeCardGame.Core.Battle.State;
-
 namespace RoguelikeCardGame.Core.Battle.Engine;
 
 /// <summary>
@@ -9,5 +7,5 @@ namespace RoguelikeCardGame.Core.Battle.Engine;
 /// </summary>
 public sealed record BattleSummary(
     int FinalHeroHp,
-    BattleOutcome Outcome,
+    RoguelikeCardGame.Core.Battle.State.BattleOutcome Outcome,
     string EncounterId);
