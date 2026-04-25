@@ -44,11 +44,8 @@ public class EnemyJsonMigrationTests
     public void No_unsupported_buff_names(string path)
     {
         var content = File.ReadAllText(path);
-        // Unsupported buff names that should not appear in "name" field of buff actions
-        // Check for the pattern "name": "buffName" to be specific
-        var unsupported = new[] { "\"name\": \"ritual\"", "\"name\": \"enrage\"",
-                                  "\"name\": \"curl_up\"", "\"name\": \"activate\"",
-                                  "\"name\": \"split\"" };
+        // Unsupported buff names that should not appear in migrated JSONs
+        var unsupported = new[] { "\"ritual\"", "\"enrage\"", "\"curl_up\"", "\"activate\"", "\"split\"" };
         foreach (var pattern in unsupported)
             Assert.False(content.Contains(pattern), $"{Path.GetFileName(path)} contains unsupported buff {pattern}");
     }
