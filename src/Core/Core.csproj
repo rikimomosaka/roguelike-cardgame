@@ -9,6 +9,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>Core.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
     <EmbeddedResource Include="Data\Cards\*.json" />
     <EmbeddedResource Include="Data\Relics\*.json" />
     <EmbeddedResource Include="Data\Potions\*.json" />
