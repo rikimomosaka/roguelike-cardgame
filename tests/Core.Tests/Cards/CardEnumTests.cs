@@ -23,6 +23,14 @@ public class CardEnumTests
         Assert.Contains("Attack", names);
         Assert.Contains("Skill", names);
         Assert.Contains("Power", names);
-        Assert.Equal(4, names.Length);
+        Assert.Equal(6, names.Length);
     }
+
+    [Fact]
+    public void CardType_includes_Status_value() =>
+        Assert.True(System.Enum.IsDefined(typeof(CardType), CardType.Status));
+
+    [Fact]
+    public void CardType_includes_Curse_value() =>
+        Assert.True(System.Enum.IsDefined(typeof(CardType), CardType.Curse));
 }
