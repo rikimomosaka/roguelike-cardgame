@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using RoguelikeCardGame.Core.Enemy;
+using RoguelikeCardGame.Core.Battle.Definitions;
 
 namespace RoguelikeCardGame.Core.Data;
 

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
-using RoguelikeCardGame.Core.Enemy;
+using RoguelikeCardGame.Core.Battle.Definitions;
 
 namespace RoguelikeCardGame.Core.Data;
 

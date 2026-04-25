@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Immutable;
 using RoguelikeCardGame.Core.Battle;
+using RoguelikeCardGame.Core.Battle.Definitions;
 using RoguelikeCardGame.Core.Data;
-using RoguelikeCardGame.Core.Enemy;
 using RoguelikeCardGame.Core.Map;
 using RoguelikeCardGame.Core.Random;
 

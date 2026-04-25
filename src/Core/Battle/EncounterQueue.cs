@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using RoguelikeCardGame.Core.Battle.Definitions;
 using RoguelikeCardGame.Core.Data;
-using RoguelikeCardGame.Core.Enemy;
 using RoguelikeCardGame.Core.Random;
 
 namespace RoguelikeCardGame.Core.Battle;

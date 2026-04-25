@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using RoguelikeCardGame.Core.Battle.Definitions;
 using RoguelikeCardGame.Core.Bestiary;
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Data;
@@ -76,7 +77,7 @@ public static class EventResolver
         var rt = catalog.RewardTables["act1"];
         var excl = ImmutableArray.CreateRange(s.Deck.Select(c => c.Id));
         var (reward, newRngState) = RewardGenerator.Generate(
-            new RewardContext.FromEnemy(new Enemy.EnemyPool(s.CurrentAct, Enemy.EnemyTier.Weak)),
+            new RewardContext.FromEnemy(new EnemyPool(s.CurrentAct, EnemyTier.Weak)),
             s.RewardRngState, excl, rt, catalog, rng);
         // Event からのカード報酬は Gold / Potion を含めない（CardChoices のみ提示）
         var cardOnly = new RewardState(

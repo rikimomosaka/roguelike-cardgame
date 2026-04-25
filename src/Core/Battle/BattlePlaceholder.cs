@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Immutable;
+using RoguelikeCardGame.Core.Battle.Definitions;
 using RoguelikeCardGame.Core.Data;
-using RoguelikeCardGame.Core.Enemy;
 using RoguelikeCardGame.Core.Random;
 using RoguelikeCardGame.Core.Run;
 
@@ -24,7 +24,7 @@ public static class BattlePlaceholder
         foreach (var eid in encounter.EnemyIds)
         {
             var def = data.Enemies[eid];
-            int hp = def.HpMin + rng.NextInt(0, def.HpMax - def.HpMin + 1);
+            int hp = def.Hp;
             enemies.Add(new EnemyInstance(eid, hp, hp, def.InitialMoveId));
         }
         var battle = new BattleState(encounterId, enemies.ToImmutable(), BattleOutcome.Pending);
