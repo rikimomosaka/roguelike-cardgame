@@ -32,4 +32,40 @@ public class RelicDefinitionTests
 
         Assert.Equal(RelicTrigger.Passive, def.Trigger);
     }
+
+    [Fact]
+    public void Implemented_defaults_to_true()
+    {
+        var def = new RelicDefinition(
+            Id: "r",
+            Name: "name",
+            Rarity: CardRarity.Common,
+            Trigger: RelicTrigger.OnPickup,
+            Effects: new List<CardEffect>());
+        Assert.True(def.Implemented);
+    }
+
+    [Fact]
+    public void Implemented_can_be_set_false()
+    {
+        var def = new RelicDefinition(
+            Id: "r",
+            Name: "name",
+            Rarity: CardRarity.Common,
+            Trigger: RelicTrigger.OnPickup,
+            Effects: new List<CardEffect>(),
+            Description: "",
+            Implemented: false);
+        Assert.False(def.Implemented);
+    }
+
+    [Fact]
+    public void Records_with_different_Implemented_are_not_equal()
+    {
+        var a = new RelicDefinition("r", "n", CardRarity.Common, RelicTrigger.OnPickup,
+                                    new List<CardEffect>(), "", true);
+        var b = new RelicDefinition("r", "n", CardRarity.Common, RelicTrigger.OnPickup,
+                                    new List<CardEffect>(), "", false);
+        Assert.NotEqual(a, b);
+    }
 }
