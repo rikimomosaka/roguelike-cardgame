@@ -11,7 +11,7 @@ public sealed class CardJsonException : Exception
     public CardJsonException(string message, Exception inner) : base(message, inner) { }
 }
 
-/// <summary>カード JSON 文字列を CardDefinition に変換する純粋関数群。</summary>
+/// <summary>カード JSON 文字列を CardDefinition に変換する純粋関数群。Phase 10 設計書 第 2-3 章参照。</summary>
 public static class CardJsonLoader
 {
     public static CardDefinition Parse(string json)
@@ -31,19 +31,21 @@ public static class CardJsonLoader
                 string? displayName = root.TryGetProperty("displayName", out var dn) && dn.ValueKind == JsonValueKind.String
                     ? dn.GetString() : null;
 
-                // rarity: 範囲チェックを追加
                 var rawRarity = GetRequiredInt(root, "rarity", id);
-                if (!System.Enum.IsDefined(typeof(CardRarity), rawRarity))
+                if (!Enum.IsDefined(typeof(CardRarity), rawRarity))
                     throw new CardJsonException($"rarity の値 {rawRarity} は無効です (card id={id})。");
                 var rarity = (CardRarity)rawRarity;
 
                 var cardType = ParseCardType(GetRequiredString(root, "cardType", id), id);
+
                 int? cost = root.TryGetProperty("cost", out var costEl) && costEl.ValueKind == JsonValueKind.Number
                     ? costEl.GetInt32() : (int?)null;
 
+                int? upgradedCost = root.TryGetProperty("upgradedCost", out var ucEl) && ucEl.ValueKind == JsonValueKind.Number
+                    ? ucEl.GetInt32() : (int?)null;
+
                 var effects = ParseEffects(root, "effects", id);
 
-                // upgradedEffects: absent/null → null、array → 解析、それ以外 → 例外
                 IReadOnlyList<CardEffect>? upgraded;
                 if (root.TryGetProperty("upgradedEffects", out var upgEl))
                 {
@@ -60,13 +62,24 @@ public static class CardJsonLoader
                     upgraded = null;
                 }
 
-                return new CardDefinition(id, name, displayName, rarity, cardType, cost, effects, upgraded);
+                IReadOnlyList<string>? keywords = null;
+                if (root.TryGetProperty("keywords", out var kwEl) && kwEl.ValueKind == JsonValueKind.Array)
+                {
+                    var list = new List<string>();
+                    foreach (var k in kwEl.EnumerateArray())
+                    {
+                        if (k.ValueKind != JsonValueKind.String)
+                            throw new CardJsonException($"keywords の要素は string でなければなりません (card id={id})。");
+                        list.Add(k.GetString()!);
+                    }
+                    keywords = list;
+                }
+
+                return new CardDefinition(id, name, displayName, rarity, cardType,
+                    cost, upgradedCost, effects, upgraded, keywords);
             }
-            catch (CardJsonException)
-            {
-                throw; // already contextual
-            }
-            catch (Exception ex) when (ex is not CardJsonException)
+            catch (CardJsonException) { throw; }
+            catch (Exception ex)
             {
                 var where = id is null ? "(card id unknown)" : $"(card id={id})";
                 throw new CardJsonException($"カード JSON のパースに失敗しました {where}: {ex.Message}", ex);
@@ -78,7 +91,6 @@ public static class CardJsonLoader
     {
         if (!root.TryGetProperty(key, out var arr) || arr.ValueKind != JsonValueKind.Array)
             return Array.Empty<CardEffect>();
-
         return ParseEffectsFromElement(arr, id);
     }
 
@@ -102,6 +114,8 @@ public static class CardJsonLoader
         "Attack" => CardType.Attack,
         "Skill" => CardType.Skill,
         "Power" => CardType.Power,
+        "Status" => CardType.Status,
+        "Curse" => CardType.Curse,
         _ => throw new CardJsonException($"未知の cardType: {s} (card id={id})"),
     };
 

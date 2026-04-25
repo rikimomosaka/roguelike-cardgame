@@ -19,11 +19,13 @@ public class CardJsonLoaderTests
         Assert.Equal(CardType.Attack, def.CardType);
         Assert.Equal(1, def.Cost);
 
-        var dmg = Assert.IsType<DamageEffect>(def.Effects.Single());
+        var dmg = def.Effects.Single();
+        Assert.Equal("attack", dmg.Action);
         Assert.Equal(6, dmg.Amount);
 
         Assert.NotNull(def.UpgradedEffects);
-        var upDmg = Assert.IsType<DamageEffect>(def.UpgradedEffects!.Single());
+        var upDmg = def.UpgradedEffects!.Single();
+        Assert.Equal("attack", upDmg.Action);
         Assert.Equal(9, upDmg.Amount);
     }
 
@@ -31,7 +33,8 @@ public class CardJsonLoaderTests
     public void ParseDefend_ParsesGainBlock()
     {
         var def = CardJsonLoader.Parse(JsonFixtures.DefendJson);
-        var eff = Assert.IsType<GainBlockEffect>(def.Effects.Single());
+        var eff = def.Effects.Single();
+        Assert.Equal("block", eff.Action);
         Assert.Equal(5, eff.Amount);
     }
 
@@ -53,11 +56,11 @@ public class CardJsonLoaderTests
     }
 
     [Fact]
-    public void UnknownEffectType_IsPreservedAsUnknownEffect()
+    public void Parse_with_arbitrary_action_string_succeeds()
     {
         var def = CardJsonLoader.Parse(JsonFixtures.UnknownEffectJson);
-        var eff = Assert.IsType<UnknownEffect>(def.Effects.Single());
-        Assert.Equal("summonUnit", eff.Type);
+        var eff = def.Effects.Single();
+        Assert.Equal("summonUnit", eff.Action);
     }
 
     [Fact]
@@ -113,5 +116,77 @@ public class CardJsonLoaderTests
     {
         var def = CardJsonLoader.Parse(JsonFixtures.UpgradedEffectsExplicitNullJson);
         Assert.Null(def.UpgradedEffects);
+    }
+
+    [Fact]
+    public void Parse_with_upgradedCost_only_sets_field()
+    {
+        var json = """
+        {
+          "id":"hb","name":"重撃","rarity":1,"cardType":"Attack",
+          "cost":2,"upgradedCost":1,
+          "effects":[{"action":"attack","scope":"single","side":"enemy","amount":12}]
+        }""";
+        var def = CardJsonLoader.Parse(json);
+        Assert.Equal(2, def.Cost);
+        Assert.Equal(1, def.UpgradedCost);
+        Assert.Null(def.UpgradedEffects);
+        Assert.True(def.IsUpgradable);
+    }
+
+    [Fact]
+    public void Parse_without_upgradedCost_or_upgradedEffects_yields_non_upgradable()
+    {
+        var json = """
+        {
+          "id":"c","name":"呪い","rarity":1,"cardType":"Curse",
+          "cost":null,
+          "effects":[]
+        }""";
+        var def = CardJsonLoader.Parse(json);
+        Assert.False(def.IsUpgradable);
+        Assert.Null(def.UpgradedCost);
+        Assert.Null(def.UpgradedEffects);
+    }
+
+    [Fact]
+    public void Parse_with_keywords_array()
+    {
+        var json = """
+        {
+          "id":"w","name":"Wild Strike","rarity":2,"cardType":"Attack",
+          "cost":5,
+          "keywords":["wild"],
+          "effects":[{"action":"attack","scope":"single","side":"enemy","amount":12}]
+        }""";
+        var def = CardJsonLoader.Parse(json);
+        Assert.NotNull(def.Keywords);
+        Assert.Contains("wild", def.Keywords);
+    }
+
+    [Fact]
+    public void Parse_with_status_card_type()
+    {
+        var json = """
+        {
+          "id":"s","name":"傷","rarity":1,"cardType":"Status",
+          "cost":null,
+          "effects":[]
+        }""";
+        var def = CardJsonLoader.Parse(json);
+        Assert.Equal(CardType.Status, def.CardType);
+    }
+
+    [Fact]
+    public void Parse_with_curse_card_type()
+    {
+        var json = """
+        {
+          "id":"c","name":"呪い","rarity":1,"cardType":"Curse",
+          "cost":null,
+          "effects":[]
+        }""";
+        var def = CardJsonLoader.Parse(json);
+        Assert.Equal(CardType.Curse, def.CardType);
     }
 }
