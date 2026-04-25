@@ -4,5 +4,11 @@
   "rarity": 2,
   "cardType": "Skill",
   "cost": 1,
-  "effects": [{ "type": "gainBlock", "amount": 12 }]
+  "effects": [
+    {
+      "action": "block",
+      "scope": "self",
+      "amount": 12
+    }
+  ]
 }

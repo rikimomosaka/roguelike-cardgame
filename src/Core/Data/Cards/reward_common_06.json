@@ -5,7 +5,15 @@
   "cardType": "Skill",
   "cost": 1,
   "effects": [
-    { "type": "gainBlock", "amount": 5 },
-    { "type": "gainBlock", "amount": 3 }
+    {
+      "action": "block",
+      "scope": "self",
+      "amount": 5
+    },
+    {
+      "action": "block",
+      "scope": "self",
+      "amount": 3
+    }
   ]
 }

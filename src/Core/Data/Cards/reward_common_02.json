@@ -5,7 +5,17 @@
   "cardType": "Attack",
   "cost": 1,
   "effects": [
-    { "type": "damage", "amount": 5 },
-    { "type": "damage", "amount": 5 }
+    {
+      "action": "attack",
+      "scope": "single",
+      "side": "enemy",
+      "amount": 5
+    },
+    {
+      "action": "attack",
+      "scope": "single",
+      "side": "enemy",
+      "amount": 5
+    }
   ]
 }

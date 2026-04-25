@@ -5,7 +5,16 @@
   "cardType": "Attack",
   "cost": 1,
   "effects": [
-    { "type": "damage", "amount": 6 },
-    { "type": "gainBlock", "amount": 3 }
+    {
+      "action": "attack",
+      "scope": "single",
+      "side": "enemy",
+      "amount": 6
+    },
+    {
+      "action": "block",
+      "scope": "self",
+      "amount": 3
+    }
   ]
 }

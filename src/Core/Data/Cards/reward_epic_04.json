@@ -5,8 +5,23 @@
   "cardType": "Attack",
   "cost": 2,
   "effects": [
-    { "type": "damage", "amount": 12 },
-    { "type": "damage", "amount": 12 },
-    { "type": "damage", "amount": 12 }
+    {
+      "action": "attack",
+      "scope": "single",
+      "side": "enemy",
+      "amount": 12
+    },
+    {
+      "action": "attack",
+      "scope": "single",
+      "side": "enemy",
+      "amount": 12
+    },
+    {
+      "action": "attack",
+      "scope": "single",
+      "side": "enemy",
+      "amount": 12
+    }
   ]
 }

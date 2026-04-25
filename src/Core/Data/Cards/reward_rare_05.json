@@ -4,5 +4,11 @@
   "rarity": 2,
   "cardType": "Skill",
   "cost": 1,
-  "effects": [{ "type": "gainEnergy", "amount": 2 }]
+  "effects": [
+    {
+      "action": "gainEnergy",
+      "scope": "self",
+      "amount": 2
+    }
+  ]
 }

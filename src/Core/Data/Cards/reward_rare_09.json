@@ -4,5 +4,11 @@
   "rarity": 2,
   "cardType": "Power",
   "cost": 1,
-  "effects": [{ "type": "gainStrength", "amount": 2 }]
+  "effects": [
+    {
+      "action": "gainStrength",
+      "scope": "self",
+      "amount": 2
+    }
+  ]
 }

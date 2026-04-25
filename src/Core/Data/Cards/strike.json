@@ -4,6 +4,20 @@
   "rarity": 1,
   "cardType": "Attack",
   "cost": 1,
-  "effects": [{ "type": "damage", "amount": 6 }],
-  "upgradedEffects": [{ "type": "damage", "amount": 9 }]
+  "effects": [
+    {
+      "action": "attack",
+      "scope": "single",
+      "side": "enemy",
+      "amount": 6
+    }
+  ],
+  "upgradedEffects": [
+    {
+      "action": "attack",
+      "scope": "single",
+      "side": "enemy",
+      "amount": 9
+    }
+  ]
 }

@@ -4,5 +4,11 @@
   "rarity": 1,
   "cardType": "Skill",
   "cost": 0,
-  "effects": [{ "type": "drawCards", "amount": 2 }]
+  "effects": [
+    {
+      "action": "drawCards",
+      "scope": "self",
+      "amount": 2
+    }
+  ]
 }

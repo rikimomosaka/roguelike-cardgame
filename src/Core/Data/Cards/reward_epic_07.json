@@ -4,5 +4,12 @@
   "rarity": 3,
   "cardType": "Attack",
   "cost": 1,
-  "effects": [{ "type": "damage", "amount": 14 }]
+  "effects": [
+    {
+      "action": "attack",
+      "scope": "single",
+      "side": "enemy",
+      "amount": 14
+    }
+  ]
 }

@@ -4,5 +4,11 @@
   "rarity": 3,
   "cardType": "Power",
   "cost": 2,
-  "effects": [{ "type": "gainDexterity", "amount": 3 }]
+  "effects": [
+    {
+      "action": "gainDexterity",
+      "scope": "self",
+      "amount": 3
+    }
+  ]
 }
