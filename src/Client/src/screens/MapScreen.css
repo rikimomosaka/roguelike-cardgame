@@ -13,9 +13,7 @@
   aspect-ratio: var(--stage-aspect);
   display: flex;
   flex-direction: column;
-  background:
-    radial-gradient(ellipse at 50% 35%, rgba(217, 97, 74, 0.18) 0%, transparent 60%),
-    linear-gradient(180deg, var(--bg-2) 0%, var(--bg-3) 50%, var(--bg-2) 100%);
+  background: transparent;
   border: none;
   border-radius: 0;
   overflow: hidden;
@@ -40,6 +38,28 @@ main.map-screen {
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
+}
+
+/* ---------- Background art (per act, fixed; not affected by zoom/pan) ---------- */
+.map-screen__bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+.map-screen__body[data-act='1'] .map-screen__bg {
+  background-image: url('/backgrounds/map/act1.png');
+}
+.map-screen__body[data-act='2'] .map-screen__bg {
+  background-image: url('/backgrounds/map/act2.png');
+}
+.map-screen__body[data-act='3'] .map-screen__bg {
+  background-image: url('/backgrounds/map/act3.png');
 }
 
 /* ---------- Stage (the scrollable/pannable map viewport) ---------- */

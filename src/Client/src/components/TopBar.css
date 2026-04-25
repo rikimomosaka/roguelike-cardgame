@@ -217,6 +217,27 @@
   background: rgba(10, 6, 4, 0.55);
 }
 
+.topbar__btn--deck {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 6px;
+}
+
+.topbar__btn-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  display: block;
+}
+
+.topbar__btn-num {
+  font-family: var(--font-label);
+  font-size: 14px;
+  letter-spacing: var(--ls-wide);
+}
+
 .topbar__deck-wrap {
   position: relative;
 }

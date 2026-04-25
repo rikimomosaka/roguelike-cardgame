@@ -41,7 +41,7 @@ type Props = {
 const SHOP_MESSAGE_MS = 2500
 const MAX_ROW = 16
 
-const TILE_IMG_SRC: Record<Exclude<TileKind, 'Start'>, string> = {
+const TILE_IMG_SRC: Record<TileKind, string> = {
   Enemy: '/icons/tiles/enemy.png',
   Elite: '/icons/tiles/elite.png',
   Merchant: '/icons/tiles/merchant.png',
@@ -50,11 +50,11 @@ const TILE_IMG_SRC: Record<Exclude<TileKind, 'Start'>, string> = {
   Event: '/icons/tiles/event.png',
   Unknown: '/icons/tiles/unknown.png',
   Boss: '/icons/tiles/boss.png',
+  Start: '/icons/tiles/start.png',
 }
 
 function iconFor(kind: TileKind, resolvedKind: TileKind | null): ReactNode {
   const k = kind === 'Unknown' && resolvedKind === null ? 'Unknown' : (resolvedKind ?? kind)
-  if (k === 'Start') return '●'
   return <img src={TILE_IMG_SRC[k]} alt="" className="map-screen__node-img" draggable={false} />
 }
 
@@ -499,8 +499,9 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
           peekActive={peekMap}
           peekDisabled={!activeBattle}
         />
-        <div className="map-screen__body">
+        <div className="map-screen__body" data-act={snap.run.currentAct}>
           <div className="map-screen__pattern" aria-hidden="true" />
+          <div className="map-screen__bg" aria-hidden="true" />
 
         <div
           className="map-screen__stage"

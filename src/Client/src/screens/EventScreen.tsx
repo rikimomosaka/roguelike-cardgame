@@ -28,34 +28,35 @@ export function EventScreen({ event, onChoose, onClose }: Props) {
         </Button>
       }
     >
-      <div className="ev-art" aria-hidden="true">
-        ✦
+      <div className="ev-frame" data-event={event.eventId}>
+        <div className="ev-bg" aria-hidden="true" />
+        <div className="ev-narrative-wrap">
+          <p className="ev-narrative">{message}</p>
+        </div>
+        <ul className="ev-choices">
+          {event.choices.map((c, i) => {
+            const chosen = event.chosenIndex === i
+            const disabled = resolved || !c.conditionMet
+            return (
+              <li key={i}>
+                <button
+                  type="button"
+                  className={
+                    'ev-choice' + (chosen ? ' ev-choice--chosen' : '')
+                  }
+                  onClick={() => onChoose(i)}
+                  disabled={disabled}
+                >
+                  <span className="ev-choice__label">
+                    {c.label}
+                    {c.conditionSummary ? ` (${c.conditionSummary})` : ''}
+                  </span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
       </div>
-      <p className="ev-narrative">{message}</p>
-      <ul className="ev-choices">
-        {event.choices.map((c, i) => {
-          const chosen = event.chosenIndex === i
-          const disabled = resolved || !c.conditionMet
-          return (
-            <li key={i}>
-              <button
-                type="button"
-                className={
-                  'ev-choice' + (chosen ? ' ev-choice--chosen' : '')
-                }
-                onClick={() => onChoose(i)}
-                disabled={disabled}
-                aria-disabled={disabled ? 'true' : 'false'}
-              >
-                <span className="ev-choice__label">
-                  {c.label}
-                  {c.conditionSummary ? ` (${c.conditionSummary})` : ''}
-                </span>
-              </button>
-            </li>
-          )
-        })}
-      </ul>
     </Popup>
   )
 }

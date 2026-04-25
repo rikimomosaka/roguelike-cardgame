@@ -308,6 +308,14 @@
   line-height: 1;
   color: var(--fg-muted);
   text-shadow: 0 0 5px currentColor, 0 1px 0 #000;
+  overflow: hidden;
+}
+
+.mc-row__icon img {
+  width: 86%;
+  height: 86%;
+  object-fit: contain;
+  image-rendering: pixelated;
 }
 
 .mc-row--relic .mc-row__icon { color: var(--rarity-c); border-color: var(--border-light); }

@@ -132,7 +132,9 @@ export function RestScreen({ deck, completed, onHeal, onUpgrade, onClose }: Prop
         </Button>
       }
     >
-      <div className="rs-fire" aria-hidden="true">✦</div>
+      <div className="rs-fire" aria-hidden="true">
+        <img src="/icons/ui/rest_fire.png" alt="" draggable={false} />
+      </div>
       <ul className="rs-choices">
         <li>
           <button
@@ -142,7 +144,9 @@ export function RestScreen({ deck, completed, onHeal, onUpgrade, onClose }: Prop
             disabled={completed}
             aria-label="Heal"
           >
-            <span className="rs-choice-icon" aria-hidden="true">☾</span>
+            <span className="rs-choice-icon" aria-hidden="true">
+              <img src="/icons/ui/rest_heal.png" alt="" draggable={false} />
+            </span>
             <span className="rs-choice-body">
               <span className="rs-choice-name">休息</span>
               <span className="rs-choice-desc">
@@ -163,7 +167,9 @@ export function RestScreen({ deck, completed, onHeal, onUpgrade, onClose }: Prop
             disabled={completed}
             aria-label="Upgrade card"
           >
-            <span className="rs-choice-icon" aria-hidden="true">✦</span>
+            <span className="rs-choice-icon" aria-hidden="true">
+              <img src="/icons/ui/upgrade.png" alt="" draggable={false} />
+            </span>
             <span className="rs-choice-body">
               <span className="rs-choice-name">鍛える</span>
               <span className="rs-choice-desc">

@@ -276,7 +276,9 @@ export function MerchantScreen(p: Props) {
             ].filter(Boolean).join(' ')
             return (
               <li className={classes}>
-                <div className="mc-row__icon" aria-hidden="true">✂</div>
+                <div className="mc-row__icon" aria-hidden="true">
+                  <img src="/icons/ui/discard.png" alt="" draggable={false} />
+                </div>
                 <div className="mc-row__body">
                   <div className="mc-row__name">カード除去</div>
                 </div>

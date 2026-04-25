@@ -8,29 +8,51 @@
    - disabled when chosenIndex is set or conditionMet=false
    ============================================================= */
 
-/* ---- Art (placeholder illustration) ---- */
-.ev-art {
-  align-self: center;
-  width: 200px;
-  aspect-ratio: 1 / 1;
-  background:
-    repeating-linear-gradient(
-      0deg,
-      rgba(0, 0, 0, 0.25) 0 2px,
-      transparent 2px 4px
-    ),
-    radial-gradient(circle at 50% 45%, rgba(255, 213, 79, 0.12), transparent 70%),
-    var(--bg-2);
+/* ---- Frame (event-specific full-bleed background + content overlay) ---- */
+.ev-frame {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 460px;
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-sm);
-  display: grid;
-  place-items: center;
+  overflow: hidden;
+  isolation: isolate;
+  padding: 16px;
+}
+
+.ev-bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   image-rendering: pixelated;
-  font-family: var(--font-label);
-  font-size: 72px;
-  color: var(--fg-muted);
-  text-shadow: 0 0 12px rgba(201, 152, 90, 0.5), 0 2px 0 #000;
-  margin: 0 0 4px;
+  pointer-events: none;
+}
+
+.ev-frame[data-event='blessing_fountain'] .ev-bg {
+  background-image: url('/backgrounds/events/blessing_fountain.png');
+}
+.ev-frame[data-event='old_library'] .ev-bg {
+  background-image: url('/backgrounds/events/old_library.png');
+}
+.ev-frame[data-event='shady_merchant'] .ev-bg {
+  background-image: url('/backgrounds/events/shady_merchant.png');
+}
+
+/* Top half: narrative window (semi-opaque scroll-style box) */
+.ev-narrative-wrap {
+  flex: 0 0 auto;
+  padding: 14px 16px;
+  background: rgba(10, 6, 4, 0.78);
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-sm);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
 }
 
 /* ---- Narrative ---- */

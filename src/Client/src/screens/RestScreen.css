@@ -11,32 +11,21 @@
 /* ---- Campfire flicker decoration ---- */
 .rs-fire {
   align-self: center;
-  width: 68px;
-  height: 68px;
-  background:
-    radial-gradient(
-      circle at 50% 70%,
-      rgba(255, 170, 60, 0.9) 0%,
-      rgba(255, 80, 0, 0.55) 45%,
-      transparent 72%
-    ),
-    radial-gradient(
-      circle at 50% 95%,
-      rgba(120, 60, 20, 0.8) 0%,
-      transparent 65%
-    );
-  filter: blur(0.4px);
-  image-rendering: pixelated;
-  font-family: var(--font-label);
-  font-size: 36px;
-  color: var(--gold);
-  line-height: 1;
-  text-shadow: 0 0 10px rgba(255, 170, 60, 0.9),
-    0 0 22px rgba(255, 80, 0, 0.6);
+  width: 96px;
+  height: 96px;
   display: grid;
   place-items: center;
   animation: rs-flicker 1.4s ease-in-out infinite;
   margin: 0 0 2px;
+  filter: drop-shadow(0 0 10px rgba(255, 170, 60, 0.55))
+    drop-shadow(0 0 22px rgba(255, 80, 0, 0.4));
+}
+
+.rs-fire img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
 }
 
 @keyframes rs-flicker {
@@ -111,6 +100,14 @@
   font-size: 22px;
   line-height: 1;
   text-shadow: 0 0 5px currentColor, 0 1px 0 #000;
+  overflow: hidden;
+}
+
+.rs-choice-icon img {
+  width: 86%;
+  height: 86%;
+  object-fit: contain;
+  image-rendering: pixelated;
 }
 
 .rs-choice--heal .rs-choice-icon {

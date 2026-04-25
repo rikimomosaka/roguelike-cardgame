@@ -123,13 +123,14 @@ export function TopBar({
         <div className="topbar__deck-wrap">
           <button
             type="button"
-            className="topbar__btn"
+            className="topbar__btn topbar__btn--deck"
             aria-label={`デッキ (${deck.length}枚)`}
             aria-expanded={deckOpenAria}
             aria-pressed={deckOpenAria}
             onClick={() => setDeckOpen((v) => !v)}
           >
-            DECK {deck.length}
+            <img className="topbar__btn-icon" src="/icons/ui/deck.png" alt="" draggable={false} />
+            <span className="topbar__btn-num">{deck.length}</span>
           </button>
           {deckOpen && (
             <div className="topbar__deck-menu" role="dialog" aria-label="現在のデッキ">
