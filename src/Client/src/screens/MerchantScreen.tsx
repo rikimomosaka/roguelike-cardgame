@@ -236,7 +236,6 @@ export function MerchantScreen(p: Props) {
               name={relicNames[o.id] ?? o.id}
               description={relicCatalog?.[o.id]?.description ?? null}
               rarity={relicRarityCode(relicCatalog?.[o.id]?.rarity)}
-              icon="◉"
               gold={p.gold}
               onBuy={handleBuy}
             />
@@ -255,7 +254,6 @@ export function MerchantScreen(p: Props) {
               name={potionNames[o.id] ?? o.id}
               description={potionCatalog?.[o.id]?.description ?? null}
               rarity={potionRarityCode(potionCatalog?.[o.id]?.rarity)}
-              icon="⚗"
               gold={p.gold}
               onBuy={handleBuy}
             />
@@ -303,12 +301,12 @@ type TileProps = {
   name: string
   description: string | null
   rarity?: CardRarity
-  icon: string
   gold: number
   onBuy: (kind: 'relic' | 'potion', id: string) => void | Promise<void>
 }
 
-function RelicPotionTile({ kind, offer, name, description, rarity, icon, gold, onBuy }: TileProps) {
+function RelicPotionTile({ kind, offer, name, description, rarity, gold, onBuy }: TileProps) {
+  const iconSrc = kind === 'relic' ? `/icons/relics/${offer.id}.png` : `/icons/potions/${offer.id}.png`
   const tooltipContent = useMemo<TooltipContent | null>(() => {
     if (offer.sold || !description) return null
     return { name, rarity, desc: description }
@@ -349,7 +347,9 @@ function RelicPotionTile({ kind, offer, name, description, rarity, icon, gold, o
         aria-disabled={locked ? 'true' : 'false'}
         aria-label={`Buy ${name}`}
       >
-        <span className="mc-tile__icon" aria-hidden="true">{icon}</span>
+        <span className="mc-tile__icon" aria-hidden="true">
+          <img src={iconSrc} alt="" draggable={false} />
+        </span>
         <span className="mc-tile__sr-name">{name}</span>
         <span className="mc-tile__price">
           <span className="mc-num">{offer.price}</span> ゴールド

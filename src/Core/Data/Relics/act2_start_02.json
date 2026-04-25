@@ -1,1 +1,8 @@
-{"id":"act2_start_02","name":"豪商の刻印","rarity":1,"trigger":"OnPickup","effects":[{"type":"gainGold","amount":100}]}
+{
+  "id": "act2_start_02",
+  "name": "シーリングスタンプ",
+  "rarity": 1,
+  "trigger": "OnPickup",
+  "description": "豪商が用いたという封蝋印。押された証文には金が集まると噂される。",
+  "effects": [{ "type": "gainGold", "amount": 100 }]
+}

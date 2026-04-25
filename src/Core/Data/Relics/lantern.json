@@ -1,7 +1,8 @@
 {
   "id": "lantern",
-  "name": "ランタン",
+  "name": "最後の灯火",
   "rarity": 1,
   "trigger": "Passive",
+  "description": "決して消えない小さな炎を灯すランタン。戦の口火を切るのは、いつもこの一灯だ。",
   "effects": [{ "type": "extraEnergyOnFirstTurn", "amount": 1 }]
 }

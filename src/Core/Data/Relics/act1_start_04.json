@@ -1,1 +1,8 @@
-{"id":"act1_start_04","name":"旅人の懐刀","rarity":1,"trigger":"OnPickup","effects":[{"type":"gainMaxHp","amount":5}]}
+{
+  "id": "act1_start_04",
+  "name": "ショートショートソード",
+  "rarity": 1,
+  "trigger": "OnPickup",
+  "description": "ずいぶんと短い剣。だが旅人の懐に忍ばせるには十分すぎる。",
+  "effects": [{ "type": "gainMaxHp", "amount": 5 }]
+}

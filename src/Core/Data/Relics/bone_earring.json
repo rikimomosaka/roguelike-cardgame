@@ -1,0 +1,8 @@
+{
+  "id": "bone_earring",
+  "name": "ほねイヤリング",
+  "rarity": 1,
+  "trigger": "Passive",
+  "description": "古い獣骨を磨いて作った野趣あふれるイヤリング。冷たい風にも怯まなくなる。",
+  "effects": []
+}

@@ -1,0 +1,8 @@
+{
+  "id": "nice_acorn",
+  "name": "いい感じのどんぐり",
+  "rarity": 0,
+  "trigger": "Passive",
+  "description": "つるりと磨かれた小さなどんぐり。手に握ると、ほのかな木の香りで気が引き締まる。",
+  "effects": []
+}

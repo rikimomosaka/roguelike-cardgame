@@ -395,6 +395,32 @@
   image-rendering: pixelated;
 }
 
+.rr__item-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.rr__journey-img {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.rr__trail-legend .lg__sym img {
+  width: 11px;
+  height: 11px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  display: block;
+}
+
 .rr__item-name {
   font-family: var(--font-body);
   font-size: 12px;

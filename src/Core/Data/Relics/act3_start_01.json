@@ -1,1 +1,8 @@
-{"id":"act3_start_01","name":"英雄の証","rarity":2,"trigger":"OnPickup","effects":[{"type":"gainMaxHp","amount":20}]}
+{
+  "id": "act3_start_01",
+  "name": "ホログラムスター",
+  "rarity": 2,
+  "trigger": "OnPickup",
+  "description": "微かに七色を放つ星型の結晶。英雄の証として伝えられているが、由来は誰も知らない。",
+  "effects": [{ "type": "gainMaxHp", "amount": 20 }]
+}

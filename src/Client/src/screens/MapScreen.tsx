@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { PointerEvent as ReactPointerEvent } from 'react'
+import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react'
 import { getCurrentRun, heartbeat, moveToNode } from '../api/runs'
 import { winBattle } from '../api/battle'
 import {
@@ -41,19 +41,21 @@ type Props = {
 const SHOP_MESSAGE_MS = 2500
 const MAX_ROW = 16
 
-function iconFor(kind: TileKind, resolvedKind: TileKind | null): string {
+const TILE_IMG_SRC: Record<Exclude<TileKind, 'Start'>, string> = {
+  Enemy: '/icons/tiles/enemy.png',
+  Elite: '/icons/tiles/elite.png',
+  Merchant: '/icons/tiles/merchant.png',
+  Rest: '/icons/tiles/rest.png',
+  Treasure: '/icons/tiles/treasure.png',
+  Event: '/icons/tiles/event.png',
+  Unknown: '/icons/tiles/unknown.png',
+  Boss: '/icons/tiles/boss.png',
+}
+
+function iconFor(kind: TileKind, resolvedKind: TileKind | null): ReactNode {
   const k = kind === 'Unknown' && resolvedKind === null ? 'Unknown' : (resolvedKind ?? kind)
-  switch (k) {
-    case 'Start': return '●'
-    case 'Enemy': return '⚔'
-    case 'Elite': return '♛'
-    case 'Merchant': return '◆'
-    case 'Rest': return '△'
-    case 'Treasure': return '◈'
-    case 'Event': return '?'
-    case 'Unknown': return '?'
-    case 'Boss': return '♛'
-  }
+  if (k === 'Start') return '●'
+  return <img src={TILE_IMG_SRC[k]} alt="" className="map-screen__node-img" draggable={false} />
 }
 
 function kindClassFor(kind: TileKind, resolvedKind: TileKind | null): string {
@@ -626,13 +628,14 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
 
           <div className="map-screen__key" aria-hidden="true">
             <div className="map-screen__key-title">マップ凡例</div>
-            <div className="map-screen__key-row"><span className="map-screen__key-sym">⚔</span><span>戦闘</span></div>
-            <div className="map-screen__key-row"><span className="map-screen__key-sym k--elite">♛</span><span>精鋭</span></div>
-            <div className="map-screen__key-row"><span className="map-screen__key-sym k--rest">△</span><span>休憩</span></div>
-            <div className="map-screen__key-row"><span className="map-screen__key-sym k--merchant">◆</span><span>商店</span></div>
-            <div className="map-screen__key-row"><span className="map-screen__key-sym k--treasure">◈</span><span>宝箱</span></div>
-            <div className="map-screen__key-row"><span className="map-screen__key-sym">?</span><span>未知</span></div>
-            <div className="map-screen__key-row"><span className="map-screen__key-sym k--boss">♛</span><span>ボス</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym"><img src="/icons/tiles/enemy.png" alt="" /></span><span>戦闘</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym k--elite"><img src="/icons/tiles/elite.png" alt="" /></span><span>精鋭</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym k--rest"><img src="/icons/tiles/rest.png" alt="" /></span><span>休憩</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym k--merchant"><img src="/icons/tiles/merchant.png" alt="" /></span><span>商店</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym k--treasure"><img src="/icons/tiles/treasure.png" alt="" /></span><span>宝箱</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym"><img src="/icons/tiles/event.png" alt="" /></span><span>イベント</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym"><img src="/icons/tiles/unknown.png" alt="" /></span><span>未知</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym k--boss"><img src="/icons/tiles/boss.png" alt="" /></span><span>ボス</span></div>
           </div>
         </div>
 

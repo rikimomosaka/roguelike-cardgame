@@ -103,6 +103,15 @@
   image-rendering: pixelated;
 }
 
+.ar-icon img {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 /* ---- Relic name ---- */
 .ar-name {
   text-align: center;

@@ -147,7 +147,9 @@ export function InGameMenuScreen({ onClose, onExitToMenu, onAbandon, elapsedSeco
             onClick={onClose}
             aria-label="続ける"
           >
-            <span className="im-item-icon" aria-hidden="true">▸</span>
+            <span className="im-item-icon" aria-hidden="true">
+              <img src="/icons/ui/continue.png" alt="" draggable={false} />
+            </span>
             <span className="im-item-body">
               <span className="im-item-name">続ける</span>
               <span className="im-item-desc">ゲームに戻る</span>
@@ -162,7 +164,9 @@ export function InGameMenuScreen({ onClose, onExitToMenu, onAbandon, elapsedSeco
             onClick={() => setMode('settings')}
             aria-label="音量設定"
           >
-            <span className="im-item-icon" aria-hidden="true">⚙</span>
+            <span className="im-item-icon" aria-hidden="true">
+              <img src="/icons/ui/settings.png" alt="" draggable={false} />
+            </span>
             <span className="im-item-body">
               <span className="im-item-name">音量設定</span>
               <span className="im-item-desc">音量 / 表示 / 操作ヒント</span>
@@ -178,7 +182,9 @@ export function InGameMenuScreen({ onClose, onExitToMenu, onAbandon, elapsedSeco
             disabled={busy}
             aria-label="メニューに戻る"
           >
-            <span className="im-item-icon" aria-hidden="true">◈</span>
+            <span className="im-item-icon" aria-hidden="true">
+              <img src="/icons/ui/map.png" alt="" draggable={false} />
+            </span>
             <span className="im-item-body">
               <span className="im-item-name">メニューに戻る</span>
               <span className="im-item-desc">タイトルに戻る（ラン継続保存）</span>
@@ -193,7 +199,9 @@ export function InGameMenuScreen({ onClose, onExitToMenu, onAbandon, elapsedSeco
             onClick={() => setMode('confirm-abandon')}
             aria-label="あきらめる"
           >
-            <span className="im-item-icon" aria-hidden="true">✕</span>
+            <span className="im-item-icon" aria-hidden="true">
+              <img src="/icons/ui/abandon.png" alt="" draggable={false} />
+            </span>
             <span className="im-item-body">
               <span className="im-item-name">あきらめる</span>
               <span className="im-item-desc">このランを破棄してタイトルへ（履歴に放棄として記録）</span>

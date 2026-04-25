@@ -91,6 +91,15 @@
   border-color: #7a2a1a;
 }
 
+.im-item-icon img {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 .im-item-body {
   flex: 1;
   min-width: 0;

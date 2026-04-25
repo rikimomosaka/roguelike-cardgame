@@ -1,1 +1,8 @@
-{"id":"act2_start_05","name":"冒険の記憶","rarity":1,"trigger":"OnPickup","effects":[{"type":"gainGold","amount":80}]}
+{
+  "id": "act2_start_05",
+  "name": "お宝マップ",
+  "rarity": 1,
+  "trigger": "OnPickup",
+  "description": "古い羊皮紙に描かれた覚え書き。ところどころに金貨の記号が躍る。",
+  "effects": [{ "type": "gainGold", "amount": 80 }]
+}

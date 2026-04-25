@@ -73,7 +73,7 @@ describe('RewardPopup', () => {
       />,
     )
     // Card button is still enabled (not Claimed) and keeps the ✨ glyph.
-    const cardBtn = screen.getByText('✨ カード報酬') as HTMLButtonElement
+    const cardBtn = screen.getByText('カード報酬') as HTMLButtonElement
     expect(cardBtn.disabled).toBe(false)
     fireEvent.click(cardBtn)
     fireEvent.click(screen.getByText('card_strike'))
@@ -93,7 +93,7 @@ describe('RewardPopup', () => {
         {...handlers}
       />,
     )
-    fireEvent.click(screen.getByText('✨ カード報酬'))
+    fireEvent.click(screen.getByText('カード報酬'))
     expect(screen.getByText('カードを選ぶ')).toBeDefined()
     fireEvent.click(screen.getByText('card_strike'))
     await waitFor(() =>
@@ -213,7 +213,7 @@ describe('RewardPopup', () => {
         {...handlers}
       />,
     )
-    fireEvent.click(screen.getByText('✨ カード報酬'))
+    fireEvent.click(screen.getByText('カード報酬'))
     expect(screen.getByText('閉じる')).toBeDefined()
     expect(screen.queryByText('戻る')).toBeNull()
   })
@@ -228,7 +228,7 @@ describe('RewardPopup', () => {
         {...handlers}
       />,
     )
-    fireEvent.click(screen.getByText('✨ カード報酬'))
+    fireEvent.click(screen.getByText('カード報酬'))
     fireEvent.click(screen.getByText('閉じる'))
     await waitFor(() => expect(handlers.onSkipCard).toHaveBeenCalledTimes(1))
     await waitFor(() => expect(screen.queryByText('カードを選ぶ')).toBeNull())
@@ -247,7 +247,7 @@ describe('RewardPopup', () => {
         {...handlers}
       />,
     )
-    fireEvent.click(screen.getByText('✨ カード報酬'))
+    fireEvent.click(screen.getByText('カード報酬'))
     expect(screen.getByText('閉じる')).toBeDefined()
     expect(screen.queryByText('戻る')).toBeNull()
     fireEvent.click(screen.getByText('閉じる'))

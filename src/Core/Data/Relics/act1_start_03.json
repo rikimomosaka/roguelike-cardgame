@@ -1,1 +1,8 @@
-{"id":"act1_start_03","name":"温石","rarity":1,"trigger":"Passive","effects":[{"type":"restHealBonus","amount":5}]}
+{
+  "id": "act1_start_03",
+  "name": "ストーンフロッグ",
+  "rarity": 1,
+  "trigger": "Passive",
+  "description": "じっと佇む石の蛙。眺めているだけで、不思議と疲れが抜けていく。",
+  "effects": [{ "type": "restHealBonus", "amount": 5 }]
+}

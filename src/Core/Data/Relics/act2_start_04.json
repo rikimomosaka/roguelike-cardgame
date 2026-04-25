@@ -1,1 +1,8 @@
-{"id":"act2_start_04","name":"守護者の加護","rarity":1,"trigger":"OnPickup","effects":[{"type":"gainMaxHp","amount":10}]}
+{
+  "id": "act2_start_04",
+  "name": "金のロザリオ",
+  "rarity": 1,
+  "trigger": "OnPickup",
+  "description": "厳かな祈りの数珠。握っていると、見えない手に守られている気がする。",
+  "effects": [{ "type": "gainMaxHp", "amount": 10 }]
+}

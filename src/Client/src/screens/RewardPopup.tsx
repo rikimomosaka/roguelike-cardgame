@@ -107,7 +107,10 @@ export function RewardPopup(p: Props) {
               disabled={r.goldClaimed}
               onClick={() => p.onClaimGold()}
             >
-              {r.goldClaimed ? '✓' : '＋'} <span className="rw-num">{r.gold}</span> ゴールド
+              <span className="rw-tile__icon" aria-hidden="true">
+                {r.goldClaimed ? '✓' : <img src="/icons/ui/gold.png" alt="" draggable={false} />}
+              </span>
+              <span className="rw-num">{r.gold}</span> ゴールド
             </button>
           </li>
         )}
@@ -119,7 +122,10 @@ export function RewardPopup(p: Props) {
               disabled={r.potionClaimed}
               onClick={() => p.onClaimPotion()}
             >
-              {r.potionClaimed ? '✓' : '🧪'} {potionLabel(r.potionId)}
+              <span className="rw-tile__icon" aria-hidden="true">
+                {r.potionClaimed ? '✓' : <img src={`/icons/potions/${r.potionId}.png`} alt="" draggable={false} />}
+              </span>
+              {potionLabel(r.potionId)}
             </button>
           </li>
         )}
@@ -131,7 +137,10 @@ export function RewardPopup(p: Props) {
               disabled={cardResolved}
               onClick={() => setCardView(true)}
             >
-              {cardResolved ? '✓' : '✨'} カード報酬
+              <span className="rw-tile__icon" aria-hidden="true">
+                {cardResolved ? '✓' : <img src="/icons/ui/reward.png" alt="" draggable={false} />}
+              </span>
+              カード報酬
             </button>
           </li>
         )}
@@ -143,7 +152,10 @@ export function RewardPopup(p: Props) {
               disabled={r.relicClaimed}
               onClick={() => p.onClaimRelic()}
             >
-              {r.relicClaimed ? '✓' : '💎'} レリック: {relicNames[r.relicId] ?? r.relicId}
+              <span className="rw-tile__icon" aria-hidden="true">
+                {r.relicClaimed ? '✓' : <img src={`/icons/relics/${r.relicId}.png`} alt="" draggable={false} />}
+              </span>
+              レリック: {relicNames[r.relicId] ?? r.relicId}
             </button>
           </li>
         )}

@@ -1,1 +1,8 @@
-{"id":"act3_start_05","name":"終焉の予言","rarity":2,"trigger":"OnPickup","effects":[{"type":"gainGold","amount":120}]}
+{
+  "id": "act3_start_05",
+  "name": "狂気の仮面",
+  "rarity": 2,
+  "trigger": "OnPickup",
+  "description": "歪んだ笑みを刻んだ仮面。被ったとき、笑っているのが自分か仮面か分からなくなる。",
+  "effects": [{ "type": "gainGold", "amount": 120 }]
+}

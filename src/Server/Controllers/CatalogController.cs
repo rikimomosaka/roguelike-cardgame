@@ -81,7 +81,7 @@ public sealed class CatalogController : ControllerBase
             .Select(r => new RelicDto(
                 Id: r.Id,
                 Name: r.Name,
-                Description: r.Name,
+                Description: string.IsNullOrEmpty(r.Description) ? r.Name : r.Description,
                 Rarity: r.Rarity.ToString(),
                 Trigger: r.Trigger.ToString()))
             .ToList();

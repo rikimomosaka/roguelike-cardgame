@@ -1,0 +1,8 @@
+{
+  "id": "gamble_dice",
+  "name": "ギャンブルダイス",
+  "rarity": 1,
+  "trigger": "Passive",
+  "description": "角の削れたサイコロ。投げる前から、なぜか勝った気分になる不思議な代物。",
+  "effects": []
+}

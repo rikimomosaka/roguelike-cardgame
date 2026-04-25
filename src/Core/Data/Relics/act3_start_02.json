@@ -1,1 +1,8 @@
-{"id":"act3_start_02","name":"王室の印","rarity":2,"trigger":"OnPickup","effects":[{"type":"gainGold","amount":150}]}
+{
+  "id": "act3_start_02",
+  "name": "サファイアの指輪",
+  "rarity": 2,
+  "trigger": "OnPickup",
+  "description": "深海色の宝石を抱いた指輪。王位継承の儀でのみ取り出されるという。",
+  "effects": [{ "type": "gainGold", "amount": 150 }]
+}

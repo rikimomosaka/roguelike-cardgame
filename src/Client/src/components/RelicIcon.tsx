@@ -30,7 +30,7 @@ export function RelicIcon({ id, catalog, names }: Props) {
       {...tip}
     >
       <span className="relic-icon__sprite" aria-hidden="true">
-        {pixelGlyphFor(id)}
+        <img src={`/icons/relics/${id}.png`} alt="" draggable={false} />
       </span>
     </span>
   )
@@ -53,11 +53,3 @@ function rarityCodeFromKey(key: string): CardRarity {
   }
 }
 
-// Deterministic placeholder glyph until real dot-art sprites arrive.
-// Picks one of a small set of Unicode block pictograms based on id hash.
-const GLYPHS = ['◈', '◉', '◆', '▲', '●', '■', '♆', '✦', '☘', '♠', '✧', '◊']
-function pixelGlyphFor(id: string): string {
-  let h = 0
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
-  return GLYPHS[h % GLYPHS.length]
-}

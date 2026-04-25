@@ -1,1 +1,8 @@
-{"id":"act1_start_02","name":"道銀貨","rarity":1,"trigger":"OnPickup","effects":[{"type":"gainGold","amount":75}]}
+{
+  "id": "act1_start_02",
+  "name": "古びたコイン",
+  "rarity": 1,
+  "trigger": "OnPickup",
+  "description": "縁が擦り切れた銀貨。長い旅路を共にしたかのような重みがある。",
+  "effects": [{ "type": "gainGold", "amount": 75 }]
+}

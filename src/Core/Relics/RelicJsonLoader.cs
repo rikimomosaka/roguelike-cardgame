@@ -41,7 +41,12 @@ public static class RelicJsonLoader
 
                 var effects = ParseEffects(root, "effects", id);
 
-                return new RelicDefinition(id, name, rarity, trigger, effects);
+                // description は任意フィールド (図鑑 / ツールチップ向けのフレーバーテキスト)
+                var description = root.TryGetProperty("description", out var descEl) && descEl.ValueKind == JsonValueKind.String
+                    ? descEl.GetString() ?? string.Empty
+                    : string.Empty;
+
+                return new RelicDefinition(id, name, rarity, trigger, effects, description);
             }
             catch (RelicJsonException)
             {

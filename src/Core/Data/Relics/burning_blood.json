@@ -1,7 +1,8 @@
 {
   "id": "burning_blood",
-  "name": "燃え盛る血",
+  "name": "血のサンゴ",
   "rarity": 1,
   "trigger": "OnBattleEnd",
+  "description": "深紅に脈打つ珊瑚。戦いを終えるたび、血肉に低く熱を返してくる。",
   "effects": [{ "type": "healPercent", "amount": 6 }]
 }

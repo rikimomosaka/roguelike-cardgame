@@ -1,7 +1,8 @@
 {
   "id": "coin_purse",
-  "name": "旅人の財布",
+  "name": "固いサイフ",
   "rarity": 0,
   "trigger": "OnPickup",
+  "description": "革が固く張った旅人の財布。中身を覗くと、ちょうど旅費に足りる程度の金貨が。",
   "effects": [{ "type": "gainGold", "amount": 50 }]
 }

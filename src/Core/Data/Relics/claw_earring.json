@@ -1,0 +1,8 @@
+{
+  "id": "claw_earring",
+  "name": "つめイヤリング",
+  "rarity": 1,
+  "trigger": "Passive",
+  "description": "鋭い爪をかたどった銀のイヤリング。鏡を覗くたび、内なる獣が静かに唸る。",
+  "effects": []
+}

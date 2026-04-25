@@ -1,5 +1,17 @@
+import type { ReactNode } from 'react'
 import type { RunResultDto, RunSnapshotDto, TileKind } from '../api/types'
 import './RunResultScreen.css'
+
+const TILE_IMG_SRC: Record<Exclude<TileKind, 'Start'>, string> = {
+  Enemy: '/icons/tiles/enemy.png',
+  Elite: '/icons/tiles/elite.png',
+  Merchant: '/icons/tiles/merchant.png',
+  Rest: '/icons/tiles/rest.png',
+  Treasure: '/icons/tiles/treasure.png',
+  Event: '/icons/tiles/event.png',
+  Unknown: '/icons/tiles/unknown.png',
+  Boss: '/icons/tiles/boss.png',
+}
 
 type Props = {
   result: RunResultDto
@@ -7,19 +19,10 @@ type Props = {
   onReturnToMenu: () => void
 }
 
-function journeyIcon(kind: TileKind, resolvedKind: TileKind | null): string {
+function journeyIcon(kind: TileKind, resolvedKind: TileKind | null): ReactNode {
   const k = kind === 'Unknown' && resolvedKind === null ? 'Unknown' : (resolvedKind ?? kind)
-  switch (k) {
-    case 'Start': return '●'
-    case 'Enemy': return '⚔'
-    case 'Elite': return '♛'
-    case 'Merchant': return '◆'
-    case 'Rest': return '△'
-    case 'Treasure': return '◈'
-    case 'Event': return '?'
-    case 'Unknown': return '?'
-    case 'Boss': return '♛'
-  }
+  if (k === 'Start') return '●'
+  return <img src={TILE_IMG_SRC[k]} alt="" className="rr__journey-img" draggable={false} />
 }
 
 function journeyNodeClass(kind: TileKind, resolvedKind: TileKind | null): string {
@@ -176,13 +179,13 @@ export function RunResultScreen({ result, snapshot, onReturnToMenu }: Props) {
 
               <div className="rr__trail-legend" aria-hidden="true">
                 <span className="lg--start"><span className="lg__sym">●</span>開始</span>
-                <span className="lg--boss"><span className="lg__sym">♛</span>ボス</span>
-                <span className="lg--fight"><span className="lg__sym">⚔</span>戦闘</span>
-                <span className="lg--elite"><span className="lg__sym">♛</span>精鋭</span>
-                <span className="lg--event"><span className="lg__sym">?</span>イベント</span>
-                <span className="lg--merchant"><span className="lg__sym">◆</span>商店</span>
-                <span className="lg--rest"><span className="lg__sym">△</span>休憩</span>
-                <span className="lg--treasure"><span className="lg__sym">◈</span>宝箱</span>
+                <span className="lg--boss"><span className="lg__sym"><img src="/icons/tiles/boss.png" alt="" /></span>ボス</span>
+                <span className="lg--fight"><span className="lg__sym"><img src="/icons/tiles/enemy.png" alt="" /></span>戦闘</span>
+                <span className="lg--elite"><span className="lg__sym"><img src="/icons/tiles/elite.png" alt="" /></span>精鋭</span>
+                <span className="lg--event"><span className="lg__sym"><img src="/icons/tiles/event.png" alt="" /></span>イベント</span>
+                <span className="lg--merchant"><span className="lg__sym"><img src="/icons/tiles/merchant.png" alt="" /></span>商店</span>
+                <span className="lg--rest"><span className="lg__sym"><img src="/icons/tiles/rest.png" alt="" /></span>休憩</span>
+                <span className="lg--treasure"><span className="lg__sym"><img src="/icons/tiles/treasure.png" alt="" /></span>宝箱</span>
               </div>
             </div>
           </div>
@@ -202,7 +205,9 @@ export function RunResultScreen({ result, snapshot, onReturnToMenu }: Props) {
                 <ul className="rr__items">
                   {result.finalRelics.map((r) => (
                     <li key={r} className="rr__item item--common">
-                      <div className="rr__item-icon" aria-hidden="true">ICON</div>
+                      <div className="rr__item-icon" aria-hidden="true">
+                        <img src={`/icons/relics/${r}.png`} alt="" draggable={false} />
+                      </div>
                       <div className="rr__item-name">{r}</div>
                     </li>
                   ))}
@@ -224,7 +229,9 @@ export function RunResultScreen({ result, snapshot, onReturnToMenu }: Props) {
                 <ul className="rr__items">
                   {result.acquiredPotionIds.map((p, i) => (
                     <li key={`${p}-${i}`} className="rr__item item--common">
-                      <div className="rr__item-icon" aria-hidden="true">ICON</div>
+                      <div className="rr__item-icon" aria-hidden="true">
+                        <img src={`/icons/potions/${p}.png`} alt="" draggable={false} />
+                      </div>
                       <div className="rr__item-name">{p}</div>
                     </li>
                   ))}

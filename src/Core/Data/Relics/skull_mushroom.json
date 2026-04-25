@@ -1,0 +1,8 @@
+{
+  "id": "skull_mushroom",
+  "name": "ドクロキノコ",
+  "rarity": 1,
+  "trigger": "Passive",
+  "description": "笠にドクロ模様が浮かぶ妖しいキノコ。一口齧れば、危険にも冷静でいられる。",
+  "effects": []
+}

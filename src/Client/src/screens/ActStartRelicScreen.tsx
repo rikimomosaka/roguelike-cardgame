@@ -107,7 +107,9 @@ function RelicChoice({ id, name, desc, disabled, isSelected, onClick }: ChoicePr
       onMouseMove={tip.onMouseMove}
       onMouseLeave={tip.onMouseLeave}
     >
-      <span className="ar-icon" aria-hidden="true">◆</span>
+      <span className="ar-icon" aria-hidden="true">
+        <img src={`/icons/relics/${id}.png`} alt="" draggable={false} />
+      </span>
       <span className="ar-name">{name}</span>
     </button>
   )

@@ -1,0 +1,8 @@
+{
+  "id": "bell_earring",
+  "name": "べるイヤリング",
+  "rarity": 1,
+  "trigger": "Passive",
+  "description": "揺れるたびに澄んだ音色を響かせる鈴のイヤリング。歩みのリズムが自然と整う。",
+  "effects": []
+}

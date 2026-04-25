@@ -299,6 +299,24 @@ main.map-screen {
 .map-screen__key-sym.k--treasure { color: var(--rarity-l); }
 .map-screen__key-sym.k--boss { color: var(--state-danger-soft); }
 
+/* Tile icons rendered as <img> on map nodes and the legend. */
+.map-screen__node-img {
+  width: 70%;
+  height: 70%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.map-screen__key-sym img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  display: block;
+}
+
 /* ---------- Dev note + toasts (preserved from App.css, restyled) ---------- */
 .map-screen__dev-note {
   position: absolute;

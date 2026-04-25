@@ -9,4 +9,5 @@ public sealed record RelicDefinition(
     string Name,
     CardRarity Rarity,
     RelicTrigger Trigger,
-    IReadOnlyList<CardEffect> Effects);
+    IReadOnlyList<CardEffect> Effects,
+    string Description = "");

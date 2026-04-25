@@ -73,8 +73,9 @@ export function PotionSlot({ slotIndex, potionId, onDiscard }: Props) {
         onMouseEnter={tip.onMouseEnter}
         onMouseMove={tip.onMouseMove}
         onMouseLeave={tip.onMouseLeave}
+        aria-label={`ポーション: ${potionId}`}
       >
-        🧪
+        <img src={`/icons/potions/${potionId}.png`} alt="" draggable={false} />
       </button>
       {menuOpen && menuPos && createPortal(
         <div

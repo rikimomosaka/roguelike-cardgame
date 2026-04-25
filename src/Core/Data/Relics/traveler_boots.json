@@ -1,7 +1,8 @@
 {
   "id": "traveler_boots",
-  "name": "旅人のブーツ",
+  "name": "ハチのお守り",
   "rarity": 1,
   "trigger": "OnMapTileResolved",
+  "description": "蜜を集めるように、こまめな歩みに小さな実りをもたらすお守り。",
   "effects": [{ "type": "gainGold", "amount": 1 }]
 }

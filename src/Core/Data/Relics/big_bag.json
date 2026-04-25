@@ -1,0 +1,8 @@
+{
+  "id": "big_bag",
+  "name": "大きなバッグ",
+  "rarity": 1,
+  "trigger": "Passive",
+  "description": "容量たっぷりの大型カバン。なんでも詰め込める安心感が、肩の力を抜いてくれる。",
+  "effects": []
+}

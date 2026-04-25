@@ -59,9 +59,8 @@
   cursor: default;
 }
 
-/* ---------- Icon (::before) ---------- */
-.rw-tile::before {
-  content: '';
+/* ---------- Icon (left badge) ---------- */
+.rw-tile__icon {
   position: absolute;
   left: 12px;
   top: 50%;
@@ -76,13 +75,23 @@
   font-family: var(--font-label);
   font-size: 22px;
   line-height: 1;
+  color: var(--fg-muted);
   text-shadow: 0 0 5px currentColor, 0 1px 0 #000;
 }
 
-.rw-row--gold   .rw-tile::before { content: '◈'; color: var(--gold); border-color: var(--gold-border); }
-.rw-row--potion .rw-tile::before { content: '⚗'; color: var(--rarity-r); border-color: var(--rarity-r-border); }
-.rw-row--relic  .rw-tile::before { content: '◉'; color: var(--rarity-c); border-color: var(--border-light); }
-.rw-row--card   .rw-tile::before { content: '⚔'; color: #ff9a8a; border-color: #8a3a2a; }
+.rw-tile__icon img {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.rw-row--gold   .rw-tile__icon { color: var(--gold); border-color: var(--gold-border); }
+.rw-row--potion .rw-tile__icon { color: var(--rarity-r); border-color: var(--rarity-r-border); }
+.rw-row--relic  .rw-tile__icon { color: var(--rarity-c); border-color: var(--border-light); }
+.rw-row--card   .rw-tile__icon { color: #ff9a8a; border-color: #8a3a2a; }
 
 /* ---------- CTA chip (::after) ---------- */
 .rw-tile::after {

@@ -1,0 +1,8 @@
+{
+  "id": "magic_pouch",
+  "name": "魔法の袋",
+  "rarity": 1,
+  "trigger": "Passive",
+  "description": "必要なものが必ず入っている魔法じみた小袋。覗くたび中身が違うような気もする。",
+  "effects": []
+}

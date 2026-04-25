@@ -528,6 +528,15 @@
   color: var(--state-danger);
 }
 
+.mc-tile__icon img {
+  width: 70%;
+  height: 70%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 .mc-tile__sr-name {
   position: absolute;
   width: 1px;

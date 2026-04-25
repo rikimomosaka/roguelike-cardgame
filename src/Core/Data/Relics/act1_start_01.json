@@ -1,1 +1,8 @@
-{"id":"act1_start_01","name":"旅立ちの盾","rarity":1,"trigger":"OnPickup","effects":[{"type":"gainMaxHp","amount":8}]}
+{
+  "id": "act1_start_01",
+  "name": "アンカー",
+  "rarity": 1,
+  "trigger": "OnPickup",
+  "description": "迷っても、心を留めるための小さな錨。胸の奥で「ここに帰ればいい」と囁く。",
+  "effects": [{ "type": "gainMaxHp", "amount": 8 }]
+}

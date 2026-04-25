@@ -305,6 +305,15 @@
   text-shadow: 0 2px 2px rgba(0, 0, 0, 0.8), 0 0 6px rgba(0, 0, 0, 0.6);
 }
 
+.achievements__tile-art img {
+  width: 78%;
+  height: 78%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 .achievements__tile-check {
   position: absolute;
   top: 4px;

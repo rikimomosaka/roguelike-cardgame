@@ -1,0 +1,8 @@
+{
+  "id": "skull_fish",
+  "name": "スカルフィッシュ",
+  "rarity": 1,
+  "trigger": "Passive",
+  "description": "干物にした奇妙な魚。臭いを嗅ぐと寒気がするが、不思議と元気が湧いてくる。",
+  "effects": []
+}

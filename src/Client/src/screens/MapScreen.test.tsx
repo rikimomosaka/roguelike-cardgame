@@ -178,7 +178,7 @@ describe('MapScreen', () => {
     )
     expect(screen.getByText('報酬')).toBeDefined()
     expect(
-      screen.getAllByText((_, el) => /＋\s*15\s*ゴールド/.test(el?.textContent ?? '')).length,
+      screen.getAllByText((_, el) => /15\s*ゴールド/.test(el?.textContent ?? '')).length,
     ).toBeGreaterThan(0)
   })
 
@@ -318,14 +318,14 @@ describe('MapScreen', () => {
     // Popup should be gone.
     await waitFor(() => {
       expect(
-        screen.queryAllByText((_, el) => /＋\s*15\s*ゴールド/.test(el?.textContent ?? '')).length,
+        screen.queryAllByText((_, el) => /15\s*ゴールド/.test(el?.textContent ?? '')).length,
       ).toBe(0)
     })
     // Re-click current tile (node 0 / start). Popup should re-appear.
     fireEvent.click(screen.getByTestId('map-node-0'))
     await waitFor(() => {
       expect(
-      screen.getAllByText((_, el) => /＋\s*15\s*ゴールド/.test(el?.textContent ?? '')).length,
+      screen.getAllByText((_, el) => /15\s*ゴールド/.test(el?.textContent ?? '')).length,
     ).toBeGreaterThan(0)
     })
   })

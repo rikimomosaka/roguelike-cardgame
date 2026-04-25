@@ -1,1 +1,8 @@
-{"id":"act2_start_03","name":"狩人の勘","rarity":1,"trigger":"Passive","effects":[{"type":"restHealBonus","amount":8}]}
+{
+  "id": "act2_start_03",
+  "name": "めのイヤリング",
+  "rarity": 1,
+  "trigger": "Passive",
+  "description": "瞳の意匠を象った耳飾り。装ければ、夜の見張りにもうたた寝にも気づかれないと言う。",
+  "effects": [{ "type": "restHealBonus", "amount": 8 }]
+}

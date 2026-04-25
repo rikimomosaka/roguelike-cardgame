@@ -1,8 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { getBestiary } from '../api/bestiary'
 import { getHistory } from '../api/history'
 import type { BestiaryDto, RunResultDto } from '../api/types'
 import { Card } from '../components/Card'
+import { useTooltipTarget } from '../components/Tooltip'
+import type { TooltipContent } from '../components/Tooltip'
+import { useRelicCatalog } from '../hooks/useRelicCatalog'
+import { usePotionCatalog } from '../hooks/useCardCatalog'
 import './AchievementsScreen.css'
 
 function BackButton({ onBack }: { onBack: () => void }) {
@@ -94,23 +98,23 @@ export function AchievementsScreen({ accountId, onBack }: Props) {
           {tab === 'relics' && (
             <TilesTab
               title="レリック"
+              kind="relic"
               allIds={bestiary.allKnownRelicIds}
-              discovered={new Set(bestiary.discoveredRelicIds)}
-              glyph="◈" />
+              discovered={new Set(bestiary.discoveredRelicIds)} />
           )}
           {tab === 'potions' && (
             <TilesTab
               title="ポーション"
+              kind="potion"
               allIds={bestiary.allKnownPotionIds}
-              discovered={new Set(bestiary.discoveredPotionIds)}
-              glyph="⚗" />
+              discovered={new Set(bestiary.discoveredPotionIds)} />
           )}
           {tab === 'enemies' && (
             <TilesTab
               title="モンスター"
+              kind="enemy"
               allIds={bestiary.allKnownEnemyIds}
-              discovered={new Set(bestiary.encounteredEnemyIds)}
-              glyph="☠" />
+              discovered={new Set(bestiary.encounteredEnemyIds)} />
           )}
           {tab === 'history' && <HistoryList history={history} />}
         </section>
@@ -189,11 +193,17 @@ function CardsTab({ allIds, discovered }: { allIds: string[]; discovered: Set<st
 
 /* ------------------------------------------------------------------
    Tiles tab — relics / potions / enemies.
-   Square tile (v1 canonical) with art glyph, name under.
+   Discovered relic/potion tiles render real PNG icons and a hover
+   tooltip showing the entry's name + description; enemies still use
+   the ☠ glyph since enemy art is pending.
    ------------------------------------------------------------------ */
-function TilesTab({ title, allIds, discovered, glyph }: {
-  title: string; allIds: string[]; discovered: Set<string>; glyph: string
+type TileKind = 'relic' | 'potion' | 'enemy'
+
+function TilesTab({ title, kind, allIds, discovered }: {
+  title: string; kind: TileKind; allIds: string[]; discovered: Set<string>
 }) {
+  const { catalog: relicCatalog, names: relicNames } = useRelicCatalog()
+  const { catalog: potionCatalog, names: potionNames } = usePotionCatalog()
   return (
     <div className="achievements__panel">
       <div className="achievements__panel-title-row">
@@ -204,32 +214,74 @@ function TilesTab({ title, allIds, discovered, glyph }: {
         <div className="achievements__tile-grid">
           {allIds.map(id => {
             const isDiscovered = discovered.has(id)
+            const displayName =
+              kind === 'relic' ? (relicNames[id] ?? id)
+              : kind === 'potion' ? (potionNames[id] ?? id)
+              : id
+            const description =
+              kind === 'relic' ? (relicCatalog?.[id]?.description ?? null)
+              : kind === 'potion' ? (potionCatalog?.[id]?.description ?? null)
+              : null
             return (
-              <div
+              <BestiaryTile
                 key={id}
-                className={'achievements__tile-cell' + (isDiscovered ? '' : ' is-locked')}
-              >
-                <div className="achievements__tile">
-                  <div className="achievements__tile-bg" aria-hidden="true" />
-                  <div className="achievements__tile-frame" aria-hidden="true" />
-                  <div className="achievements__tile-art" aria-hidden="true">
-                    {isDiscovered ? glyph : '?'}
-                  </div>
-                  {isDiscovered && (
-                    <span className="achievements__tile-check" aria-hidden="true">✓</span>
-                  )}
-                </div>
-                <div className="achievements__tile-name">
-                  {isDiscovered ? (
-                    <span>✓ {id} ({id})</span>
-                  ) : (
-                    <span>??? ({id})</span>
-                  )}
-                </div>
-              </div>
+                kind={kind}
+                id={id}
+                isDiscovered={isDiscovered}
+                displayName={displayName}
+                description={description}
+              />
             )
           })}
         </div>
+      </div>
+    </div>
+  )
+}
+
+function BestiaryTile({ kind, id, isDiscovered, displayName, description }: {
+  kind: TileKind
+  id: string
+  isDiscovered: boolean
+  displayName: string
+  description: string | null
+}) {
+  const tooltipContent = useMemo<TooltipContent | null>(() => {
+    if (!isDiscovered) return null
+    return { name: displayName, desc: description ?? '—' }
+  }, [isDiscovered, displayName, description])
+  const tip = useTooltipTarget(tooltipContent)
+
+  const art = (() => {
+    if (!isDiscovered) return <span aria-hidden="true">?</span>
+    if (kind === 'relic') return <img src={`/icons/relics/${id}.png`} alt="" draggable={false} />
+    if (kind === 'potion') return <img src={`/icons/potions/${id}.png`} alt="" draggable={false} />
+    return <span aria-hidden="true">☠</span>
+  })()
+
+  return (
+    <div
+      className={'achievements__tile-cell' + (isDiscovered ? '' : ' is-locked')}
+      onMouseEnter={tip.onMouseEnter}
+      onMouseMove={tip.onMouseMove}
+      onMouseLeave={tip.onMouseLeave}
+    >
+      <div className="achievements__tile">
+        <div className="achievements__tile-bg" aria-hidden="true" />
+        <div className="achievements__tile-frame" aria-hidden="true" />
+        <div className="achievements__tile-art" aria-hidden="true">
+          {art}
+        </div>
+        {isDiscovered && (
+          <span className="achievements__tile-check" aria-hidden="true">✓</span>
+        )}
+      </div>
+      <div className="achievements__tile-name">
+        {isDiscovered ? (
+          <span>✓ {displayName}</span>
+        ) : (
+          <span>??? ({id})</span>
+        )}
       </div>
     </div>
   )
