@@ -2,16 +2,59 @@
   "id": "jaw_worm",
   "name": "ジョウ・ワーム",
   "imageId": "jaw_worm",
-  "hpMin": 40,
-  "hpMax": 44,
+  "hp": 42,
   "act": 1,
   "tier": "Weak",
   "initialMoveId": "chomp",
   "moves": [
-    { "id": "chomp",  "kind": "attack", "damageMin": 11, "damageMax": 11, "hits": 1, "nextMoveId": "thrash" },
-    { "id": "thrash", "kind": "multi",  "damageMin": 7,  "damageMax": 7,  "hits": 1,
-      "blockMin": 5, "blockMax": 5, "nextMoveId": "bellow" },
-    { "id": "bellow", "kind": "buff",   "buff": "strength", "amountMin": 3, "amountMax": 5,
-      "blockMin": 6, "blockMax": 6, "nextMoveId": "chomp" }
+    {
+      "id": "chomp",
+      "kind": "Attack",
+      "nextMoveId": "thrash",
+      "effects": [
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 11
+        }
+      ]
+    },
+    {
+      "id": "thrash",
+      "kind": "Multi",
+      "nextMoveId": "bellow",
+      "effects": [
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 7
+        },
+        {
+          "action": "block",
+          "scope": "self",
+          "amount": 5
+        }
+      ]
+    },
+    {
+      "id": "bellow",
+      "kind": "Buff",
+      "nextMoveId": "chomp",
+      "effects": [
+        {
+          "action": "buff",
+          "scope": "self",
+          "name": "strength",
+          "amount": 4
+        },
+        {
+          "action": "block",
+          "scope": "self",
+          "amount": 6
+        }
+      ]
+    }
   ]
 }

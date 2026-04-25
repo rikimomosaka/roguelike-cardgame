@@ -2,13 +2,35 @@
   "id": "louse_red",
   "name": "レッド・ラウス",
   "imageId": "louse_red",
-  "hpMin": 10,
-  "hpMax": 15,
+  "hp": 13,
   "act": 1,
   "tier": "Weak",
   "initialMoveId": "bite",
   "moves": [
-    { "id": "bite",   "kind": "attack", "damageMin": 5, "damageMax": 7, "hits": 1, "nextMoveId": "curl" },
-    { "id": "curl",   "kind": "buff",   "buff": "curl_up", "amountMin": 3, "amountMax": 3, "nextMoveId": "bite" }
+    {
+      "id": "bite",
+      "kind": "Attack",
+      "nextMoveId": "curl",
+      "effects": [
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 6
+        }
+      ]
+    },
+    {
+      "id": "curl",
+      "kind": "Defend",
+      "nextMoveId": "bite",
+      "effects": [
+        {
+          "action": "block",
+          "scope": "self",
+          "amount": 3
+        }
+      ]
+    }
   ]
 }

@@ -2,16 +2,141 @@
   "id": "six_ghost",
   "name": "シックスゴースト",
   "imageId": "six_ghost",
-  "hpMin": 250,
-  "hpMax": 250,
+  "hp": 250,
   "act": 1,
   "tier": "Boss",
   "initialMoveId": "activate",
   "moves": [
-    { "id": "activate", "kind": "buff", "buff": "activate", "amountMin": 1, "amountMax": 1, "nextMoveId": "divider" },
-    { "id": "divider",  "kind": "multi", "damageMin": 6, "damageMax": 6, "hits": 6, "nextMoveId": "sear" },
-    { "id": "sear",     "kind": "attack", "damageMin": 6, "damageMax": 6, "hits": 1, "nextMoveId": "tackle" },
-    { "id": "tackle",   "kind": "attack", "damageMin": 5, "damageMax": 5, "hits": 2, "nextMoveId": "inferno" },
-    { "id": "inferno",  "kind": "multi",  "damageMin": 2, "damageMax": 2, "hits": 6, "nextMoveId": "sear" }
+    {
+      "id": "activate",
+      "kind": "Buff",
+      "nextMoveId": "divider",
+      "effects": [
+        {
+          "action": "buff",
+          "scope": "self",
+          "name": "strength",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "divider",
+      "kind": "Multi",
+      "nextMoveId": "sear",
+      "effects": [
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 6
+        },
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 6
+        },
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 6
+        },
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 6
+        },
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 6
+        },
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 6
+        }
+      ]
+    },
+    {
+      "id": "sear",
+      "kind": "Attack",
+      "nextMoveId": "tackle",
+      "effects": [
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 6
+        }
+      ]
+    },
+    {
+      "id": "tackle",
+      "kind": "Attack",
+      "nextMoveId": "inferno",
+      "effects": [
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 5
+        },
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 5
+        }
+      ]
+    },
+    {
+      "id": "inferno",
+      "kind": "Multi",
+      "nextMoveId": "sear",
+      "effects": [
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 2
+        },
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 2
+        },
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 2
+        },
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 2
+        },
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 2
+        },
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 2
+        }
+      ]
+    }
   ]
 }

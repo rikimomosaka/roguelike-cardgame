@@ -2,13 +2,37 @@
   "id": "goblin_a",
   "name": "ゴブリン A",
   "imageId": "goblin_a",
-  "hpMin": 30,
-  "hpMax": 34,
+  "hp": 32,
   "act": 1,
   "tier": "Strong",
   "initialMoveId": "stab",
   "moves": [
-    { "id": "stab", "kind": "attack", "damageMin": 6, "damageMax": 6, "hits": 1, "nextMoveId": "taunt" },
-    { "id": "taunt", "kind": "debuff", "buff": "weak", "amountMin": 2, "amountMax": 2, "nextMoveId": "stab" }
+    {
+      "id": "stab",
+      "kind": "Attack",
+      "nextMoveId": "taunt",
+      "effects": [
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 6
+        }
+      ]
+    },
+    {
+      "id": "taunt",
+      "kind": "Debuff",
+      "nextMoveId": "stab",
+      "effects": [
+        {
+          "action": "debuff",
+          "scope": "all",
+          "side": "enemy",
+          "name": "weak",
+          "amount": 2
+        }
+      ]
+    }
   ]
 }

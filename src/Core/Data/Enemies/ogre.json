@@ -2,14 +2,54 @@
   "id": "ogre",
   "name": "オーガ",
   "imageId": "ogre",
-  "hpMin": 46,
-  "hpMax": 50,
+  "hp": 48,
   "act": 1,
   "tier": "Strong",
   "initialMoveId": "club_smash",
   "moves": [
-    { "id": "club_smash", "kind": "attack", "damageMin": 14, "damageMax": 14, "hits": 1, "nextMoveId": "stomp" },
-    { "id": "stomp",      "kind": "multi",  "damageMin": 6, "damageMax": 6, "hits": 1, "blockMin": 6, "blockMax": 6, "nextMoveId": "roar" },
-    { "id": "roar",       "kind": "buff",   "buff": "strength", "amountMin": 2, "amountMax": 2, "nextMoveId": "club_smash" }
+    {
+      "id": "club_smash",
+      "kind": "Attack",
+      "nextMoveId": "stomp",
+      "effects": [
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 14
+        }
+      ]
+    },
+    {
+      "id": "stomp",
+      "kind": "Multi",
+      "nextMoveId": "roar",
+      "effects": [
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 6
+        },
+        {
+          "action": "block",
+          "scope": "self",
+          "amount": 6
+        }
+      ]
+    },
+    {
+      "id": "roar",
+      "kind": "Buff",
+      "nextMoveId": "club_smash",
+      "effects": [
+        {
+          "action": "buff",
+          "scope": "self",
+          "name": "strength",
+          "amount": 2
+        }
+      ]
+    }
   ]
 }

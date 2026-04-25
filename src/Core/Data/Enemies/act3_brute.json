@@ -1,1 +1,36 @@
-{"id":"act3_brute","name":"闇鎧騎士","imageId":"act3_brute","hpMin":78,"hpMax":84,"act":3,"tier":"Strong","initialMoveId":"crush","moves":[{"id":"crush","kind":"attack","damageMin":20,"damageMax":22,"hits":1,"nextMoveId":"wall"},{"id":"wall","kind":"block","blockMin":14,"blockMax":14,"nextMoveId":"crush"}]}
+{
+  "id": "act3_brute",
+  "name": "闇鎧騎士",
+  "imageId": "act3_brute",
+  "hp": 81,
+  "act": 3,
+  "tier": "Strong",
+  "initialMoveId": "crush",
+  "moves": [
+    {
+      "id": "crush",
+      "kind": "Attack",
+      "nextMoveId": "wall",
+      "effects": [
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 21
+        }
+      ]
+    },
+    {
+      "id": "wall",
+      "kind": "Defend",
+      "nextMoveId": "crush",
+      "effects": [
+        {
+          "action": "block",
+          "scope": "self",
+          "amount": 14
+        }
+      ]
+    }
+  ]
+}

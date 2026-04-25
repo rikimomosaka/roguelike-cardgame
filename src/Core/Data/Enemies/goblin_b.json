@@ -2,13 +2,35 @@
   "id": "goblin_b",
   "name": "ゴブリン B",
   "imageId": "goblin_b",
-  "hpMin": 32,
-  "hpMax": 36,
+  "hp": 34,
   "act": 1,
   "tier": "Strong",
   "initialMoveId": "slice",
   "moves": [
-    { "id": "slice", "kind": "attack", "damageMin": 7, "damageMax": 7, "hits": 1, "nextMoveId": "hide" },
-    { "id": "hide",  "kind": "block",  "blockMin": 6, "blockMax": 6, "nextMoveId": "slice" }
+    {
+      "id": "slice",
+      "kind": "Attack",
+      "nextMoveId": "hide",
+      "effects": [
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 7
+        }
+      ]
+    },
+    {
+      "id": "hide",
+      "kind": "Defend",
+      "nextMoveId": "slice",
+      "effects": [
+        {
+          "action": "block",
+          "scope": "self",
+          "amount": 6
+        }
+      ]
+    }
   ]
 }

@@ -2,14 +2,55 @@
   "id": "sleeping_dragon",
   "name": "眠れる竜",
   "imageId": "dragon_sleep",
-  "hpMin": 68,
-  "hpMax": 72,
+  "hp": 70,
   "act": 1,
   "tier": "Elite",
   "initialMoveId": "wake",
   "moves": [
-    { "id": "wake", "kind": "buff", "buff": "strength", "amountMin": 3, "amountMax": 3, "nextMoveId": "fire_breath" },
-    { "id": "fire_breath", "kind": "attack", "damageMin": 18, "damageMax": 18, "hits": 1, "nextMoveId": "tail_swipe" },
-    { "id": "tail_swipe", "kind": "attack", "damageMin": 8, "damageMax": 8, "hits": 2, "nextMoveId": "fire_breath" }
+    {
+      "id": "wake",
+      "kind": "Buff",
+      "nextMoveId": "fire_breath",
+      "effects": [
+        {
+          "action": "buff",
+          "scope": "self",
+          "name": "strength",
+          "amount": 3
+        }
+      ]
+    },
+    {
+      "id": "fire_breath",
+      "kind": "Attack",
+      "nextMoveId": "tail_swipe",
+      "effects": [
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 18
+        }
+      ]
+    },
+    {
+      "id": "tail_swipe",
+      "kind": "Attack",
+      "nextMoveId": "fire_breath",
+      "effects": [
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 8
+        },
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 8
+        }
+      ]
+    }
   ]
 }

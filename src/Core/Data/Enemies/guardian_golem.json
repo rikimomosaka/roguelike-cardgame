@@ -2,14 +2,54 @@
   "id": "guardian_golem",
   "name": "ガーディアン・ゴーレム",
   "imageId": "guardian_golem",
-  "hpMin": 160,
-  "hpMax": 160,
+  "hp": 160,
   "act": 1,
   "tier": "Boss",
   "initialMoveId": "defensive_mode",
   "moves": [
-    { "id": "defensive_mode", "kind": "block", "blockMin": 20, "blockMax": 20, "nextMoveId": "twin_slam" },
-    { "id": "twin_slam",      "kind": "attack", "damageMin": 16, "damageMax": 16, "hits": 2, "nextMoveId": "fierce_bash" },
-    { "id": "fierce_bash",    "kind": "attack", "damageMin": 32, "damageMax": 32, "hits": 1, "nextMoveId": "defensive_mode" }
+    {
+      "id": "defensive_mode",
+      "kind": "Defend",
+      "nextMoveId": "twin_slam",
+      "effects": [
+        {
+          "action": "block",
+          "scope": "self",
+          "amount": 20
+        }
+      ]
+    },
+    {
+      "id": "twin_slam",
+      "kind": "Attack",
+      "nextMoveId": "fierce_bash",
+      "effects": [
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 16
+        },
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 16
+        }
+      ]
+    },
+    {
+      "id": "fierce_bash",
+      "kind": "Attack",
+      "nextMoveId": "defensive_mode",
+      "effects": [
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 32
+        }
+      ]
+    }
   ]
 }

@@ -2,13 +2,35 @@
   "id": "mushroom_b",
   "name": "マッシュルーム B",
   "imageId": "mushroom_b",
-  "hpMin": 34,
-  "hpMax": 38,
+  "hp": 36,
   "act": 1,
   "tier": "Strong",
   "initialMoveId": "chomp",
   "moves": [
-    { "id": "chomp", "kind": "attack", "damageMin": 9, "damageMax": 9, "hits": 1, "nextMoveId": "sporecoat" },
-    { "id": "sporecoat", "kind": "block", "blockMin": 6, "blockMax": 6, "nextMoveId": "chomp" }
+    {
+      "id": "chomp",
+      "kind": "Attack",
+      "nextMoveId": "sporecoat",
+      "effects": [
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 9
+        }
+      ]
+    },
+    {
+      "id": "sporecoat",
+      "kind": "Defend",
+      "nextMoveId": "chomp",
+      "effects": [
+        {
+          "action": "block",
+          "scope": "self",
+          "amount": 6
+        }
+      ]
+    }
   ]
 }

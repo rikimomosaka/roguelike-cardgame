@@ -2,14 +2,48 @@
   "id": "blue_orc",
   "name": "ブルー・オーク",
   "imageId": "orc_blue",
-  "hpMin": 36,
-  "hpMax": 40,
+  "hp": 38,
   "act": 1,
   "tier": "Strong",
   "initialMoveId": "slash",
   "moves": [
-    { "id": "slash", "kind": "attack", "damageMin": 8, "damageMax": 8, "hits": 1, "nextMoveId": "shield_up" },
-    { "id": "shield_up", "kind": "block", "blockMin": 10, "blockMax": 10, "nextMoveId": "war_cry" },
-    { "id": "war_cry", "kind": "buff", "buff": "strength", "amountMin": 1, "amountMax": 1, "nextMoveId": "slash" }
+    {
+      "id": "slash",
+      "kind": "Attack",
+      "nextMoveId": "shield_up",
+      "effects": [
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 8
+        }
+      ]
+    },
+    {
+      "id": "shield_up",
+      "kind": "Defend",
+      "nextMoveId": "war_cry",
+      "effects": [
+        {
+          "action": "block",
+          "scope": "self",
+          "amount": 10
+        }
+      ]
+    },
+    {
+      "id": "war_cry",
+      "kind": "Buff",
+      "nextMoveId": "slash",
+      "effects": [
+        {
+          "action": "buff",
+          "scope": "self",
+          "name": "strength",
+          "amount": 1
+        }
+      ]
+    }
   ]
 }

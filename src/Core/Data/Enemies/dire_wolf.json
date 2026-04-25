@@ -2,14 +2,50 @@
   "id": "dire_wolf",
   "name": "ダイア・ウルフ",
   "imageId": "wolf_dire",
-  "hpMin": 38,
-  "hpMax": 42,
+  "hp": 40,
   "act": 1,
   "tier": "Strong",
   "initialMoveId": "howl",
   "moves": [
-    { "id": "howl", "kind": "buff", "buff": "strength", "amountMin": 2, "amountMax": 2, "nextMoveId": "pounce" },
-    { "id": "pounce", "kind": "attack", "damageMin": 11, "damageMax": 11, "hits": 1, "nextMoveId": "snarl" },
-    { "id": "snarl", "kind": "debuff", "buff": "weak", "amountMin": 1, "amountMax": 1, "nextMoveId": "pounce" }
+    {
+      "id": "howl",
+      "kind": "Buff",
+      "nextMoveId": "pounce",
+      "effects": [
+        {
+          "action": "buff",
+          "scope": "self",
+          "name": "strength",
+          "amount": 2
+        }
+      ]
+    },
+    {
+      "id": "pounce",
+      "kind": "Attack",
+      "nextMoveId": "snarl",
+      "effects": [
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 11
+        }
+      ]
+    },
+    {
+      "id": "snarl",
+      "kind": "Debuff",
+      "nextMoveId": "pounce",
+      "effects": [
+        {
+          "action": "debuff",
+          "scope": "all",
+          "side": "enemy",
+          "name": "weak",
+          "amount": 1
+        }
+      ]
+    }
   ]
 }

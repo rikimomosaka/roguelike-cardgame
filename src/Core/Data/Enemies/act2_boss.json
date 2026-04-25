@@ -1,1 +1,61 @@
-{"id":"act2_boss","name":"機兵隊長","imageId":"act2_boss","hpMin":220,"hpMax":220,"act":2,"tier":"Boss","initialMoveId":"charge","moves":[{"id":"charge","kind":"attack","damageMin":22,"damageMax":22,"hits":1,"nextMoveId":"volley"},{"id":"volley","kind":"attack","damageMin":8,"damageMax":8,"hits":3,"nextMoveId":"fortify"},{"id":"fortify","kind":"block","blockMin":20,"blockMax":20,"nextMoveId":"charge"}]}
+{
+  "id": "act2_boss",
+  "name": "機兵隊長",
+  "imageId": "act2_boss",
+  "hp": 220,
+  "act": 2,
+  "tier": "Boss",
+  "initialMoveId": "charge",
+  "moves": [
+    {
+      "id": "charge",
+      "kind": "Attack",
+      "nextMoveId": "volley",
+      "effects": [
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 22
+        }
+      ]
+    },
+    {
+      "id": "volley",
+      "kind": "Attack",
+      "nextMoveId": "fortify",
+      "effects": [
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 8
+        },
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 8
+        },
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 8
+        }
+      ]
+    },
+    {
+      "id": "fortify",
+      "kind": "Defend",
+      "nextMoveId": "charge",
+      "effects": [
+        {
+          "action": "block",
+          "scope": "self",
+          "amount": 20
+        }
+      ]
+    }
+  ]
+}

@@ -2,13 +2,41 @@
   "id": "iron_golem_c",
   "name": "アイアン・ゴーレム C",
   "imageId": "iron_golem_c",
-  "hpMin": 82,
-  "hpMax": 86,
+  "hp": 84,
   "act": 1,
   "tier": "Elite",
   "initialMoveId": "ground_pound",
   "moves": [
-    { "id": "ground_pound", "kind": "attack", "damageMin": 17, "damageMax": 17, "hits": 1, "nextMoveId": "fortify" },
-    { "id": "fortify",      "kind": "multi",  "damageMin": 6, "damageMax": 6, "hits": 1, "blockMin": 10, "blockMax": 10, "nextMoveId": "ground_pound" }
+    {
+      "id": "ground_pound",
+      "kind": "Attack",
+      "nextMoveId": "fortify",
+      "effects": [
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 17
+        }
+      ]
+    },
+    {
+      "id": "fortify",
+      "kind": "Multi",
+      "nextMoveId": "ground_pound",
+      "effects": [
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 6
+        },
+        {
+          "action": "block",
+          "scope": "self",
+          "amount": 10
+        }
+      ]
+    }
   ]
 }

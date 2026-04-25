@@ -2,14 +2,48 @@
   "id": "iron_golem_b",
   "name": "アイアン・ゴーレム B",
   "imageId": "iron_golem_b",
-  "hpMin": 72,
-  "hpMax": 76,
+  "hp": 74,
   "act": 1,
   "tier": "Elite",
   "initialMoveId": "hammer_swing",
   "moves": [
-    { "id": "hammer_swing", "kind": "attack", "damageMin": 15, "damageMax": 15, "hits": 1, "nextMoveId": "brace" },
-    { "id": "brace",        "kind": "block",  "blockMin": 14, "blockMax": 14, "nextMoveId": "overheat" },
-    { "id": "overheat",     "kind": "buff",   "buff": "strength", "amountMin": 2, "amountMax": 2, "nextMoveId": "hammer_swing" }
+    {
+      "id": "hammer_swing",
+      "kind": "Attack",
+      "nextMoveId": "brace",
+      "effects": [
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 15
+        }
+      ]
+    },
+    {
+      "id": "brace",
+      "kind": "Defend",
+      "nextMoveId": "overheat",
+      "effects": [
+        {
+          "action": "block",
+          "scope": "self",
+          "amount": 14
+        }
+      ]
+    },
+    {
+      "id": "overheat",
+      "kind": "Buff",
+      "nextMoveId": "hammer_swing",
+      "effects": [
+        {
+          "action": "buff",
+          "scope": "self",
+          "name": "strength",
+          "amount": 2
+        }
+      ]
+    }
   ]
 }

@@ -2,13 +2,41 @@
   "id": "big_slime",
   "name": "ビッグ・スライム",
   "imageId": "slime_big",
-  "hpMin": 44,
-  "hpMax": 48,
+  "hp": 46,
   "act": 1,
   "tier": "Strong",
   "initialMoveId": "body_slam",
   "moves": [
-    { "id": "body_slam", "kind": "attack", "damageMin": 12, "damageMax": 12, "hits": 1, "nextMoveId": "bounce" },
-    { "id": "bounce",    "kind": "multi",  "damageMin": 5, "damageMax": 5, "hits": 1, "blockMin": 5, "blockMax": 5, "nextMoveId": "body_slam" }
+    {
+      "id": "body_slam",
+      "kind": "Attack",
+      "nextMoveId": "bounce",
+      "effects": [
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 12
+        }
+      ]
+    },
+    {
+      "id": "bounce",
+      "kind": "Multi",
+      "nextMoveId": "body_slam",
+      "effects": [
+        {
+          "action": "attack",
+          "scope": "all",
+          "side": "enemy",
+          "amount": 5
+        },
+        {
+          "action": "block",
+          "scope": "self",
+          "amount": 5
+        }
+      ]
+    }
   ]
 }
