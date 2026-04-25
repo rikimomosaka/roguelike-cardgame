@@ -49,7 +49,7 @@ public sealed class CatalogController : ControllerBase
                 (int)def.Rarity,
                 def.CardType.ToString(),
                 def.Cost,
-                def.UpgradedEffects is not null,
+                def.IsUpgradable,
                 DescribeEffects(def.Effects),
                 def.UpgradedEffects is null ? null : DescribeEffects(def.UpgradedEffects));
         }
@@ -142,15 +142,14 @@ public sealed class CatalogController : ControllerBase
         return scope + DescribeEffects(def.Effects);
     }
 
-    private static string CardEffectLabel(CardEffect e) => e switch
+    private static string CardEffectLabel(CardEffect e) => e.Action switch
     {
-        DamageEffect d => $"{d.Amount} ダメージ",
-        GainBlockEffect b => $"ブロック +{b.Amount}",
-        GainMaxHpEffect m => $"最大HP +{m.Amount}",
-        GainGoldEffect g => $"+{g.Amount} ゴールド",
-        RestHealBonusEffect r => $"休憩時の回復 +{r.Amount}",
-        UnknownEffect u => $"(未実装: {u.Type})",
-        _ => "(効果)",
+        "attack" => $"{e.Amount} ダメージ",
+        "block" => $"ブロック +{e.Amount}",
+        "gainMaxHp" => $"最大HP +{e.Amount}",
+        "gainGold" => $"+{e.Amount} ゴールド",
+        "restHealBonus" => $"休憩時の回復 +{e.Amount}",
+        _ => $"(未実装: {e.Action})",
     };
 
     private static string EffectLabel(EventEffect e) => e switch
