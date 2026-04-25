@@ -38,4 +38,26 @@ public class CardUpgradeTests
         var ci = new CardInstance("strike", Upgraded: true);
         Assert.Throws<System.InvalidOperationException>(() => CardUpgrade.Upgrade(ci));
     }
+
+    [Fact]
+    public void CanUpgrade_ReturnsTrue_When_OnlyUpgradedCostIsSet()
+    {
+        var def = new CardDefinition(
+            "x", "x", null, CardRarity.Common, CardType.Skill,
+            Cost: 2, UpgradedCost: 1,
+            Effects: System.Array.Empty<CardEffect>(),
+            UpgradedEffects: null,
+            Keywords: null);
+        var catalog = new DataCatalog(
+            Cards: new System.Collections.Generic.Dictionary<string, CardDefinition> { ["x"] = def },
+            Relics: new System.Collections.Generic.Dictionary<string, RoguelikeCardGame.Core.Relics.RelicDefinition>(),
+            Potions: new System.Collections.Generic.Dictionary<string, RoguelikeCardGame.Core.Potions.PotionDefinition>(),
+            Enemies: new System.Collections.Generic.Dictionary<string, RoguelikeCardGame.Core.Enemy.EnemyDefinition>(),
+            Encounters: new System.Collections.Generic.Dictionary<string, RoguelikeCardGame.Core.Data.EncounterDefinition>(),
+            RewardTables: new System.Collections.Generic.Dictionary<string, RoguelikeCardGame.Core.Data.RewardTable>(),
+            Characters: new System.Collections.Generic.Dictionary<string, RoguelikeCardGame.Core.Data.CharacterDefinition>(),
+            Events: new System.Collections.Generic.Dictionary<string, RoguelikeCardGame.Core.Events.EventDefinition>());
+        var ci = new CardInstance("x", Upgraded: false);
+        Assert.True(CardUpgrade.CanUpgrade(ci, catalog));
+    }
 }

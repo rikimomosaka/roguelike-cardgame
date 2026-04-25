@@ -9,7 +9,7 @@ public static class CardUpgrade
     {
         if (ci.Upgraded) return false;
         if (!catalog.TryGetCard(ci.Id, out var def)) return false;
-        return def.UpgradedEffects is not null;
+        return def.IsUpgradable;
     }
 
     public static CardInstance Upgrade(CardInstance ci)
