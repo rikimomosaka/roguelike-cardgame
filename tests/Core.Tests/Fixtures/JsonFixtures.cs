@@ -9,8 +9,8 @@ public static class JsonFixtures
       "rarity": 1,
       "cardType": "Attack",
       "cost": 1,
-      "effects": [ { "type": "damage", "amount": 6 } ],
-      "upgradedEffects": [ { "type": "damage", "amount": 9 } ]
+      "effects": [ { "action": "attack", "scope": "single", "side": "enemy", "amount": 6 } ],
+      "upgradedEffects": [ { "action": "attack", "scope": "single", "side": "enemy", "amount": 9 } ]
     }
     """;
 
@@ -21,8 +21,8 @@ public static class JsonFixtures
       "rarity": 1,
       "cardType": "Skill",
       "cost": 1,
-      "effects": [ { "type": "gainBlock", "amount": 5 } ],
-      "upgradedEffects": [ { "type": "gainBlock", "amount": 8 } ]
+      "effects": [ { "action": "block", "scope": "self", "amount": 5 } ],
+      "upgradedEffects": [ { "action": "block", "scope": "self", "amount": 8 } ]
     }
     """;
 
@@ -34,7 +34,7 @@ public static class JsonFixtures
       "rarity": 0,
       "cardType": "Attack",
       "cost": 1,
-      "effects": [ { "type": "damage", "amount": 6 } ]
+      "effects": [ { "action": "attack", "scope": "single", "side": "enemy", "amount": 6 } ]
     }
     """;
 
@@ -56,7 +56,7 @@ public static class JsonFixtures
       "rarity": 2,
       "cardType": "Attack",
       "cost": 2,
-      "effects": [ { "type": "summonUnit", "unitId": "imp" } ]
+      "effects": [ { "action": "summonUnit", "scope": "self", "amount": 0, "unitId": "imp" } ]
     }
     """;
 
@@ -146,7 +146,7 @@ public static class JsonFixtures
       "name": "燃え盛る血",
       "rarity": 1,
       "trigger": "OnBattleEnd",
-      "effects": [ { "type": "healPercent", "amount": 6 } ]
+      "effects": [ { "action": "healPercent", "scope": "self", "amount": 6 } ]
     }
     """;
 
@@ -186,7 +186,7 @@ public static class JsonFixtures
       "name": "ダメージレリック",
       "rarity": 1,
       "trigger": "OnBattleStart",
-      "effects": [ { "type": "damage", "amount": 7 } ]
+      "effects": [ { "action": "attack", "scope": "single", "side": "enemy", "amount": 7 } ]
     }
     """;
 
@@ -199,7 +199,7 @@ public static class JsonFixtures
       "rarity": 1,
       "usableInBattle": true,
       "usableOutOfBattle": false,
-      "effects": [ { "type": "gainBlock", "amount": 12 } ]
+      "effects": [ { "action": "block", "scope": "self", "amount": 12 } ]
     }
     """;
 
@@ -210,7 +210,7 @@ public static class JsonFixtures
       "rarity": 1,
       "usableInBattle": true,
       "usableOutOfBattle": false,
-      "effects": [ { "type": "damage", "amount": 20 } ]
+      "effects": [ { "action": "attack", "scope": "single", "side": "enemy", "amount": 20 } ]
     }
     """;
 

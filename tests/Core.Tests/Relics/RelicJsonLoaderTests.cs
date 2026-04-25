@@ -44,7 +44,8 @@ public class RelicJsonLoaderTests
     public void ParseRelicWithDamageEffect_SpecializesAsDamageEffect()
     {
         var def = RelicJsonLoader.Parse(JsonFixtures.RelicWithDamageEffectJson);
-        var dmg = Assert.IsType<DamageEffect>(def.Effects.Single());
+        var dmg = def.Effects.Single();
+        Assert.Equal("attack", dmg.Action);
         Assert.Equal(7, dmg.Amount);
     }
 }

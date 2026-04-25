@@ -13,8 +13,12 @@ public class EmbeddedDataLoaderTests
         var catalog = EmbeddedDataLoader.LoadCatalog();
         Assert.Contains("strike", catalog.Cards.Keys);
         Assert.Contains("defend", catalog.Cards.Keys);
-        Assert.Equal(6, ((DamageEffect)catalog.Cards["strike"].Effects[0]).Amount);
-        Assert.Equal(9, ((DamageEffect)catalog.Cards["strike"].UpgradedEffects![0]).Amount);
+        var strikeEff = catalog.Cards["strike"].Effects[0];
+        Assert.Equal("attack", strikeEff.Action);
+        Assert.Equal(6, strikeEff.Amount);
+        var strikeUpgEff = catalog.Cards["strike"].UpgradedEffects![0];
+        Assert.Equal("attack", strikeUpgEff.Action);
+        Assert.Equal(9, strikeUpgEff.Amount);
     }
 
     [Fact]

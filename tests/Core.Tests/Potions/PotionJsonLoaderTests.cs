@@ -15,7 +15,8 @@ public class PotionJsonLoaderTests
         Assert.Equal("block_potion", def.Id);
         Assert.True(def.UsableInBattle);
         Assert.False(def.UsableOutOfBattle);
-        var eff = Assert.IsType<GainBlockEffect>(def.Effects.Single());
+        var eff = def.Effects.Single();
+        Assert.Equal("block", eff.Action);
         Assert.Equal(12, eff.Amount);
     }
 
@@ -23,7 +24,8 @@ public class PotionJsonLoaderTests
     public void ParseFirePotion()
     {
         var def = PotionJsonLoader.Parse(JsonFixtures.FirePotionJson);
-        var dmg = Assert.IsType<DamageEffect>(def.Effects.Single());
+        var dmg = def.Effects.Single();
+        Assert.Equal("attack", dmg.Action);
         Assert.Equal(20, dmg.Amount);
     }
 

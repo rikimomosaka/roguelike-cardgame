@@ -15,7 +15,7 @@ public class RelicDefinitionTests
             Name: "燃え盛る血",
             Rarity: CardRarity.Common,
             Trigger: RelicTrigger.OnBattleEnd,
-            Effects: new List<CardEffect> { new UnknownEffect("healPercent") });
+            Effects: new List<CardEffect> { new CardEffect("healPercent", EffectScope.Self, null, 0) });
 
         Assert.Equal(RelicTrigger.OnBattleEnd, def.Trigger);
     }
