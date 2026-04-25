@@ -262,7 +262,9 @@ main.map-screen {
   font-family: var(--font-label);
   font-size: 12px;
   letter-spacing: 1px;
-  color: var(--border-light);
+  /* Match the dark route-line color so the map reads as one palette. */
+  color: #2a1c0e;
+  font-weight: 700;
   white-space: nowrap;
   pointer-events: none;
   /* White outline so labels stay readable over the act background. */

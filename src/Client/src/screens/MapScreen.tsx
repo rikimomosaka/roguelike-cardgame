@@ -66,13 +66,13 @@ function kindClassFor(kind: TileKind, resolvedKind: TileKind | null): string {
 function nodeLabelFor(kind: TileKind, resolvedKind: TileKind | null): string | null {
   const k = kind === 'Unknown' && resolvedKind === null ? 'Unknown' : (resolvedKind ?? kind)
   switch (k) {
-    case 'Enemy': return '戦闘'
-    case 'Elite': return '精鋭'
+    case 'Enemy': return '敵'
+    case 'Elite': return '強敵'
     case 'Rest': return '休憩'
     case 'Merchant': return '商店'
     case 'Treasure': return '宝箱'
     case 'Event': return 'イベント'
-    case 'Unknown': return '未知'
+    case 'Unknown': return '不明'
     case 'Boss': return 'ボス'
     case 'Start': return '開始'
   }
@@ -550,11 +550,11 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
                   // glance. Next-edge stays gold-toned to match the next-tile
                   // pulse glow.
                   const stroke = visitedEdge
-                    ? '#9bd8ff'
+                    ? '#1f3a52'
                     : nextEdge
-                      ? '#d9b77a'
-                      : '#b08a5a'
-                  const opacity = visitedEdge ? 1 : nextEdge ? 0.95 : 0.75
+                      ? '#5a3812'
+                      : '#2a1c0e'
+                  const opacity = visitedEdge ? 1 : nextEdge ? 1 : 0.95
                   const strokeWidth = nextEdge ? 0.5 : 0.45
                   const dash = visitedEdge
                     ? undefined

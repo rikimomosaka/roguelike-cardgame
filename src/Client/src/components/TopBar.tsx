@@ -61,12 +61,12 @@ type Props = {
 
 function formatElapsed(totalSeconds: number): string {
   const s = Math.max(0, Math.floor(totalSeconds))
-  const hh = Math.floor(s / 3600)
+  // Always render HH:MM:SS with 2-digit groups so the frame width never shifts.
+  // Hours saturate at 99 to keep the layout stable across very long sessions.
+  const hh = Math.min(99, Math.floor(s / 3600))
   const mm = Math.floor((s % 3600) / 60)
   const ss = s % 60
-  const mmStr = String(mm).padStart(2, '0')
-  const ssStr = String(ss).padStart(2, '0')
-  return hh > 0 ? `${hh}:${mmStr}:${ssStr}` : `${mmStr}:${ssStr}`
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`
 }
 
 export function TopBar({

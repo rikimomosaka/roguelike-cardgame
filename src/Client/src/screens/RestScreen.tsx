@@ -125,64 +125,65 @@ export function RestScreen({ deck, completed, onHeal, onUpgrade, onClose }: Prop
       title="焚き火"
       subtitle={`休息所${completed ? '(使用済み)' : ''}`}
       width={640}
-      footerAlign="center"
-      footer={
-        <Button onClick={() => onClose()} aria-label="Close">
-          閉じる
-        </Button>
-      }
     >
       <div className="rs-fire" aria-hidden="true">
         <img src="/icons/ui/rest_fire.png" alt="" draggable={false} />
       </div>
-      <ul className="rs-choices">
-        <li>
-          <button
-            type="button"
-            className="rs-choice rs-choice--heal"
-            onClick={() => onHeal()}
-            disabled={completed}
-            aria-label="Heal"
-          >
-            <span className="rs-choice-icon" aria-hidden="true">
-              <img src="/icons/ui/rest_heal.png" alt="" draggable={false} />
-            </span>
-            <span className="rs-choice-body">
-              <span className="rs-choice-name">休息</span>
-              <span className="rs-choice-desc">
-                最大 HP の 30% を回復する{completed ? '(使用済み)' : ''}
+      <div className="rs-actions">
+        <ul className="rs-choices">
+          <li>
+            <button
+              type="button"
+              className="rs-choice rs-choice--heal"
+              onClick={() => onHeal()}
+              disabled={completed}
+              aria-label="Heal"
+            >
+              <span className="rs-choice-icon" aria-hidden="true">
+                <img src="/icons/ui/rest_heal.png" alt="" draggable={false} />
               </span>
-              <span className="rs-choice-tags">
-                <span className="rs-tag rs-tag--heal">HP +30%</span>
-                {completed ? <span className="rs-tag rs-tag--used">使用済み</span> : null}
+              <span className="rs-choice-body">
+                <span className="rs-choice-name">休息</span>
+                <span className="rs-choice-desc">
+                  最大 HP の 30% を回復する{completed ? '(使用済み)' : ''}
+                </span>
+                <span className="rs-choice-tags">
+                  <span className="rs-tag rs-tag--heal">HP +30%</span>
+                  {completed ? <span className="rs-tag rs-tag--used">使用済み</span> : null}
+                </span>
               </span>
-            </span>
-          </button>
-        </li>
-        <li>
-          <button
-            type="button"
-            className="rs-choice rs-choice--upgrade"
-            onClick={() => setMode('upgrade')}
-            disabled={completed}
-            aria-label="Upgrade card"
-          >
-            <span className="rs-choice-icon" aria-hidden="true">
-              <img src="/icons/ui/upgrade.png" alt="" draggable={false} />
-            </span>
-            <span className="rs-choice-body">
-              <span className="rs-choice-name">鍛える</span>
-              <span className="rs-choice-desc">
-                デッキから 1 枚を強化する{completed ? '(使用済み)' : ''}
+            </button>
+          </li>
+          <li>
+            <button
+              type="button"
+              className="rs-choice rs-choice--upgrade"
+              onClick={() => setMode('upgrade')}
+              disabled={completed}
+              aria-label="Upgrade card"
+            >
+              <span className="rs-choice-icon" aria-hidden="true">
+                <img src="/icons/ui/upgrade.png" alt="" draggable={false} />
               </span>
-              <span className="rs-choice-tags">
-                <span className="rs-tag rs-tag--upgrade">+ カード強化 x1</span>
-                {completed ? <span className="rs-tag rs-tag--used">使用済み</span> : null}
+              <span className="rs-choice-body">
+                <span className="rs-choice-name">鍛える</span>
+                <span className="rs-choice-desc">
+                  デッキから 1 枚を強化する{completed ? '(使用済み)' : ''}
+                </span>
+                <span className="rs-choice-tags">
+                  <span className="rs-tag rs-tag--upgrade">+ カード強化 x1</span>
+                  {completed ? <span className="rs-tag rs-tag--used">使用済み</span> : null}
+                </span>
               </span>
-            </span>
-          </button>
-        </li>
-      </ul>
+            </button>
+          </li>
+        </ul>
+        <div className="rs-close-wrap">
+          <Button onClick={() => onClose()} aria-label="Close">
+            閉じる
+          </Button>
+        </div>
+      </div>
     </Popup>
   )
 }

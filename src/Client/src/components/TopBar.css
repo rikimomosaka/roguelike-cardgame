@@ -27,13 +27,15 @@
   border-radius: var(--radius-sm);
   background: var(--bg-panel);
   font-family: var(--font-body);
-  font-size: 16px;
+  font-size: 18px;
   font-variant-numeric: tabular-nums;
+  min-height: 50px;
+  box-sizing: border-box;
 }
 
 .topbar__hp {
-  padding: 4px 8px;
-  width: 110px;
+  padding: 4px 10px;
+  width: 144px;
   flex-shrink: 0;
   justify-content: center;
 }
@@ -41,7 +43,7 @@
 .topbar__hp-track {
   position: relative;
   width: 100%;
-  height: 22px;
+  height: 30px;
   background: rgba(10, 6, 4, 0.7);
   border: 1px solid var(--border-dark);
   border-radius: 3px;
@@ -65,7 +67,7 @@
   text-align: center;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 1px;
   color: inherit;
@@ -111,9 +113,10 @@
 
 .topbar__gold {
   color: var(--gold-warm);
-  width: 130px;
+  width: 156px;
   flex-shrink: 0;
   justify-content: flex-start;
+  font-size: 18px;
 }
 
 .topbar__gold-text {
@@ -125,7 +128,7 @@
 }
 
 .topbar__gold .topbar__num {
-  min-width: 48px;
+  min-width: 56px;
   display: inline-block;
   text-align: right;
 }
@@ -138,25 +141,29 @@
 }
 
 .topbar__timer {
-  padding: 4px 10px;
-  gap: 6px;
+  padding: 4px 12px;
+  gap: 8px;
   color: var(--gold-soft);
   flex-shrink: 0;
 }
 
 .topbar__timer-icon {
-  width: 22px;
-  height: 22px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
   image-rendering: pixelated;
   display: block;
 }
 
 .topbar__timer-text {
-  font-family: var(--font-label);
-  font-size: 14px;
-  letter-spacing: 1.5px;
+  font-family: var(--font-digit);
+  font-size: 20px;
+  letter-spacing: 2px;
   font-variant-numeric: tabular-nums;
+  /* Width matches "00:00:00" in Silkscreen so seconds rolling over never shifts neighbors. */
+  min-width: 9.4ch;
+  display: inline-block;
+  text-align: center;
 }
 
 .topbar__relics {
@@ -177,6 +184,8 @@
   cursor: grab;
   -webkit-user-select: none;
   user-select: none;
+  min-height: 50px;
+  box-sizing: border-box;
   /* Hide native scrollbar but keep horizontal scrolling. */
 }
 
@@ -206,6 +215,8 @@
   border: 1px solid var(--border-dark);
   border-radius: var(--radius-sm);
   background: var(--bg-panel);
+  min-height: 50px;
+  box-sizing: border-box;
 }
 
 .topbar__actions {
@@ -221,10 +232,12 @@
   border-radius: var(--radius-sm);
   padding: 7px 14px;
   font-family: var(--font-label);
-  font-size: 14px;
+  font-size: 16px;
   letter-spacing: var(--ls-wide);
   cursor: pointer;
   transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+  min-height: 50px;
+  box-sizing: border-box;
 }
 
 .topbar__btn:hover {
@@ -256,26 +269,26 @@
 .topbar__btn--deck {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px 4px 6px;
+  gap: 8px;
+  padding: 4px 12px 4px 8px;
 }
 
 .topbar__btn--icon {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 12px 4px 8px;
+  gap: 8px;
+  padding: 4px 14px 4px 10px;
 }
 
 .topbar__btn-label {
   font-family: var(--font-label);
-  font-size: 14px;
+  font-size: 16px;
   letter-spacing: var(--ls-wide);
 }
 
 .topbar__btn-icon {
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   object-fit: contain;
   image-rendering: pixelated;
   display: block;
@@ -283,7 +296,7 @@
 
 .topbar__btn-num {
   font-family: var(--font-label);
-  font-size: 14px;
+  font-size: 18px;
   letter-spacing: var(--ls-wide);
 }
 

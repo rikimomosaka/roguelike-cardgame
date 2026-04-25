@@ -53,8 +53,8 @@
 }
 
 .mc-shopkeeper__avatar {
-  width: 110px;
-  height: 110px;
+  width: 64px;
+  height: 64px;
   flex-shrink: 0;
   border: 1px solid var(--border-light);
   border-radius: var(--radius-sm);
@@ -91,11 +91,29 @@
 .mc-shopkeeper__line {
   flex: 1;
   min-width: 0;
-  padding: 8px 14px;
+  padding: 14px 14px 8px;
   background: rgba(10, 6, 4, 0.55);
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-sm);
   position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mc-shopkeeper__name {
+  position: absolute;
+  top: -8px;
+  left: 12px;
+  padding: 1px 8px;
+  background: rgba(20, 12, 6, 0.96);
+  border: 1px solid var(--border-mid);
+  border-radius: 1px;
+  font-family: var(--font-label);
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--gold-soft);
+  text-shadow: 0 1px 0 #000;
 }
 
 .mc-shopkeeper__line::before {

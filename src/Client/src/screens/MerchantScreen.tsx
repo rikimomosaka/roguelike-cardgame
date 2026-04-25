@@ -195,9 +195,9 @@ export function MerchantScreen(p: Props) {
     <Popup
       open
       variant="modal"
-      title="商人"
+      title="商店"
       width={820}
-      headRight={<span className="mc-gold"><span className="mc-num">{p.gold}</span> ゴールド</span>}
+      headRight={<span className="mc-gold">所持 <span className="mc-num">{p.gold}</span> ゴールド</span>}
       footerAlign="center"
       footer={
         <Button onClick={() => p.onLeave()} aria-label="Leave">
@@ -212,6 +212,7 @@ export function MerchantScreen(p: Props) {
           </span>
         </div>
         <div className="mc-shopkeeper__line" role="status" aria-live="polite">
+          <span className="mc-shopkeeper__name">商人</span>
           <span className="mc-shopkeeper__quote">
             {purchased
               ? 'お買い上げありがとうございます。'
