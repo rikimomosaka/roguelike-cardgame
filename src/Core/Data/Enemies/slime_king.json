@@ -23,7 +23,7 @@
     {
       "id": "slam",
       "kind": "Attack",
-      "nextMoveId": "split",
+      "nextMoveId": "divide",
       "effects": [
         {
           "action": "attack",
@@ -34,7 +34,7 @@
       ]
     },
     {
-      "id": "split",
+      "id": "divide",
       "kind": "Buff",
       "nextMoveId": "slam",
       "effects": [
