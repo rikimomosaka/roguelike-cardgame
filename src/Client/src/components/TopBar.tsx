@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import type { CardInstanceDto } from '../api/types'
 import { Card } from './Card'
 import { cardDisplay } from './cardDisplay'
@@ -55,6 +55,18 @@ type Props = {
   onTogglePeek?: () => void
   peekActive?: boolean
   peekDisabled?: boolean
+  /** Server-authoritative elapsed seconds for the current run. */
+  playSeconds?: number
+}
+
+function formatElapsed(totalSeconds: number): string {
+  const s = Math.max(0, Math.floor(totalSeconds))
+  const hh = Math.floor(s / 3600)
+  const mm = Math.floor((s % 3600) / 60)
+  const ss = s % 60
+  const mmStr = String(mm).padStart(2, '0')
+  const ssStr = String(ss).padStart(2, '0')
+  return hh > 0 ? `${hh}:${mmStr}:${ssStr}` : `${mmStr}:${ssStr}`
 }
 
 export function TopBar({
@@ -70,8 +82,50 @@ export function TopBar({
   onTogglePeek,
   peekActive,
   peekDisabled,
+  playSeconds,
 }: Props) {
   const [deckOpen, setDeckOpen] = useState(false)
+  // Re-sync the displayed timer whenever the server-side baseline changes.
+  const baselineRef = useRef<{ seconds: number; at: number }>({
+    seconds: playSeconds ?? 0,
+    at: Date.now(),
+  })
+  useEffect(() => {
+    baselineRef.current = { seconds: playSeconds ?? 0, at: Date.now() }
+  }, [playSeconds])
+  const [now, setNow] = useState<number>(() => Date.now())
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(id)
+  }, [])
+  const elapsedSec = baselineRef.current.seconds + (now - baselineRef.current.at) / 1000
+  const elapsedLabel = formatElapsed(elapsedSec)
+  // Drag-scroll for the relics row. Long-press (mousedown) then drag horizontally.
+  const relicsRef = useRef<HTMLUListElement | null>(null)
+  const dragRef = useRef<{ startX: number; startScroll: number; pointerId: number } | null>(null)
+  const onRelicsPointerDown = (e: ReactPointerEvent<HTMLUListElement>) => {
+    if (e.button !== 0) return
+    const el = relicsRef.current
+    if (!el) return
+    if (el.scrollWidth <= el.clientWidth) return
+    dragRef.current = { startX: e.clientX, startScroll: el.scrollLeft, pointerId: e.pointerId }
+    el.setPointerCapture(e.pointerId)
+    el.classList.add('topbar__relics--dragging')
+  }
+  const onRelicsPointerMove = (e: ReactPointerEvent<HTMLUListElement>) => {
+    const d = dragRef.current
+    const el = relicsRef.current
+    if (!d || !el || d.pointerId !== e.pointerId) return
+    el.scrollLeft = d.startScroll - (e.clientX - d.startX)
+  }
+  const onRelicsPointerEnd = (e: ReactPointerEvent<HTMLUListElement>) => {
+    const d = dragRef.current
+    const el = relicsRef.current
+    if (!d || !el || d.pointerId !== e.pointerId) return
+    el.releasePointerCapture(e.pointerId)
+    el.classList.remove('topbar__relics--dragging')
+    dragRef.current = null
+  }
   const { names, catalog } = useCardCatalog()
   const { names: relicNames, catalog: relicCatalog } = useRelicCatalog()
   const deckLabel = (id: string) => names[id] ?? id
@@ -102,7 +156,27 @@ export function TopBar({
           <span className="topbar__num">{displayedGold}</span> GOLD
         </span>
       </span>
-      <ul className="topbar__relics" aria-label={`レリック (${relics.length}個)`}>
+      <span
+        className="topbar__group topbar__timer"
+        aria-label={`経過時間 ${elapsedLabel}`}
+      >
+        <img
+          className="topbar__timer-icon"
+          src="/icons/ui/time.png"
+          alt=""
+          draggable={false}
+        />
+        <span className="topbar__num topbar__timer-text">{elapsedLabel}</span>
+      </span>
+      <ul
+        ref={relicsRef}
+        className="topbar__relics"
+        aria-label={`レリック (${relics.length}個)`}
+        onPointerDown={onRelicsPointerDown}
+        onPointerMove={onRelicsPointerMove}
+        onPointerUp={onRelicsPointerEnd}
+        onPointerCancel={onRelicsPointerEnd}
+      >
         {relics.map((id, i) => (
           <li key={`${id}-${i}`} className="topbar__relic">
             <RelicIcon id={id} catalog={relicCatalog} names={relicNames} />
@@ -173,22 +247,24 @@ export function TopBar({
         </div>
         <button
           type="button"
-          className="topbar__btn"
+          className="topbar__btn topbar__btn--icon"
           aria-label={peekActive ? '戦闘に戻る' : 'マップを見る'}
           aria-pressed={peekPressedAria}
           onClick={onTogglePeek}
           disabled={peekDisabled || !onTogglePeek}
         >
-          MAP
+          <img className="topbar__btn-icon" src="/icons/ui/map.png" alt="" draggable={false} />
+          <span className="topbar__btn-label">MAP</span>
         </button>
         <button
           type="button"
-          className="topbar__btn"
+          className="topbar__btn topbar__btn--icon"
           aria-label="メニュー"
           aria-pressed={menuPressedAria}
           onClick={onOpenMenu}
         >
-          MENU
+          <img className="topbar__btn-icon" src="/icons/ui/settings.png" alt="" draggable={false} />
+          <span className="topbar__btn-label">MENU</span>
         </button>
       </div>
     </div>

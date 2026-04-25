@@ -498,6 +498,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
           onTogglePeek={activeBattle ? () => setPeekMap(v => !v) : () => {}}
           peekActive={peekMap}
           peekDisabled={!activeBattle}
+          playSeconds={snap.run.playSeconds}
         />
         <div className="map-screen__body" data-act={snap.run.currentAct}>
           <div className="map-screen__pattern" aria-hidden="true" />
@@ -561,15 +562,23 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
                       ? '1.2 1'
                       : undefined
                   return (
-                    <line
-                      key={`${n.id}-${toId}`}
-                      x1={a.x} y1={a.y} x2={b.x} y2={b.y}
-                      stroke={stroke}
-                      strokeOpacity={opacity}
-                      strokeWidth={strokeWidth}
-                      strokeLinecap="round"
-                      strokeDasharray={dash}
-                    />
+                    <g key={`${n.id}-${toId}`}>
+                      <line
+                        x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                        stroke="#ffffff"
+                        strokeOpacity={0.9}
+                        strokeWidth={strokeWidth + 0.35}
+                        strokeLinecap="round"
+                      />
+                      <line
+                        x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                        stroke={stroke}
+                        strokeOpacity={opacity}
+                        strokeWidth={strokeWidth}
+                        strokeLinecap="round"
+                        strokeDasharray={dash}
+                      />
+                    </g>
                   )
                 }),
               )}

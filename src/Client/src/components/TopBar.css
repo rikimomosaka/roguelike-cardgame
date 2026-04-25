@@ -33,7 +33,7 @@
 
 .topbar__hp {
   padding: 4px 8px;
-  width: 188px;
+  width: 110px;
   flex-shrink: 0;
   justify-content: center;
 }
@@ -137,6 +137,28 @@
   color: var(--fg-muted);
 }
 
+.topbar__timer {
+  padding: 4px 10px;
+  gap: 6px;
+  color: var(--gold-soft);
+  flex-shrink: 0;
+}
+
+.topbar__timer-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  display: block;
+}
+
+.topbar__timer-text {
+  font-family: var(--font-label);
+  font-size: 14px;
+  letter-spacing: 1.5px;
+  font-variant-numeric: tabular-nums;
+}
+
 .topbar__relics {
   flex: 1;
   min-width: 0;
@@ -149,7 +171,21 @@
   border: 1px solid var(--border-dark);
   border-radius: var(--radius-sm);
   background: var(--bg-panel);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  cursor: grab;
+  -webkit-user-select: none;
+  user-select: none;
+  /* Hide native scrollbar but keep horizontal scrolling. */
+}
+
+.topbar__relics::-webkit-scrollbar {
+  display: none;
+}
+
+.topbar__relics--dragging {
+  cursor: grabbing;
 }
 
 .topbar__relic {
@@ -224,9 +260,22 @@
   padding: 4px 10px 4px 6px;
 }
 
+.topbar__btn--icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px 4px 8px;
+}
+
+.topbar__btn-label {
+  font-family: var(--font-label);
+  font-size: 14px;
+  letter-spacing: var(--ls-wide);
+}
+
 .topbar__btn-icon {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
   image-rendering: pixelated;
   display: block;

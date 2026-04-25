@@ -31,6 +31,37 @@ function potionRarityCode(n: number | undefined): CardRarity | undefined {
   }
 }
 
+const RARITY_ORDER: CardRarity[] = ['c', 'r', 'e', 'l']
+const RARITY_LABEL: Record<CardRarity, string> = {
+  c: 'COMMON',
+  r: 'RARE',
+  e: 'EPIC',
+  l: 'LEGENDARY',
+}
+
+/** Card-type filter values. 'summon' is reserved for a future card type. */
+type CardTypeFilter = 'all' | 'attack' | 'skill' | 'power' | 'summon'
+
+const CARD_TYPE_FILTERS: { value: CardTypeFilter; label: string }[] = [
+  { value: 'all', label: '全て' },
+  { value: 'attack', label: 'アタック' },
+  { value: 'skill', label: 'スキル' },
+  { value: 'power', label: 'パワー' },
+  { value: 'summon', label: 'サモン' },
+]
+
+function groupByRarity<T>(items: T[], rarityOf: (item: T) => CardRarity | undefined): Map<CardRarity | 'unknown', T[]> {
+  const groups = new Map<CardRarity | 'unknown', T[]>()
+  for (const r of RARITY_ORDER) groups.set(r, [])
+  groups.set('unknown', [])
+  for (const item of items) {
+    const r = rarityOf(item)
+    const key = r ?? 'unknown'
+    groups.get(key)!.push(item)
+  }
+  return groups
+}
+
 function BackButton({ onBack }: { onBack: () => void }) {
   return (
     <button type="button" className="achievements__back" onClick={onBack}>
@@ -172,46 +203,84 @@ function TabButton({ label, count, active, onClick }: {
    ------------------------------------------------------------------ */
 function CardsTab({ allIds, discovered }: { allIds: string[]; discovered: Set<string> }) {
   const { catalog: cardCatalog } = useCardCatalog()
+  const [typeFilter, setTypeFilter] = useState<CardTypeFilter>('all')
+
+  // Resolve display info up-front so we can filter and group by rarity/type
+  // without recomputing per render branch. Undiscovered cards still get a
+  // catalog lookup so we can group them by rarity even before reveal.
+  const items = useMemo(() => {
+    return allIds.map(id => {
+      const disp = cardDisplay(id, cardCatalog)
+      return { id, disp, isDiscovered: discovered.has(id) }
+    })
+  }, [allIds, cardCatalog, discovered])
+
+  const filtered = useMemo(() => {
+    if (typeFilter === 'all') return items
+    return items.filter(it => it.disp.type === typeFilter)
+  }, [items, typeFilter])
+
+  const groups = useMemo(
+    () => groupByRarity(filtered, it => it.disp.rarity),
+    [filtered],
+  )
+
   return (
     <div className="achievements__panel">
       <div className="achievements__panel-title-row">
         <div className="achievements__panel-title">▸ CARDS</div>
         <p className="achievements__count">{discovered.size} / {allIds.length} 発見</p>
       </div>
-      <div className="achievements__scroll">
-        <div className="achievements__card-grid">
-          {allIds.map(id => {
-            const isDiscovered = discovered.has(id)
-            if (isDiscovered) {
-              const disp = cardDisplay(id, cardCatalog)
-              return (
-                <div key={id} className="achievements__card-cell">
-                  <Card
-                    name={disp.name}
-                    cost={disp.cost}
-                    type={disp.type}
-                    rarity={disp.rarity}
-                    description={disp.description}
-                    upgradedDescription={disp.upgradedDescription}
-                  />
-                  <span className="achievements__card-id">✓ {disp.name} ({id})</span>
-                </div>
-              )
+      <div className="achievements__filter-row" role="tablist" aria-label="カードタイプで絞り込み">
+        {CARD_TYPE_FILTERS.map(f => (
+          <button
+            key={f.value}
+            type="button"
+            role="tab"
+            aria-selected={typeFilter === f.value ? 'true' : 'false'}
+            className={
+              'achievements__filter-chip'
+              + (typeFilter === f.value ? ' achievements__filter-chip--active' : '')
             }
-            return (
-              <div key={id} className="achievements__card-cell">
-                <Card
-                  name="? ? ?"
-                  cost={0}
-                  type="skill"
-                  rarity="c"
-                  locked
-                />
-                <span className="achievements__card-id">??? ({id})</span>
+            onClick={() => setTypeFilter(f.value)}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+      <div className="achievements__scroll">
+        {RARITY_ORDER.map(rarity => {
+          const list = groups.get(rarity) ?? []
+          if (list.length === 0) return null
+          return (
+            <section key={rarity} className="achievements__rarity-group">
+              <h3 className={`achievements__rarity-heading achievements__rarity-heading--${rarity}`}>
+                {RARITY_LABEL[rarity]} <span className="achievements__rarity-count">({list.length})</span>
+              </h3>
+              <div className="achievements__card-grid">
+                {list.map(({ id, disp, isDiscovered }) => (
+                  <div key={id} className="achievements__card-cell">
+                    {isDiscovered ? (
+                      <Card
+                        name={disp.name}
+                        cost={disp.cost}
+                        type={disp.type}
+                        rarity={disp.rarity}
+                        description={disp.description}
+                        upgradedDescription={disp.upgradedDescription}
+                      />
+                    ) : (
+                      <Card name="? ? ?" cost={0} type="skill" rarity={disp.rarity} locked />
+                    )}
+                    <span className="achievements__card-id">
+                      {isDiscovered ? `${disp.name} (${id})` : `??? (${id})`}
+                    </span>
+                  </div>
+                ))}
               </div>
-            )
-          })}
-        </div>
+            </section>
+          )
+        })}
       </div>
     </div>
   )
@@ -230,6 +299,27 @@ function TilesTab({ title, kind, allIds, discovered }: {
 }) {
   const { catalog: relicCatalog, names: relicNames } = useRelicCatalog()
   const { catalog: potionCatalog, names: potionNames } = usePotionCatalog()
+
+  const items = useMemo(() => allIds.map(id => {
+    const isDiscovered = discovered.has(id)
+    const displayName =
+      kind === 'relic' ? (relicNames[id] ?? id)
+      : kind === 'potion' ? (potionNames[id] ?? id)
+      : id
+    const description =
+      kind === 'relic' ? (relicCatalog?.[id]?.description ?? null)
+      : kind === 'potion' ? (potionCatalog?.[id]?.description ?? null)
+      : null
+    const rarity =
+      kind === 'relic' ? relicRarityCode(relicCatalog?.[id]?.rarity)
+      : kind === 'potion' ? potionRarityCode(potionCatalog?.[id]?.rarity)
+      : undefined
+    return { id, isDiscovered, displayName, description, rarity }
+  }), [allIds, discovered, kind, relicCatalog, relicNames, potionCatalog, potionNames])
+
+  // Enemies have no rarity — render flat. Relics/potions group by rarity.
+  const flat = kind === 'enemy'
+
   return (
     <div className="achievements__panel">
       <div className="achievements__panel-title-row">
@@ -237,34 +327,46 @@ function TilesTab({ title, kind, allIds, discovered }: {
         <p className="achievements__count">{discovered.size} / {allIds.length} 発見</p>
       </div>
       <div className="achievements__scroll">
-        <div className="achievements__tile-grid">
-          {allIds.map(id => {
-            const isDiscovered = discovered.has(id)
-            const displayName =
-              kind === 'relic' ? (relicNames[id] ?? id)
-              : kind === 'potion' ? (potionNames[id] ?? id)
-              : id
-            const description =
-              kind === 'relic' ? (relicCatalog?.[id]?.description ?? null)
-              : kind === 'potion' ? (potionCatalog?.[id]?.description ?? null)
-              : null
-            const rarity =
-              kind === 'relic' ? relicRarityCode(relicCatalog?.[id]?.rarity)
-              : kind === 'potion' ? potionRarityCode(potionCatalog?.[id]?.rarity)
-              : undefined
-            return (
+        {flat ? (
+          <div className="achievements__tile-grid">
+            {items.map(it => (
               <BestiaryTile
-                key={id}
+                key={it.id}
                 kind={kind}
-                id={id}
-                isDiscovered={isDiscovered}
-                displayName={displayName}
-                description={description}
-                rarity={rarity}
+                id={it.id}
+                isDiscovered={it.isDiscovered}
+                displayName={it.displayName}
+                description={it.description}
+                rarity={it.rarity}
               />
+            ))}
+          </div>
+        ) : (
+          RARITY_ORDER.map(rarity => {
+            const list = items.filter(it => it.rarity === rarity)
+            if (list.length === 0) return null
+            return (
+              <section key={rarity} className="achievements__rarity-group">
+                <h3 className={`achievements__rarity-heading achievements__rarity-heading--${rarity}`}>
+                  {RARITY_LABEL[rarity]} <span className="achievements__rarity-count">({list.length})</span>
+                </h3>
+                <div className="achievements__tile-grid">
+                  {list.map(it => (
+                    <BestiaryTile
+                      key={it.id}
+                      kind={kind}
+                      id={it.id}
+                      isDiscovered={it.isDiscovered}
+                      displayName={it.displayName}
+                      description={it.description}
+                      rarity={it.rarity}
+                    />
+                  ))}
+                </div>
+              </section>
             )
-          })}
-        </div>
+          })
+        )}
       </div>
     </div>
   )
@@ -309,13 +411,10 @@ function BestiaryTile({ kind, id, isDiscovered, displayName, description, rarity
         <div className="achievements__tile-art" aria-hidden="true">
           {art}
         </div>
-        {isDiscovered && (
-          <span className="achievements__tile-check" aria-hidden="true">✓</span>
-        )}
       </div>
       <div className="achievements__tile-name">
         {isDiscovered ? (
-          <span>✓ {displayName}</span>
+          <span>{displayName}</span>
         ) : (
           <span>??? ({id})</span>
         )}

@@ -153,6 +153,9 @@ main.map-screen {
   z-index: 3;
   transition: box-shadow 0.12s ease, border-color 0.12s ease;
   padding: 0;
+  /* White outer outline so nodes stand out against busy backgrounds. */
+  outline: 2px solid #ffffff;
+  outline-offset: -1px;
 }
 
 .map-screen__node.is-past {
@@ -262,6 +265,14 @@ main.map-screen {
   color: var(--border-light);
   white-space: nowrap;
   pointer-events: none;
+  /* White outline so labels stay readable over the act background. */
+  -webkit-text-stroke: 2px #ffffff;
+  paint-order: stroke fill;
+  text-shadow:
+    -1px -1px 0 #ffffff,
+    1px -1px 0 #ffffff,
+    -1px 1px 0 #ffffff,
+    1px 1px 0 #ffffff;
 }
 
 .map-screen__node.is-current .map-screen__node-label {

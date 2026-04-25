@@ -188,6 +188,65 @@
   margin: 0;
 }
 
+/* ---------- Card-type filter chips ---------- */
+.achievements__filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 8px 8px;
+}
+
+.achievements__filter-chip {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-mid);
+  color: var(--fg-muted);
+  border-radius: var(--radius-sm);
+  padding: 4px 12px;
+  font-family: var(--font-label);
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+
+.achievements__filter-chip:hover {
+  border-color: var(--border-hover);
+  color: var(--gold-soft);
+}
+
+.achievements__filter-chip--active {
+  border-color: var(--gold-deep);
+  color: var(--gold-soft);
+  background: rgba(201, 152, 90, 0.18);
+}
+
+/* ---------- Rarity grouping ---------- */
+.achievements__rarity-group {
+  margin: 8px 0 18px;
+}
+
+.achievements__rarity-heading {
+  margin: 6px 0 8px;
+  font-family: var(--font-label);
+  font-size: 13px;
+  letter-spacing: 4px;
+  color: var(--fg-muted);
+  border-bottom: 1px solid var(--border-dark);
+  padding: 0 0 4px 4px;
+}
+
+.achievements__rarity-heading--c { color: #c8c8c8; }
+.achievements__rarity-heading--r { color: var(--rarity-r, #6fb8ff); }
+.achievements__rarity-heading--e { color: var(--rarity-e, #c89bff); }
+.achievements__rarity-heading--l { color: var(--rarity-l, #ffd866); }
+
+.achievements__rarity-count {
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: var(--fg-dim);
+  margin-left: 4px;
+}
+
 /* ---------- Scroll area ---------- */
 .achievements__scroll {
   flex: 1;
@@ -312,18 +371,6 @@
   image-rendering: pixelated;
   -webkit-user-select: none;
   user-select: none;
-}
-
-.achievements__tile-check {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  font-family: var(--font-label);
-  font-size: 12px;
-  line-height: 1;
-  color: var(--state-heal);
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
-  z-index: 2;
 }
 
 .achievements__tile-name {

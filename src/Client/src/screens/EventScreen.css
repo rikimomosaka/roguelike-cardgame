@@ -15,7 +15,9 @@
   flex-direction: column;
   justify-content: space-between;
   gap: 12px;
-  min-height: 460px;
+  /* Match the source event background art (1536x1024 = 3:2). */
+  aspect-ratio: 3 / 2;
+  width: 100%;
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-sm);
   overflow: hidden;
@@ -73,8 +75,25 @@
   text-shadow: 0 0 6px rgba(255, 213, 79, 0.3);
 }
 
+/* ---- Actions row (choices + inline close button) ---- */
+.ev-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  width: 100%;
+}
+
+.ev-close-wrap {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 4px;
+}
+
 /* ---- Choices ---- */
 .ev-choices {
+  flex: 0 0 80%;
   display: flex;
   flex-direction: column;
   gap: 8px;

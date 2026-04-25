@@ -11,14 +11,13 @@
 /* ---- Campfire flicker decoration ---- */
 .rs-fire {
   align-self: center;
-  width: 96px;
-  height: 96px;
+  width: 200px;
+  height: 200px;
   display: grid;
   place-items: center;
-  animation: rs-flicker 1.4s ease-in-out infinite;
-  margin: 0 0 2px;
-  filter: drop-shadow(0 0 10px rgba(255, 170, 60, 0.55))
-    drop-shadow(0 0 22px rgba(255, 80, 0, 0.4));
+  margin: 0 0 4px;
+  filter: drop-shadow(0 0 14px rgba(255, 170, 60, 0.6))
+    drop-shadow(0 0 28px rgba(255, 80, 0, 0.42));
 }
 
 .rs-fire img {
@@ -26,21 +25,14 @@
   height: 100%;
   object-fit: contain;
   image-rendering: pixelated;
+  /* Brightness-only flicker — size stays fixed. */
+  animation: rs-flicker 1.4s ease-in-out infinite;
 }
 
 @keyframes rs-flicker {
-  0%, 100% {
-    transform: scale(1) translateY(0);
-    filter: blur(0.4px) brightness(1);
-  }
-  35% {
-    transform: scale(1.06) translateY(-1px);
-    filter: blur(0.4px) brightness(1.12);
-  }
-  65% {
-    transform: scale(0.97) translateY(1px);
-    filter: blur(0.4px) brightness(0.92);
-  }
+  0%, 100% { filter: brightness(1); }
+  35%      { filter: brightness(1.18); }
+  65%      { filter: brightness(0.88); }
 }
 
 /* ---- Choices list ---- */

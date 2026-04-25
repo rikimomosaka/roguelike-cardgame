@@ -53,8 +53,8 @@
 }
 
 .mc-shopkeeper__avatar {
-  width: 64px;
-  height: 64px;
+  width: 110px;
+  height: 110px;
   flex-shrink: 0;
   border: 1px solid var(--border-light);
   border-radius: var(--radius-sm);
@@ -80,8 +80,8 @@
 }
 
 .mc-shopkeeper__sprite img {
-  width: 78%;
-  height: 78%;
+  width: 92%;
+  height: 92%;
   object-fit: contain;
   image-rendering: pixelated;
   -webkit-user-select: none;

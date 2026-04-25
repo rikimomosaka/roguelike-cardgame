@@ -44,7 +44,7 @@ describe('AchievementsScreen', () => {
   it('cards tab shows discovered and undiscovered with count header', async () => {
     render(<AchievementsScreen accountId="a" onBack={() => { }} />)
     await screen.findByText(/1 \/ 3 発見/)
-    expect(screen.getByText(/✓.*strike/)).toBeInTheDocument()
+    expect(screen.getByText(/strike \(strike\)/)).toBeInTheDocument()
     expect(screen.getByText(/\?\?\?.*\(defend\)/)).toBeInTheDocument()
   })
 
