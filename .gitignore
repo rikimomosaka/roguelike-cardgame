@@ -29,6 +29,7 @@ Thumbs.db
 .claude/settings.local.json
 .superpowers/
 .playwright-mcp/
+.worktrees/
 
 # Playwright verification screenshots (repo-root)
 /*.png
