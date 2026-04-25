@@ -2,7 +2,5 @@
   "id": "block_potion",
   "name": "ブロックポーション",
   "rarity": 1,
-  "usableInBattle": true,
-  "usableOutOfBattle": false,
-  "effects": [{ "action": "block", "scope": "self", "amount": 12 }]
+  "effects": [{ "action": "block", "scope": "self", "amount": 12, "battleOnly": true }]
 }

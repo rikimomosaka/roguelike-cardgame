@@ -2,7 +2,5 @@
   "id": "strength_potion",
   "name": "ストレングスポーション",
   "rarity": 2,
-  "usableInBattle": true,
-  "usableOutOfBattle": false,
-  "effects": [{ "action": "gainStrength", "scope": "self", "amount": 2 }]
+  "effects": [{ "action": "buff", "scope": "self", "name": "strength", "amount": 2, "battleOnly": true }]
 }

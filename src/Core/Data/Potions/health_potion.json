@@ -2,7 +2,5 @@
   "id": "health_potion",
   "name": "ヘルスポーション",
   "rarity": 1,
-  "usableInBattle": true,
-  "usableOutOfBattle": true,
   "effects": [{ "action": "heal", "scope": "self", "amount": 15 }]
 }

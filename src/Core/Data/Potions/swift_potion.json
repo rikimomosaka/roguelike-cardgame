@@ -2,7 +2,5 @@
   "id": "swift_potion",
   "name": "スウィフトポーション",
   "rarity": 1,
-  "usableInBattle": true,
-  "usableOutOfBattle": false,
-  "effects": [{ "action": "drawCards", "scope": "self", "amount": 3 }]
+  "effects": [{ "action": "draw", "scope": "self", "amount": 3, "battleOnly": true }]
 }

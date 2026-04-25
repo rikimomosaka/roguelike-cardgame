@@ -2,7 +2,5 @@
   "id": "energy_potion",
   "name": "エナジーポーション",
   "rarity": 1,
-  "usableInBattle": true,
-  "usableOutOfBattle": false,
-  "effects": [{ "action": "gainEnergy", "scope": "self", "amount": 2 }]
+  "effects": [{ "action": "gainEnergy", "scope": "self", "amount": 2, "battleOnly": true }]
 }

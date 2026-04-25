@@ -1,6 +1,7 @@
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Battle.Definitions;
+using System.Linq;
 using Xunit;
 
 namespace RoguelikeCardGame.Core.Tests.Data;
@@ -40,5 +41,46 @@ public class EmbeddedDataLoaderTests
             Assert.True(def.Hp > 0, $"Enemy {id} has non-positive Hp");
             Assert.NotEmpty(def.Moves);
         }
+    }
+
+    [Fact]
+    public void All_potion_JSONs_load_with_new_format()
+    {
+        var catalog = EmbeddedDataLoader.LoadCatalog();
+        Assert.Equal(7, catalog.Potions.Count);
+        foreach (var (id, def) in catalog.Potions)
+        {
+            Assert.NotNull(def);
+            Assert.NotEmpty(def.Effects);
+        }
+    }
+
+    [Fact]
+    public void HealthPotion_IsUsableOutsideBattle()
+    {
+        var catalog = EmbeddedDataLoader.LoadCatalog();
+        Assert.True(catalog.Potions["health_potion"].IsUsableOutsideBattle);
+    }
+
+    [Fact]
+    public void NonHealthPotions_AreNotUsableOutsideBattle()
+    {
+        var catalog = EmbeddedDataLoader.LoadCatalog();
+        var nonHealth = new[] { "block_potion", "energy_potion", "fire_potion",
+                                "poison_potion", "strength_potion", "swift_potion" };
+        foreach (var id in nonHealth)
+            Assert.False(catalog.Potions[id].IsUsableOutsideBattle, $"{id} should not be usable outside battle");
+    }
+
+    [Fact]
+    public void All_relic_JSONs_load_with_implemented_field()
+    {
+        var catalog = EmbeddedDataLoader.LoadCatalog();
+        Assert.Equal(36, catalog.Relics.Count);
+        // 19 ファイルが Implemented: true、17 ファイルが Implemented: false の想定
+        var trueCount = catalog.Relics.Values.Count(r => r.Implemented);
+        var falseCount = catalog.Relics.Values.Count(r => !r.Implemented);
+        Assert.Equal(19, trueCount);
+        Assert.Equal(17, falseCount);
     }
 }
