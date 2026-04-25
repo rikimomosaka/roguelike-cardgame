@@ -201,20 +201,17 @@
 }
 
 /* ---- Chosen state highlight ----
-   Override the disabled gray-out so the picked choice stays vivid and
-   gets a stronger border + golden glow than the resting hover state. */
+   Override the disabled gray-out so the picked choice stays vivid. Only the
+   border turns gold — background and label color match the resting state so
+   the text remains fully legible. */
 .ev-choice--chosen,
 .ev-choice--chosen:disabled,
 .ev-choice--chosen[aria-disabled='true'] {
   filter: none;
   color: var(--fg);
   border-color: var(--gold);
-  background: rgba(78, 50, 22, 0.7);
-  box-shadow:
-    inset 0 0 12px rgba(201, 152, 90, 0.3),
-    0 0 14px rgba(201, 152, 90, 0.4);
 }
 
 .ev-choice--chosen .ev-choice__label {
-  color: var(--gold-soft);
+  color: var(--fg);
 }

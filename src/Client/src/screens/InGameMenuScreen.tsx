@@ -21,7 +21,14 @@ export function InGameMenuScreen({ onClose, onExitToMenu, onAbandon, elapsedSeco
   const [busy, setBusy] = useState(false)
 
   function currentElapsed(): number {
-    return Math.max(0, Math.floor((performance.now() - (elapsedSecondsRef.current ?? performance.now())) / 1000))
+    const now = performance.now()
+    const baseline = elapsedSecondsRef.current ?? now
+    const e = Math.max(0, Math.floor((now - baseline) / 1000))
+    // 報告した整数秒ぶんだけ起点を進め、サブ秒の余りを次回に持ち越す。
+    // 同時に、二重加算（MapScreen unmount の cleanup heartbeat が同区間を
+    // もう一度送ってしまう問題）も自動的に防げる。
+    elapsedSecondsRef.current = baseline + e * 1000
+    return e
   }
 
   async function exit() {
@@ -30,9 +37,6 @@ export function InGameMenuScreen({ onClose, onExitToMenu, onAbandon, elapsedSeco
     const e = currentElapsed()
     try {
       await heartbeat(accountId, e).catch(() => {})
-      // 送信後は起点をリセット。これを怠ると MapScreen unmount の cleanup heartbeat が
-      // 同区間をもう一度加算してしまう (二重加算防止)。
-      elapsedSecondsRef.current = performance.now()
       onExitToMenu()
     } finally {
       setBusy(false)
@@ -44,8 +48,6 @@ export function InGameMenuScreen({ onClose, onExitToMenu, onAbandon, elapsedSeco
     setBusy(true)
     try {
       const result = await abandonRun(accountId, currentElapsed()).catch(() => null)
-      // 同上 — abandon 後の cleanup heartbeat を 409 で空打ちさせないためリセット。
-      elapsedSecondsRef.current = performance.now()
       onAbandon(result)
     } finally {
       setBusy(false)

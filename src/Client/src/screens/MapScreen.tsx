@@ -164,9 +164,12 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
   }
 
   const elapsedSeconds = useCallback(() => {
-    const e = Math.floor((performance.now() - mountedAt.current) / 1000)
-    mountedAt.current = performance.now()
-    return Math.max(0, e)
+    const e = Math.max(0, Math.floor((performance.now() - mountedAt.current) / 1000))
+    // 報告した整数秒ぶんだけ起点を進め、サブ秒の余りを次回に持ち越す。
+    // performance.now() で起点をリセットすると毎回端数が捨てられ、
+    // サーバ PlaySeconds が TopBar のリアル時刻表示よりじわじわ遅れていく。
+    mountedAt.current += e * 1000
+    return e
   }, [])
 
   const refresh = useCallback(async () => {
@@ -203,8 +206,11 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
   useEffect(() => {
     return () => {
       if (!accountId) return
-      const elapsed = Math.floor((performance.now() - mountedAt.current) / 1000)
-      if (elapsed > 0) void heartbeat(accountId, elapsed).catch(() => {})
+      const elapsed = Math.max(0, Math.floor((performance.now() - mountedAt.current) / 1000))
+      if (elapsed > 0) {
+        mountedAt.current += elapsed * 1000
+        void heartbeat(accountId, elapsed).catch(() => {})
+      }
     }
   }, [accountId])
 
@@ -550,7 +556,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
                   // glance. Next-edge stays gold-toned to match the next-tile
                   // pulse glow.
                   const stroke = visitedEdge
-                    ? '#7a1818'
+                    ? '#3ec6ff'
                     : nextEdge
                       ? '#5a3812'
                       : '#2a1c0e'

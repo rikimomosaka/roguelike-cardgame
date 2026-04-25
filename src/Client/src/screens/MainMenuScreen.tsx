@@ -95,7 +95,7 @@ export function MainMenuScreen({ onOpenSettings, onLogout, onStartRun, hasCurren
             onClick={handleSingle}
           >
             <span className="main-menu__btn-mark" aria-hidden="true">▸</span>
-            シングル
+            ソロ
           </button>
           <button
             type="button"
@@ -139,7 +139,7 @@ export function MainMenuScreen({ onOpenSettings, onLogout, onStartRun, hasCurren
       )}
 
       {singleDialog && (
-        <div role="dialog" aria-label="シングルプレイ" className="main-menu__dialog">
+        <div role="dialog" aria-label="ソロプレイ" className="main-menu__dialog">
           <p>進行中のランがあります。どうしますか？</p>
           <Button onClick={continueRun}>続きから</Button>
           <Button variant="danger" onClick={() => void startFresh(true)}>新規で上書き</Button>

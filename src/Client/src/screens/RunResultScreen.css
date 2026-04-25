@@ -256,16 +256,11 @@
 }
 
 .node--fight { color: var(--fg-strong); }
-.node--elite { color: var(--state-danger-soft); border-color: var(--state-danger-soft); }
+.node--elite { color: var(--state-danger-soft); }
 .node--event { color: #c49ad9; }
-.node--merchant { color: var(--gold-warm); border-color: var(--gold-warm); }
-.node--rest { color: var(--state-heal-soft); border-color: var(--state-heal-soft); }
-.node--boss {
-  color: var(--state-danger-soft);
-  border-color: var(--gold);
-  border-width: 2px;
-  box-shadow: 0 0 6px rgba(217, 97, 74, 0.6);
-}
+.node--merchant { color: var(--gold-warm); }
+.node--rest { color: var(--state-heal-soft); }
+.node--boss { color: var(--state-danger-soft); }
 .node--treasure { color: var(--rarity-l); }
 .node--start {
   color: var(--fg-muted);
@@ -314,11 +309,11 @@
 }
 
 .lg--fight .lg__sym { color: var(--fg-strong); }
-.lg--elite .lg__sym { color: var(--state-danger-soft); border-color: var(--state-danger-soft); }
+.lg--elite .lg__sym { color: var(--state-danger-soft); }
 .lg--event .lg__sym { color: #c49ad9; }
-.lg--merchant .lg__sym { color: var(--gold-warm); border-color: var(--gold-warm); }
-.lg--rest .lg__sym { color: var(--state-heal-soft); border-color: var(--state-heal-soft); }
-.lg--boss .lg__sym { color: var(--state-danger-soft); border-color: var(--gold); }
+.lg--merchant .lg__sym { color: var(--gold-warm); }
+.lg--rest .lg__sym { color: var(--state-heal-soft); }
+.lg--boss .lg__sym { color: var(--state-danger-soft); }
 .lg--treasure .lg__sym { color: var(--rarity-l); }
 .lg--start .lg__sym { color: var(--fg-muted); border-style: dashed; }
 
@@ -411,6 +406,7 @@
   image-rendering: pixelated;
   -webkit-user-select: none;
   user-select: none;
+  transform: translateX(2px);
 }
 
 .rr__trail-legend .lg__sym img {

@@ -263,7 +263,7 @@ export function RunResultScreen({ result, snapshot, onReturnToMenu }: Props) {
               </div>
 
               <div className="rr__trail-legend" aria-hidden="true">
-                <span className="lg--start"><span className="lg__sym">●</span>開始</span>
+                <span className="lg--start"><span className="lg__sym"><img src="/icons/tiles/start.png" alt="" /></span>開始</span>
                 <span className="lg--boss"><span className="lg__sym"><img src="/icons/tiles/boss.png" alt="" /></span>ボス</span>
                 <span className="lg--fight"><span className="lg__sym"><img src="/icons/tiles/enemy.png" alt="" /></span>敵</span>
                 <span className="lg--elite"><span className="lg__sym"><img src="/icons/tiles/elite.png" alt="" /></span>強敵</span>
