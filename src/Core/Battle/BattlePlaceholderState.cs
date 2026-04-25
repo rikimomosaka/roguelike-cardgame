@@ -17,5 +17,14 @@ public sealed record PlaceholderEnemyInstance(
     int MaxHp,
     string CurrentMoveId);
 
-/// <summary>placeholder 用の旧 BattleOutcome。Phase 10.5 で削除し、新 <see cref="State.BattleOutcome"/> に統合。</summary>
+/// <summary>
+/// placeholder 用の旧 BattleOutcome（Pending, Victory）。Phase 10.5 で削除し、
+/// 新 <see cref="State.BattleOutcome"/> (Pending, Victory, Defeat) に統合する。
+///
+/// **CS0104 ambiguity risk**: 同じ assembly 内に <see cref="State.BattleOutcome"/> が存在し、
+/// メンバ名（Pending / Victory）も重複する。同一 .cs ファイルで両 namespace を using すると
+/// `BattleOutcome` 参照がコンパイルエラーになる。両方必要な場合は次のいずれかで回避:
+///   using BattleOutcome = RoguelikeCardGame.Core.Battle.BattleOutcome;
+///   using NewBattleOutcome = RoguelikeCardGame.Core.Battle.State.BattleOutcome;
+/// </summary>
 public enum BattleOutcome { Pending, Victory }
