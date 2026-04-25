@@ -22,6 +22,16 @@ public class ActTransitionTests
                 Kind: TileKind.Start,
                 OutgoingNodeIds: ImmutableArray<int>.Empty)));
 
+    private static DungeonMap FakeMapWithNodes(int nodeCount)
+    {
+        var b = ImmutableArray.CreateBuilder<MapNode>(nodeCount);
+        for (int i = 0; i < nodeCount; i++)
+            b.Add(new MapNode(Id: i, Row: 0, Column: i,
+                Kind: i == 0 ? TileKind.Start : TileKind.Enemy,
+                OutgoingNodeIds: ImmutableArray<int>.Empty));
+        return new DungeonMap(StartNodeId: 0, BossNodeId: nodeCount - 1, Nodes: b.ToImmutable());
+    }
+
     [Fact]
     public void AdvanceAct_IncrementsAct_HealsToMax_ResetsVisited()
     {
@@ -36,8 +46,9 @@ public class ActTransitionTests
                 CardChoices: ImmutableArray<string>.Empty,
                 CardStatus: RoguelikeCardGame.Core.Rewards.CardRewardStatus.Skipped),
         };
+        var oldMap = FakeMapWithNodes(4);
         var newMap = FakeMap(999);
-        var next = ActTransition.AdvanceAct(s, newMap, cat, new SystemRng(1));
+        var next = ActTransition.AdvanceAct(s, oldMap, newMap, cat, new SystemRng(1));
         Assert.Equal(2, next.CurrentAct);
         Assert.Equal(s.MaxHp, next.CurrentHp);
         Assert.Equal(999, next.CurrentNodeId);
@@ -54,7 +65,7 @@ public class ActTransitionTests
     {
         var cat = EmbeddedDataLoader.LoadCatalog();
         var s = TestRunStates.FreshDefault(cat);
-        var next = ActTransition.AdvanceAct(s, FakeMap(999), cat, new SystemRng(1));
+        var next = ActTransition.AdvanceAct(s, FakeMap(0), FakeMap(999), cat, new SystemRng(1));
 
         // After AdvanceAct from act 1 to act 2, the boss queue must contain only act 2 bosses,
         // and must not contain any act 1 boss encounter ids.
@@ -74,7 +85,7 @@ public class ActTransitionTests
             Relics = (IReadOnlyList<string>)new[] { "coin_purse" },
             Deck = ImmutableArray.Create(new CardInstance("strike", true)),
         };
-        var next = ActTransition.AdvanceAct(s, FakeMap(1), cat, new SystemRng(1));
+        var next = ActTransition.AdvanceAct(s, FakeMap(0), FakeMap(1), cat, new SystemRng(1));
         Assert.Equal(500, next.Gold);
         Assert.Contains("coin_purse", next.Relics);
         Assert.Single(next.Deck);
@@ -90,7 +101,7 @@ public class ActTransitionTests
         var resolutions = ImmutableDictionary<int, TileKind>.Empty
             .Add(42, TileKind.Enemy)
             .Add(77, TileKind.Merchant);
-        var next = ActTransition.AdvanceAct(s, FakeMap(999), cat, new SystemRng(1), resolutions);
+        var next = ActTransition.AdvanceAct(s, FakeMap(0), FakeMap(999), cat, new SystemRng(1), resolutions);
         Assert.Equal(TileKind.Enemy, next.UnknownResolutions[42]);
         Assert.Equal(TileKind.Merchant, next.UnknownResolutions[77]);
     }
@@ -100,7 +111,7 @@ public class ActTransitionTests
     {
         var cat = EmbeddedDataLoader.LoadCatalog();
         var s = TestRunStates.FreshDefault(cat);
-        var next = ActTransition.AdvanceAct(s, FakeMap(999), cat, new SystemRng(1));
+        var next = ActTransition.AdvanceAct(s, FakeMap(0), FakeMap(999), cat, new SystemRng(1));
         Assert.Empty(next.UnknownResolutions);
     }
 

@@ -73,6 +73,7 @@ public sealed class FileHistoryRepository : IHistoryRepository
         if (node is not JsonObject obj) return null;
         int version = obj["schemaVersion"]?.GetValue<int>() ?? 1;
         if (version == 1) { obj = MigrateV1ToV2(obj); version = 2; }
+        if (version == 2) { obj = MigrateV2ToV3(obj); version = 3; }
         if (version != RunHistoryRecord.CurrentSchemaVersion) return null;
         return JsonSerializer.Deserialize<RunHistoryRecord>(obj.ToJsonString(), JsonOptions.Default);
     }
@@ -83,6 +84,13 @@ public sealed class FileHistoryRepository : IHistoryRepository
         obj["acquiredRelicIds"] = new JsonArray();
         obj["acquiredPotionIds"] = new JsonArray();
         obj["encounteredEnemyIds"] = new JsonArray();
+        obj["schemaVersion"] = 2;
+        return obj;
+    }
+
+    private static JsonObject MigrateV2ToV3(JsonObject obj)
+    {
+        obj["journeyLog"] = new JsonArray();
         obj["schemaVersion"] = RunHistoryRecord.CurrentSchemaVersion;
         return obj;
     }

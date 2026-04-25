@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import type { ReactNode } from 'react'
-import type { RunResultDto, RunSnapshotDto, TileKind } from '../api/types'
+import type { RunResultDto, RunResultJourneyEntryDto, RunSnapshotDto, TileKind } from '../api/types'
 import type { CardRarity } from '../components/Card'
 import { cardDisplay } from '../components/cardDisplay'
 import { useTooltipTarget } from '../components/Tooltip'
@@ -10,7 +10,8 @@ import { useRelicCatalog } from '../hooks/useRelicCatalog'
 import type { CardCatalog, PotionCatalog, RelicCatalog } from '../api/catalog'
 import './RunResultScreen.css'
 
-const TILE_IMG_SRC: Record<Exclude<TileKind, 'Start'>, string> = {
+const TILE_IMG_SRC: Record<TileKind, string> = {
+  Start: '/icons/tiles/start.png',
   Enemy: '/icons/tiles/enemy.png',
   Elite: '/icons/tiles/elite.png',
   Merchant: '/icons/tiles/merchant.png',
@@ -60,7 +61,6 @@ function potionRarityCode(n: number | undefined): CardRarity | undefined {
 
 function journeyIcon(kind: TileKind, resolvedKind: TileKind | null): ReactNode {
   const k = kind === 'Unknown' && resolvedKind === null ? 'Unknown' : (resolvedKind ?? kind)
-  if (k === 'Start') return '●'
   return <img src={TILE_IMG_SRC[k]} alt="" className="rr__journey-img" draggable={false} />
 }
 
@@ -89,7 +89,7 @@ function journeyTooltip(kind: TileKind, resolvedKind: TileKind | null): string {
     case 'Rest': return '休憩'
     case 'Treasure': return '宝箱'
     case 'Event': return 'イベント'
-    case 'Unknown': return '未知'
+    case 'Unknown': return '不明'
     case 'Boss': return 'ボス戦'
   }
 }
@@ -124,6 +124,23 @@ export function RunResultScreen({ result, snapshot, onReturnToMenu }: Props) {
   const { catalog: potionCatalog, names: potionNames } = usePotionCatalog()
   const relicCount = result.finalRelics.length
   const deckCount = result.finalDeck.length
+
+  // 全アクトの走行履歴を act ごとにまとめる。journeyLog が空の場合は
+  // (旧スキーマセーブや未保存ラン) snapshot の現在アクト visitedNodeIds に
+  // フォールバックして 1 行だけ描画する。
+  const journeyByAct = useMemo<{ act: number; entries: RunResultJourneyEntryDto[] }[]>(() => {
+    const log = result.journeyLog ?? []
+    if (log.length === 0) return []
+    const groups = new Map<number, RunResultJourneyEntryDto[]>()
+    for (const e of log) {
+      const arr = groups.get(e.act)
+      if (arr) arr.push(e)
+      else groups.set(e.act, [e])
+    }
+    return Array.from(groups.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([act, entries]) => ({ act, entries }))
+  }, [result.journeyLog])
 
   return (
     <main className="rr" role="dialog" aria-modal="true" aria-label="Run Result">
@@ -174,7 +191,33 @@ export function RunResultScreen({ result, snapshot, onReturnToMenu }: Props) {
                 <div className="rr__trail-header">
                   <span>走行履歴</span>
                 </div>
-                {snapshot ? (
+                {journeyByAct.length > 0 ? (
+                  journeyByAct.map(({ act, entries }) => (
+                    <div className="rr__journey-row" key={`act-${act}`}>
+                      <div className="rr__journey-act-label">
+                        ACT {actLabel(act)}
+                      </div>
+                      <div className="rr__journey-nodes">
+                        {entries.map((e, i) => {
+                          const resolved = e.resolvedKind ?? null
+                          const icon = journeyIcon(e.kind, resolved)
+                          const cls = journeyNodeClass(e.kind, resolved)
+                          const tip = journeyTooltip(e.kind, resolved)
+                          return (
+                            <div
+                              key={`${act}-${e.nodeId}-${i}`}
+                              className={`rr__journey-node ${cls}`}
+                              title={tip}
+                              aria-label={tip}
+                            >
+                              <span aria-hidden="true">{icon}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))
+                ) : snapshot ? (
                   <div className="rr__journey-row">
                     <div className="rr__journey-act-label">
                       ACT {actLabel(snapshot.run.currentAct)}
@@ -222,8 +265,8 @@ export function RunResultScreen({ result, snapshot, onReturnToMenu }: Props) {
               <div className="rr__trail-legend" aria-hidden="true">
                 <span className="lg--start"><span className="lg__sym">●</span>開始</span>
                 <span className="lg--boss"><span className="lg__sym"><img src="/icons/tiles/boss.png" alt="" /></span>ボス</span>
-                <span className="lg--fight"><span className="lg__sym"><img src="/icons/tiles/enemy.png" alt="" /></span>戦闘</span>
-                <span className="lg--elite"><span className="lg__sym"><img src="/icons/tiles/elite.png" alt="" /></span>精鋭</span>
+                <span className="lg--fight"><span className="lg__sym"><img src="/icons/tiles/enemy.png" alt="" /></span>敵</span>
+                <span className="lg--elite"><span className="lg__sym"><img src="/icons/tiles/elite.png" alt="" /></span>強敵</span>
                 <span className="lg--event"><span className="lg__sym"><img src="/icons/tiles/event.png" alt="" /></span>イベント</span>
                 <span className="lg--merchant"><span className="lg__sym"><img src="/icons/tiles/merchant.png" alt="" /></span>商店</span>
                 <span className="lg--rest"><span className="lg__sym"><img src="/icons/tiles/rest.png" alt="" /></span>休憩</span>

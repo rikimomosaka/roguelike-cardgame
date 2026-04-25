@@ -22,7 +22,8 @@ public class BestiaryUpdaterTests
             SeenCardBaseIds: cards.ToImmutableArray(),
             AcquiredRelicIds: relics.ToImmutableArray(),
             AcquiredPotionIds: potions.ToImmutableArray(),
-            EncounteredEnemyIds: enemies.ToImmutableArray());
+            EncounteredEnemyIds: enemies.ToImmutableArray(),
+            JourneyLog: ImmutableArray<JourneyEntry>.Empty);
 
     [Fact]
     public void Merge_EmptyPlusRecord_AddsAllCategories()

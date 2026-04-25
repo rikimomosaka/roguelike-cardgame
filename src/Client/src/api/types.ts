@@ -98,6 +98,13 @@ export type RunResultCardDto = {
   upgraded: boolean
 }
 
+export type RunResultJourneyEntryDto = {
+  act: number
+  nodeId: number
+  kind: TileKind
+  resolvedKind: TileKind | null
+}
+
 export type RunResultDto = {
   schemaVersion: number
   accountId: string
@@ -117,6 +124,7 @@ export type RunResultDto = {
   acquiredRelicIds: string[]
   acquiredPotionIds: string[]
   encounteredEnemyIds: string[]
+  journeyLog: RunResultJourneyEntryDto[]
 }
 
 export type RunHistoryDto = RunResultDto[]

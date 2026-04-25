@@ -113,7 +113,8 @@
 
 .topbar__gold {
   color: var(--gold-warm);
-  width: 156px;
+  width: 132px;
+  padding: 6px 8px;
   flex-shrink: 0;
   justify-content: flex-start;
   font-size: 18px;
@@ -141,18 +142,10 @@
 }
 
 .topbar__timer {
-  padding: 4px 12px;
-  gap: 8px;
+  padding: 4px 10px;
+  gap: 0;
   color: var(--gold-soft);
   flex-shrink: 0;
-}
-
-.topbar__timer-icon {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-  image-rendering: pixelated;
-  display: block;
 }
 
 .topbar__timer-text {
@@ -276,8 +269,8 @@
 .topbar__btn--icon {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 14px 4px 10px;
+  gap: 0;
+  padding: 4px 8px;
 }
 
 .topbar__btn-label {

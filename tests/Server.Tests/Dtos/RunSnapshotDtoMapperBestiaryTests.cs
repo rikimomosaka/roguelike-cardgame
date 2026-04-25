@@ -23,7 +23,8 @@ public class RunSnapshotDtoMapperBestiaryTests
             SeenCardBaseIds: ImmutableArray.Create("strike", "defend"),
             AcquiredRelicIds: ImmutableArray.Create("burning_blood"),
             AcquiredPotionIds: ImmutableArray.Create("fire_potion"),
-            EncounteredEnemyIds: ImmutableArray.Create("jaw_worm"));
+            EncounteredEnemyIds: ImmutableArray.Create("jaw_worm"),
+            JourneyLog: ImmutableArray<JourneyEntry>.Empty);
         var dto = RunSnapshotDtoMapper.ToResultDto(rec);
         Assert.Equal(new[] { "strike", "defend" }, dto.SeenCardBaseIds);
         Assert.Equal(new[] { "burning_blood" }, dto.AcquiredRelicIds);

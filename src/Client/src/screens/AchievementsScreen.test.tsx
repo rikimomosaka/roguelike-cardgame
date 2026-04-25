@@ -25,6 +25,7 @@ const oneRun: RunResultDto = {
   endedAtUtc: '2026-04-20T12:00:00Z',
   seenCardBaseIds: ['strike'], acquiredRelicIds: ['burning_blood'],
   acquiredPotionIds: [], encounteredEnemyIds: ['jaw_worm'],
+  journeyLog: [],
 }
 
 describe('AchievementsScreen', () => {

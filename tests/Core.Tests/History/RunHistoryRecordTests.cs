@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using RoguelikeCardGame.Core.History;
+using RoguelikeCardGame.Core.Run;
 using Xunit;
 
 namespace RoguelikeCardGame.Core.Tests.History;
@@ -7,9 +8,9 @@ namespace RoguelikeCardGame.Core.Tests.History;
 public class RunHistoryRecordTests
 {
     [Fact]
-    public void CurrentSchemaVersion_Is2()
+    public void CurrentSchemaVersion_Is3()
     {
-        Assert.Equal(2, RunHistoryRecord.CurrentSchemaVersion);
+        Assert.Equal(3, RunHistoryRecord.CurrentSchemaVersion);
     }
 
     [Fact]
@@ -33,7 +34,8 @@ public class RunHistoryRecordTests
             SeenCardBaseIds: ImmutableArray.Create("strike"),
             AcquiredRelicIds: ImmutableArray<string>.Empty,
             AcquiredPotionIds: ImmutableArray<string>.Empty,
-            EncounteredEnemyIds: ImmutableArray<string>.Empty);
+            EncounteredEnemyIds: ImmutableArray<string>.Empty,
+            JourneyLog: ImmutableArray<JourneyEntry>.Empty);
         Assert.Contains("strike", rec.SeenCardBaseIds);
     }
 }

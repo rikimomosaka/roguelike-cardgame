@@ -4,6 +4,8 @@ namespace RoguelikeCardGame.Server.Dtos;
 
 public sealed record RunResultCardDto(string Id, bool Upgraded);
 
+public sealed record RunResultJourneyEntryDto(int Act, int NodeId, string Kind, string? ResolvedKind);
+
 public sealed record RunResultDto(
     int SchemaVersion,
     string AccountId,
@@ -22,4 +24,5 @@ public sealed record RunResultDto(
     IReadOnlyList<string> SeenCardBaseIds,
     IReadOnlyList<string> AcquiredRelicIds,
     IReadOnlyList<string> AcquiredPotionIds,
-    IReadOnlyList<string> EncounteredEnemyIds);
+    IReadOnlyList<string> EncounteredEnemyIds,
+    IReadOnlyList<RunResultJourneyEntryDto> JourneyLog);

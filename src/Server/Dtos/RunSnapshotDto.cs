@@ -94,9 +94,9 @@ public static class RunSnapshotDtoMapper
         return new RunSnapshotDto(run, MapDtoMapper.From(map));
     }
 
-    public static RunResultDto ToResult(string accountId, RunState s, int nodesVisited, RunProgress outcome)
+    public static RunResultDto ToResult(string accountId, RunState s, DungeonMap currentMap, int nodesVisited, RunProgress outcome)
     {
-        var rec = RunHistoryBuilder.From(accountId, s, nodesVisited, outcome);
+        var rec = RunHistoryBuilder.From(accountId, s, currentMap, nodesVisited, outcome);
         return ToResultDto(rec);
     }
 
@@ -104,6 +104,10 @@ public static class RunSnapshotDtoMapper
     {
         var deck = new List<RunResultCardDto>();
         foreach (var c in rec.FinalDeck) deck.Add(new RunResultCardDto(c.Id, c.Upgraded));
+        var journey = new List<RunResultJourneyEntryDto>();
+        if (!rec.JourneyLog.IsDefault)
+            foreach (var j in rec.JourneyLog)
+                journey.Add(new RunResultJourneyEntryDto(j.Act, j.NodeId, j.Kind.ToString(), j.ResolvedKind?.ToString()));
         return new RunResultDto(
             rec.SchemaVersion, rec.AccountId, rec.RunId,
             rec.Outcome.ToString(), rec.ActReached, rec.NodesVisited,
@@ -113,7 +117,8 @@ public static class RunSnapshotDtoMapper
             SafeList(rec.SeenCardBaseIds),
             SafeList(rec.AcquiredRelicIds),
             SafeList(rec.AcquiredPotionIds),
-            SafeList(rec.EncounteredEnemyIds));
+            SafeList(rec.EncounteredEnemyIds),
+            journey);
     }
 
     private static IReadOnlyList<string> SafeList(System.Collections.Immutable.ImmutableArray<string> arr)

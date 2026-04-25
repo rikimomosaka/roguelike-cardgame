@@ -139,7 +139,8 @@ public sealed class RunsController : ControllerBase
                 ActiveBattle = null,
                 PlaySeconds = afterWin.PlaySeconds + elapsed,
             }, RunProgress.Cleared);
-            var rec = RunHistoryBuilder.From(accountId, finished, finished.VisitedNodeIds.Length, RunProgress.Cleared);
+            var clearMap = _runStart.RehydrateMap(finished.RngSeed, finished.CurrentAct);
+            var rec = RunHistoryBuilder.From(accountId, finished, clearMap, finished.VisitedNodeIds.Length, RunProgress.Cleared);
             await _history.AppendAsync(accountId, rec, ct);
             await _bestiary.MergeAsync(accountId, rec, ct);
             await _saves.DeleteAsync(accountId, ct);
@@ -268,10 +269,11 @@ public sealed class RunsController : ControllerBase
             // act 遷移: 新マップ生成 → Unknown 解決 → AdvanceAct
             int nextAct = s.CurrentAct + 1;
             var nextActSeed = unchecked((int)(uint)ActMapSeed.Derive(s.RngSeed, nextAct));
+            var oldMap = _runStart.RehydrateMap(s.RngSeed, s.CurrentAct);
             var newMap = _runStart.RehydrateMap(s.RngSeed, nextAct);
             var newResolutions = _runStart.ResolveUnknownsForAct(newMap, s.RngSeed, nextAct);
             var advanceRng = new SystemRng(unchecked(nextActSeed ^ 0xAC70));
-            updated = ActTransition.AdvanceAct(s, newMap, _data, advanceRng, newResolutions);
+            updated = ActTransition.AdvanceAct(s, oldMap, newMap, _data, advanceRng, newResolutions);
             // 新アクトの層開始レリック選択はスタートマスに入った時点で ActStartController.Enter が生成する。
             updated = updated with
             {
@@ -357,7 +359,8 @@ public sealed class RunsController : ControllerBase
         {
             PlaySeconds = state.PlaySeconds + elapsed,
         }, RunProgress.Abandoned);
-        var rec = RunHistoryBuilder.From(accountId, finished, finished.VisitedNodeIds.Length, RunProgress.Abandoned);
+        var abandonMap = _runStart.RehydrateMap(finished.RngSeed, finished.CurrentAct);
+        var rec = RunHistoryBuilder.From(accountId, finished, abandonMap, finished.VisitedNodeIds.Length, RunProgress.Abandoned);
         await _history.AppendAsync(accountId, rec, ct);
         await _bestiary.MergeAsync(accountId, rec, ct);
         await _saves.DeleteAsync(accountId, ct);

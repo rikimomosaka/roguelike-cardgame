@@ -11,10 +11,11 @@ namespace RoguelikeCardGame.Core.Run;
 public static class ActTransition
 {
     public static RunState AdvanceAct(
-        RunState state, DungeonMap newMap, DataCatalog catalog, IRng rng,
+        RunState state, DungeonMap oldMap, DungeonMap newMap, DataCatalog catalog, IRng rng,
         ImmutableDictionary<int, TileKind>? unknownResolutions = null)
     {
         ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(oldMap);
         ArgumentNullException.ThrowIfNull(newMap);
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(rng);
@@ -24,6 +25,11 @@ public static class ActTransition
         var queueStrong = EncounterQueue.Initialize(new EnemyPool(nextAct, EnemyTier.Strong), catalog, rng);
         var queueElite = EncounterQueue.Initialize(new EnemyPool(nextAct, EnemyTier.Elite), catalog, rng);
         var queueBoss = EncounterQueue.Initialize(new EnemyPool(nextAct, EnemyTier.Boss), catalog, rng);
+
+        var oldActEntries = JourneyLogger.EntriesFor(state, oldMap);
+        var existingLog = state.JourneyLog.IsDefault
+            ? ImmutableArray<JourneyEntry>.Empty
+            : state.JourneyLog;
 
         return state with
         {
@@ -43,6 +49,7 @@ public static class ActTransition
             EncounterQueueStrong = queueStrong,
             EncounterQueueElite = queueElite,
             EncounterQueueBoss = queueBoss,
+            JourneyLog = existingLog.AddRange(oldActEntries),
             SavedAtUtc = DateTimeOffset.UtcNow,
         };
     }

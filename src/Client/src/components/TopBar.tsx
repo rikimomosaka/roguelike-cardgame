@@ -160,12 +160,6 @@ export function TopBar({
         className="topbar__group topbar__timer"
         aria-label={`経過時間 ${elapsedLabel}`}
       >
-        <img
-          className="topbar__timer-icon"
-          src="/icons/ui/time.png"
-          alt=""
-          draggable={false}
-        />
         <span className="topbar__num topbar__timer-text">{elapsedLabel}</span>
       </span>
       <ul
@@ -254,7 +248,6 @@ export function TopBar({
           disabled={peekDisabled || !onTogglePeek}
         >
           <img className="topbar__btn-icon" src="/icons/ui/map.png" alt="" draggable={false} />
-          <span className="topbar__btn-label">MAP</span>
         </button>
         <button
           type="button"
@@ -264,7 +257,6 @@ export function TopBar({
           onClick={onOpenMenu}
         >
           <img className="topbar__btn-icon" src="/icons/ui/settings.png" alt="" draggable={false} />
-          <span className="topbar__btn-label">MENU</span>
         </button>
       </div>
     </div>

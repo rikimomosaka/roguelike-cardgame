@@ -114,7 +114,7 @@
   flex-direction: column;
   gap: 4px;
   padding: 10px 14px;
-  background: rgba(20, 12, 6, 0.65);
+  background: rgba(20, 12, 6, 0.92);
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -123,6 +123,19 @@
   text-align: left;
   color: var(--fg);
   font-family: var(--font-body);
+}
+
+/* Close button (rendered via shared <Button>) inherits the same panel look as
+   the choices so the row reads as one palette. */
+.ev-close-wrap .btn {
+  background: rgba(20, 12, 6, 0.92);
+  border-color: var(--border-mid);
+  color: var(--fg);
+}
+
+.ev-close-wrap .btn:hover {
+  background: rgba(40, 24, 12, 0.92);
+  border-color: var(--border-hover);
 }
 
 .ev-choice:hover:not(:disabled) {

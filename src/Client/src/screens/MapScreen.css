@@ -278,11 +278,11 @@ main.map-screen {
 }
 
 .map-screen__node.is-current .map-screen__node-label {
-  color: var(--fg-strong);
+  color: #2a1c0e;
 }
 
 .map-screen__node.is-next .map-screen__node-label {
-  color: var(--fg-muted);
+  color: #2a1c0e;
 }
 
 /* ---------- Legend key (bottom-right) ---------- */

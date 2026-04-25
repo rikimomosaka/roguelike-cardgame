@@ -33,7 +33,14 @@ public class FileHistoryRepositoryTests
             encounterQueueElite: System.Collections.Immutable.ImmutableArray<string>.Empty,
             encounterQueueBoss: System.Collections.Immutable.ImmutableArray<string>.Empty,
             nowUtc: DateTimeOffset.UtcNow);
-        var rec = RunHistoryBuilder.From("acc1", s, 3, RunProgress.Cleared);
+        var fakeMap = new RoguelikeCardGame.Core.Map.DungeonMap(
+            StartNodeId: 0,
+            BossNodeId: 0,
+            Nodes: System.Collections.Immutable.ImmutableArray.Create(new RoguelikeCardGame.Core.Map.MapNode(
+                Id: 0, Row: 0, Column: 0,
+                Kind: RoguelikeCardGame.Core.Map.TileKind.Start,
+                OutgoingNodeIds: System.Collections.Immutable.ImmutableArray<int>.Empty)));
+        var rec = RunHistoryBuilder.From("acc1", s, fakeMap, 3, RunProgress.Cleared);
 
         await repo.AppendAsync("acc1", rec, CancellationToken.None);
         var list = await repo.ListAsync("acc1", CancellationToken.None);

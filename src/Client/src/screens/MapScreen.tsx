@@ -550,7 +550,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
                   // glance. Next-edge stays gold-toned to match the next-tile
                   // pulse glow.
                   const stroke = visitedEdge
-                    ? '#1f3a52'
+                    ? '#7a1818'
                     : nextEdge
                       ? '#5a3812'
                       : '#2a1c0e'
@@ -638,13 +638,13 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
 
           <div className="map-screen__key" aria-hidden="true">
             <div className="map-screen__key-title">マップ凡例</div>
-            <div className="map-screen__key-row"><span className="map-screen__key-sym"><img src="/icons/tiles/enemy.png" alt="" /></span><span>戦闘</span></div>
-            <div className="map-screen__key-row"><span className="map-screen__key-sym k--elite"><img src="/icons/tiles/elite.png" alt="" /></span><span>精鋭</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym"><img src="/icons/tiles/enemy.png" alt="" /></span><span>敵</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym k--elite"><img src="/icons/tiles/elite.png" alt="" /></span><span>強敵</span></div>
             <div className="map-screen__key-row"><span className="map-screen__key-sym k--rest"><img src="/icons/tiles/rest.png" alt="" /></span><span>休憩</span></div>
             <div className="map-screen__key-row"><span className="map-screen__key-sym k--merchant"><img src="/icons/tiles/merchant.png" alt="" /></span><span>商店</span></div>
             <div className="map-screen__key-row"><span className="map-screen__key-sym k--treasure"><img src="/icons/tiles/treasure.png" alt="" /></span><span>宝箱</span></div>
             <div className="map-screen__key-row"><span className="map-screen__key-sym"><img src="/icons/tiles/event.png" alt="" /></span><span>イベント</span></div>
-            <div className="map-screen__key-row"><span className="map-screen__key-sym"><img src="/icons/tiles/unknown.png" alt="" /></span><span>未知</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym"><img src="/icons/tiles/unknown.png" alt="" /></span><span>不明</span></div>
             <div className="map-screen__key-row"><span className="map-screen__key-sym k--boss"><img src="/icons/tiles/boss.png" alt="" /></span><span>ボス</span></div>
           </div>
         </div>

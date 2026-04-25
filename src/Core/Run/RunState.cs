@@ -57,10 +57,15 @@ public sealed record RunState(
     ImmutableArray<string> AcquiredPotionIds,
     ImmutableArray<string> EncounteredEnemyIds,
 
+    // --- Multi-act run history (v7) ---
+    // VisitedNodeIds はアクト遷移でクリアされるため、過去アクトのマス情報を残せない。
+    // ActTransition.AdvanceAct が旧アクト分を集約して追記する。
+    ImmutableArray<JourneyEntry> JourneyLog,
+
     int DiscardUsesSoFar = 0)
 {
-    /// <summary>Phase 8 の JSON スキーマバージョン。</summary>
-    public const int CurrentSchemaVersion = 6;
+    /// <summary>JSON スキーマバージョン。v7 = JourneyLog 追加。</summary>
+    public const int CurrentSchemaVersion = 7;
 
     public static RunState NewSoloRun(
         DataCatalog catalog,
@@ -130,7 +135,8 @@ public sealed record RunState(
             SeenCardBaseIds: ImmutableArray.CreateRange(ch.Deck.Distinct()),
             AcquiredRelicIds: ImmutableArray<string>.Empty,
             AcquiredPotionIds: ImmutableArray<string>.Empty,
-            EncounteredEnemyIds: ImmutableArray<string>.Empty);
+            EncounteredEnemyIds: ImmutableArray<string>.Empty,
+            JourneyLog: ImmutableArray<JourneyEntry>.Empty);
     }
 
     /// <summary>構造的不変条件を検査する。違反があれば理由文字列、問題なければ null。</summary>

@@ -71,7 +71,8 @@ public class RunStateSerializerMigrationTests
         var s = TestRunStates.FreshDefault(cat);
         var json = RunStateSerializer.Serialize(s);
         // schemaVersion を 4 に書き換える
-        json = json.Replace("\"schemaVersion\":6", "\"schemaVersion\":4");
+        json = System.Text.RegularExpressions.Regex.Replace(
+            json, "\"schemaVersion\":\\d+", "\"schemaVersion\":4");
         // runId / activeActStartRelicChoice フィールドを削除して v4 体裁に戻す
         json = System.Text.RegularExpressions.Regex.Replace(
             json, ",\"runId\":\"[^\"]*\"", "");
@@ -82,6 +83,8 @@ public class RunStateSerializerMigrationTests
         json = System.Text.RegularExpressions.Regex.Replace(json, ",\"acquiredRelicIds\":\\[[^\\]]*\\]", "");
         json = System.Text.RegularExpressions.Regex.Replace(json, ",\"acquiredPotionIds\":\\[[^\\]]*\\]", "");
         json = System.Text.RegularExpressions.Regex.Replace(json, ",\"encounteredEnemyIds\":\\[[^\\]]*\\]", "");
+        // Phase 8 journeyLog フィールドも v4 にはないので削除
+        json = System.Text.RegularExpressions.Regex.Replace(json, ",\"journeyLog\":\\[[^\\]]*\\]", "");
         return json;
     }
 }

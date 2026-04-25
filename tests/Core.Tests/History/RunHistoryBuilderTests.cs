@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.History;
+using RoguelikeCardGame.Core.Map;
 using RoguelikeCardGame.Core.Run;
 using Xunit;
 
@@ -8,6 +9,15 @@ namespace RoguelikeCardGame.Core.Tests.History;
 
 public class RunHistoryBuilderTests
 {
+    private static DungeonMap FakeMap()
+        => new DungeonMap(
+            StartNodeId: 0,
+            BossNodeId: 0,
+            Nodes: ImmutableArray.Create(new MapNode(
+                Id: 0, Row: 0, Column: 0,
+                Kind: TileKind.Start,
+                OutgoingNodeIds: ImmutableArray<int>.Empty)));
+
     [Fact]
     public void From_CopiesBasicFields()
     {
@@ -20,8 +30,8 @@ public class RunHistoryBuilderTests
             Gold = 123,
             PlaySeconds = 456,
         };
-        var rec = RunHistoryBuilder.From("acc_abc", s, nodesVisited: 7, RunProgress.GameOver);
-        Assert.Equal(2, rec.SchemaVersion);
+        var rec = RunHistoryBuilder.From("acc_abc", s, FakeMap(), nodesVisited: 7, outcome: RunProgress.GameOver);
+        Assert.Equal(RunHistoryRecord.CurrentSchemaVersion, rec.SchemaVersion);
         Assert.Equal("acc_abc", rec.AccountId);
         Assert.Equal(s.RunId, rec.RunId);
         Assert.Equal(RunProgress.GameOver, rec.Outcome);
@@ -44,7 +54,7 @@ public class RunHistoryBuilderTests
             AcquiredPotionIds = ImmutableArray.Create("fire_potion"),
             EncounteredEnemyIds = ImmutableArray.Create("jaw_worm"),
         };
-        var rec = RunHistoryBuilder.From("acct", state, nodesVisited: 3, outcome: RunProgress.Cleared);
+        var rec = RunHistoryBuilder.From("acct", state, FakeMap(), nodesVisited: 3, outcome: RunProgress.Cleared);
         Assert.Equal(new[] { "strike", "defend" }, rec.SeenCardBaseIds.ToArray());
         Assert.Equal(new[] { "burning_blood" }, rec.AcquiredRelicIds.ToArray());
         Assert.Equal(new[] { "fire_potion" }, rec.AcquiredPotionIds.ToArray());

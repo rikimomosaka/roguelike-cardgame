@@ -66,7 +66,8 @@ public class FileBestiaryRepositoryTests : IDisposable
             SeenCardBaseIds: ImmutableArray.Create("strike"),
             AcquiredRelicIds: ImmutableArray<string>.Empty,
             AcquiredPotionIds: ImmutableArray<string>.Empty,
-            EncounteredEnemyIds: ImmutableArray.Create("jaw_worm"));
+            EncounteredEnemyIds: ImmutableArray.Create("jaw_worm"),
+            JourneyLog: ImmutableArray<JourneyEntry>.Empty);
         await _repo.MergeAsync("ccc", rec, default);
         var loaded = await _repo.LoadAsync("ccc", default);
         Assert.Contains("strike", loaded.DiscoveredCardBaseIds);

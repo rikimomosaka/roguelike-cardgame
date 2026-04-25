@@ -34,6 +34,7 @@ public static class RunStateSerializer
         if (version == 3) { obj = MigrateV3ToV4(obj); version = 4; }
         if (version == 4) { obj = MigrateV4ToV5(obj); version = 5; }
         if (version == 5) { obj = MigrateV5ToV6(obj); version = 6; }
+        if (version == 6) { obj = MigrateV6ToV7(obj); version = 7; }
         if (version != RunState.CurrentSchemaVersion)
             throw new RunStateSerializerException(
                 $"未対応の schemaVersion: {version} (対応: {RunState.CurrentSchemaVersion})");
@@ -97,6 +98,15 @@ public static class RunStateSerializer
         obj["acquiredRelicIds"] = new JsonArray();
         obj["acquiredPotionIds"] = new JsonArray();
         obj["encounteredEnemyIds"] = new JsonArray();
+        obj["schemaVersion"] = 6;
+        return obj;
+    }
+
+    private static JsonObject MigrateV6ToV7(JsonObject obj)
+    {
+        // v6 セーブには過去アクトのマス情報が残っていないため空で開始する。
+        // 以後のアクト遷移から journeyLog に追記される。
+        obj["journeyLog"] = new JsonArray();
         obj["schemaVersion"] = RunState.CurrentSchemaVersion;
         return obj;
     }

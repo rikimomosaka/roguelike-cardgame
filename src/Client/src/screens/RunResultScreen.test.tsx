@@ -22,6 +22,7 @@ const sample: RunResultDto = {
   acquiredRelicIds: [],
   acquiredPotionIds: [],
   encounteredEnemyIds: [],
+  journeyLog: [],
 }
 
 describe('RunResultScreen', () => {

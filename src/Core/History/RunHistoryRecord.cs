@@ -23,7 +23,10 @@ public sealed record RunHistoryRecord(
     ImmutableArray<string> SeenCardBaseIds,
     ImmutableArray<string> AcquiredRelicIds,
     ImmutableArray<string> AcquiredPotionIds,
-    ImmutableArray<string> EncounteredEnemyIds)
+    ImmutableArray<string> EncounteredEnemyIds,
+    // v3: 全アクトに渡る走行履歴。アクト遷移ごとに RunState.JourneyLog へ追記され、
+    // ラン終了時に最終アクト分も含めてここへコピーされる。
+    ImmutableArray<JourneyEntry> JourneyLog)
 {
-    public const int CurrentSchemaVersion = 2;
+    public const int CurrentSchemaVersion = 3;
 }
