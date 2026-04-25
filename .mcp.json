@@ -1,9 +1,5 @@
 {
   "mcpServers": {
-    "aidesigner": {
-      "type": "http",
-      "url": "https://api.aidesigner.ai/api/v1/mcp"
-    },
     "playwright": {
       "command": "npx",
       "args": ["@playwright/mcp@latest"]

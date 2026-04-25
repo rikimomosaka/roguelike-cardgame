@@ -17,7 +17,7 @@
 - 作業ブランチは既存の `phase08-bestiary-history`（brainstorming で作成済み）。
 - コミット / プッシュは Git 自動化 Option B（タスク完了ごとに commit + push）。
 - `dotnet test`（Core.Tests / Server.Tests）と `cd src/Client && npm test`（vitest）を各タスクで実行。
-- UI はデバッグスタイル維持（Phase 8 完了後に aidesigner で一括リデザイン予定）。
+- UI はデバッグスタイルで完成させる。
 
 ---
 

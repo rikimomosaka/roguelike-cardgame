@@ -27,8 +27,6 @@ Thumbs.db
 
 # Claude Code
 .claude/settings.local.json
-.aidesigner/*
-!.aidesigner/.gitkeep
 .superpowers/
 .playwright-mcp/
 

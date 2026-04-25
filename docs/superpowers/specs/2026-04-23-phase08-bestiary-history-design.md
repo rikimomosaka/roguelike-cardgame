@@ -2,13 +2,12 @@
 
 **Goal:** メイン画面「実績」からアカウント単位の図鑑（カード / レリック / ポーション / モンスター）と過去ランの履歴一覧を閲覧できるようにする。
 
-**Scope:** 図鑑の集計データ構造、発見タイミングの組み込み、アカウント単位 Bestiary の永続化、履歴一覧 UI、Achievements 画面。UI はデバッグスタイル維持（Phase 8 完了後に aidesigner で一括仕上げ予定）。
+**Scope:** 図鑑の集計データ構造、発見タイミングの組み込み、アカウント単位 Bestiary の永続化、履歴一覧 UI、Achievements 画面。UI はデバッグスタイルで完成させる。
 
 **Non-goals:**
 - 履歴削除機能（YAGNI、必要なら Phase 9 以降）
 - 統計情報（撃破数 / 入手回数）
 - 実績バッジ・トロフィー
-- 図鑑 UI の最終デザイン（aidesigner に任せる）
 - 初発見日時
 - マルチプレイでの Bestiary 共有（Phase 9+）
 
@@ -311,7 +310,7 @@ export async function fetchBestiary(accountId: string): Promise<BestiaryDto> {
   - 未発見（カード/レリック/ポーション）: `??? (acid_splash)` — ID を小さく括弧で表示
   - 未発見（モンスター）: `??? (act2_brute)`
 - 並び順: `AllKnown*` の昇順（DTO から既ソート）
-- display_name: Phase 8 時点ではカタログを別途 fetch しない。ID をそのまま表示 or カタログの name をクライアントがどこかで持っていれば使う。**簡単のため ID そのまま表示**（aidesigner 仕上げ時に local catalog 経由で name 解決に置換する）
+- display_name: Phase 8 時点ではカタログを別途 fetch しない。ID をそのまま表示 or カタログの name をクライアントがどこかで持っていれば使う。**簡単のため ID そのまま表示**（後で local catalog 経由で name 解決に置換する余地を残す）
 
 **タブ 5（履歴）:**
 - 1 行 = 1 ラン、サマリー行クリックで展開（アコーディオン）

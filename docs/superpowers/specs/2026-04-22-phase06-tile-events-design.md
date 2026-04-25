@@ -15,7 +15,7 @@ Phase 5 まででバトル／報酬／マップ進行が暫定動作している
 - 層移動・Boss 撃破後の結果画面・HP 全回復。Phase 7。
 - 図鑑（Bestiary）への記録。Phase 8。
 - マルチプレイでの Event/Merchant 同期。Phase 9。
-- UI のビジュアルデザイン。Phase 6 では既存のデバッグスタイルを踏襲し、後で Claude Design (aidesigner) で一括実施する。
+- UI のビジュアルデザイン。Phase 6 では既存のデバッグスタイルを踏襲する。
 
 ## Architecture
 
