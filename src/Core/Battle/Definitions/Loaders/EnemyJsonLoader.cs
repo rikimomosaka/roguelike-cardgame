@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 
-namespace RoguelikeCardGame.Core.Enemy;
+namespace RoguelikeCardGame.Core.Battle.Definitions.Loaders;
 
 public sealed class EnemyJsonException : Exception
 {
@@ -10,6 +10,7 @@ public sealed class EnemyJsonException : Exception
     public EnemyJsonException(string message, Exception inner) : base(message, inner) { }
 }
 
+/// <summary>敵 JSON 文字列を EnemyDefinition に変換する純粋関数群。</summary>
 public static class EnemyJsonLoader
 {
     public static EnemyDefinition Parse(string json)
@@ -27,11 +28,7 @@ public static class EnemyJsonLoader
                 id = GetRequiredString(root, "id", null);
                 var name = GetRequiredString(root, "name", id);
                 var imageId = GetRequiredString(root, "imageId", id);
-
-                var hpMin = GetRequiredInt(root, "hpMin", id);
-                var hpMax = GetRequiredInt(root, "hpMax", id);
-                if (hpMin > hpMax)
-                    throw new EnemyJsonException($"hpMin ({hpMin}) は hpMax ({hpMax}) 以下である必要があります (enemy id={id})。");
+                var hp = GetRequiredInt(root, "hp", id);
 
                 var act = GetRequiredInt(root, "act", id);
                 if (act < 1 || act > 3)
@@ -50,7 +47,7 @@ public static class EnemyJsonLoader
                     throw new EnemyJsonException(
                         $"initialMoveId \"{initialMoveId}\" が moves に存在しません (enemy id={id})。");
 
-                return new EnemyDefinition(id, name, imageId, hpMin, hpMax,
+                return new EnemyDefinition(id, name, imageId, hp,
                     new EnemyPool(act, tier), initialMoveId, moves);
             }
             catch (EnemyJsonException) { throw; }
@@ -64,10 +61,10 @@ public static class EnemyJsonLoader
 
     private static EnemyTier ParseTier(string s, string? id) => s switch
     {
-        "Weak" => EnemyTier.Weak,
+        "Weak"   => EnemyTier.Weak,
         "Strong" => EnemyTier.Strong,
-        "Elite" => EnemyTier.Elite,
-        "Boss" => EnemyTier.Boss,
+        "Elite"  => EnemyTier.Elite,
+        "Boss"   => EnemyTier.Boss,
         _ => throw new EnemyJsonException($"tier の値 \"{s}\" は無効です (enemy id={id})。"),
     };
 
@@ -84,20 +81,8 @@ public static class EnemyJsonLoader
                 throw new EnemyJsonException(
                     $"moves[{index}] はオブジェクトである必要があります (enemy id={id})。");
 
-            var mid = GetRequiredString(el, "id", id);
-            var kind = GetRequiredString(el, "kind", id);
-            var nextMoveId = GetRequiredString(el, "nextMoveId", id);
-
-            int? dmin = GetOptionalInt(el, "damageMin");
-            int? dmax = GetOptionalInt(el, "damageMax");
-            int? hits = GetOptionalInt(el, "hits");
-            int? bmin = GetOptionalInt(el, "blockMin");
-            int? bmax = GetOptionalInt(el, "blockMax");
-            string? buff = GetOptionalString(el, "buff");
-            int? amin = GetOptionalInt(el, "amountMin");
-            int? amax = GetOptionalInt(el, "amountMax");
-
-            list.Add(new MoveDefinition(mid, kind, dmin, dmax, hits, bmin, bmax, buff, amin, amax, nextMoveId));
+            var ctx = $" (enemy id={id}, moves[{index}])";
+            list.Add(MoveJsonLoader.ParseMove(el, msg => new EnemyJsonException($"{msg}{ctx}")));
             index++;
         }
         return list;
@@ -122,10 +107,4 @@ public static class EnemyJsonLoader
         }
         return v.GetInt32();
     }
-
-    private static int? GetOptionalInt(JsonElement el, string key)
-        => el.TryGetProperty(key, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetInt32() : null;
-
-    private static string? GetOptionalString(JsonElement el, string key)
-        => el.TryGetProperty(key, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
 }
