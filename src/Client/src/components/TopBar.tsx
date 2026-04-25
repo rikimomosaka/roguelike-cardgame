@@ -99,7 +99,7 @@ export function TopBar({
       </span>
       <span className="topbar__group topbar__gold">
         <span className="topbar__gold-text">
-          <span className="topbar__num">{displayedGold}</span> ゴールド
+          <span className="topbar__num">{displayedGold}</span> GOLD
         </span>
       </span>
       <ul className="topbar__relics" aria-label={`レリック (${relics.length}個)`}>

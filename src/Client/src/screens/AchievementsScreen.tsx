@@ -3,11 +3,33 @@ import { getBestiary } from '../api/bestiary'
 import { getHistory } from '../api/history'
 import type { BestiaryDto, RunResultDto } from '../api/types'
 import { Card } from '../components/Card'
+import type { CardRarity } from '../components/Card'
+import { cardDisplay } from '../components/cardDisplay'
 import { useTooltipTarget } from '../components/Tooltip'
 import type { TooltipContent } from '../components/Tooltip'
 import { useRelicCatalog } from '../hooks/useRelicCatalog'
-import { usePotionCatalog } from '../hooks/useCardCatalog'
+import { useCardCatalog, usePotionCatalog } from '../hooks/useCardCatalog'
 import './AchievementsScreen.css'
+
+function relicRarityCode(rarity: string | undefined): CardRarity | undefined {
+  if (!rarity) return undefined
+  const r = rarity.toLowerCase()
+  if (r === 'rare' || r === 'r') return 'r'
+  if (r === 'epic' || r === 'e') return 'e'
+  if (r === 'legendary' || r === 'l') return 'l'
+  return 'c'
+}
+
+function potionRarityCode(n: number | undefined): CardRarity | undefined {
+  if (n === undefined) return undefined
+  switch (n) {
+    case 0: return 'c'
+    case 1: return 'r'
+    case 2: return 'e'
+    case 3: return 'l'
+    default: return 'c'
+  }
+}
 
 function BackButton({ onBack }: { onBack: () => void }) {
   return (
@@ -149,6 +171,7 @@ function TabButton({ label, count, active, onClick }: {
    variant for undiscovered entries.
    ------------------------------------------------------------------ */
 function CardsTab({ allIds, discovered }: { allIds: string[]; discovered: Set<string> }) {
+  const { catalog: cardCatalog } = useCardCatalog()
   return (
     <div className="achievements__panel">
       <div className="achievements__panel-title-row">
@@ -160,15 +183,18 @@ function CardsTab({ allIds, discovered }: { allIds: string[]; discovered: Set<st
           {allIds.map(id => {
             const isDiscovered = discovered.has(id)
             if (isDiscovered) {
+              const disp = cardDisplay(id, cardCatalog)
               return (
                 <div key={id} className="achievements__card-cell">
                   <Card
-                    name={id}
-                    cost={1}
-                    type="skill"
-                    rarity="c"
+                    name={disp.name}
+                    cost={disp.cost}
+                    type={disp.type}
+                    rarity={disp.rarity}
+                    description={disp.description}
+                    upgradedDescription={disp.upgradedDescription}
                   />
-                  <span className="achievements__card-id">✓ {id} ({id})</span>
+                  <span className="achievements__card-id">✓ {disp.name} ({id})</span>
                 </div>
               )
             }
@@ -222,6 +248,10 @@ function TilesTab({ title, kind, allIds, discovered }: {
               kind === 'relic' ? (relicCatalog?.[id]?.description ?? null)
               : kind === 'potion' ? (potionCatalog?.[id]?.description ?? null)
               : null
+            const rarity =
+              kind === 'relic' ? relicRarityCode(relicCatalog?.[id]?.rarity)
+              : kind === 'potion' ? potionRarityCode(potionCatalog?.[id]?.rarity)
+              : undefined
             return (
               <BestiaryTile
                 key={id}
@@ -230,6 +260,7 @@ function TilesTab({ title, kind, allIds, discovered }: {
                 isDiscovered={isDiscovered}
                 displayName={displayName}
                 description={description}
+                rarity={rarity}
               />
             )
           })}
@@ -239,17 +270,18 @@ function TilesTab({ title, kind, allIds, discovered }: {
   )
 }
 
-function BestiaryTile({ kind, id, isDiscovered, displayName, description }: {
+function BestiaryTile({ kind, id, isDiscovered, displayName, description, rarity }: {
   kind: TileKind
   id: string
   isDiscovered: boolean
   displayName: string
   description: string | null
+  rarity?: CardRarity
 }) {
   const tooltipContent = useMemo<TooltipContent | null>(() => {
     if (!isDiscovered) return null
-    return { name: displayName, desc: description ?? '—' }
-  }, [isDiscovered, displayName, description])
+    return { name: displayName, rarity, desc: description ?? '—' }
+  }, [isDiscovered, displayName, description, rarity])
   const tip = useTooltipTarget(tooltipContent)
 
   const art = (() => {
@@ -259,6 +291,11 @@ function BestiaryTile({ kind, id, isDiscovered, displayName, description }: {
     return <span aria-hidden="true">☠</span>
   })()
 
+  const tileClasses = [
+    'achievements__tile',
+    isDiscovered && rarity ? `achievements__tile--rarity-${rarity}` : null,
+  ].filter(Boolean).join(' ')
+
   return (
     <div
       className={'achievements__tile-cell' + (isDiscovered ? '' : ' is-locked')}
@@ -266,7 +303,7 @@ function BestiaryTile({ kind, id, isDiscovered, displayName, description }: {
       onMouseMove={tip.onMouseMove}
       onMouseLeave={tip.onMouseLeave}
     >
-      <div className="achievements__tile">
+      <div className={tileClasses}>
         <div className="achievements__tile-bg" aria-hidden="true" />
         <div className="achievements__tile-frame" aria-hidden="true" />
         <div className="achievements__tile-art" aria-hidden="true">

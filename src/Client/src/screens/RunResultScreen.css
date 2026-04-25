@@ -409,6 +409,7 @@
   height: 80%;
   object-fit: contain;
   image-rendering: pixelated;
+  transform: translateX(5px);
   -webkit-user-select: none;
   user-select: none;
 }

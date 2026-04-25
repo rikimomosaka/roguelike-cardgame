@@ -1,5 +1,13 @@
+import { useMemo } from 'react'
 import type { ReactNode } from 'react'
 import type { RunResultDto, RunSnapshotDto, TileKind } from '../api/types'
+import type { CardRarity } from '../components/Card'
+import { cardDisplay } from '../components/cardDisplay'
+import { useTooltipTarget } from '../components/Tooltip'
+import type { TooltipContent } from '../components/Tooltip'
+import { useCardCatalog, usePotionCatalog } from '../hooks/useCardCatalog'
+import { useRelicCatalog } from '../hooks/useRelicCatalog'
+import type { CardCatalog, PotionCatalog, RelicCatalog } from '../api/catalog'
 import './RunResultScreen.css'
 
 const TILE_IMG_SRC: Record<Exclude<TileKind, 'Start'>, string> = {
@@ -17,6 +25,37 @@ type Props = {
   result: RunResultDto
   snapshot?: RunSnapshotDto
   onReturnToMenu: () => void
+}
+
+function rarityToItemClass(rarity: CardRarity | undefined): string {
+  switch (rarity) {
+    case 'r': return 'item--uncommon'
+    case 'e': return 'item--rare'
+    case 'l': return 'item--boss'
+    case 'c':
+    default:
+      return 'item--common'
+  }
+}
+
+function relicRarityCode(rarity: string | undefined): CardRarity | undefined {
+  if (!rarity) return undefined
+  const r = rarity.toLowerCase()
+  if (r === 'rare' || r === 'r') return 'r'
+  if (r === 'epic' || r === 'e') return 'e'
+  if (r === 'legendary' || r === 'l') return 'l'
+  return 'c'
+}
+
+function potionRarityCode(n: number | undefined): CardRarity | undefined {
+  if (n === undefined) return undefined
+  switch (n) {
+    case 0: return 'c'
+    case 1: return 'r'
+    case 2: return 'e'
+    case 3: return 'l'
+    default: return 'c'
+  }
 }
 
 function journeyIcon(kind: TileKind, resolvedKind: TileKind | null): ReactNode {
@@ -80,6 +119,9 @@ function outcomeClass(outcome: string): string {
 }
 
 export function RunResultScreen({ result, snapshot, onReturnToMenu }: Props) {
+  const { catalog: cardCatalog } = useCardCatalog()
+  const { catalog: relicCatalog, names: relicNames } = useRelicCatalog()
+  const { catalog: potionCatalog, names: potionNames } = usePotionCatalog()
   const relicCount = result.finalRelics.length
   const deckCount = result.finalDeck.length
 
@@ -204,12 +246,12 @@ export function RunResultScreen({ result, snapshot, onReturnToMenu }: Props) {
               ) : (
                 <ul className="rr__items">
                   {result.finalRelics.map((r) => (
-                    <li key={r} className="rr__item item--common">
-                      <div className="rr__item-icon" aria-hidden="true">
-                        <img src={`/icons/relics/${r}.png`} alt="" draggable={false} />
-                      </div>
-                      <div className="rr__item-name">{r}</div>
-                    </li>
+                    <RelicRow
+                      key={r}
+                      id={r}
+                      relicCatalog={relicCatalog}
+                      relicNames={relicNames}
+                    />
                   ))}
                 </ul>
               )}
@@ -228,12 +270,12 @@ export function RunResultScreen({ result, snapshot, onReturnToMenu }: Props) {
               ) : (
                 <ul className="rr__items">
                   {result.acquiredPotionIds.map((p, i) => (
-                    <li key={`${p}-${i}`} className="rr__item item--common">
-                      <div className="rr__item-icon" aria-hidden="true">
-                        <img src={`/icons/potions/${p}.png`} alt="" draggable={false} />
-                      </div>
-                      <div className="rr__item-name">{p}</div>
-                    </li>
+                    <PotionRow
+                      key={`${p}-${i}`}
+                      id={p}
+                      potionCatalog={potionCatalog}
+                      potionNames={potionNames}
+                    />
                   ))}
                 </ul>
               )}
@@ -250,13 +292,12 @@ export function RunResultScreen({ result, snapshot, onReturnToMenu }: Props) {
               ) : (
                 <ul className="rr__items rr__items--2col">
                   {result.finalDeck.map((c, i) => (
-                    <li key={`${c.id}-${i}`} className="rr__item item--common">
-                      <div className="rr__item-icon" aria-hidden="true">CARD</div>
-                      <div className="rr__item-name">
-                        {c.id}
-                        {c.upgraded ? <span className="rr__item-plus">+</span> : null}
-                      </div>
-                    </li>
+                    <CardRow
+                      key={`${c.id}-${i}`}
+                      id={c.id}
+                      upgraded={c.upgraded}
+                      cardCatalog={cardCatalog}
+                    />
                   ))}
                 </ul>
               )}
@@ -277,5 +318,108 @@ export function RunResultScreen({ result, snapshot, onReturnToMenu }: Props) {
         </div>
       </div>
     </main>
+  )
+}
+
+function RelicRow({
+  id,
+  relicCatalog,
+  relicNames,
+}: {
+  id: string
+  relicCatalog: RelicCatalog | null
+  relicNames: Record<string, string>
+}) {
+  const entry = relicCatalog?.[id]
+  const name = relicNames[id] ?? id
+  const rarity = relicRarityCode(entry?.rarity)
+  const description = entry?.description ?? null
+  const tooltipContent = useMemo<TooltipContent | null>(() => {
+    if (!description) return null
+    return { name, rarity, desc: description }
+  }, [name, rarity, description])
+  const tip = useTooltipTarget(tooltipContent)
+  return (
+    <li
+      className={`rr__item ${rarityToItemClass(rarity)}`}
+      onMouseEnter={tip.onMouseEnter}
+      onMouseMove={tip.onMouseMove}
+      onMouseLeave={tip.onMouseLeave}
+    >
+      <div className="rr__item-icon" aria-hidden="true">
+        <img src={`/icons/relics/${id}.png`} alt="" draggable={false} />
+      </div>
+      <div className="rr__item-name">{name}</div>
+    </li>
+  )
+}
+
+function PotionRow({
+  id,
+  potionCatalog,
+  potionNames,
+}: {
+  id: string
+  potionCatalog: PotionCatalog | null
+  potionNames: Record<string, string>
+}) {
+  const entry = potionCatalog?.[id]
+  const name = potionNames[id] ?? id
+  const rarity = potionRarityCode(entry?.rarity)
+  const description = entry?.description ?? null
+  const tooltipContent = useMemo<TooltipContent | null>(() => {
+    if (!description) return null
+    return { name, rarity, desc: description }
+  }, [name, rarity, description])
+  const tip = useTooltipTarget(tooltipContent)
+  return (
+    <li
+      className={`rr__item ${rarityToItemClass(rarity)}`}
+      onMouseEnter={tip.onMouseEnter}
+      onMouseMove={tip.onMouseMove}
+      onMouseLeave={tip.onMouseLeave}
+    >
+      <div className="rr__item-icon" aria-hidden="true">
+        <img src={`/icons/potions/${id}.png`} alt="" draggable={false} />
+      </div>
+      <div className="rr__item-name">{name}</div>
+    </li>
+  )
+}
+
+function CardRow({
+  id,
+  upgraded,
+  cardCatalog,
+}: {
+  id: string
+  upgraded: boolean
+  cardCatalog: CardCatalog | null
+}) {
+  const disp = cardDisplay(id, cardCatalog)
+  const activeDesc = upgraded && disp.upgradedDescription ? disp.upgradedDescription : disp.description
+  const tooltipContent = useMemo<TooltipContent | null>(() => {
+    if (!activeDesc) return null
+    return {
+      name: upgraded ? `${disp.name}+` : disp.name,
+      rarity: disp.rarity,
+      desc: activeDesc,
+    }
+  }, [disp.name, disp.rarity, activeDesc, upgraded])
+  const tip = useTooltipTarget(tooltipContent)
+  const typeLabel = disp.type.slice(0, 3).toUpperCase()
+  return (
+    <li
+      className={`rr__item ${rarityToItemClass(disp.rarity)}`}
+      onMouseEnter={tip.onMouseEnter}
+      onMouseMove={tip.onMouseMove}
+      onMouseLeave={tip.onMouseLeave}
+    >
+      <div className="rr__item-icon" aria-hidden="true">{typeLabel}</div>
+      <div className="rr__item-name">
+        {disp.name}
+        {upgraded ? <span className="rr__item-plus">+</span> : null}
+      </div>
+    </li>
   )
 }

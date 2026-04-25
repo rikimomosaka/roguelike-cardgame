@@ -207,7 +207,9 @@ export function MerchantScreen(p: Props) {
     >
       <div className="mc-shopkeeper" aria-hidden="false">
         <div className="mc-shopkeeper__avatar" aria-hidden="true">
-          <span className="mc-shopkeeper__sprite">商</span>
+          <span className="mc-shopkeeper__sprite">
+            <img src="/icons/ui/merchant.png" alt="" draggable={false} />
+          </span>
         </div>
         <div className="mc-shopkeeper__line" role="status" aria-live="polite">
           <span className="mc-shopkeeper__quote">

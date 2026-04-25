@@ -344,6 +344,51 @@
   word-break: break-all;
 }
 
+.achievements__tile--rarity-c {
+  border-color: var(--rarity-c-border);
+  background: var(--rarity-c-bg);
+}
+.achievements__tile--rarity-r {
+  border-color: var(--rarity-r-border);
+  background: var(--rarity-r-bg);
+  box-shadow: 0 0 6px rgba(158, 203, 255, 0.2);
+}
+.achievements__tile--rarity-e {
+  border-color: var(--rarity-e-border);
+  background: var(--rarity-e-bg);
+  box-shadow: 0 0 6px rgba(228, 168, 255, 0.22);
+}
+.achievements__tile--rarity-l {
+  border-color: var(--rarity-l-border);
+  background: var(--rarity-l-bg);
+  box-shadow: 0 0 8px rgba(255, 229, 138, 0.28);
+}
+
+.achievements__tile--rarity-c .achievements__tile-bg {
+  background:
+    radial-gradient(ellipse at 50% 35%, rgba(234, 234, 234, 0.18) 0%, transparent 65%),
+    linear-gradient(180deg, #2a1f18 0%, #1a120c 100%),
+    repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.18) 0 2px, transparent 2px 4px);
+}
+.achievements__tile--rarity-r .achievements__tile-bg {
+  background:
+    radial-gradient(ellipse at 50% 35%, rgba(158, 203, 255, 0.32) 0%, transparent 65%),
+    linear-gradient(180deg, #1a2030 0%, #0f1422 100%),
+    repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.18) 0 2px, transparent 2px 4px);
+}
+.achievements__tile--rarity-e .achievements__tile-bg {
+  background:
+    radial-gradient(ellipse at 50% 35%, rgba(228, 168, 255, 0.34) 0%, transparent 65%),
+    linear-gradient(180deg, #2a1830 0%, #1a0f22 100%),
+    repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.18) 0 2px, transparent 2px 4px);
+}
+.achievements__tile--rarity-l .achievements__tile-bg {
+  background:
+    radial-gradient(ellipse at 50% 35%, rgba(255, 229, 138, 0.38) 0%, transparent 65%),
+    linear-gradient(180deg, #2a2008 0%, #1a1404 100%),
+    repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.18) 0 2px, transparent 2px 4px);
+}
+
 .achievements__tile-cell.is-locked .achievements__tile {
   filter: grayscale(1) brightness(0.4);
 }

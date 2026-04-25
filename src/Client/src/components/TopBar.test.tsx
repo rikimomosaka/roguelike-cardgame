@@ -26,7 +26,7 @@ describe('TopBar', () => {
     render(<TopBar {...baseProps()} />)
     expect(screen.getByText('HP 80/80')).toBeDefined()
     expect(
-      screen.getAllByText((_, el) => /99\s*ゴールド/.test(el?.textContent ?? '')).length,
+      screen.getAllByText((_, el) => /99\s*GOLD/.test(el?.textContent ?? '')).length,
     ).toBeGreaterThan(0)
   })
 

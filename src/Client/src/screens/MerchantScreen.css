@@ -66,12 +66,26 @@
 }
 
 .mc-shopkeeper__sprite {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
   font-family: 'Cinzel', serif;
   font-weight: 900;
   font-size: 32px;
   letter-spacing: 0;
   color: var(--gold-soft);
   text-shadow: 0 0 10px rgba(255, 213, 79, 0.55), 0 2px 0 #000;
+}
+
+.mc-shopkeeper__sprite img {
+  width: 78%;
+  height: 78%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .mc-shopkeeper__line {

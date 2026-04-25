@@ -299,13 +299,16 @@ main.map-screen {
 .map-screen__key-sym.k--treasure { color: var(--rarity-l); }
 .map-screen__key-sym.k--boss { color: var(--state-danger-soft); }
 
-/* Tile icons rendered as <img> on map nodes and the legend. */
+/* Tile icons rendered as <img> on map nodes and the legend.
+   Source PNGs sit slightly high in their canvas; nudge them ~5px down so
+   the visible art is centered against the circular node border. */
 .map-screen__node-img {
   width: 70%;
   height: 70%;
   object-fit: contain;
   image-rendering: pixelated;
   pointer-events: none;
+  transform: translateY(5px);
   -webkit-user-select: none;
   user-select: none;
 }
