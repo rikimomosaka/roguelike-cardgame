@@ -28,4 +28,17 @@ public class EmbeddedDataLoaderTests
         Assert.Contains("six_ghost", catalog.Enemies.Keys);
         Assert.Equal(EnemyTier.Boss, catalog.Enemies["six_ghost"].Pool.Tier);
     }
+
+    [Fact]
+    public void All_enemy_JSONs_load_with_new_format()
+    {
+        var catalog = EmbeddedDataLoader.LoadCatalog();
+        Assert.Equal(34, catalog.Enemies.Count);
+        foreach (var (id, def) in catalog.Enemies)
+        {
+            Assert.NotNull(def);
+            Assert.True(def.Hp > 0, $"Enemy {id} has non-positive Hp");
+            Assert.NotEmpty(def.Moves);
+        }
+    }
 }
