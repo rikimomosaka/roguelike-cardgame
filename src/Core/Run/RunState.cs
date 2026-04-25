@@ -28,7 +28,7 @@ public sealed record RunState(
     ImmutableArray<CardInstance> Deck,
     ImmutableArray<string> Potions,
     int PotionSlotCount,
-    BattleState? ActiveBattle,
+    BattlePlaceholderState? ActiveBattle,
     RewardState? ActiveReward,
     ImmutableArray<string> EncounterQueueWeak,
     ImmutableArray<string> EncounterQueueStrong,

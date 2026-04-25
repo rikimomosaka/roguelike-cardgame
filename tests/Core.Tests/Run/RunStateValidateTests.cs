@@ -152,8 +152,8 @@ public class RunStateValidateTests
             ImmutableArray<MerchantOffer>.Empty,
             DiscardSlotUsed: false, DiscardPrice: 75);
 
-    private static BattleState FakeBattle() =>
-        new BattleState("test", ImmutableArray<EnemyInstance>.Empty, BattleOutcome.Pending);
+    private static BattlePlaceholderState FakeBattle() =>
+        new BattlePlaceholderState("test", ImmutableArray<PlaceholderEnemyInstance>.Empty, BattleOutcome.Pending);
 
     private static RewardState FakeReward() =>
         new RewardState(0, false, null, true, ImmutableArray<string>.Empty, CardRewardStatus.Pending);

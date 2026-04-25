@@ -40,8 +40,8 @@ public class BattlePlaceholderTests
         var cat = EmbeddedDataLoader.LoadCatalog();
         var state = TestRunStates.FreshDefault(cat) with
         {
-            ActiveBattle = new BattleState("enc_w_jaw_worm",
-                ImmutableArray.Create(new EnemyInstance("jaw_worm", 42, 42, "chomp")),
+            ActiveBattle = new BattlePlaceholderState("enc_w_jaw_worm",
+                ImmutableArray.Create(new PlaceholderEnemyInstance("jaw_worm", 42, 42, "chomp")),
                 BattleOutcome.Pending)
         };
 

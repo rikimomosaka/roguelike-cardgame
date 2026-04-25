@@ -20,14 +20,14 @@ public static class BattlePlaceholder
         var (encounterId, queueAfter) = EncounterQueue.Draw(queueBefore);
         var encounter = data.Encounters[encounterId];
 
-        var enemies = ImmutableArray.CreateBuilder<EnemyInstance>(encounter.EnemyIds.Count);
+        var enemies = ImmutableArray.CreateBuilder<PlaceholderEnemyInstance>(encounter.EnemyIds.Count);
         foreach (var eid in encounter.EnemyIds)
         {
             var def = data.Enemies[eid];
             int hp = def.Hp;
-            enemies.Add(new EnemyInstance(eid, hp, hp, def.InitialMoveId));
+            enemies.Add(new PlaceholderEnemyInstance(eid, hp, hp, def.InitialMoveId));
         }
-        var battle = new BattleState(encounterId, enemies.ToImmutable(), BattleOutcome.Pending);
+        var battle = new BattlePlaceholderState(encounterId, enemies.ToImmutable(), BattleOutcome.Pending);
         var next = selector(state, queueAfter) with { ActiveBattle = battle };
         return Bestiary.BestiaryTracker.NoteEnemiesEncountered(next, encounter.EnemyIds);
     }
