@@ -4,5 +4,5 @@
   "rarity": 0,
   "trigger": "OnPickup",
   "description": "ずんぐりとした赤いキノコ。一口齧ると、肉体の芯がじわりと太くなる。",
-  "effects": [{ "type": "gainMaxHp", "amount": 7 }]
+  "effects": [{ "action": "gainMaxHp", "scope": "self", "amount": 7 }]
 }

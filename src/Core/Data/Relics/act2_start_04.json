@@ -4,5 +4,5 @@
   "rarity": 1,
   "trigger": "OnPickup",
   "description": "厳かな祈りの数珠。握っていると、見えない手に守られている気がする。",
-  "effects": [{ "type": "gainMaxHp", "amount": 10 }]
+  "effects": [{ "action": "gainMaxHp", "scope": "self", "amount": 10 }]
 }

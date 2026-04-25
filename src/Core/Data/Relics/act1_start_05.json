@@ -4,5 +4,5 @@
   "rarity": 1,
   "trigger": "OnPickup",
   "description": "曇った針が、なぜか黄金の方角を指し示す。",
-  "effects": [{ "type": "gainGold", "amount": 50 }]
+  "effects": [{ "action": "gainGold", "scope": "self", "amount": 50 }]
 }

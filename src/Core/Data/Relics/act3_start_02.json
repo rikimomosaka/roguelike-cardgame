@@ -4,5 +4,5 @@
   "rarity": 2,
   "trigger": "OnPickup",
   "description": "深海色の宝石を抱いた指輪。王位継承の儀でのみ取り出されるという。",
-  "effects": [{ "type": "gainGold", "amount": 150 }]
+  "effects": [{ "action": "gainGold", "scope": "self", "amount": 150 }]
 }

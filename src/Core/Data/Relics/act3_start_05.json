@@ -4,5 +4,5 @@
   "rarity": 2,
   "trigger": "OnPickup",
   "description": "歪んだ笑みを刻んだ仮面。被ったとき、笑っているのが自分か仮面か分からなくなる。",
-  "effects": [{ "type": "gainGold", "amount": 120 }]
+  "effects": [{ "action": "gainGold", "scope": "self", "amount": 120 }]
 }

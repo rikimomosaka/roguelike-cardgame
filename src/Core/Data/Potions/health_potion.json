@@ -4,5 +4,5 @@
   "rarity": 1,
   "usableInBattle": true,
   "usableOutOfBattle": true,
-  "effects": [{ "type": "heal", "amount": 15 }]
+  "effects": [{ "action": "heal", "scope": "self", "amount": 15 }]
 }

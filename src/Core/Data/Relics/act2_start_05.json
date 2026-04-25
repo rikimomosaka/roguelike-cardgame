@@ -4,5 +4,5 @@
   "rarity": 1,
   "trigger": "OnPickup",
   "description": "古い羊皮紙に描かれた覚え書き。ところどころに金貨の記号が躍る。",
-  "effects": [{ "type": "gainGold", "amount": 80 }]
+  "effects": [{ "action": "gainGold", "scope": "self", "amount": 80 }]
 }

@@ -4,5 +4,5 @@
   "rarity": 1,
   "usableInBattle": true,
   "usableOutOfBattle": false,
-  "effects": [{ "type": "gainEnergy", "amount": 2 }]
+  "effects": [{ "action": "gainEnergy", "scope": "self", "amount": 2 }]
 }

@@ -4,5 +4,5 @@
   "rarity": 1,
   "usableInBattle": true,
   "usableOutOfBattle": false,
-  "effects": [{ "type": "gainBlock", "amount": 12 }]
+  "effects": [{ "action": "block", "scope": "self", "amount": 12 }]
 }

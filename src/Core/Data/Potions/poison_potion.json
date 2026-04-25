@@ -4,5 +4,5 @@
   "rarity": 2,
   "usableInBattle": true,
   "usableOutOfBattle": false,
-  "effects": [{ "type": "applyPoison", "amount": 6 }]
+  "effects": [{ "action": "applyPoison", "scope": "self", "amount": 6 }]
 }

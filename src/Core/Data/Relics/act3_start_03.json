@@ -4,5 +4,5 @@
   "rarity": 2,
   "trigger": "Passive",
   "description": "錆びた古磁石。磁力は衰えたが、なぜか身体の凝りを引き寄せて散らしてくれる。",
-  "effects": [{ "type": "restHealBonus", "amount": 12 }]
+  "effects": [{ "action": "restHealBonus", "scope": "self", "amount": 12 }]
 }

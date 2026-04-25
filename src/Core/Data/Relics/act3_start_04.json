@@ -4,5 +4,5 @@
   "rarity": 2,
   "trigger": "OnPickup",
   "description": "夜空から落ちた燃え滓。掌の上で熱を孕み、決戦の朝を予感させる。",
-  "effects": [{ "type": "gainMaxHp", "amount": 15 }]
+  "effects": [{ "action": "gainMaxHp", "scope": "self", "amount": 15 }]
 }

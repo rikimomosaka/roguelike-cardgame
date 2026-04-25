@@ -4,5 +4,5 @@
   "rarity": 1,
   "usableInBattle": true,
   "usableOutOfBattle": false,
-  "effects": [{ "type": "damage", "amount": 20 }]
+  "effects": [{ "action": "attack", "scope": "single", "side": "enemy", "amount": 20 }]
 }
