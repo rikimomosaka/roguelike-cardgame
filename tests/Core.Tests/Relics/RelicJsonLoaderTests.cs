@@ -96,4 +96,34 @@ public class RelicJsonLoaderTests
         var def = RelicJsonLoader.Parse(json);
         Assert.Equal(RelicTrigger.OnEnemyDeath, def.Trigger);
     }
+
+    [Fact]
+    public void Implemented_defaults_to_true_when_field_missing()
+    {
+        var json = """
+        {"id":"r","name":"n","rarity":1,"trigger":"OnPickup","effects":[]}
+        """;
+        var def = RelicJsonLoader.Parse(json);
+        Assert.True(def.Implemented);
+    }
+
+    [Fact]
+    public void Implemented_explicit_false_is_loaded()
+    {
+        var json = """
+        {"id":"r","name":"n","rarity":1,"trigger":"OnPickup","effects":[],"implemented":false}
+        """;
+        var def = RelicJsonLoader.Parse(json);
+        Assert.False(def.Implemented);
+    }
+
+    [Fact]
+    public void Implemented_explicit_true_is_loaded()
+    {
+        var json = """
+        {"id":"r","name":"n","rarity":1,"trigger":"OnPickup","effects":[],"implemented":true}
+        """;
+        var def = RelicJsonLoader.Parse(json);
+        Assert.True(def.Implemented);
+    }
 }

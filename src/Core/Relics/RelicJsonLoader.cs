@@ -46,7 +46,17 @@ public static class RelicJsonLoader
                     ? descEl.GetString() ?? string.Empty
                     : string.Empty;
 
-                return new RelicDefinition(id, name, rarity, trigger, effects, description);
+                // implemented は任意フィールド (省略時 true)
+                bool implemented = true;
+                if (root.TryGetProperty("implemented", out var implEl))
+                {
+                    if (implEl.ValueKind == JsonValueKind.True) implemented = true;
+                    else if (implEl.ValueKind == JsonValueKind.False) implemented = false;
+                    else throw new RelicJsonException(
+                        $"implemented は boolean である必要があります (relic id={id})。");
+                }
+
+                return new RelicDefinition(id, name, rarity, trigger, effects, description, implemented);
             }
             catch (RelicJsonException)
             {
