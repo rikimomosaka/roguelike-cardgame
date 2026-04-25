@@ -17,7 +17,8 @@ public class UnitJsonLoaderTests
             {"id":"bite","kind":"Attack","nextMoveId":"bite",
              "effects":[{"action":"attack","scope":"single","side":"enemy","amount":4}]}
           ]
-        }""");
+        }
+        """);
         Assert.Equal("wolf", def.Id);
         Assert.Equal(12, def.Hp);
         Assert.Null(def.LifetimeTurns);
@@ -33,7 +34,8 @@ public class UnitJsonLoaderTests
           "initialMoveId":"a",
           "moves":[{"id":"a","kind":"Attack","nextMoveId":"a","effects":[]}],
           "lifetimeTurns":3
-        }""");
+        }
+        """);
         Assert.Equal(3, def.LifetimeTurns);
     }
 
@@ -44,7 +46,8 @@ public class UnitJsonLoaderTests
         {
           "id":"x","name":"x","imageId":"x",
           "hp":10,"initialMoveId":"a","moves":[]
-        }"""));
+        }
+        """));
     }
 
     [Fact]
@@ -55,7 +58,8 @@ public class UnitJsonLoaderTests
           "id":"x","name":"x","imageId":"x",
           "hp":10,"initialMoveId":"missing",
           "moves":[{"id":"a","kind":"Attack","nextMoveId":"a","effects":[]}]
-        }"""));
+        }
+        """));
     }
 
     [Fact]
@@ -66,6 +70,7 @@ public class UnitJsonLoaderTests
           "id":"x","name":"x","imageId":"x",
           "initialMoveId":"a",
           "moves":[{"id":"a","kind":"Attack","nextMoveId":"a","effects":[]}]
-        }"""));
+        }
+        """));
     }
 }

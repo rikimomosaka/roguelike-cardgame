@@ -2,7 +2,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using RoguelikeCardGame.Core.Battle;
 using RoguelikeCardGame.Core.Data;
-using RoguelikeCardGame.Core.Enemy;
+using RoguelikeCardGame.Core.Battle.Definitions;
 using RoguelikeCardGame.Core.Random;
 using RoguelikeCardGame.Core.Run;
 using Xunit;
@@ -27,7 +27,7 @@ public class BattlePlaceholderTests
         foreach (var e in next.ActiveBattle.Enemies)
         {
             var def = cat.Enemies[e.EnemyDefinitionId];
-            Assert.InRange(e.CurrentHp, def.HpMin, def.HpMax);
+            Assert.Equal(def.Hp, e.CurrentHp);
             Assert.Equal(e.CurrentHp, e.MaxHp);
             Assert.Equal(def.InitialMoveId, e.CurrentMoveId);
         }

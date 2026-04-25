@@ -1,6 +1,6 @@
 using System.Linq;
 using RoguelikeCardGame.Core.Data;
-using RoguelikeCardGame.Core.Enemy;
+using RoguelikeCardGame.Core.Battle.Definitions;
 using Xunit;
 
 namespace RoguelikeCardGame.Core.Tests.Data;

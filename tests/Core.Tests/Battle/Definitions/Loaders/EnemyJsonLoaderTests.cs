@@ -18,7 +18,8 @@ public class EnemyJsonLoaderTests
             {"id":"a","kind":"Attack","nextMoveId":"a",
              "effects":[{"action":"attack","scope":"all","side":"enemy","amount":5}]}
           ]
-        }""");
+        }
+        """);
         Assert.Equal("e1", def.Id);
         Assert.Equal(42, def.Hp);
         Assert.Equal(1, def.Pool.Act);
@@ -41,7 +42,8 @@ public class EnemyJsonLoaderTests
             {"id":"b","kind":"Defend","nextMoveId":"a",
              "effects":[{"action":"block","scope":"self","amount":8}]}
           ]
-        }""");
+        }
+        """);
         Assert.Equal(2, def.Moves.Count);
         Assert.Equal(EnemyTier.Boss, def.Pool.Tier);
     }
@@ -57,7 +59,8 @@ public class EnemyJsonLoaderTests
           "moves":[
             {"id":"a","kind":"Attack","nextMoveId":"a","effects":[]}
           ]
-        }"""));
+        }
+        """));
     }
 
     [Fact]
@@ -69,7 +72,8 @@ public class EnemyJsonLoaderTests
           "hp":10,"act":1,"tier":"Weak",
           "initialMoveId":"a",
           "moves":[]
-        }"""));
+        }
+        """));
     }
 
     [Fact]
@@ -81,7 +85,8 @@ public class EnemyJsonLoaderTests
           "hp":10,"act":4,"tier":"Weak",
           "initialMoveId":"a",
           "moves":[{"id":"a","kind":"Attack","nextMoveId":"a","effects":[]}]
-        }"""));
+        }
+        """));
     }
 
     [Fact]
@@ -93,7 +98,8 @@ public class EnemyJsonLoaderTests
           "hp":10,"act":1,"tier":"Mythic",
           "initialMoveId":"a",
           "moves":[{"id":"a","kind":"Attack","nextMoveId":"a","effects":[]}]
-        }"""));
+        }
+        """));
     }
 
     [Fact]
@@ -105,6 +111,7 @@ public class EnemyJsonLoaderTests
           "act":1,"tier":"Weak",
           "initialMoveId":"a",
           "moves":[{"id":"a","kind":"Attack","nextMoveId":"a","effects":[]}]
-        }"""));
+        }
+        """));
     }
 }

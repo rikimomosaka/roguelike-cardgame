@@ -8,6 +8,13 @@ namespace RoguelikeCardGame.Core.Tests.Battle.Definitions;
 
 public class EnemyDefinitionTests
 {
+    private static readonly IReadOnlyList<MoveDefinition> SampleMoves = new List<MoveDefinition>
+    {
+        new("m1", MoveKind.Attack,
+            new[] { new CardEffect("attack", EffectScope.All, EffectSide.Enemy, 5) },
+            "m1"),
+    };
+
     private static EnemyDefinition Sample(int hp = 30) => new(
         Id: "test_enemy",
         Name: "テスト敵",
@@ -15,12 +22,7 @@ public class EnemyDefinitionTests
         Hp: hp,
         Pool: new EnemyPool(1, EnemyTier.Weak),
         InitialMoveId: "m1",
-        Moves: new List<MoveDefinition>
-        {
-            new("m1", MoveKind.Attack,
-                new[] { new CardEffect("attack", EffectScope.All, EffectSide.Enemy, 5) },
-                "m1"),
-        });
+        Moves: SampleMoves);
 
     [Fact]
     public void Inherits_CombatActorDefinition()

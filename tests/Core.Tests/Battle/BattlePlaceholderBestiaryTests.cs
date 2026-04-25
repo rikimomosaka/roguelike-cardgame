@@ -1,7 +1,7 @@
 using System.Linq;
 using RoguelikeCardGame.Core.Battle;
 using RoguelikeCardGame.Core.Data;
-using RoguelikeCardGame.Core.Enemy;
+using RoguelikeCardGame.Core.Battle.Definitions;
 using RoguelikeCardGame.Core.Random;
 using RoguelikeCardGame.Core.Run;
 using Xunit;

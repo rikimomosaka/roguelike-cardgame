@@ -230,15 +230,17 @@ public static class JsonFixtures
       "id": "jaw_worm",
       "name": "ジョウ・ワーム",
       "imageId": "jaw_worm",
-      "hpMin": 40,
-      "hpMax": 44,
+      "hp": 42,
       "act": 1,
       "tier": "Weak",
       "initialMoveId": "chomp",
       "moves": [
-        { "id": "chomp",  "kind": "attack", "damageMin": 11, "damageMax": 11, "hits": 1, "nextMoveId": "thrash" },
-        { "id": "thrash", "kind": "multi",  "damageMin": 7,  "damageMax": 7,  "hits": 1, "nextMoveId": "bellow" },
-        { "id": "bellow", "kind": "buff",   "buff": "strength", "amountMin": 3, "amountMax": 5, "nextMoveId": "chomp" }
+        { "id": "chomp",  "kind": "Attack", "nextMoveId": "thrash",
+          "effects": [ { "action": "attack", "scope": "all", "side": "enemy", "amount": 11 } ] },
+        { "id": "thrash", "kind": "Multi",  "nextMoveId": "bellow",
+          "effects": [ { "action": "attack", "scope": "all", "side": "enemy", "amount": 7 } ] },
+        { "id": "bellow", "kind": "Buff",   "nextMoveId": "chomp",
+          "effects": [ { "action": "buff", "scope": "self", "name": "strength", "amount": 4 } ] }
       ]
     }
     """;
@@ -248,15 +250,17 @@ public static class JsonFixtures
       "id": "hobgoblin",
       "name": "ホブゴブリン",
       "imageId": "hobgoblin",
-      "hpMin": 82,
-      "hpMax": 86,
+      "hp": 84,
       "act": 1,
       "tier": "Elite",
       "initialMoveId": "bellow",
       "moves": [
-        { "id": "bellow", "kind": "buff", "buff": "enrage", "amountMin": 2, "amountMax": 2, "nextMoveId": "rush" },
-        { "id": "rush",   "kind": "attack", "damageMin": 14, "damageMax": 14, "hits": 1, "nextMoveId": "skull_bash" },
-        { "id": "skull_bash", "kind": "attack", "damageMin": 6, "damageMax": 6, "hits": 1, "nextMoveId": "rush" }
+        { "id": "bellow", "kind": "Buff", "nextMoveId": "rush",
+          "effects": [ { "action": "buff", "scope": "self", "name": "enrage", "amount": 2 } ] },
+        { "id": "rush",   "kind": "Attack", "nextMoveId": "skull_bash",
+          "effects": [ { "action": "attack", "scope": "all", "side": "enemy", "amount": 14 } ] },
+        { "id": "skull_bash", "kind": "Attack", "nextMoveId": "rush",
+          "effects": [ { "action": "attack", "scope": "all", "side": "enemy", "amount": 6 } ] }
       ]
     }
     """;

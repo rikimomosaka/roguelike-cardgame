@@ -52,7 +52,7 @@ public class CardUpgradeTests
             Cards: new System.Collections.Generic.Dictionary<string, CardDefinition> { ["x"] = def },
             Relics: new System.Collections.Generic.Dictionary<string, RoguelikeCardGame.Core.Relics.RelicDefinition>(),
             Potions: new System.Collections.Generic.Dictionary<string, RoguelikeCardGame.Core.Potions.PotionDefinition>(),
-            Enemies: new System.Collections.Generic.Dictionary<string, RoguelikeCardGame.Core.Enemy.EnemyDefinition>(),
+            Enemies: new System.Collections.Generic.Dictionary<string, RoguelikeCardGame.Core.Battle.Definitions.EnemyDefinition>(),
             Encounters: new System.Collections.Generic.Dictionary<string, RoguelikeCardGame.Core.Data.EncounterDefinition>(),
             RewardTables: new System.Collections.Generic.Dictionary<string, RoguelikeCardGame.Core.Data.RewardTable>(),
             Characters: new System.Collections.Generic.Dictionary<string, RoguelikeCardGame.Core.Data.CharacterDefinition>(),
