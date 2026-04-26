@@ -65,4 +65,31 @@ public class BattleEnginePlayCardComboTests
         Assert.Equal(5, next.LastPlayedOrigCost);
         Assert.Equal(5, next.Energy);
     }
+
+    [Fact] public void Example2_wild_no_match_continues_no_reduction()
+    {
+        var def = CardWithCost("wild5", 5, keywords: new[] { "wild" });
+        var card = new BattleCardInstance("inst1", "wild5", false, null);
+        var hand = ImmutableArray.Create(card);
+        var s = Make(hand, lastOrigCost: 1, combo: 1);
+        var cat = BattleFixtures.MinimalCatalog(cards: new[] { def });
+        var (next, _) = BattleEngine.PlayCard(s, 0, 0, 0, Rng(), cat);
+        Assert.Equal(5, next.Energy);
+        Assert.Equal(2, next.ComboCount);
+        Assert.Equal(5, next.LastPlayedOrigCost);
+        Assert.False(next.NextCardComboFreePass);
+    }
+
+    [Fact] public void Example3_wild_with_match_reduces_normally()
+    {
+        var def = CardWithCost("wild2", 2, keywords: new[] { "wild" });
+        var card = new BattleCardInstance("inst1", "wild2", false, null);
+        var hand = ImmutableArray.Create(card);
+        var s = Make(hand, lastOrigCost: 1, combo: 1);
+        var cat = BattleFixtures.MinimalCatalog(cards: new[] { def });
+        var (next, _) = BattleEngine.PlayCard(s, 0, 0, 0, Rng(), cat);
+        Assert.Equal(9, next.Energy);
+        Assert.Equal(2, next.ComboCount);
+        Assert.Equal(2, next.LastPlayedOrigCost);
+    }
 }

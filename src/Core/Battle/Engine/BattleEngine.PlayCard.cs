@@ -34,7 +34,7 @@ public static partial class BattleEngine
         // 10.2.C: コンボ判定
         bool matchesNormal =
             state.LastPlayedOrigCost is { } prev && actualCost == prev + 1;
-        bool isWild = false;          // Task 11
+        bool isWild = def.Keywords?.Contains("wild") == true;
         bool isSuperWild = false;     // Task 12
 
         bool isContinuing =
