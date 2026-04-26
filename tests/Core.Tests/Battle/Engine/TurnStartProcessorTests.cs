@@ -43,7 +43,7 @@ public class TurnStartProcessorTests
     {
         var s = MakeState(Deck(10), turn: 1);
         var rng = new FakeRng(new int[100], new double[0]); // shuffle 不要、すでに 10 枚
-        var (next, _) = TurnStartProcessor.Process(s, rng);
+        var (next, _) = TurnStartProcessor.Process(s, rng, BattleFixtures.MinimalCatalog());
         Assert.Equal(2, next.Turn);
     }
 
@@ -51,7 +51,7 @@ public class TurnStartProcessorTests
     {
         var s = MakeState(Deck(10), energy: 0, energyMax: 3);
         var rng = new FakeRng(new int[100], new double[0]);
-        var (next, _) = TurnStartProcessor.Process(s, rng);
+        var (next, _) = TurnStartProcessor.Process(s, rng, BattleFixtures.MinimalCatalog());
         Assert.Equal(3, next.Energy);
     }
 
@@ -59,7 +59,7 @@ public class TurnStartProcessorTests
     {
         var s = MakeState(Deck(10));
         var rng = new FakeRng(new int[100], new double[0]);
-        var (next, _) = TurnStartProcessor.Process(s, rng);
+        var (next, _) = TurnStartProcessor.Process(s, rng, BattleFixtures.MinimalCatalog());
         Assert.Equal(5, next.Hand.Length);
         Assert.Equal(5, next.DrawPile.Length);
     }
@@ -71,7 +71,7 @@ public class TurnStartProcessorTests
         // ハンドに既に 0 枚、山札 2 枚、捨札 5 枚 → 5 枚ドロー要求
         // 山札 2 枚 ドロー → 山札 0 枚 → 捨札 5 枚をシャッフルして山札へ → 残り 3 枚ドロー
         var rng = new FakeRng(new int[] { 0, 0, 0, 0, 0 }, new double[0]); // Fisher-Yates 用
-        var (next, _) = TurnStartProcessor.Process(s, rng);
+        var (next, _) = TurnStartProcessor.Process(s, rng, BattleFixtures.MinimalCatalog());
         Assert.Equal(5, next.Hand.Length);
         Assert.Empty(next.DiscardPile);
     }
@@ -80,7 +80,7 @@ public class TurnStartProcessorTests
     {
         var s = MakeState(Deck(2));
         var rng = new FakeRng(new int[100], new double[0]);
-        var (next, _) = TurnStartProcessor.Process(s, rng);
+        var (next, _) = TurnStartProcessor.Process(s, rng, BattleFixtures.MinimalCatalog());
         Assert.Equal(2, next.Hand.Length);
         Assert.Empty(next.DrawPile);
     }
@@ -92,7 +92,7 @@ public class TurnStartProcessorTests
             .ToImmutableArray();
         var s = MakeState(Deck(10), hand);
         var rng = new FakeRng(new int[100], new double[0]);
-        var (next, _) = TurnStartProcessor.Process(s, rng);
+        var (next, _) = TurnStartProcessor.Process(s, rng, BattleFixtures.MinimalCatalog());
         Assert.Equal(10, next.Hand.Length); // 8 既存 + 2 ドロー (5 ではなく 10 でストップ)
         Assert.Equal(8, next.DrawPile.Length); // 10 - 2 = 8 残り
     }
@@ -101,7 +101,7 @@ public class TurnStartProcessorTests
     {
         var s = MakeState(Deck(10));
         var rng = new FakeRng(new int[100], new double[0]);
-        var (_, events) = TurnStartProcessor.Process(s, rng);
+        var (_, events) = TurnStartProcessor.Process(s, rng, BattleFixtures.MinimalCatalog());
         Assert.Contains(events, e => e.Kind == BattleEventKind.TurnStart);
     }
 }

@@ -54,7 +54,7 @@ public static partial class BattleEngine
         AddWithOrder(events, evsEnd, ref order);
 
         // 6. ターン開始処理
-        var (afterStart, evsStart) = TurnStartProcessor.Process(s, rng);
+        var (afterStart, evsStart) = TurnStartProcessor.Process(s, rng, catalog);
         AddWithOrder(events, evsStart, ref order);
 
         // TurnStart 中に毒死などで Outcome 確定した場合、Phase 上書きをスキップ

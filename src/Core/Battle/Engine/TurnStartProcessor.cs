@@ -4,20 +4,22 @@ using System.Linq;
 using RoguelikeCardGame.Core.Battle.Events;
 using RoguelikeCardGame.Core.Battle.State;
 using RoguelikeCardGame.Core.Battle.Statuses;
+using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Random;
+using RoguelikeCardGame.Core.Relics;
 
 namespace RoguelikeCardGame.Core.Battle.Engine;
 
 /// <summary>
 /// ターン開始処理。10.2.B で 毒ダメージ tick / status countdown / 死亡判定で Outcome 確定 を実装。
-/// 召喚 Lifetime tick / OnTurnStart レリックは後続 phase。
+/// 10.2.E で OnTurnStart レリック発火を追加。
 /// 親 spec §4-2 / Phase 10.2.B spec §5 参照。
 /// </summary>
 internal static class TurnStartProcessor
 {
     public const int DrawPerTurn = 5;
 
-    public static (BattleState, IReadOnlyList<BattleEvent>) Process(BattleState state, IRng rng)
+    public static (BattleState, IReadOnlyList<BattleEvent>) Process(BattleState state, IRng rng, DataCatalog catalog)
     {
         var s = state with { Turn = state.Turn + 1 };
         var events = new List<BattleEvent>();
@@ -61,9 +63,17 @@ internal static class TurnStartProcessor
         // 10.2.D: Lifetime 死亡で召喚カードを Discard へ
         s = SummonCleanup.Apply(s, events, ref order);
 
-        // Step 6-8（Energy / Draw / TurnStart event）
+        // Step 6-7: Energy reset / Draw
         s = s with { Energy = s.EnergyMax };
         s = DrawHelper.Draw(s, DrawPerTurn, rng, out _);
+
+        // Step 8: OnTurnStart レリック発動 (10.2.E)
+        var (afterRelic, evsRelic) = RelicTriggerProcessor.Fire(
+            s, RelicTrigger.OnTurnStart, catalog, rng, orderStart: order);
+        s = afterRelic;
+        foreach (var ev in evsRelic) { events.Add(ev with { Order = order++ }); }
+
+        // Step 9: TurnStart event
         events.Add(new BattleEvent(BattleEventKind.TurnStart, Order: order++, Note: $"turn={s.Turn}"));
         return (s, events);
     }

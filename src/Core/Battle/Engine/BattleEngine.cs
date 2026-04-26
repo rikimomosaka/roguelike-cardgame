@@ -97,7 +97,7 @@ public static partial class BattleEngine
             Note: encounterId));
 
         // 5. ターン 1 開始処理（5 ドロー、Energy=3、TurnStart イベント発火）
-        var (afterTurnStart, evsTurnStart) = TurnStartProcessor.Process(initial, rng);
+        var (afterTurnStart, evsTurnStart) = TurnStartProcessor.Process(initial, rng, catalog);
         foreach (var ev in evsTurnStart)
         {
             events.Add(ev with { Order = order++ });

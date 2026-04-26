@@ -39,7 +39,7 @@ public class TurnStartProcessorLifetimeTests
     [Fact] public void Hero_lifetime_null_skipped()
     {
         var s = MakeState();   // hero only, lifetime=null
-        var (next, _) = TurnStartProcessor.Process(s, Rng());
+        var (next, _) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Null(next.Allies[0].RemainingLifetimeTurns);
     }
 
@@ -48,7 +48,7 @@ public class TurnStartProcessorLifetimeTests
         var hero = BattleFixtures.Hero();
         var summon = BattleFixtures.SummonActor("s1", "minion", 1, hp: 10, lifetime: 3);
         var s = MakeState(hero, summon);
-        var (next, _) = TurnStartProcessor.Process(s, Rng());
+        var (next, _) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
         var summonNext = next.Allies.Single(a => a.InstanceId == "s1");
         Assert.Equal(2, summonNext.RemainingLifetimeTurns);
         Assert.True(summonNext.IsAlive);
@@ -59,7 +59,7 @@ public class TurnStartProcessorLifetimeTests
         var hero = BattleFixtures.Hero();
         var summon = BattleFixtures.SummonActor("s1", "minion", 1, hp: 10, lifetime: 1);
         var s = MakeState(hero, summon);
-        var (next, evs) = TurnStartProcessor.Process(s, Rng());
+        var (next, evs) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
         var summonNext = next.Allies.Single(a => a.InstanceId == "s1");
         Assert.Equal(0, summonNext.CurrentHp);
         Assert.False(summonNext.IsAlive);
@@ -75,7 +75,7 @@ public class TurnStartProcessorLifetimeTests
         var summon = BattleFixtures.SummonActor("s1", "minion", 1, hp: 10, lifetime: 2);
         summon = summon with { Statuses = ImmutableDictionary<string, int>.Empty.Add("weak", 1) };
         var s = MakeState(hero, summon);
-        var (next, _) = TurnStartProcessor.Process(s, Rng());
+        var (next, _) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
         var summonNext = next.Allies.Single(a => a.InstanceId == "s1");
         Assert.Equal(1, summonNext.RemainingLifetimeTurns);   // 2 → 1
         Assert.False(summonNext.Statuses.ContainsKey("weak")); // 1 → 0 → removed

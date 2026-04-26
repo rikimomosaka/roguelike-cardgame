@@ -37,7 +37,7 @@ public class TurnStartProcessorTickTests
     {
         var hero = BattleFixtures.WithPoison(BattleFixtures.Hero(70), 3) with { Block = BlockPool.Empty.Add(10) };
         var s = State(hero, BattleFixtures.Goblin());
-        var (next, evs) = TurnStartProcessor.Process(s, Rng());
+        var (next, evs) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(70 - 3, next.Allies[0].CurrentHp);
         Assert.Equal(10, next.Allies[0].Block.Sum); // Block は無傷
         Assert.Contains(evs, e => e.Kind == BattleEventKind.PoisonTick && e.Amount == 3);
@@ -49,7 +49,7 @@ public class TurnStartProcessorTickTests
         var goblin0 = BattleFixtures.WithPoison(BattleFixtures.Goblin(0, hp: 20), 5);
         var goblin1 = BattleFixtures.Goblin(1, hp: 20); // poison なし
         var s = State(hero, goblin0, goblin1);
-        var (next, _) = TurnStartProcessor.Process(s, Rng());
+        var (next, _) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(70 - 2, next.Allies[0].CurrentHp);
         Assert.Equal(20 - 5, next.Enemies[0].CurrentHp);
         Assert.Equal(20, next.Enemies[1].CurrentHp);
@@ -60,7 +60,7 @@ public class TurnStartProcessorTickTests
         var hero = BattleFixtures.WithPoison(BattleFixtures.Hero(70), 2);
         var goblin = BattleFixtures.WithPoison(BattleFixtures.Goblin(hp: 20), 99) with { CurrentHp = 0 };
         var s = State(hero, goblin);
-        var (next, evs) = TurnStartProcessor.Process(s, Rng());
+        var (next, evs) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(70 - 2, next.Allies[0].CurrentHp);
         Assert.Equal(0, next.Enemies[0].CurrentHp); // 不変
         Assert.DoesNotContain(evs, e => e.Kind == BattleEventKind.PoisonTick && e.TargetInstanceId == goblin.InstanceId);
@@ -70,7 +70,7 @@ public class TurnStartProcessorTickTests
     {
         var hero = BattleFixtures.Hero(70);
         var s = State(hero, BattleFixtures.Goblin());
-        var (next, evs) = TurnStartProcessor.Process(s, Rng());
+        var (next, evs) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(70, next.Allies[0].CurrentHp);
         Assert.DoesNotContain(evs, e => e.Kind == BattleEventKind.PoisonTick);
     }
@@ -87,7 +87,7 @@ public class TurnStartProcessorTickTests
                 BattleFixtures.MakeBattleCard("strike", "c4"),
                 BattleFixtures.MakeBattleCard("strike", "c5")),
         };
-        var (next, _) = TurnStartProcessor.Process(s, Rng());
+        var (next, _) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(3, next.Energy); // EnergyMax = 3
         Assert.Equal(5, next.Hand.Length);
     }
@@ -97,7 +97,7 @@ public class TurnStartProcessorTickTests
         var hero = BattleFixtures.Hero(70);
         var goblin = BattleFixtures.WithPoison(BattleFixtures.Goblin(hp: 3), 5);
         var s = State(hero, goblin);
-        var (next, evs) = TurnStartProcessor.Process(s, Rng());
+        var (next, evs) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(RoguelikeCardGame.Core.Battle.State.BattleOutcome.Victory, next.Outcome);
         Assert.Equal(BattlePhase.Resolved, next.Phase);
         Assert.Contains(evs, e => e.Kind == BattleEventKind.BattleEnd);
@@ -107,7 +107,7 @@ public class TurnStartProcessorTickTests
     {
         var hero = BattleFixtures.WithPoison(BattleFixtures.Hero(hp: 2), 5);
         var s = State(hero, BattleFixtures.Goblin());
-        var (next, evs) = TurnStartProcessor.Process(s, Rng());
+        var (next, evs) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(RoguelikeCardGame.Core.Battle.State.BattleOutcome.Defeat, next.Outcome);
         Assert.Equal(BattlePhase.Resolved, next.Phase);
         Assert.Contains(evs, e => e.Kind == BattleEventKind.BattleEnd);
@@ -122,7 +122,7 @@ public class TurnStartProcessorTickTests
                 BattleFixtures.MakeBattleCard("strike", "c1"),
                 BattleFixtures.MakeBattleCard("strike", "c2")),
         };
-        var (next, _) = TurnStartProcessor.Process(s, Rng());
+        var (next, _) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(0, next.Energy);    // EnergyMax まで回復しない
         Assert.Empty(next.Hand);          // ドローしない
     }
@@ -134,7 +134,7 @@ public class TurnStartProcessorTickTests
         var goblin0 = BattleFixtures.WithPoison(BattleFixtures.Goblin(0, hp: 3), 5); // 死ぬ
         var goblin1 = BattleFixtures.Goblin(1, hp: 20);                              // 生存
         var s = State(hero, goblin0, goblin1);
-        var (next, _) = TurnStartProcessor.Process(s, Rng());
+        var (next, _) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(RoguelikeCardGame.Core.Battle.State.BattleOutcome.Pending, next.Outcome);
         Assert.Equal(1, next.TargetEnemyIndex);
     }
@@ -144,7 +144,7 @@ public class TurnStartProcessorTickTests
         var hero = BattleFixtures.Hero();
         var goblin = BattleFixtures.WithVulnerable(BattleFixtures.Goblin(), 3);
         var s = State(hero, goblin);
-        var (next, _) = TurnStartProcessor.Process(s, Rng());
+        var (next, _) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(2, next.Enemies[0].GetStatus("vulnerable"));
     }
 
@@ -153,7 +153,7 @@ public class TurnStartProcessorTickTests
         var hero = BattleFixtures.Hero();
         var goblin = BattleFixtures.WithVulnerable(BattleFixtures.Goblin(), 1);
         var s = State(hero, goblin);
-        var (next, evs) = TurnStartProcessor.Process(s, Rng());
+        var (next, evs) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.False(next.Enemies[0].Statuses.ContainsKey("vulnerable"));
         Assert.Contains(evs, e => e.Kind == BattleEventKind.RemoveStatus
                                   && e.Note == "vulnerable"
@@ -164,7 +164,7 @@ public class TurnStartProcessorTickTests
     {
         var hero = BattleFixtures.WithStrength(BattleFixtures.Hero(), 5);
         var s = State(hero, BattleFixtures.Goblin());
-        var (next, _) = TurnStartProcessor.Process(s, Rng());
+        var (next, _) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(5, next.Allies[0].GetStatus("strength"));
     }
 
@@ -172,7 +172,7 @@ public class TurnStartProcessorTickTests
     {
         var hero = BattleFixtures.WithDexterity(BattleFixtures.Hero(), 4);
         var s = State(hero, BattleFixtures.Goblin());
-        var (next, _) = TurnStartProcessor.Process(s, Rng());
+        var (next, _) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(4, next.Allies[0].GetStatus("dexterity"));
     }
 
@@ -181,7 +181,7 @@ public class TurnStartProcessorTickTests
         // 毒 3 ターン → ダメージ 3、その後 countdown で 2 に
         var hero = BattleFixtures.WithPoison(BattleFixtures.Hero(70), 3);
         var s = State(hero, BattleFixtures.Goblin());
-        var (next, _) = TurnStartProcessor.Process(s, Rng());
+        var (next, _) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(70 - 3, next.Allies[0].CurrentHp);
         Assert.Equal(2, next.Allies[0].GetStatus("poison"));
     }
@@ -197,7 +197,7 @@ public class TurnStartProcessorTickTests
                 .Add("omnistrike", 3),
         };
         var s = State(hero, goblin);
-        var (next, _) = TurnStartProcessor.Process(s, Rng());
+        var (next, _) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(1, next.Enemies[0].GetStatus("vulnerable"));
         Assert.False(next.Enemies[0].Statuses.ContainsKey("weak")); // 1 → 0 で削除
         Assert.Equal(2, next.Enemies[0].GetStatus("omnistrike"));
