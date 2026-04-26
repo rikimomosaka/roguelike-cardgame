@@ -5,6 +5,7 @@ using RoguelikeCardGame.Core.Battle.Events;
 using RoguelikeCardGame.Core.Battle.State;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Random;
+using RoguelikeCardGame.Core.Relics;
 using RoguelikeCardGame.Core.Run;
 
 namespace RoguelikeCardGame.Core.Battle.Engine;
@@ -98,12 +99,15 @@ public static partial class BattleEngine
 
         // 5. ターン 1 開始処理（5 ドロー、Energy=3、TurnStart イベント発火）
         var (afterTurnStart, evsTurnStart) = TurnStartProcessor.Process(initial, rng, catalog);
-        foreach (var ev in evsTurnStart)
-        {
-            events.Add(ev with { Order = order++ });
-        }
+        foreach (var ev in evsTurnStart) { events.Add(ev with { Order = order++ }); }
 
-        return (afterTurnStart, events);
+        // 10.2.E 追加: OnBattleStart レリック発動 (TurnStart 後)
+        var (afterBattleStart, evsBattleStart) = RelicTriggerProcessor.Fire(
+            afterTurnStart, RelicTrigger.OnBattleStart,
+            catalog, rng, orderStart: order);
+        foreach (var ev in evsBattleStart) { events.Add(ev with { Order = order++ }); }
+
+        return (afterBattleStart, events);
     }
 
     private static void ShuffleInPlace(BattleCardInstance[] arr, IRng rng)
