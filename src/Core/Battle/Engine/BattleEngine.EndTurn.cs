@@ -24,7 +24,7 @@ public static partial class BattleEngine
 
         // 1. PlayerAttacking
         var s = state with { Phase = BattlePhase.PlayerAttacking };
-        var (afterPA, evsPA) = PlayerAttackingResolver.Resolve(s, rng);
+        var (afterPA, evsPA) = PlayerAttackingResolver.Resolve(s, rng, catalog);
         s = afterPA;
         AddWithOrder(events, evsPA, ref order);
 

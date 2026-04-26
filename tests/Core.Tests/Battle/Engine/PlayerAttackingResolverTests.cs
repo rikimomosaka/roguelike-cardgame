@@ -41,7 +41,7 @@ public class PlayerAttackingResolverTests
         var goblin0 = BattleFixtures.Goblin(slotIndex: 0, hp: 20);
         var goblin1 = BattleFixtures.Goblin(slotIndex: 1, hp: 20);
         var s = MakeState(hero, goblin0, goblin1);
-        var (next, _) = PlayerAttackingResolver.Resolve(s, Rng());
+        var (next, _) = PlayerAttackingResolver.Resolve(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(14, next.Enemies[0].CurrentHp);
         Assert.Equal(20, next.Enemies[1].CurrentHp);
     }
@@ -52,7 +52,7 @@ public class PlayerAttackingResolverTests
         var s = MakeState(hero,
             BattleFixtures.Goblin(0, 20),
             BattleFixtures.Goblin(1, 20));
-        var (next, _) = PlayerAttackingResolver.Resolve(s, Rng());
+        var (next, _) = PlayerAttackingResolver.Resolve(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(16, next.Enemies[0].CurrentHp);
         Assert.Equal(16, next.Enemies[1].CurrentHp);
     }
@@ -64,7 +64,7 @@ public class PlayerAttackingResolverTests
             BattleFixtures.Goblin(0, 20),
             BattleFixtures.Goblin(1, 20));
         var rng = Rng(1); // 2 体中 index=1 を選択
-        var (next, _) = PlayerAttackingResolver.Resolve(s, rng);
+        var (next, _) = PlayerAttackingResolver.Resolve(s, rng, BattleFixtures.MinimalCatalog());
         Assert.Equal(20, next.Enemies[0].CurrentHp);
         Assert.Equal(13, next.Enemies[1].CurrentHp);
     }
@@ -74,7 +74,7 @@ public class PlayerAttackingResolverTests
         var hero = BattleFixtures.Hero() with { AttackSingle = AttackPool.Empty.Add(6) };
         var goblin = BattleFixtures.Goblin() with { Block = BlockPool.Empty.Add(4) };
         var s = MakeState(hero, goblin);
-        var (next, _) = PlayerAttackingResolver.Resolve(s, Rng());
+        var (next, _) = PlayerAttackingResolver.Resolve(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(18, next.Enemies[0].CurrentHp); // 20 - (6 - 4) = 18
         Assert.Equal(0, next.Enemies[0].Block.Sum); // Consume(6) from 4 → 0
     }
@@ -84,7 +84,7 @@ public class PlayerAttackingResolverTests
         var hero = BattleFixtures.Hero() with { AttackSingle = AttackPool.Empty.Add(3) };
         var goblin = BattleFixtures.Goblin() with { Block = BlockPool.Empty.Add(5) };
         var s = MakeState(hero, goblin);
-        var (next, _) = PlayerAttackingResolver.Resolve(s, Rng());
+        var (next, _) = PlayerAttackingResolver.Resolve(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(20, next.Enemies[0].CurrentHp);
         Assert.Equal(2, next.Enemies[0].Block.Sum); // 5 - 3 = 2
     }
@@ -93,7 +93,7 @@ public class PlayerAttackingResolverTests
     {
         var hero = BattleFixtures.Hero() with { AttackSingle = AttackPool.Empty.Add(99) };
         var s = MakeState(hero, BattleFixtures.Goblin(0, 5));
-        var (next, events) = PlayerAttackingResolver.Resolve(s, Rng());
+        var (next, events) = PlayerAttackingResolver.Resolve(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.False(next.Enemies[0].IsAlive);
         Assert.Contains(events, e => e.Kind == BattleEventKind.ActorDeath);
     }
@@ -102,7 +102,7 @@ public class PlayerAttackingResolverTests
     {
         var hero = BattleFixtures.Hero(); // 全 Pool 0
         var s = MakeState(hero, BattleFixtures.Goblin());
-        var (_, events) = PlayerAttackingResolver.Resolve(s, Rng());
+        var (_, events) = PlayerAttackingResolver.Resolve(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.DoesNotContain(events, e => e.Kind == BattleEventKind.AttackFire);
     }
 
@@ -117,7 +117,7 @@ public class PlayerAttackingResolverTests
         var s = MakeState(hero,
             BattleFixtures.Goblin(0, 20),
             BattleFixtures.Goblin(1, 20));
-        var (_, events) = PlayerAttackingResolver.Resolve(s, Rng(0));
+        var (_, events) = PlayerAttackingResolver.Resolve(s, Rng(0), BattleFixtures.MinimalCatalog());
         var fireEvents = events.Where(e => e.Kind == BattleEventKind.AttackFire).ToList();
         Assert.Equal("single", fireEvents[0].Note);
         Assert.Equal("random", fireEvents[1].Note);

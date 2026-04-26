@@ -2,7 +2,9 @@ using System.Collections.Generic;
 using System.Linq;
 using RoguelikeCardGame.Core.Battle.Events;
 using RoguelikeCardGame.Core.Battle.State;
+using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Random;
+using RoguelikeCardGame.Core.Relics;
 
 namespace RoguelikeCardGame.Core.Battle.Engine;
 
@@ -10,11 +12,13 @@ namespace RoguelikeCardGame.Core.Battle.Engine;
 /// PlayerAttacking フェーズ実行。
 /// omnistrike バフ持ち ally → Single+Random+All を合算して全敵に発射。
 /// それ以外 → Single → Random → All の順で個別発射。
-/// 親 spec §4-4 / Phase 10.2.B spec §6 参照。
+/// 各発射後に新規死亡敵を slot 順に OnEnemyDeath 発火。
+/// 親 spec §4-4 / Phase 10.2.B spec §6 / Phase 10.2.E spec §5-5 参照。
 /// </summary>
 internal static class PlayerAttackingResolver
 {
-    public static (BattleState, IReadOnlyList<BattleEvent>) Resolve(BattleState state, IRng rng)
+    public static (BattleState, IReadOnlyList<BattleEvent>) Resolve(
+        BattleState state, IRng rng, DataCatalog catalog)
     {
         var events = new List<BattleEvent>();
         int order = 0;
@@ -29,13 +33,13 @@ internal static class PlayerAttackingResolver
             bool omni = ally.GetStatus("omnistrike") > 0;
             if (omni)
             {
-                state = ResolveOmnistrike(state, ally, events, ref order);
+                state = ResolveOmnistrike(state, ally, events, ref order, catalog, rng);
             }
             else
             {
-                state = ResolveSingle(state, ally, events, ref order);
-                state = ResolveRandom(state, ally, rng, events, ref order);
-                state = ResolveAll(state, ally, events, ref order);
+                state = ResolveSingle(state, ally, events, ref order, catalog, rng);
+                state = ResolveRandom(state, ally, rng, events, ref order, catalog);
+                state = ResolveAll(state, ally, events, ref order, catalog, rng);
             }
         }
 
@@ -46,11 +50,13 @@ internal static class PlayerAttackingResolver
     }
 
     private static BattleState ResolveOmnistrike(
-        BattleState state, CombatActor ally, List<BattleEvent> events, ref int order)
+        BattleState state, CombatActor ally, List<BattleEvent> events, ref int order,
+        DataCatalog catalog, IRng rng)
     {
         var combined = ally.AttackSingle + ally.AttackRandom + ally.AttackAll;
         if (combined.Sum <= 0) return state;
 
+        var beforeAlive = SnapshotEnemyAliveIds(state);
         var enemyIds = state.Enemies.Select(e => e.InstanceId).ToList();
         foreach (var eid in enemyIds)
         {
@@ -68,15 +74,19 @@ internal static class PlayerAttackingResolver
             events.AddRange(evs);
             order += evs.Count;
         }
+
+        state = FireOnEnemyDeathForNewlyDead(state, beforeAlive, events, ref order, catalog, rng);
         return state;
     }
 
     private static BattleState ResolveSingle(
-        BattleState state, CombatActor ally, List<BattleEvent> events, ref int order)
+        BattleState state, CombatActor ally, List<BattleEvent> events, ref int order,
+        DataCatalog catalog, IRng rng)
     {
         if (ally.AttackSingle.Sum <= 0) return state;
         if (state.TargetEnemyIndex is not { } ti || ti < 0 || ti >= state.Enemies.Length) return state;
 
+        var beforeAlive = SnapshotEnemyAliveIds(state);
         var (updated, evs, _) = DealDamageHelper.Apply(
             ally, state.Enemies[ti],
             baseSum: ally.AttackSingle.Sum, addCount: ally.AttackSingle.AddCount,
@@ -84,14 +94,18 @@ internal static class PlayerAttackingResolver
         state = state with { Enemies = state.Enemies.SetItem(ti, updated) };
         events.AddRange(evs);
         order += evs.Count;
+
+        state = FireOnEnemyDeathForNewlyDead(state, beforeAlive, events, ref order, catalog, rng);
         return state;
     }
 
     private static BattleState ResolveRandom(
-        BattleState state, CombatActor ally, IRng rng, List<BattleEvent> events, ref int order)
+        BattleState state, CombatActor ally, IRng rng, List<BattleEvent> events, ref int order,
+        DataCatalog catalog)
     {
         if (ally.AttackRandom.Sum <= 0 || state.Enemies.Length == 0) return state;
 
+        var beforeAlive = SnapshotEnemyAliveIds(state);
         int idx = rng.NextInt(0, state.Enemies.Length); // 死亡敵含む（spec §4-4）
         var (updated, evs, _) = DealDamageHelper.Apply(
             ally, state.Enemies[idx],
@@ -100,14 +114,18 @@ internal static class PlayerAttackingResolver
         state = state with { Enemies = state.Enemies.SetItem(idx, updated) };
         events.AddRange(evs);
         order += evs.Count;
+
+        state = FireOnEnemyDeathForNewlyDead(state, beforeAlive, events, ref order, catalog, rng);
         return state;
     }
 
     private static BattleState ResolveAll(
-        BattleState state, CombatActor ally, List<BattleEvent> events, ref int order)
+        BattleState state, CombatActor ally, List<BattleEvent> events, ref int order,
+        DataCatalog catalog, IRng rng)
     {
         if (ally.AttackAll.Sum <= 0) return state;
 
+        var beforeAlive = SnapshotEnemyAliveIds(state);
         var enemyIds = state.Enemies.Select(e => e.InstanceId).ToList();
         foreach (var eid in enemyIds)
         {
@@ -124,6 +142,37 @@ internal static class PlayerAttackingResolver
             state = state with { Enemies = state.Enemies.SetItem(idx, updated) };
             events.AddRange(evs);
             order += evs.Count;
+        }
+
+        state = FireOnEnemyDeathForNewlyDead(state, beforeAlive, events, ref order, catalog, rng);
+        return state;
+    }
+
+    private static System.Collections.Generic.HashSet<string> SnapshotEnemyAliveIds(BattleState state)
+    {
+        var set = new System.Collections.Generic.HashSet<string>();
+        foreach (var e in state.Enemies)
+            if (e.IsAlive) set.Add(e.InstanceId);
+        return set;
+    }
+
+    private static BattleState FireOnEnemyDeathForNewlyDead(
+        BattleState state, System.Collections.Generic.HashSet<string> beforeAlive,
+        List<BattleEvent> events, ref int order,
+        DataCatalog catalog, IRng rng)
+    {
+        var newlyDead = state.Enemies
+            .Where(e => beforeAlive.Contains(e.InstanceId) && !e.IsAlive)
+            .OrderBy(e => e.SlotIndex)
+            .Select(e => e.InstanceId)
+            .ToList();
+
+        foreach (var deadId in newlyDead)
+        {
+            var (afterRelic, evsRelic) = RelicTriggerProcessor.FireOnEnemyDeath(
+                state, deadId, catalog, rng, orderStart: order);
+            state = afterRelic;
+            foreach (var ev in evsRelic) { events.Add(ev with { Order = order++ }); }
         }
         return state;
     }

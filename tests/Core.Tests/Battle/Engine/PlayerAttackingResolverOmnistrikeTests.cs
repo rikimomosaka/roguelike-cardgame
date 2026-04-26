@@ -42,7 +42,7 @@ public class PlayerAttackingResolverOmnistrikeTests
             AttackAll    = AttackPool.Empty.Add(3),
         };
         var s = State(hero, BattleFixtures.Goblin(0, hp: 50), BattleFixtures.Goblin(1, hp: 50));
-        var (next, _) = PlayerAttackingResolver.Resolve(s, Rng());
+        var (next, _) = PlayerAttackingResolver.Resolve(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(50 - 8, next.Enemies[0].CurrentHp);
         Assert.Equal(50 - 8, next.Enemies[1].CurrentHp);
     }
@@ -57,7 +57,7 @@ public class PlayerAttackingResolverOmnistrikeTests
             AttackRandom = AttackPool.Empty.Add(3),
         };
         var s = State(hero, BattleFixtures.Goblin(0, hp: 50));
-        var (next, _) = PlayerAttackingResolver.Resolve(s, Rng());
+        var (next, _) = PlayerAttackingResolver.Resolve(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(50 - 19, next.Enemies[0].CurrentHp);
     }
 
@@ -65,7 +65,7 @@ public class PlayerAttackingResolverOmnistrikeTests
     {
         var hero = BattleFixtures.WithOmnistrike(BattleFixtures.Hero(), 1);
         var s = State(hero, BattleFixtures.Goblin(0, hp: 50));
-        var (next, evs) = PlayerAttackingResolver.Resolve(s, Rng());
+        var (next, evs) = PlayerAttackingResolver.Resolve(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(50, next.Enemies[0].CurrentHp);
         Assert.DoesNotContain(evs, e => e.Kind == BattleEventKind.AttackFire);
     }
@@ -77,7 +77,7 @@ public class PlayerAttackingResolverOmnistrikeTests
             AttackAll = AttackPool.Empty.Add(3),
         };
         var s = State(hero, BattleFixtures.Goblin(0), BattleFixtures.Goblin(1), BattleFixtures.Goblin(2));
-        var (_, evs) = PlayerAttackingResolver.Resolve(s, Rng());
+        var (_, evs) = PlayerAttackingResolver.Resolve(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(3, evs.Count(e => e.Kind == BattleEventKind.AttackFire));
         Assert.All(evs.Where(e => e.Kind == BattleEventKind.AttackFire),
                    e => Assert.Equal("omnistrike", e.Note));
@@ -88,7 +88,7 @@ public class PlayerAttackingResolverOmnistrikeTests
         // omnistrike なし → 既存挙動。Single のみで対象 1 体に着弾
         var hero = BattleFixtures.Hero() with { AttackSingle = AttackPool.Empty.Add(5) };
         var s = State(hero, BattleFixtures.Goblin(0, hp: 20), BattleFixtures.Goblin(1, hp: 20));
-        var (next, _) = PlayerAttackingResolver.Resolve(s, Rng());
+        var (next, _) = PlayerAttackingResolver.Resolve(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(20 - 5, next.Enemies[0].CurrentHp);
         Assert.Equal(20, next.Enemies[1].CurrentHp);
     }

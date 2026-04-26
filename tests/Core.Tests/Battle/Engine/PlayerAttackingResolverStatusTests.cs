@@ -39,7 +39,7 @@ public class PlayerAttackingResolverStatusTests
             AttackSingle = AttackPool.Empty.Add(4).Add(4),
         };
         var s = State(hero, BattleFixtures.Goblin(hp: 30));
-        var (next, _) = PlayerAttackingResolver.Resolve(s, Rng());
+        var (next, _) = PlayerAttackingResolver.Resolve(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(30 - 14, next.Enemies[0].CurrentHp);
     }
 
@@ -51,7 +51,7 @@ public class PlayerAttackingResolverStatusTests
             AttackSingle = AttackPool.Empty.Add(10),
         };
         var s = State(hero, BattleFixtures.Goblin(hp: 30));
-        var (next, _) = PlayerAttackingResolver.Resolve(s, Rng());
+        var (next, _) = PlayerAttackingResolver.Resolve(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(30 - 7, next.Enemies[0].CurrentHp);
     }
 
@@ -64,7 +64,7 @@ public class PlayerAttackingResolverStatusTests
             Block = BlockPool.Empty.Add(4),
         };
         var s = State(hero, goblin);
-        var (next, _) = PlayerAttackingResolver.Resolve(s, Rng());
+        var (next, _) = PlayerAttackingResolver.Resolve(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(30 - 9, next.Enemies[0].CurrentHp);
     }
 
@@ -77,7 +77,7 @@ public class PlayerAttackingResolverStatusTests
             Block = BlockPool.Empty.Add(2),
         };
         var s = State(hero, goblin);
-        var (next, _) = PlayerAttackingResolver.Resolve(s, Rng());
+        var (next, _) = PlayerAttackingResolver.Resolve(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(30 - 3, next.Enemies[0].CurrentHp);
     }
 
@@ -96,7 +96,7 @@ public class PlayerAttackingResolverStatusTests
             Block = BlockPool.Empty.Add(2),
         };
         var s = State(hero, goblin);
-        var (next, _) = PlayerAttackingResolver.Resolve(s, Rng());
+        var (next, _) = PlayerAttackingResolver.Resolve(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(30 - 12, next.Enemies[0].CurrentHp);
     }
 }
