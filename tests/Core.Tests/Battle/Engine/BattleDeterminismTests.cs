@@ -218,4 +218,61 @@ public class BattleDeterminismTests
         Assert.Equal(a.Hand.Length, b.Hand.Length);
         Assert.Equal(StateJson(a), StateJson(b));
     }
+
+    [Fact]
+    public void Combat_with_relic_and_potion_is_deterministic()
+    {
+        // 10.2.E: レリック発動 + UsePotion を含む 1 戦闘で seed 一致確認
+        var relic = BattleFixtures.Relic("ts_atk", RoguelikeCardGame.Core.Relics.RelicTrigger.OnTurnStart, true,
+            new CardEffect("attack", EffectScope.All, EffectSide.Enemy, 2));
+        var potion = BattleFixtures.Potion("heal_p",
+            new CardEffect("heal", EffectScope.Self, null, 5));
+        var catalog = BattleFixtures.MinimalCatalog(
+            cards: new[] { BattleFixtures.Strike(), BattleFixtures.Defend() },
+            relics: new[] { relic },
+            potions: new[] { potion });
+
+        RunState MakeRunWithRelicAndPotion() => new RunState(
+            SchemaVersion: RunState.CurrentSchemaVersion,
+            CurrentAct: 1, CurrentNodeId: 0,
+            VisitedNodeIds: ImmutableArray<int>.Empty,
+            UnknownResolutions: System.Collections.Immutable.ImmutableDictionary<int, RoguelikeCardGame.Core.Map.TileKind>.Empty,
+            CharacterId: "default", CurrentHp: 30, MaxHp: 70, Gold: 0,
+            Deck: ImmutableArray.Create(new CardInstance("strike", false), new CardInstance("defend", false)),
+            Potions: ImmutableArray.Create("heal_p", "", ""),
+            PotionSlotCount: 3,
+            ActiveBattle: null, ActiveReward: null,
+            EncounterQueueWeak: ImmutableArray<string>.Empty,
+            EncounterQueueStrong: ImmutableArray<string>.Empty,
+            EncounterQueueElite: ImmutableArray<string>.Empty,
+            EncounterQueueBoss: ImmutableArray<string>.Empty,
+            RewardRngState: new RoguelikeCardGame.Core.Rewards.RewardRngState(0, 0),
+            ActiveMerchant: null, ActiveEvent: null,
+            ActiveRestPending: false, ActiveRestCompleted: false,
+            Relics: new[] { "ts_atk" },
+            PlaySeconds: 0L, RngSeed: 0UL,
+            SavedAtUtc: DateTimeOffset.UnixEpoch,
+            Progress: RunProgress.InProgress,
+            RunId: "test-run",
+            ActiveActStartRelicChoice: null,
+            SeenCardBaseIds: ImmutableArray<string>.Empty,
+            AcquiredRelicIds: ImmutableArray<string>.Empty,
+            AcquiredPotionIds: ImmutableArray<string>.Empty,
+            EncounteredEnemyIds: ImmutableArray<string>.Empty,
+            JourneyLog: ImmutableArray<JourneyEntry>.Empty);
+
+        BattleState Play()
+        {
+            var (state, _) = BattleEngine.Start(MakeRunWithRelicAndPotion(), "enc_test", new FakeRng(new int[20], System.Array.Empty<double>()), catalog);
+            var (afterPotion, _) = BattleEngine.UsePotion(state, 0, null, null, new FakeRng(new int[20], System.Array.Empty<double>()), catalog);
+            return afterPotion;
+        }
+
+        var s1 = Play();
+        var s2 = Play();
+
+        var json1 = System.Text.Json.JsonSerializer.Serialize(s1);
+        var json2 = System.Text.Json.JsonSerializer.Serialize(s2);
+        Assert.Equal(json1, json2);
+    }
 }
