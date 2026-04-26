@@ -26,7 +26,7 @@ internal static class TurnStartProcessor
         int order = 0;
 
         // Step 2: 毒ダメージ tick（Allies → Enemies、SlotIndex 順、InstanceId 検索で更新）
-        s = ApplyPoisonTick(s, events, ref order);
+        s = ApplyPoisonTick(s, events, ref order, catalog, rng);
 
         // 10.2.D: 毒死で召喚も死んだ場合のクリーンアップ（Outcome 確定前に SummonHeld → Discard）
         s = SummonCleanup.Apply(s, events, ref order);
@@ -78,7 +78,9 @@ internal static class TurnStartProcessor
         return (s, events);
     }
 
-    private static BattleState ApplyPoisonTick(BattleState state, List<BattleEvent> events, ref int order)
+    private static BattleState ApplyPoisonTick(
+        BattleState state, List<BattleEvent> events, ref int order,
+        DataCatalog catalog, IRng rng)
     {
         // Allies と Enemies の InstanceId スナップショットを採る
         var actorIds = state.Allies.OrderBy(a => a.SlotIndex).Select(a => a.InstanceId)
@@ -94,6 +96,7 @@ internal static class TurnStartProcessor
             if (poison <= 0) continue;
 
             bool wasAlive = actor.IsAlive;
+            bool wasEnemy = actor.Side == ActorSide.Enemy;
             var updated = actor with { CurrentHp = actor.CurrentHp - poison };
             s = ReplaceActor(s, aid, updated);
 
@@ -106,6 +109,15 @@ internal static class TurnStartProcessor
                 events.Add(new BattleEvent(
                     BattleEventKind.ActorDeath, Order: order++,
                     TargetInstanceId: aid, Note: "poison"));
+
+                // 10.2.E: 敵の毒死で OnEnemyDeath 発火
+                if (wasEnemy)
+                {
+                    var (afterRelic, evsRelic) = RelicTriggerProcessor.FireOnEnemyDeath(
+                        s, aid, catalog, rng, orderStart: order);
+                    s = afterRelic;
+                    foreach (var ev in evsRelic) { events.Add(ev with { Order = order++ }); }
+                }
             }
         }
         return s;
