@@ -74,4 +74,36 @@ public class BattleEngineSetTargetTests
             BattleEngine.SetTarget(s, ActorSide.Enemy, 0));
         Assert.Contains("Phase=PlayerInput", ex.Message);
     }
+
+    [Fact] public void Throws_when_slotIndex_negative()
+    {
+        var s = Make();
+        var ex = Assert.Throws<System.InvalidOperationException>(() =>
+            BattleEngine.SetTarget(s, ActorSide.Enemy, -1));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact] public void Throws_when_slotIndex_too_large()
+    {
+        var s = Make(enemyCount: 2);
+        Assert.Throws<System.InvalidOperationException>(() =>
+            BattleEngine.SetTarget(s, ActorSide.Enemy, 2));
+        Assert.Throws<System.InvalidOperationException>(() =>
+            BattleEngine.SetTarget(s, ActorSide.Enemy, 99));
+    }
+
+    [Fact] public void Throws_when_target_slot_is_dead()
+    {
+        var s = Make(enemyCount: 2, enemy0Dead: true);
+        var ex = Assert.Throws<System.InvalidOperationException>(() =>
+            BattleEngine.SetTarget(s, ActorSide.Enemy, 0));
+        Assert.Contains("dead", ex.Message);
+    }
+
+    [Fact] public void Allows_switching_to_alive_when_other_slot_dead()
+    {
+        var s = Make(enemyCount: 2, enemy0Dead: true);
+        var next = BattleEngine.SetTarget(s, ActorSide.Enemy, 1);
+        Assert.Equal(1, next.TargetEnemyIndex);
+    }
 }
