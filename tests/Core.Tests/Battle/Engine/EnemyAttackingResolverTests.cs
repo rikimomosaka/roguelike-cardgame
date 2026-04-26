@@ -60,7 +60,8 @@ public class EnemyAttackingResolverTests
         var hero = BattleFixtures.Hero();
         var enemy = new CombatActor("e1", "twohit", ActorSide.Enemy, 0, 30, 30,
             BlockPool.Empty, AttackPool.Empty, AttackPool.Empty, AttackPool.Empty,
-            ImmutableDictionary<string, int>.Empty, "double");
+            ImmutableDictionary<string, int>.Empty, "double",
+            RemainingLifetimeTurns: null, AssociatedSummonHeldInstanceId: null);   // 10.2.D
         var s = MakeState(hero, enemy);
         var cat = BattleFixtures.MinimalCatalog(enemies: new[] { twoHits });
         var (next, events) = EnemyAttackingResolver.Resolve(s, Rng(), cat);
@@ -82,7 +83,8 @@ public class EnemyAttackingResolverTests
         var hero = BattleFixtures.Hero();
         var enemy = new CombatActor("e1", "defender", ActorSide.Enemy, 0, 30, 30,
             BlockPool.Empty, AttackPool.Empty, AttackPool.Empty, AttackPool.Empty,
-            ImmutableDictionary<string, int>.Empty, "guard");
+            ImmutableDictionary<string, int>.Empty, "guard",
+            RemainingLifetimeTurns: null, AssociatedSummonHeldInstanceId: null);   // 10.2.D
         var s = MakeState(hero, enemy);
         var cat = BattleFixtures.MinimalCatalog(enemies: new[] { defender });
         var (next, _) = EnemyAttackingResolver.Resolve(s, Rng(), cat);
@@ -103,7 +105,8 @@ public class EnemyAttackingResolverTests
         var hero = BattleFixtures.Hero();
         var enemy = new CombatActor("e1", "alt", ActorSide.Enemy, 0, 30, 30,
             BlockPool.Empty, AttackPool.Empty, AttackPool.Empty, AttackPool.Empty,
-            ImmutableDictionary<string, int>.Empty, "a");
+            ImmutableDictionary<string, int>.Empty, "a",
+            RemainingLifetimeTurns: null, AssociatedSummonHeldInstanceId: null);   // 10.2.D
         var s = MakeState(hero, enemy);
         var cat = BattleFixtures.MinimalCatalog(enemies: new[] { def });
         var (next, _) = EnemyAttackingResolver.Resolve(s, Rng(), cat);
@@ -132,7 +135,8 @@ public class EnemyAttackingResolverTests
         var summon = new CombatActor("summon_inst", "test_summon", ActorSide.Ally,
             SlotIndex: 1, CurrentHp: 10, MaxHp: 10,
             BlockPool.Empty, AttackPool.Empty, AttackPool.Empty, AttackPool.Empty,
-            ImmutableDictionary<string, int>.Empty, null);
+            ImmutableDictionary<string, int>.Empty, null,
+            RemainingLifetimeTurns: null, AssociatedSummonHeldInstanceId: null);   // 10.2.D
         var s = new BattleState(
             Turn: 1, Phase: BattlePhase.EnemyAttacking, Outcome: BattleOutcome.Pending,
             Allies: ImmutableArray.Create(hero, summon),

@@ -16,12 +16,25 @@ public static class BattleFixtures
     public static CombatActor Hero(int hp = 70, int slotIndex = 0) =>
         new("hero_inst", "hero", ActorSide.Ally, slotIndex, hp, hp,
             BlockPool.Empty, AttackPool.Empty, AttackPool.Empty, AttackPool.Empty,
-            ImmutableDictionary<string, int>.Empty, null);
+            ImmutableDictionary<string, int>.Empty, null,
+            RemainingLifetimeTurns: null, AssociatedSummonHeldInstanceId: null);   // 10.2.D
 
     public static CombatActor Goblin(int slotIndex = 0, int hp = 20, string moveId = "swing") =>
         new($"goblin_inst_{slotIndex}", "goblin", ActorSide.Enemy, slotIndex, hp, hp,
             BlockPool.Empty, AttackPool.Empty, AttackPool.Empty, AttackPool.Empty,
-            ImmutableDictionary<string, int>.Empty, moveId);
+            ImmutableDictionary<string, int>.Empty, moveId,
+            RemainingLifetimeTurns: null, AssociatedSummonHeldInstanceId: null);   // 10.2.D
+
+    /// <summary>10.2.D: 召喚 actor 用 factory（テストで召喚キャラを直接構築する際に使用）。</summary>
+    public static CombatActor SummonActor(
+        string instanceId, string definitionId, int slotIndex,
+        int hp = 10, int? lifetime = null, string? associatedCardId = null,
+        string? moveId = null) =>
+        new(instanceId, definitionId, ActorSide.Ally, slotIndex, hp, hp,
+            BlockPool.Empty, AttackPool.Empty, AttackPool.Empty, AttackPool.Empty,
+            ImmutableDictionary<string, int>.Empty, moveId,
+            RemainingLifetimeTurns: lifetime,
+            AssociatedSummonHeldInstanceId: associatedCardId);
 
     // ===== CardDefinition factories =====
 

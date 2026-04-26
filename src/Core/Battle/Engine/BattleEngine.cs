@@ -33,7 +33,9 @@ public static partial class BattleEngine
             AttackRandom: AttackPool.Empty,
             AttackAll: AttackPool.Empty,
             Statuses: ImmutableDictionary<string, int>.Empty,
-            CurrentMoveId: null);
+            CurrentMoveId: null,
+            RemainingLifetimeTurns: null,                  // 10.2.D
+            AssociatedSummonHeldInstanceId: null);         // 10.2.D
 
         // 2. 敵 CombatActor 生成
         var enemiesBuilder = ImmutableArray.CreateBuilder<CombatActor>();
@@ -51,7 +53,9 @@ public static partial class BattleEngine
                 AttackRandom: AttackPool.Empty,
                 AttackAll: AttackPool.Empty,
                 Statuses: ImmutableDictionary<string, int>.Empty,
-                CurrentMoveId: def.InitialMoveId));
+                CurrentMoveId: def.InitialMoveId,
+                RemainingLifetimeTurns: null,                  // 10.2.D
+                AssociatedSummonHeldInstanceId: null));        // 10.2.D
         }
 
         // 3. Deck コピー & シャッフル → 山札

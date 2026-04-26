@@ -11,12 +11,14 @@ public class BattleStateInvariantTests
     private static CombatActor Hero(int hp = 70) =>
         new("hero1", "hero", ActorSide.Ally, 0, hp, hp,
             BlockPool.Empty, AttackPool.Empty, AttackPool.Empty, AttackPool.Empty,
-            ImmutableDictionary<string, int>.Empty, null);
+            ImmutableDictionary<string, int>.Empty, null,
+            RemainingLifetimeTurns: null, AssociatedSummonHeldInstanceId: null);   // 10.2.D
 
     private static CombatActor Goblin(int slotIndex, int hp = 20) =>
         new($"goblin{slotIndex}", "goblin", ActorSide.Enemy, slotIndex, hp, hp,
             BlockPool.Empty, AttackPool.Empty, AttackPool.Empty, AttackPool.Empty,
-            ImmutableDictionary<string, int>.Empty, "swing");
+            ImmutableDictionary<string, int>.Empty, "swing",
+            RemainingLifetimeTurns: null, AssociatedSummonHeldInstanceId: null);   // 10.2.D
 
     private static BattleState Make(
         ImmutableArray<CombatActor>? allies = null,
