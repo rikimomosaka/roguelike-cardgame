@@ -39,7 +39,7 @@ public class TurnEndProcessorTests
         var hero = BattleFixtures.Hero() with { Block = BlockPool.Empty.Add(5) };
         var enemy = BattleFixtures.Goblin() with { Block = BlockPool.Empty.Add(3) };
         var s = MakeState(ImmutableArray<BattleCardInstance>.Empty, hero, enemy);
-        var (next, _) = TurnEndProcessor.Process(s);
+        var (next, _) = TurnEndProcessor.Process(s, BattleFixtures.MinimalCatalog());
         Assert.Equal(BlockPool.Empty, next.Allies[0].Block);
         Assert.Equal(BlockPool.Empty, next.Enemies[0].Block);
     }
@@ -50,7 +50,7 @@ public class TurnEndProcessorTests
             AttackSingle = AttackPool.Empty.Add(6),
             AttackAll    = AttackPool.Empty.Add(4) };
         var s = MakeState(ImmutableArray<BattleCardInstance>.Empty, hero);
-        var (next, _) = TurnEndProcessor.Process(s);
+        var (next, _) = TurnEndProcessor.Process(s, BattleFixtures.MinimalCatalog());
         Assert.Equal(AttackPool.Empty, next.Allies[0].AttackSingle);
         Assert.Equal(AttackPool.Empty, next.Allies[0].AttackRandom);
         Assert.Equal(AttackPool.Empty, next.Allies[0].AttackAll);
@@ -62,7 +62,7 @@ public class TurnEndProcessorTests
             BattleFixtures.MakeBattleCard("strike", "c1"),
             BattleFixtures.MakeBattleCard("defend", "c2"));
         var s = MakeState(hand);
-        var (next, _) = TurnEndProcessor.Process(s);
+        var (next, _) = TurnEndProcessor.Process(s, BattleFixtures.MinimalCatalog());
         Assert.Empty(next.Hand);
         Assert.Equal(2, next.DiscardPile.Length);
         Assert.Equal(new[] { "c1", "c2" }, next.DiscardPile.Select(c => c.InstanceId).ToArray());
@@ -71,7 +71,7 @@ public class TurnEndProcessorTests
     [Fact] public void No_events_emitted_in_phase_10_2_a()
     {
         var s = MakeState(ImmutableArray<BattleCardInstance>.Empty);
-        var (_, events) = TurnEndProcessor.Process(s);
+        var (_, events) = TurnEndProcessor.Process(s, BattleFixtures.MinimalCatalog());
         Assert.Empty(events);
     }
 }

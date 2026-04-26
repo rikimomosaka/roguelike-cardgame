@@ -49,7 +49,7 @@ public static partial class BattleEngine
         }
 
         // 5. ターン終了処理
-        var (afterEnd, evsEnd) = TurnEndProcessor.Process(s);
+        var (afterEnd, evsEnd) = TurnEndProcessor.Process(s, catalog);
         s = afterEnd;
         AddWithOrder(events, evsEnd, ref order);
 
