@@ -27,6 +27,9 @@ internal static class TurnStartProcessor
         // Step 2: 毒ダメージ tick（Allies → Enemies、SlotIndex 順、InstanceId 検索で更新）
         s = ApplyPoisonTick(s, events, ref order);
 
+        // 10.2.D: 毒死で召喚も死んだ場合のクリーンアップ（Outcome 確定前に SummonHeld → Discard）
+        s = SummonCleanup.Apply(s, events, ref order);
+
         // Step 3: tick 後の死亡判定 + 自動切替 + Outcome 確定
         s = TargetingAutoSwitch.Apply(s);
         if (!s.Enemies.Any(e => e.IsAlive))
@@ -55,6 +58,9 @@ internal static class TurnStartProcessor
 
         // Step 5: Lifetime tick（10.2.D）
         s = ApplyLifetimeTick(s, events, ref order);
+
+        // 10.2.D: Lifetime 死亡で召喚カードを Discard へ
+        s = SummonCleanup.Apply(s, events, ref order);
 
         // Step 6-8（Energy / Draw / TurnStart event）
         s = s with { Energy = s.EnergyMax };

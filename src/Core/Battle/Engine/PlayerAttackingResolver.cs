@@ -39,6 +39,9 @@ internal static class PlayerAttackingResolver
             }
         }
 
+        // 10.2.D: 死亡 summon のクリーンアップ
+        state = SummonCleanup.Apply(state, events, ref order);
+
         return (state, events);
     }
 
