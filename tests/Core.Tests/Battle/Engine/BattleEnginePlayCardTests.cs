@@ -96,4 +96,31 @@ public class BattleEnginePlayCardTests
         Assert.Equal(BattleEventKind.PlayCard, events[0].Kind);
         Assert.Equal("strike", events[0].CardId);
     }
+
+    [Fact] public void Updates_LastPlayedOrigCost_to_card_cost()
+    {
+        var hand = ImmutableArray.Create(BattleFixtures.MakeBattleCard("strike", "c1"));
+        var s = MakeState(hand);
+        var cat = BattleFixtures.MinimalCatalog();
+        var (next, _) = BattleEngine.PlayCard(s, 0, 0, 0, Rng(), cat);
+        Assert.Equal(1, next.LastPlayedOrigCost);
+    }
+
+    [Fact] public void Updates_ComboCount_to_one_on_first_play()
+    {
+        var hand = ImmutableArray.Create(BattleFixtures.MakeBattleCard("strike", "c1"));
+        var s = MakeState(hand);
+        var cat = BattleFixtures.MinimalCatalog();
+        var (next, _) = BattleEngine.PlayCard(s, 0, 0, 0, Rng(), cat);
+        Assert.Equal(1, next.ComboCount);
+    }
+
+    [Fact] public void NextCardComboFreePass_remains_false_for_non_superwild()
+    {
+        var hand = ImmutableArray.Create(BattleFixtures.MakeBattleCard("strike", "c1"));
+        var s = MakeState(hand);
+        var cat = BattleFixtures.MinimalCatalog();
+        var (next, _) = BattleEngine.PlayCard(s, 0, 0, 0, Rng(), cat);
+        Assert.False(next.NextCardComboFreePass);
+    }
 }
