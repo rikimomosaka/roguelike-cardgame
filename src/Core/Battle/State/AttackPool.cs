@@ -25,5 +25,5 @@ public readonly record struct AttackPool(int Sum, int AddCount)
     }
 
     /// <summary>10.2.A の暫定 API。Task 11 で internal 化。</summary>
-    public int RawTotal => Sum;
+    internal int RawTotal => Sum;
 }

@@ -16,13 +16,6 @@ public readonly record struct BlockPool(int Sum, int AddCount)
     /// <summary>敏捷を遡及反映（×AddCount）した表示・吸収用 Block 量。</summary>
     public int Display(int dexterity) => Sum + AddCount * dexterity;
 
-    /// <summary>10.2.A 互換 API。Task 10 で `Consume(int, int)` に置換予定。</summary>
-    public BlockPool Consume(int incomingAttack)
-    {
-        var remaining = Math.Max(0, Sum - incomingAttack);
-        return new(remaining, 0);
-    }
-
     /// <summary>
     /// 攻撃の総量を受けて Block を消費。`incomingAttack` は「ブロック適用前の攻撃値」を渡す。
     /// dexterity を反映した Display(dexterity) を計算してから消費量を判定。
@@ -37,5 +30,5 @@ public readonly record struct BlockPool(int Sum, int AddCount)
     }
 
     /// <summary>10.2.A の暫定 API。Task 11 で internal 化。</summary>
-    public int RawTotal => Sum;
+    internal int RawTotal => Sum;
 }

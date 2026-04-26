@@ -29,7 +29,9 @@ internal static class PlayerAttackingResolver
             {
                 var target = state.Enemies[ti];
                 var (updated, evs, _) = DealDamageHelper.Apply(
-                    ally, target, ally.AttackSingle.RawTotal, scopeNote: "single", orderBase: order);
+                    ally, target,
+                    baseSum: ally.AttackSingle.Sum, addCount: ally.AttackSingle.AddCount,
+                    scopeNote: "single", orderBase: order);
                 state = state with { Enemies = state.Enemies.SetItem(ti, updated) };
                 events.AddRange(evs);
                 order += evs.Count;
@@ -41,7 +43,9 @@ internal static class PlayerAttackingResolver
                 int idx = rng.NextInt(0, state.Enemies.Length); // 死亡敵含む（spec §4-4 仕様）
                 var target = state.Enemies[idx];
                 var (updated, evs, _) = DealDamageHelper.Apply(
-                    ally, target, ally.AttackRandom.RawTotal, scopeNote: "random", orderBase: order);
+                    ally, target,
+                    baseSum: ally.AttackRandom.Sum, addCount: ally.AttackRandom.AddCount,
+                    scopeNote: "random", orderBase: order);
                 state = state with { Enemies = state.Enemies.SetItem(idx, updated) };
                 events.AddRange(evs);
                 order += evs.Count;
@@ -54,7 +58,9 @@ internal static class PlayerAttackingResolver
                 {
                     var target = state.Enemies[i];
                     var (updated, evs, _) = DealDamageHelper.Apply(
-                        ally, target, ally.AttackAll.RawTotal, scopeNote: "all", orderBase: order);
+                        ally, target,
+                        baseSum: ally.AttackAll.Sum, addCount: ally.AttackAll.AddCount,
+                        scopeNote: "all", orderBase: order);
                     state = state with { Enemies = state.Enemies.SetItem(i, updated) };
                     events.AddRange(evs);
                     order += evs.Count;

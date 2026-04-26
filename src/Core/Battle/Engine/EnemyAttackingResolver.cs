@@ -55,7 +55,9 @@ internal static class EnemyAttackingResolver
                         if (!currentAlly.IsAlive) continue; // 前の effect で既に死亡
 
                         var (updated, evs, _) = DealDamageHelper.Apply(
-                            currentEnemyState, currentAlly, eff.Amount, scopeNote: "enemy_attack", orderBase: order);
+                            currentEnemyState, currentAlly,
+                            baseSum: eff.Amount, addCount: 1,
+                            scopeNote: "enemy_attack", orderBase: order);
                         state = state with { Allies = state.Allies.SetItem(idx, updated) };
                         events.AddRange(evs);
                         order += evs.Count;
