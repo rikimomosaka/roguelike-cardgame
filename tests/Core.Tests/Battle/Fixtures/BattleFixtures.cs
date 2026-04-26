@@ -15,11 +15,13 @@ public static class BattleFixtures
 
     public static CombatActor Hero(int hp = 70, int slotIndex = 0) =>
         new("hero_inst", "hero", ActorSide.Ally, slotIndex, hp, hp,
-            BlockPool.Empty, AttackPool.Empty, AttackPool.Empty, AttackPool.Empty, null);
+            BlockPool.Empty, AttackPool.Empty, AttackPool.Empty, AttackPool.Empty,
+            ImmutableDictionary<string, int>.Empty, null);
 
     public static CombatActor Goblin(int slotIndex = 0, int hp = 20, string moveId = "swing") =>
         new($"goblin_inst_{slotIndex}", "goblin", ActorSide.Enemy, slotIndex, hp, hp,
-            BlockPool.Empty, AttackPool.Empty, AttackPool.Empty, AttackPool.Empty, moveId);
+            BlockPool.Empty, AttackPool.Empty, AttackPool.Empty, AttackPool.Empty,
+            ImmutableDictionary<string, int>.Empty, moveId);
 
     // ===== CardDefinition factories =====
 

@@ -32,6 +32,7 @@ public static partial class BattleEngine
             AttackSingle: AttackPool.Empty,
             AttackRandom: AttackPool.Empty,
             AttackAll: AttackPool.Empty,
+            Statuses: ImmutableDictionary<string, int>.Empty,
             CurrentMoveId: null);
 
         // 2. 敵 CombatActor 生成
@@ -49,6 +50,7 @@ public static partial class BattleEngine
                 AttackSingle: AttackPool.Empty,
                 AttackRandom: AttackPool.Empty,
                 AttackAll: AttackPool.Empty,
+                Statuses: ImmutableDictionary<string, int>.Empty,
                 CurrentMoveId: def.InitialMoveId));
         }
 

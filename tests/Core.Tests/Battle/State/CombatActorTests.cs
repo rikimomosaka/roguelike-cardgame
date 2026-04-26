@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using RoguelikeCardGame.Core.Battle.State;
 using Xunit;
 
@@ -7,7 +8,8 @@ public class CombatActorTests
 {
     private static CombatActor MakeHero(int hp = 70) =>
         new("hero1", "hero", ActorSide.Ally, 0, hp, hp,
-            BlockPool.Empty, AttackPool.Empty, AttackPool.Empty, AttackPool.Empty, null);
+            BlockPool.Empty, AttackPool.Empty, AttackPool.Empty, AttackPool.Empty,
+            ImmutableDictionary<string, int>.Empty, null);
 
     [Fact] public void IsAlive_true_when_hp_positive()
     {
@@ -30,5 +32,25 @@ public class CombatActorTests
     [Fact] public void Record_equality_holds()
     {
         Assert.Equal(MakeHero(70), MakeHero(70));
+    }
+
+    [Fact] public void GetStatus_returns_zero_for_unknown()
+    {
+        var a = MakeHero();
+        Assert.Equal(0, a.GetStatus("strength"));
+    }
+
+    [Fact] public void GetStatus_returns_amount_when_present()
+    {
+        var statuses = ImmutableDictionary<string, int>.Empty.Add("strength", 3);
+        var a = MakeHero() with { Statuses = statuses };
+        Assert.Equal(3, a.GetStatus("strength"));
+    }
+
+    [Fact] public void Record_inequality_when_statuses_differ()
+    {
+        var a = MakeHero();
+        var b = MakeHero() with { Statuses = ImmutableDictionary<string, int>.Empty.Add("weak", 1) };
+        Assert.NotEqual(a, b);
     }
 }
