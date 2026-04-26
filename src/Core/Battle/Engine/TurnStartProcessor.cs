@@ -16,7 +16,6 @@ namespace RoguelikeCardGame.Core.Battle.Engine;
 internal static class TurnStartProcessor
 {
     public const int DrawPerTurn = 5;
-    public const int HandCap = 10;
 
     public static (BattleState, IReadOnlyList<BattleEvent>) Process(BattleState state, IRng rng)
     {
@@ -64,7 +63,7 @@ internal static class TurnStartProcessor
 
         // Step 6-8（Energy / Draw / TurnStart event）
         s = s with { Energy = s.EnergyMax };
-        s = DrawCards(s, DrawPerTurn, rng);
+        s = DrawHelper.Draw(s, DrawPerTurn, rng, out _);
         events.Add(new BattleEvent(BattleEventKind.TurnStart, Order: order++, Note: $"turn={s.Turn}"));
         return (s, events);
     }
@@ -210,49 +209,4 @@ internal static class TurnStartProcessor
         return state;
     }
 
-    private static BattleState DrawCards(BattleState state, int count, IRng rng)
-    {
-        var hand = state.Hand.ToBuilder();
-        var draw = state.DrawPile.ToBuilder();
-        var discard = state.DiscardPile.ToBuilder();
-
-        for (int i = 0; i < count; i++)
-        {
-            if (hand.Count >= HandCap) break;
-            if (draw.Count == 0)
-            {
-                if (discard.Count == 0) break;
-                ShuffleInto(discard, draw, rng);
-                discard.Clear();
-            }
-            // 山札先頭から取り出す
-            var top = draw[0];
-            draw.RemoveAt(0);
-            hand.Add(top);
-        }
-
-        return state with
-        {
-            Hand = hand.ToImmutable(),
-            DrawPile = draw.ToImmutable(),
-            DiscardPile = discard.ToImmutable(),
-        };
-    }
-
-    /// <summary>
-    /// Fisher-Yates シャッフル。`source` の中身を `dest` に移しながらランダム順で並べる。
-    /// </summary>
-    private static void ShuffleInto(
-        ImmutableArray<BattleCardInstance>.Builder source,
-        ImmutableArray<BattleCardInstance>.Builder dest,
-        IRng rng)
-    {
-        var arr = source.ToArray();
-        for (int i = arr.Length - 1; i > 0; i--)
-        {
-            int j = rng.NextInt(0, i + 1);
-            (arr[i], arr[j]) = (arr[j], arr[i]);
-        }
-        foreach (var c in arr) dest.Add(c);
-    }
 }
