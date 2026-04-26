@@ -148,4 +148,37 @@ public class BattleDeterminismTests
         var b = RunWithBuff(seed: 100);
         Assert.Equal(StateJson(a), StateJson(b));
     }
+
+    [Fact] public void Combat_with_combo_and_set_target_is_deterministic()
+    {
+        // 同じ seed + 同じ操作列（SetTarget → PlayCard）→ 同じ最終 state（コンボ関連フィールドを含む）
+        BattleState RunComboAndPlay(int seed)
+        {
+            var rng = new SequentialRng((ulong)seed);
+            var run = MakeRun();
+            var cat = BattleFixtures.MinimalCatalog();
+            var s = BattleEngine.Start(run, "enc_test", rng, cat);
+
+            // SetTarget(Enemy, 0) → PlayCard(0)
+            s = BattleEngine.SetTarget(s, ActorSide.Enemy, 0);
+            if (s.Hand.Length > 0 && s.Energy >= 1)
+            {
+                var (after, _) = BattleEngine.PlayCard(s, 0, 0, 0, rng, cat);
+                return after;
+            }
+            return s;
+        }
+
+        var a = RunComboAndPlay(seed: 7777);
+        var b = RunComboAndPlay(seed: 7777);
+
+        // コンボ関連フィールドの個別 assertion（StateJson は ComboCount / LastPlayedOrigCost / NextCardComboFreePass を含まないため）
+        Assert.Equal(a.ComboCount, b.ComboCount);
+        Assert.Equal(a.LastPlayedOrigCost, b.LastPlayedOrigCost);
+        Assert.Equal(a.NextCardComboFreePass, b.NextCardComboFreePass);
+        Assert.Equal(a.Energy, b.Energy);
+        Assert.Equal(a.Hand.Length, b.Hand.Length);
+        // 全体構造の一致も確認
+        Assert.Equal(StateJson(a), StateJson(b));
+    }
 }
