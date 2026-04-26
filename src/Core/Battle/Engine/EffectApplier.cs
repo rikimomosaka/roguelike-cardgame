@@ -31,6 +31,7 @@ internal static class EffectApplier
             "debuff" => ApplyStatusChange(state, caster, effect, rng),
             "heal"   => ApplyHeal(state, caster, effect, rng),
             "draw"   => ApplyDraw(state, caster, effect, rng),
+            "discard"=> ApplyDiscard(state, caster, effect, rng),
             _        => (state, Array.Empty<BattleEvent>()),
         };
     }
@@ -271,6 +272,65 @@ internal static class EffectApplier
                 CasterInstanceId: caster.InstanceId, Amount: actualDrawn),
         };
         return (newState, evs);
+    }
+
+    private static (BattleState, IReadOnlyList<BattleEvent>) ApplyDiscard(
+        BattleState state, CombatActor caster, CardEffect effect, IRng rng)
+    {
+        if (effect.Scope == EffectScope.Single)
+            throw new InvalidOperationException(
+                "discard Scope=Single is not supported (UI not yet wired)");
+        if (effect.Scope == EffectScope.Self)
+            throw new InvalidOperationException(
+                $"discard does not support Scope=Self");
+
+        if (state.Hand.Length == 0) return (state, Array.Empty<BattleEvent>());
+
+        string note;
+        var hand = state.Hand.ToBuilder();
+        var discard = state.DiscardPile.ToBuilder();
+
+        if (effect.Scope == EffectScope.All)
+        {
+            note = "all";
+            foreach (var c in hand) discard.Add(c);
+            int discardedCount = hand.Count;
+            hand.Clear();
+            return BuildResult(state, caster, hand, discard, discardedCount, note);
+        }
+        else // Random
+        {
+            note = "random";
+            int target = Math.Min(effect.Amount, hand.Count);
+            for (int i = 0; i < target; i++)
+            {
+                int idx = rng.NextInt(0, hand.Count);
+                var card = hand[idx];
+                hand.RemoveAt(idx);
+                discard.Add(card);
+            }
+            return BuildResult(state, caster, hand, discard, target, note);
+        }
+    }
+
+    private static (BattleState, IReadOnlyList<BattleEvent>) BuildResult(
+        BattleState state, CombatActor caster,
+        ImmutableArray<BattleCardInstance>.Builder hand,
+        ImmutableArray<BattleCardInstance>.Builder discard,
+        int discardedCount, string note)
+    {
+        var next = state with
+        {
+            Hand = hand.ToImmutable(),
+            DiscardPile = discard.ToImmutable(),
+        };
+        if (discardedCount == 0) return (next, Array.Empty<BattleEvent>());
+        var evs = new[] {
+            new BattleEvent(BattleEventKind.Discard, Order: 0,
+                CasterInstanceId: caster.InstanceId,
+                Amount: discardedCount, Note: note),
+        };
+        return (next, evs);
     }
 
     /// <summary>
