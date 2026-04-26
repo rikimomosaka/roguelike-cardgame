@@ -1,8 +1,11 @@
 using System.Collections.Immutable;
 using System.Linq;
+using RoguelikeCardGame.Core.Battle.Definitions;
 using RoguelikeCardGame.Core.Battle.Engine;
 using RoguelikeCardGame.Core.Battle.Events;
 using RoguelikeCardGame.Core.Battle.State;
+using RoguelikeCardGame.Core.Cards;
+using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Random;
 using RoguelikeCardGame.Core.Tests.Battle.Fixtures;
 using Xunit;
@@ -92,5 +95,33 @@ public class BattleEngineEndTurnTests
         var cat = BattleFixtures.MinimalCatalog();
         Assert.Throws<System.InvalidOperationException>(() =>
             BattleEngine.EndTurn(s, Rng(), cat));
+    }
+
+    [Fact] public void EndTurn_with_poison_dying_hero_at_next_turn_keeps_resolved_phase()
+    {
+        // hero に毒(5)を付ける。HP=2 なので次ターン TurnStart の毒 tick で確実に死亡
+        var hero = BattleFixtures.WithPoison(BattleFixtures.Hero(hp: 2), 5);
+        var goblin = BattleFixtures.Goblin(hp: 100, moveId: "noop");
+
+        // 敵 move が noop（攻撃なし）→ EndTurn 中は hero 生存、TurnStart で毒死
+        var noopMove = new MoveDefinition("noop", MoveKind.Unknown, System.Array.Empty<CardEffect>(), "noop");
+        var goblinDef = new EnemyDefinition("goblin", "Goblin", "img_goblin",
+            100, new EnemyPool(1, EnemyTier.Weak), "noop", new[] { noopMove });
+
+        var cards = new[] { BattleFixtures.Strike() };
+        var enemies = new[] { goblinDef };
+        var encs = new[] { new EncounterDefinition("enc_test", new EnemyPool(1, EnemyTier.Weak), new[] { "goblin" }) };
+        var catalog = BattleFixtures.MinimalCatalog(cards, enemies, encs);
+
+        var s = MakeState(hero, ImmutableArray.Create(goblin)) with
+        {
+            Phase = BattlePhase.PlayerInput,
+            DrawPile = ImmutableArray.Create(BattleFixtures.MakeBattleCard("strike", "c1")),
+        };
+        var rng = new FakeRng(new int[0], new double[0]);
+        var (next, _) = BattleEngine.EndTurn(s, rng, catalog);
+
+        Assert.Equal(RoguelikeCardGame.Core.Battle.State.BattleOutcome.Defeat, next.Outcome);
+        Assert.Equal(BattlePhase.Resolved, next.Phase); // PlayerInput に上書きされていない
     }
 }

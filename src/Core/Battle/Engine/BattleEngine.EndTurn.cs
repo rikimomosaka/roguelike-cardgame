@@ -55,9 +55,13 @@ public static partial class BattleEngine
 
         // 6. ターン開始処理
         var (afterStart, evsStart) = TurnStartProcessor.Process(s, rng);
-        s = afterStart with { Phase = BattlePhase.PlayerInput };
         AddWithOrder(events, evsStart, ref order);
 
+        // TurnStart 中に毒死などで Outcome 確定した場合、Phase 上書きをスキップ
+        if (afterStart.Outcome != RoguelikeCardGame.Core.Battle.State.BattleOutcome.Pending)
+            return (afterStart, events);
+
+        s = afterStart with { Phase = BattlePhase.PlayerInput };
         return (s, events);
     }
 
