@@ -181,4 +181,40 @@ public class BattleDeterminismTests
         // 全体構造の一致も確認
         Assert.Equal(StateJson(a), StateJson(b));
     }
+
+    [Fact] public void Combat_with_summon_and_heal_is_deterministic()
+    {
+        // 10.2.D: 召喚 + heal を含む環境で seed 一致確認
+        BattleState RunWithSummonAndHeal(int seed)
+        {
+            var rng = new SequentialRng((ulong)seed);
+            var run = MakeRun();
+            var summonCard = new CardDefinition(
+                "call_minion", "Call Minion", null,
+                CardRarity.Common, CardType.Unit,
+                Cost: 1, UpgradedCost: null,
+                Effects: new[] { new CardEffect("summon", EffectScope.Self, null, 0, UnitId: "minion") },
+                UpgradedEffects: null, Keywords: null);
+            var healCard = new CardDefinition(
+                "aid", "Aid", null,
+                CardRarity.Common, CardType.Skill,
+                Cost: 1, UpgradedCost: null,
+                Effects: new[] { new CardEffect("heal", EffectScope.Self, null, 5) },
+                UpgradedEffects: null, Keywords: null);
+            var cat = BattleFixtures.MinimalCatalog(
+                cards: new[] { BattleFixtures.Strike(), summonCard, healCard },
+                units: new[] { BattleFixtures.MinionDef() });
+            return BattleEngine.Start(run, "enc_test", rng, cat);
+        }
+
+        var a = RunWithSummonAndHeal(seed: 314);
+        var b = RunWithSummonAndHeal(seed: 314);
+
+        Assert.Equal(a.Allies.Length, b.Allies.Length);
+        Assert.Equal(a.SummonHeld.Length, b.SummonHeld.Length);
+        Assert.Equal(a.PowerCards.Length, b.PowerCards.Length);
+        Assert.Equal(a.Energy, b.Energy);
+        Assert.Equal(a.Hand.Length, b.Hand.Length);
+        Assert.Equal(StateJson(a), StateJson(b));
+    }
 }
