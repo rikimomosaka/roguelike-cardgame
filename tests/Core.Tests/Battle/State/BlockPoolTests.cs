@@ -60,4 +60,32 @@ public class BlockPoolTests
     {
         Assert.Equal(0, BlockPool.Empty.Display(dexterity: 10));
     }
+
+    [Fact] public void Consume_with_dex_uses_display()
+    {
+        // Sum=5, AddCount=2, dex=3 → Display=11、Consume(4) で残量 7
+        var p = BlockPool.Empty.Add(2).Add(3);
+        var after = p.Consume(incomingAttack: 4, dexterity: 3);
+        Assert.Equal(7, after.Sum);
+        Assert.Equal(0, after.AddCount);
+    }
+
+    [Fact] public void Consume_dex_overflow_clamps_to_zero()
+    {
+        // Display=8, attack=20 → 0
+        // Sum=5, AddCount=1, dex=3 → Display=5+3=8、attack=20 → 0
+        var p2 = BlockPool.Empty.Add(5);
+        var after = p2.Consume(incomingAttack: 20, dexterity: 3);
+        Assert.Equal(0, after.Sum);
+        Assert.Equal(0, after.AddCount);
+    }
+
+    [Fact] public void Consume_with_zero_dex_matches_old_behavior()
+    {
+        // dex=0 で呼べば旧 Consume(int) と等価
+        var p = BlockPool.Empty.Add(5).Add(5); // Sum=10, AddCount=2
+        var after = p.Consume(incomingAttack: 3, dexterity: 0);
+        Assert.Equal(7, after.Sum);
+        Assert.Equal(0, after.AddCount);
+    }
 }

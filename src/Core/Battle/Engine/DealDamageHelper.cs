@@ -20,7 +20,7 @@ internal static class DealDamageHelper
         bool wasAlive = target.IsAlive;
         int preBlock = target.Block.RawTotal;
         int damage = System.Math.Max(0, totalAttack - preBlock);
-        var newBlock = target.Block.Consume(totalAttack);
+        var newBlock = target.Block.Consume(totalAttack, dexterity: 0);
         var newHp = target.CurrentHp - damage;
         var updated = target with { Block = newBlock, CurrentHp = newHp };
         bool diedNow = wasAlive && !updated.IsAlive;
