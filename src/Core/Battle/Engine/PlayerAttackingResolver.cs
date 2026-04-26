@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using RoguelikeCardGame.Core.Battle.Events;
 using RoguelikeCardGame.Core.Battle.State;
@@ -8,9 +7,10 @@ using RoguelikeCardGame.Core.Random;
 namespace RoguelikeCardGame.Core.Battle.Engine;
 
 /// <summary>
-/// PlayerAttacking フェーズ実行。各 ally の Single→Random→All の順で発射。
-/// 10.2.A は ally = 主人公 1 体のみ。10.2.D で召喚を inside-out で含める。
-/// 親 spec §4-4 参照。
+/// PlayerAttacking フェーズ実行。
+/// omnistrike バフ持ち ally → Single+Random+All を合算して全敵に発射。
+/// それ以外 → Single → Random → All の順で個別発射。
+/// 親 spec §4-4 / Phase 10.2.B spec §6 参照。
 /// </summary>
 internal static class PlayerAttackingResolver
 {
@@ -19,55 +19,115 @@ internal static class PlayerAttackingResolver
         var events = new List<BattleEvent>();
         int order = 0;
 
-        var allies = state.Allies.OrderBy(a => a.SlotIndex).ToList();
-        foreach (var ally in allies)
+        // ally を SlotIndex 順で iterate（10.2.A は hero 1 体のみ、10.2.D で召喚を含める）
+        var allyIds = state.Allies.OrderBy(a => a.SlotIndex).Select(a => a.InstanceId).ToList();
+        foreach (var aid in allyIds)
         {
-            if (!ally.IsAlive) continue;
+            var ally = FindAlly(state, aid);
+            if (ally is null || !ally.IsAlive) continue;
 
-            // 1. Single
-            if (ally.AttackSingle.Sum > 0 && state.TargetEnemyIndex is { } ti && ti < state.Enemies.Length)
+            bool omni = ally.GetStatus("omnistrike") > 0;
+            if (omni)
             {
-                var target = state.Enemies[ti];
-                var (updated, evs, _) = DealDamageHelper.Apply(
-                    ally, target,
-                    baseSum: ally.AttackSingle.Sum, addCount: ally.AttackSingle.AddCount,
-                    scopeNote: "single", orderBase: order);
-                state = state with { Enemies = state.Enemies.SetItem(ti, updated) };
-                events.AddRange(evs);
-                order += evs.Count;
+                state = ResolveOmnistrike(state, ally, events, ref order);
             }
-
-            // 2. Random
-            if (ally.AttackRandom.Sum > 0 && state.Enemies.Length > 0)
+            else
             {
-                int idx = rng.NextInt(0, state.Enemies.Length); // 死亡敵含む（spec §4-4 仕様）
-                var target = state.Enemies[idx];
-                var (updated, evs, _) = DealDamageHelper.Apply(
-                    ally, target,
-                    baseSum: ally.AttackRandom.Sum, addCount: ally.AttackRandom.AddCount,
-                    scopeNote: "random", orderBase: order);
-                state = state with { Enemies = state.Enemies.SetItem(idx, updated) };
-                events.AddRange(evs);
-                order += evs.Count;
-            }
-
-            // 3. All
-            if (ally.AttackAll.Sum > 0)
-            {
-                for (int i = 0; i < state.Enemies.Length; i++)
-                {
-                    var target = state.Enemies[i];
-                    var (updated, evs, _) = DealDamageHelper.Apply(
-                        ally, target,
-                        baseSum: ally.AttackAll.Sum, addCount: ally.AttackAll.AddCount,
-                        scopeNote: "all", orderBase: order);
-                    state = state with { Enemies = state.Enemies.SetItem(i, updated) };
-                    events.AddRange(evs);
-                    order += evs.Count;
-                }
+                state = ResolveSingle(state, ally, events, ref order);
+                state = ResolveRandom(state, ally, rng, events, ref order);
+                state = ResolveAll(state, ally, events, ref order);
             }
         }
 
         return (state, events);
+    }
+
+    private static BattleState ResolveOmnistrike(
+        BattleState state, CombatActor ally, List<BattleEvent> events, ref int order)
+    {
+        var combined = ally.AttackSingle + ally.AttackRandom + ally.AttackAll;
+        if (combined.Sum <= 0) return state;
+
+        var enemyIds = state.Enemies.Select(e => e.InstanceId).ToList();
+        foreach (var eid in enemyIds)
+        {
+            int idx = -1;
+            for (int i = 0; i < state.Enemies.Length; i++)
+                if (state.Enemies[i].InstanceId == eid) { idx = i; break; }
+            if (idx < 0) continue;
+            var current = state.Enemies[idx];
+
+            var (updated, evs, _) = DealDamageHelper.Apply(
+                ally, current,
+                baseSum: combined.Sum, addCount: combined.AddCount,
+                scopeNote: "omnistrike", orderBase: order);
+            state = state with { Enemies = state.Enemies.SetItem(idx, updated) };
+            events.AddRange(evs);
+            order += evs.Count;
+        }
+        return state;
+    }
+
+    private static BattleState ResolveSingle(
+        BattleState state, CombatActor ally, List<BattleEvent> events, ref int order)
+    {
+        if (ally.AttackSingle.Sum <= 0) return state;
+        if (state.TargetEnemyIndex is not { } ti || ti < 0 || ti >= state.Enemies.Length) return state;
+
+        var (updated, evs, _) = DealDamageHelper.Apply(
+            ally, state.Enemies[ti],
+            baseSum: ally.AttackSingle.Sum, addCount: ally.AttackSingle.AddCount,
+            scopeNote: "single", orderBase: order);
+        state = state with { Enemies = state.Enemies.SetItem(ti, updated) };
+        events.AddRange(evs);
+        order += evs.Count;
+        return state;
+    }
+
+    private static BattleState ResolveRandom(
+        BattleState state, CombatActor ally, IRng rng, List<BattleEvent> events, ref int order)
+    {
+        if (ally.AttackRandom.Sum <= 0 || state.Enemies.Length == 0) return state;
+
+        int idx = rng.NextInt(0, state.Enemies.Length); // 死亡敵含む（spec §4-4）
+        var (updated, evs, _) = DealDamageHelper.Apply(
+            ally, state.Enemies[idx],
+            baseSum: ally.AttackRandom.Sum, addCount: ally.AttackRandom.AddCount,
+            scopeNote: "random", orderBase: order);
+        state = state with { Enemies = state.Enemies.SetItem(idx, updated) };
+        events.AddRange(evs);
+        order += evs.Count;
+        return state;
+    }
+
+    private static BattleState ResolveAll(
+        BattleState state, CombatActor ally, List<BattleEvent> events, ref int order)
+    {
+        if (ally.AttackAll.Sum <= 0) return state;
+
+        var enemyIds = state.Enemies.Select(e => e.InstanceId).ToList();
+        foreach (var eid in enemyIds)
+        {
+            int idx = -1;
+            for (int i = 0; i < state.Enemies.Length; i++)
+                if (state.Enemies[i].InstanceId == eid) { idx = i; break; }
+            if (idx < 0) continue;
+            var current = state.Enemies[idx];
+
+            var (updated, evs, _) = DealDamageHelper.Apply(
+                ally, current,
+                baseSum: ally.AttackAll.Sum, addCount: ally.AttackAll.AddCount,
+                scopeNote: "all", orderBase: order);
+            state = state with { Enemies = state.Enemies.SetItem(idx, updated) };
+            events.AddRange(evs);
+            order += evs.Count;
+        }
+        return state;
+    }
+
+    private static CombatActor? FindAlly(BattleState state, string instanceId)
+    {
+        foreach (var a in state.Allies) if (a.InstanceId == instanceId) return a;
+        return null;
     }
 }
