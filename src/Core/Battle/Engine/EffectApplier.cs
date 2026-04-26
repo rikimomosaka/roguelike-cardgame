@@ -38,7 +38,7 @@ internal static class EffectApplier
             "gainEnergy"  => ApplyGainEnergy(state, caster, effect),
             "exhaustCard" => ApplyExhaustCard(state, caster, effect, rng),
             "upgrade"     => ApplyUpgrade(state, caster, effect, rng, catalog),
-            "summon"      => ApplySummon(state, caster, effect, catalog),
+            "summon"      => ApplySummon(state, caster, effect, rng, catalog),
             _        => (state, Array.Empty<BattleEvent>()),
         };
     }
@@ -445,7 +445,7 @@ internal static class EffectApplier
     /// AssociatedSummonHeldInstanceId は null（PlayCard 側 card-move logic が後で設定）。
     /// </summary>
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplySummon(
-        BattleState state, CombatActor caster, CardEffect effect, DataCatalog catalog)
+        BattleState state, CombatActor caster, CardEffect effect, IRng rng, DataCatalog catalog)
     {
         if (string.IsNullOrEmpty(effect.UnitId))
             throw new InvalidOperationException("summon requires UnitId");
@@ -462,7 +462,7 @@ internal static class EffectApplier
         if (emptySlot == -1)
             return (state, Array.Empty<BattleEvent>());  // 不発、silent skip
 
-        string newInstanceId = $"summon_inst_{state.Turn}_{state.Allies.Length}";
+        string newInstanceId = $"summon_inst_{state.Turn}_{rng.NextInt(0, 1 << 30):x}";
         var newActor = new CombatActor(
             InstanceId: newInstanceId,
             DefinitionId: effect.UnitId,
