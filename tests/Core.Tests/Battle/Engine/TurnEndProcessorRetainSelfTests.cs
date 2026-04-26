@@ -3,6 +3,7 @@ using System.Linq;
 using RoguelikeCardGame.Core.Battle.Engine;
 using RoguelikeCardGame.Core.Battle.State;
 using RoguelikeCardGame.Core.Cards;
+using RoguelikeCardGame.Core.Random;
 using RoguelikeCardGame.Core.Tests.Battle.Fixtures;
 using Xunit;
 
@@ -15,6 +16,8 @@ namespace RoguelikeCardGame.Core.Tests.Battle.Engine;
 /// </summary>
 public class TurnEndProcessorRetainSelfTests
 {
+    private static FakeRng MakeRng() => new FakeRng(new int[10], System.Array.Empty<double>());
+
     private static CardDefinition StrikeDef() =>
         new("strike", "Strike", null, CardRarity.Common, CardType.Attack,
             Cost: 1, UpgradedCost: null,
@@ -54,7 +57,7 @@ public class TurnEndProcessorRetainSelfTests
         var s = MakeState(hand);
         var cat = BattleFixtures.MinimalCatalog(cards: new[] { StrikeDef(), RetainCard() });
 
-        var (next, _) = TurnEndProcessor.Process(s, cat);
+        var (next, _) = TurnEndProcessor.Process(s, MakeRng(), cat);
 
         Assert.Single(next.Hand);
         Assert.Equal("c2", next.Hand[0].InstanceId);   // hold のみ残る
@@ -71,7 +74,7 @@ public class TurnEndProcessorRetainSelfTests
         var s = MakeState(hand);
         var cat = BattleFixtures.MinimalCatalog(cards: new[] { StrikeDef() });
 
-        var (next, _) = TurnEndProcessor.Process(s, cat);
+        var (next, _) = TurnEndProcessor.Process(s, MakeRng(), cat);
 
         Assert.Empty(next.Hand);
         Assert.Equal(2, next.DiscardPile.Length);
@@ -90,7 +93,7 @@ public class TurnEndProcessorRetainSelfTests
         };
         var cat = BattleFixtures.MinimalCatalog(cards: new[] { RetainCard() });
 
-        var (next, _) = TurnEndProcessor.Process(s, cat);
+        var (next, _) = TurnEndProcessor.Process(s, MakeRng(), cat);
 
         Assert.Equal(0, next.ComboCount);
         Assert.Null(next.LastPlayedOrigCost);

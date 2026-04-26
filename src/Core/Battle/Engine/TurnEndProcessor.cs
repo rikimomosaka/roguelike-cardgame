@@ -5,27 +5,48 @@ using System.Linq;
 using RoguelikeCardGame.Core.Battle.Events;
 using RoguelikeCardGame.Core.Battle.State;
 using RoguelikeCardGame.Core.Data;
+using RoguelikeCardGame.Core.Random;
+using RoguelikeCardGame.Core.Relics;
 
 namespace RoguelikeCardGame.Core.Battle.Engine;
 
 /// <summary>
 /// ターン終了処理。Phase 10.2.C でコンボ 3 フィールドのリセットを追加。
 /// Phase 10.2.D で retainSelf-aware 手札整理 + DataCatalog 引数追加。
-/// 10.2.E で OnTurnEnd レリックが追加される予定。
+/// Phase 10.2.E で OnTurnEnd レリック発火 + IRng 引数追加 (step 3)。
 /// 親 spec §4-6 参照。
 /// </summary>
 internal static class TurnEndProcessor
 {
     public static (BattleState, IReadOnlyList<BattleEvent>) Process(
-        BattleState state, DataCatalog catalog)
+        BattleState state, IRng rng, DataCatalog catalog)
     {
+        // Step 1-2: Block / AttackPool リセット
         var allies = state.Allies.Select(ResetActor).ToImmutableArray();
         var enemies = state.Enemies.Select(ResetActor).ToImmutableArray();
+        var s = state with { Allies = allies, Enemies = enemies };
 
-        // 10.2.D: retainSelf-aware 手札整理
+        var events = new List<BattleEvent>();
+        int order = 0;
+
+        // Step 3: OnTurnEnd レリック発動 (10.2.E)
+        var (afterRelic, evsRelic) = RelicTriggerProcessor.Fire(
+            s, RelicTrigger.OnTurnEnd, catalog, rng, orderStart: order);
+        s = afterRelic;
+        foreach (var ev in evsRelic) { events.Add(ev with { Order = order++ }); }
+
+        // Step 4: コンボリセット
+        s = s with
+        {
+            ComboCount = 0,
+            LastPlayedOrigCost = null,
+            NextCardComboFreePass = false,
+        };
+
+        // Step 5: 手札整理 (retainSelf-aware, 10.2.D 既存)
         var keepInHand = ImmutableArray.CreateBuilder<BattleCardInstance>();
-        var newDiscard = state.DiscardPile.ToBuilder();
-        foreach (var card in state.Hand)
+        var newDiscard = s.DiscardPile.ToBuilder();
+        foreach (var card in s.Hand)
         {
             if (!catalog.TryGetCard(card.CardDefinitionId, out var def))
             {
@@ -40,17 +61,13 @@ internal static class TurnEndProcessor
                 newDiscard.Add(card);
         }
 
-        var next = state with
+        s = s with
         {
-            Allies = allies,
-            Enemies = enemies,
             Hand = keepInHand.ToImmutable(),
             DiscardPile = newDiscard.ToImmutable(),
-            ComboCount = 0,                       // 10.2.C
-            LastPlayedOrigCost = null,            // 10.2.C
-            NextCardComboFreePass = false,        // 10.2.C
         };
-        return (next, Array.Empty<BattleEvent>());
+
+        return (s, events);
     }
 
     private static CombatActor ResetActor(CombatActor a) => a with
