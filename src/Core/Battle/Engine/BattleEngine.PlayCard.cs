@@ -6,6 +6,7 @@ using RoguelikeCardGame.Core.Battle.State;
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Random;
+using RoguelikeCardGame.Core.Relics;
 
 namespace RoguelikeCardGame.Core.Battle.Engine;
 
@@ -105,6 +106,12 @@ public static partial class BattleEngine
             if (eff.Action == "summon" && s.Allies.Length > beforeAlliesLength)
                 summonSucceeded = true;
         }
+
+        // 10.2.E 追加: OnCardPlay レリック発動（effect 適用後・カード移動前）
+        var (afterRelic, evsRelic) = RelicTriggerProcessor.Fire(
+            s, RelicTrigger.OnCardPlay, catalog, rng, orderStart: order);
+        s = afterRelic;
+        foreach (var ev in evsRelic) { events.Add(ev with { Order = order++ }); }
 
         // 10.2.D: 5 段優先順位（exhaustSelf → Power → Unit+success → retainSelf → Discard）
         bool hasExhaustSelf = effects.Any(e => e.Action == "exhaustSelf");
