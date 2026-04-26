@@ -35,6 +35,7 @@ internal static class EffectApplier
             "exhaustSelf" => ApplyExhaustSelf(state, caster),
             "retainSelf"  => (state, Array.Empty<BattleEvent>()),
             "gainEnergy"  => ApplyGainEnergy(state, caster, effect),
+            "exhaustCard" => ApplyExhaustCard(state, caster, effect, rng),
             _        => (state, Array.Empty<BattleEvent>()),
         };
     }
@@ -358,6 +359,56 @@ internal static class EffectApplier
                 Amount: discardedCount, Note: note),
         };
         return (next, evs);
+    }
+
+    private static (BattleState, IReadOnlyList<BattleEvent>) ApplyExhaustCard(
+        BattleState state, CombatActor caster, CardEffect effect, IRng rng)
+    {
+        var (sourceBuilder, exhaustBuilder, applyResult) = OpenPile(state, effect.Pile);
+
+        int target = Math.Min(effect.Amount, sourceBuilder.Count);
+        for (int i = 0; i < target; i++)
+        {
+            int idx = rng.NextInt(0, sourceBuilder.Count);
+            var card = sourceBuilder[idx];
+            sourceBuilder.RemoveAt(idx);
+            exhaustBuilder.Add(card);
+        }
+
+        if (target == 0)
+            return (state, Array.Empty<BattleEvent>());
+
+        var next = applyResult(sourceBuilder, exhaustBuilder);
+        var ev = new BattleEvent(
+            BattleEventKind.Exhaust, Order: 0,
+            CasterInstanceId: caster.InstanceId,
+            Amount: target, Note: effect.Pile);
+        return (next, new[] { ev });
+    }
+
+    /// <summary>
+    /// pile 名 (hand/discard/draw) から source / exhaust の Builder と適用関数を返す。
+    /// 不正 pile / null は InvalidOperationException。
+    /// </summary>
+    private static (
+        ImmutableArray<BattleCardInstance>.Builder source,
+        ImmutableArray<BattleCardInstance>.Builder exhaust,
+        Func<ImmutableArray<BattleCardInstance>.Builder,
+             ImmutableArray<BattleCardInstance>.Builder, BattleState> apply
+    ) OpenPile(BattleState state, string? pileName)
+    {
+        var exhaustBuilder = state.ExhaustPile.ToBuilder();
+        return pileName switch
+        {
+            "hand" => (state.Hand.ToBuilder(), exhaustBuilder,
+                (s, e) => state with { Hand = s.ToImmutable(), ExhaustPile = e.ToImmutable() }),
+            "discard" => (state.DiscardPile.ToBuilder(), exhaustBuilder,
+                (s, e) => state with { DiscardPile = s.ToImmutable(), ExhaustPile = e.ToImmutable() }),
+            "draw" => (state.DrawPile.ToBuilder(), exhaustBuilder,
+                (s, e) => state with { DrawPile = s.ToImmutable(), ExhaustPile = e.ToImmutable() }),
+            null => throw new InvalidOperationException("exhaustCard requires Pile (hand|discard|draw)"),
+            _ => throw new InvalidOperationException($"exhaustCard invalid Pile '{pileName}', expected hand|discard|draw"),
+        };
     }
 
     /// <summary>
