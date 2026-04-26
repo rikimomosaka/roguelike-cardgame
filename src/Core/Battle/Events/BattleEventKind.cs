@@ -1,8 +1,8 @@
 namespace RoguelikeCardGame.Core.Battle.Events;
 
 /// <summary>
-/// バトル中に発火されるイベント種別。Phase 10.2.B で 12 種に拡張。
-/// 後続 phase で Summon / Exhaust / Upgrade / RelicTrigger / UsePotion 等を追加していく。
+/// バトル中に発生するイベント種別。
+/// 10.2.D で 7 値追加（Heal/Draw/Discard/Upgrade/Exhaust/GainEnergy/Summon）。
 /// </summary>
 public enum BattleEventKind
 {
@@ -15,7 +15,14 @@ public enum BattleEventKind
     ActorDeath    = 6,
     EndTurn       = 7,
     BattleEnd     = 8,
-    ApplyStatus   = 9,    // 10.2.B 新規（buff/debuff 付与・重ね掛け）
-    RemoveStatus  = 10,   // 10.2.B 新規（countdown で 0 → 削除）
-    PoisonTick    = 11,   // 10.2.B 新規（毒ダメージ）
+    ApplyStatus   = 9,
+    RemoveStatus  = 10,
+    PoisonTick    = 11,
+    Heal          = 12,    // 10.2.D
+    Draw          = 13,    // 10.2.D
+    Discard       = 14,    // 10.2.D
+    Upgrade       = 15,    // 10.2.D
+    Exhaust       = 16,    // 10.2.D（exhaustCard / exhaustSelf 共通）
+    GainEnergy    = 17,    // 10.2.D
+    Summon        = 18,    // 10.2.D
 }

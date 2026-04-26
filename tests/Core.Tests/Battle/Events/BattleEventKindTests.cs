@@ -17,4 +17,11 @@ public class BattleEventKindTests
     [Fact] public void ApplyStatus_value_is_nine()    => Assert.Equal(9,  (int)BattleEventKind.ApplyStatus);
     [Fact] public void RemoveStatus_value_is_ten()    => Assert.Equal(10, (int)BattleEventKind.RemoveStatus);
     [Fact] public void PoisonTick_value_is_eleven()   => Assert.Equal(11, (int)BattleEventKind.PoisonTick);
+    [Fact] public void Heal_value_is_12()         => Assert.Equal(12, (int)BattleEventKind.Heal);
+    [Fact] public void Draw_value_is_13()         => Assert.Equal(13, (int)BattleEventKind.Draw);
+    [Fact] public void Discard_value_is_14()      => Assert.Equal(14, (int)BattleEventKind.Discard);
+    [Fact] public void Upgrade_value_is_15()      => Assert.Equal(15, (int)BattleEventKind.Upgrade);
+    [Fact] public void Exhaust_value_is_16()      => Assert.Equal(16, (int)BattleEventKind.Exhaust);
+    [Fact] public void GainEnergy_value_is_17()   => Assert.Equal(17, (int)BattleEventKind.GainEnergy);
+    [Fact] public void Summon_value_is_18()       => Assert.Equal(18, (int)BattleEventKind.Summon);
 }
