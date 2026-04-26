@@ -36,6 +36,7 @@ internal static class EffectApplier
             "retainSelf"  => (state, Array.Empty<BattleEvent>()),
             "gainEnergy"  => ApplyGainEnergy(state, caster, effect),
             "exhaustCard" => ApplyExhaustCard(state, caster, effect, rng),
+            "upgrade"     => ApplyUpgrade(state, caster, effect, rng, catalog),
             _        => (state, Array.Empty<BattleEvent>()),
         };
     }
@@ -408,6 +409,65 @@ internal static class EffectApplier
                 (s, e) => state with { DrawPile = s.ToImmutable(), ExhaustPile = e.ToImmutable() }),
             null => throw new InvalidOperationException("exhaustCard requires Pile (hand|discard|draw)"),
             _ => throw new InvalidOperationException($"exhaustCard invalid Pile '{pileName}', expected hand|discard|draw"),
+        };
+    }
+
+    private static (BattleState, IReadOnlyList<BattleEvent>) ApplyUpgrade(
+        BattleState state, CombatActor caster, CardEffect effect, IRng rng,
+        DataCatalog catalog)
+    {
+        // Pile 検証は OpenSourcePile で（exhaust pile は使わない）
+        var (sourceBuilder, applyResult) = OpenSourcePile(state, effect.Pile);
+
+        // 強化候補抽出: IsUpgraded=false かつ definition.IsUpgradable
+        var candidates = new List<int>();
+        for (int i = 0; i < sourceBuilder.Count; i++)
+        {
+            var card = sourceBuilder[i];
+            if (card.IsUpgraded) continue;
+            if (!catalog.TryGetCard(card.CardDefinitionId, out var def)) continue;
+            if (def.UpgradedCost is null && def.UpgradedEffects is null) continue;
+            candidates.Add(i);
+        }
+
+        int target = Math.Min(effect.Amount, candidates.Count);
+        int upgradedCount = 0;
+        for (int i = 0; i < target; i++)
+        {
+            int pickIdx = rng.NextInt(0, candidates.Count);
+            int sourceIdx = candidates[pickIdx];
+            candidates.RemoveAt(pickIdx);
+            var card = sourceBuilder[sourceIdx];
+            sourceBuilder[sourceIdx] = card with { IsUpgraded = true };
+            upgradedCount++;
+        }
+
+        if (upgradedCount == 0)
+            return (state, Array.Empty<BattleEvent>());
+
+        var next = applyResult(sourceBuilder);
+        var ev = new BattleEvent(
+            BattleEventKind.Upgrade, Order: 0,
+            CasterInstanceId: caster.InstanceId,
+            Amount: upgradedCount, Note: effect.Pile);
+        return (next, new[] { ev });
+    }
+
+    private static (
+        ImmutableArray<BattleCardInstance>.Builder source,
+        Func<ImmutableArray<BattleCardInstance>.Builder, BattleState> apply
+    ) OpenSourcePile(BattleState state, string? pileName)
+    {
+        return pileName switch
+        {
+            "hand" => (state.Hand.ToBuilder(),
+                s => state with { Hand = s.ToImmutable() }),
+            "discard" => (state.DiscardPile.ToBuilder(),
+                s => state with { DiscardPile = s.ToImmutable() }),
+            "draw" => (state.DrawPile.ToBuilder(),
+                s => state with { DrawPile = s.ToImmutable() }),
+            null => throw new InvalidOperationException("upgrade requires Pile (hand|discard|draw)"),
+            _ => throw new InvalidOperationException($"upgrade invalid Pile '{pileName}', expected hand|discard|draw"),
         };
     }
 
