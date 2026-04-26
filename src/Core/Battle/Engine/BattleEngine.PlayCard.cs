@@ -82,12 +82,16 @@ public static partial class BattleEngine
             ? def.UpgradedEffects
             : def.Effects;
 
+        // 10.2.D: summon 成功フラグを追跡
+        bool summonSucceeded = false;
+
         foreach (var eff in effects)
         {
             // 10.2.C: per-effect comboMin filter（PlayCard 経路のみ）
             if (eff.ComboMin is { } min && newCombo < min)
                 continue;
 
+            int beforeAlliesLength = s.Allies.Length;
             var (afterEffect, evs) = EffectApplier.Apply(s, caster, eff, rng, catalog);
             s = afterEffect;
             foreach (var ev in evs)
@@ -96,11 +100,51 @@ public static partial class BattleEngine
                 order++;
             }
             caster = s.Allies[0];
+
+            // 10.2.D: summon 成功検出
+            if (eff.Action == "summon" && s.Allies.Length > beforeAlliesLength)
+                summonSucceeded = true;
         }
 
-        var newHand = s.Hand.RemoveAt(handIndex);
-        var newDiscard = s.DiscardPile.Add(card);
-        s = s with { Hand = newHand, DiscardPile = newDiscard };
+        // 10.2.D: 5 段優先順位（exhaustSelf → Power → Unit+success → retainSelf → Discard）
+        bool hasExhaustSelf = effects.Any(e => e.Action == "exhaustSelf");
+        bool hasRetainSelf = effects.Any(e => e.Action == "retainSelf");
+        bool isPower = def.CardType == CardType.Power;
+        bool isUnit = def.CardType == CardType.Unit;
+
+        s = s with { Hand = s.Hand.RemoveAt(handIndex) };
+
+        if (hasExhaustSelf)
+        {
+            s = s with { ExhaustPile = s.ExhaustPile.Add(card) };
+        }
+        else if (isPower)
+        {
+            s = s with { PowerCards = s.PowerCards.Add(card) };
+        }
+        else if (isUnit && summonSucceeded)
+        {
+            s = s with { SummonHeld = s.SummonHeld.Add(card) };
+            // 直前に追加された召喚 actor の AssociatedSummonHeldInstanceId に card.InstanceId を設定
+            int lastIdx = s.Allies.Length - 1;
+            if (lastIdx >= 0
+                && s.Allies[lastIdx].DefinitionId != "hero"
+                && s.Allies[lastIdx].AssociatedSummonHeldInstanceId is null)
+            {
+                var summonActor = s.Allies[lastIdx];
+                s = s with { Allies = s.Allies.SetItem(
+                    lastIdx, summonActor with { AssociatedSummonHeldInstanceId = card.InstanceId }) };
+            }
+        }
+        else if (hasRetainSelf)
+        {
+            // hand の元の位置に戻す
+            s = s with { Hand = s.Hand.Insert(handIndex, card) };
+        }
+        else
+        {
+            s = s with { DiscardPile = s.DiscardPile.Add(card) };
+        }
 
         return (s, events);
     }
