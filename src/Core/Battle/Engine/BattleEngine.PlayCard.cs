@@ -31,12 +31,19 @@ public static partial class BattleEngine
             throw new InvalidOperationException($"card '{def.Id}' is unplayable (cost=null)");
         int actualCost = origCost.Value;
 
-        // 10.2.C: コンボ判定（Tasks 10-12 で完成、Task 8 では新規スタート/軽減なしの最小実装）
-        bool matchesNormal = false;
-        bool isWild = false;
-        bool isSuperWild = false;
-        bool isContinuing = false;
-        bool isReduced = false;
+        // 10.2.C: コンボ判定
+        bool matchesNormal =
+            state.LastPlayedOrigCost is { } prev && actualCost == prev + 1;
+        bool isWild = false;          // Task 11
+        bool isSuperWild = false;     // Task 12
+
+        bool isContinuing =
+            state.NextCardComboFreePass ? true
+          : matchesNormal              ? true
+          : (isWild || isSuperWild)    ? true
+          : false;
+
+        bool isReduced = matchesNormal;
 
         // 10.2.C: payCost 算定
         int basePay = card.CostOverride ?? actualCost;
