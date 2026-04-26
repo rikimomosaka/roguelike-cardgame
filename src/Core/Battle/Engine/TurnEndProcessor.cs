@@ -7,8 +7,8 @@ using RoguelikeCardGame.Core.Battle.State;
 namespace RoguelikeCardGame.Core.Battle.Engine;
 
 /// <summary>
-/// ターン終了処理。10.2.A は最小限（Block / AttackPool リセット、手札全捨て）。
-/// 10.2.B で OnTurnEnd レリック / コンボリセット, 10.2.D で retainSelf 対応が追加される。
+/// ターン終了処理。Phase 10.2.C でコンボ 3 フィールドのリセットを追加。
+/// 10.2.E で OnTurnEnd レリック / 10.2.D で retainSelf 対応の手札整理が追加される。
 /// 親 spec §4-6 参照。
 /// </summary>
 internal static class TurnEndProcessor
@@ -24,6 +24,9 @@ internal static class TurnEndProcessor
             Enemies = enemies,
             Hand = ImmutableArray<BattleCardInstance>.Empty,
             DiscardPile = newDiscard,
+            ComboCount = 0,                       // 10.2.C
+            LastPlayedOrigCost = null,            // 10.2.C
+            NextCardComboFreePass = false,        // 10.2.C
         };
         return (next, System.Array.Empty<BattleEvent>());
     }
