@@ -62,4 +62,16 @@ public class BattleEngineSetTargetTests
         BattleState next = BattleEngine.SetTarget(s, ActorSide.Enemy, 0);
         Assert.Equal(0, next.TargetEnemyIndex);
     }
+
+    [Theory]
+    [InlineData(BattlePhase.PlayerAttacking)]
+    [InlineData(BattlePhase.EnemyAttacking)]
+    [InlineData(BattlePhase.Resolved)]
+    public void Throws_when_phase_not_PlayerInput(BattlePhase phase)
+    {
+        var s = Make(phase: phase);
+        var ex = Assert.Throws<System.InvalidOperationException>(() =>
+            BattleEngine.SetTarget(s, ActorSide.Enemy, 0));
+        Assert.Contains("Phase=PlayerInput", ex.Message);
+    }
 }
