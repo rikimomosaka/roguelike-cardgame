@@ -42,7 +42,7 @@ public class EffectApplierDrawTests
         var eff = new CardEffect("draw", EffectScope.Self, null, 2);
         var (next, evs) = EffectApplier.Apply(s, hero, eff, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(2, next.Hand.Length);
-        Assert.Equal(1, next.DrawPile.Length);
+        Assert.Single(next.DrawPile);
         Assert.Single(evs);
         Assert.Equal(BattleEventKind.Draw, evs[0].Kind);
         Assert.Equal(2, evs[0].Amount);

@@ -41,7 +41,7 @@ public class EffectApplierDiscardTests
         var rng = new FakeRng(new[] { 1 }, new double[0]);  // pick c2
         var (next, evs) = EffectApplier.Apply(s, hero, eff, rng, BattleFixtures.MinimalCatalog());
         Assert.Equal(2, next.Hand.Length);
-        Assert.Equal(1, next.DiscardPile.Length);
+        Assert.Single(next.DiscardPile);
         Assert.Equal("c2", next.DiscardPile[0].InstanceId);
         Assert.Equal(BattleEventKind.Discard, evs[0].Kind);
         Assert.Equal(1, evs[0].Amount);
@@ -72,7 +72,7 @@ public class EffectApplierDiscardTests
         var eff = new CardEffect("discard", EffectScope.Random, null, 5);
         var (next, evs) = EffectApplier.Apply(s, hero, eff, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Empty(next.Hand);
-        Assert.Equal(1, next.DiscardPile.Length);
+        Assert.Single(next.DiscardPile);
         Assert.Equal(1, evs[0].Amount);  // 実捨て数 = 1
     }
 

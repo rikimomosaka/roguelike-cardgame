@@ -32,8 +32,35 @@ internal static class EffectApplier
             "heal"   => ApplyHeal(state, caster, effect, rng),
             "draw"   => ApplyDraw(state, caster, effect, rng),
             "discard"=> ApplyDiscard(state, caster, effect, rng),
+            "exhaustSelf" => ApplyExhaustSelf(state, caster),
+            "retainSelf"  => (state, Array.Empty<BattleEvent>()),
+            "gainEnergy"  => ApplyGainEnergy(state, caster, effect),
             _        => (state, Array.Empty<BattleEvent>()),
         };
+    }
+
+    private static (BattleState, IReadOnlyList<BattleEvent>) ApplyExhaustSelf(
+        BattleState state, CombatActor caster)
+    {
+        var ev = new BattleEvent(
+            BattleEventKind.Exhaust, Order: 0,
+            CasterInstanceId: caster.InstanceId,
+            Amount: 1, Note: "self");
+        return (state, new[] { ev });
+    }
+
+    private static (BattleState, IReadOnlyList<BattleEvent>) ApplyGainEnergy(
+        BattleState state, CombatActor caster, CardEffect effect)
+    {
+        if (effect.Scope != EffectScope.Self)
+            throw new InvalidOperationException(
+                $"gainEnergy requires Scope=Self, got {effect.Scope}");
+        var next = state with { Energy = state.Energy + effect.Amount };
+        var ev = new BattleEvent(
+            BattleEventKind.GainEnergy, Order: 0,
+            CasterInstanceId: caster.InstanceId,
+            Amount: effect.Amount);
+        return (next, new[] { ev });
     }
 
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyAttack(
