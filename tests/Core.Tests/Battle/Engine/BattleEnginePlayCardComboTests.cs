@@ -132,4 +132,53 @@ public class BattleEnginePlayCardComboTests
         Assert.Equal(2, next.ComboCount);
         Assert.True(next.NextCardComboFreePass);
     }
+
+    [Fact] public void Example5_wild_after_reset_starts_at_combo_one()
+    {
+        var def = CardWithCost("wild5", 5, keywords: new[] { "wild" });
+        var card = new BattleCardInstance("inst1", "wild5", false, null);
+        var hand = ImmutableArray.Create(card);
+        var s = Make(hand, lastOrigCost: null, combo: 0);
+        var cat = BattleFixtures.MinimalCatalog(cards: new[] { def });
+        var (next, _) = BattleEngine.PlayCard(s, 0, 0, 0, Rng(), cat);
+        Assert.Equal(1, next.ComboCount);
+        Assert.Equal(5, next.LastPlayedOrigCost);
+        Assert.False(next.NextCardComboFreePass);
+    }
+
+    [Fact] public void Example6_superwild_then_zero_cost()
+    {
+        var def1 = CardWithCost("sw6", 6, keywords: new[] { "superwild" });
+        var card1 = new BattleCardInstance("inst1", "sw6", false, null);
+        var s1 = Make(ImmutableArray.Create(card1), lastOrigCost: 4, combo: 2);
+        var cat1 = BattleFixtures.MinimalCatalog(cards: new[] { def1 });
+        var (after1, _) = BattleEngine.PlayCard(s1, 0, 0, 0, Rng(), cat1);
+        Assert.Equal(3, after1.ComboCount);
+        Assert.Equal(6, after1.LastPlayedOrigCost);
+        Assert.True(after1.NextCardComboFreePass);
+
+        var def2 = CardWithCost("c0", 0);
+        var card2 = new BattleCardInstance("inst2", "c0", false, null);
+        var s2 = after1 with {
+            Hand = ImmutableArray.Create(card2),
+        };
+        var cat2 = BattleFixtures.MinimalCatalog(cards: new[] { def1, def2 });
+        var (after2, _) = BattleEngine.PlayCard(s2, 0, 0, 0, Rng(), cat2);
+        Assert.Equal(4, after2.ComboCount);
+        Assert.Equal(0, after2.LastPlayedOrigCost);
+        Assert.False(after2.NextCardComboFreePass);
+        Assert.Equal(4, after2.Energy);
+    }
+
+    [Fact] public void Empty_keywords_array_treated_as_no_wild()
+    {
+        var def = CardWithCost("c5", 5, keywords: new string[0]);
+        var card = new BattleCardInstance("inst1", "c5", false, null);
+        var hand = ImmutableArray.Create(card);
+        var s = Make(hand, lastOrigCost: 1, combo: 1);
+        var cat = BattleFixtures.MinimalCatalog(cards: new[] { def });
+        var (next, _) = BattleEngine.PlayCard(s, 0, 0, 0, Rng(), cat);
+        Assert.Equal(1, next.ComboCount);
+        Assert.Equal(5, next.LastPlayedOrigCost);
+    }
 }
