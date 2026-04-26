@@ -86,4 +86,28 @@ public static class BattleFixtures
 
     public static BattleCardInstance MakeBattleCard(string defId, string instId, bool upgraded = false) =>
         new(instId, defId, upgraded, null);
+
+    // ===== Status helpers =====
+
+    /// <summary>actor に status を 1 つ追加した複製を返す。</summary>
+    public static CombatActor WithStatus(CombatActor actor, string id, int amount) =>
+        actor with { Statuses = actor.Statuses.SetItem(id, amount) };
+
+    public static CombatActor WithStrength(CombatActor actor, int amount = 1) =>
+        WithStatus(actor, "strength", amount);
+
+    public static CombatActor WithDexterity(CombatActor actor, int amount = 1) =>
+        WithStatus(actor, "dexterity", amount);
+
+    public static CombatActor WithVulnerable(CombatActor actor, int amount = 1) =>
+        WithStatus(actor, "vulnerable", amount);
+
+    public static CombatActor WithWeak(CombatActor actor, int amount = 1) =>
+        WithStatus(actor, "weak", amount);
+
+    public static CombatActor WithPoison(CombatActor actor, int amount = 1) =>
+        WithStatus(actor, "poison", amount);
+
+    public static CombatActor WithOmnistrike(CombatActor actor, int amount = 1) =>
+        WithStatus(actor, "omnistrike", amount);
 }
