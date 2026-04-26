@@ -130,4 +130,38 @@ public class EffectApplierBuffDebuffTests
         Assert.Equal(hero.InstanceId, evs[0].CasterInstanceId);
         Assert.Equal(goblin.InstanceId, evs[0].TargetInstanceId);
     }
+
+    [Fact] public void Buff_random_with_null_side_throws()
+    {
+        var hero = BattleFixtures.Hero();
+        var s = State(hero, BattleFixtures.Goblin());
+        var eff = new CardEffect("buff", EffectScope.Random, null, 1, Name: "strength");
+        Assert.Throws<System.InvalidOperationException>(() => EffectApplier.Apply(s, hero, eff, Rng()));
+    }
+
+    [Fact] public void Buff_all_with_null_side_throws()
+    {
+        var hero = BattleFixtures.Hero();
+        var s = State(hero, BattleFixtures.Goblin());
+        var eff = new CardEffect("buff", EffectScope.All, null, 1, Name: "strength");
+        Assert.Throws<System.InvalidOperationException>(() => EffectApplier.Apply(s, hero, eff, Rng()));
+    }
+
+    [Fact] public void Buff_single_ally_targets_target_ally_index()
+    {
+        var hero = BattleFixtures.Hero();
+        var s = State(hero, BattleFixtures.Goblin());
+        var eff = new CardEffect("buff", EffectScope.Single, EffectSide.Ally, 2, Name: "strength");
+        var (next, _) = EffectApplier.Apply(s, hero, eff, Rng());
+        Assert.Equal(2, next.Allies[0].GetStatus("strength"));
+    }
+
+    [Fact] public void Buff_all_allies_adds_to_each()
+    {
+        var hero = BattleFixtures.Hero();
+        var s = State(hero, BattleFixtures.Goblin());
+        var eff = new CardEffect("buff", EffectScope.All, EffectSide.Ally, 1, Name: "strength");
+        var (next, _) = EffectApplier.Apply(s, hero, eff, Rng());
+        Assert.Equal(1, next.Allies[0].GetStatus("strength"));
+    }
 }

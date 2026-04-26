@@ -67,7 +67,10 @@ internal static class EnemyAttackingResolver
                 {
                     // 敵 move の block effect は scope=self を前提（10.2.A の制約）
                     var newEnemy = currentEnemyState with { Block = currentEnemyState.Block.Add(eff.Amount) };
-                    int idx = state.Enemies.IndexOf(currentEnemyState);
+                    int idx = -1;
+                    for (int i = 0; i < state.Enemies.Length; i++)
+                        if (state.Enemies[i].InstanceId == currentEnemyState.InstanceId) { idx = i; break; }
+                    if (idx < 0) continue;
                     state = state with { Enemies = state.Enemies.SetItem(idx, newEnemy) };
                     events.Add(new BattleEvent(
                         BattleEventKind.GainBlock, Order: order,
@@ -80,8 +83,10 @@ internal static class EnemyAttackingResolver
                 // その他の action は 10.2.B 以降で対応 (no-op)
             }
 
-            // NextMoveId へ遷移
-            int enemyIdx = state.Enemies.IndexOf(currentEnemyState);
+            // NextMoveId へ遷移（InstanceId ベースで検索して IndexOf を回避）
+            int enemyIdx = -1;
+            for (int i = 0; i < state.Enemies.Length; i++)
+                if (state.Enemies[i].InstanceId == currentEnemyState.InstanceId) { enemyIdx = i; break; }
             if (enemyIdx >= 0)
             {
                 var transitioned = state.Enemies[enemyIdx] with { CurrentMoveId = move.NextMoveId };

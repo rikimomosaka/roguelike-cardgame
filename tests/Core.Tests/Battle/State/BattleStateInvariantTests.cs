@@ -1,5 +1,7 @@
 using System.Collections.Immutable;
+using System.Linq;
 using RoguelikeCardGame.Core.Battle.State;
+using RoguelikeCardGame.Core.Tests.Battle.Fixtures;
 using Xunit;
 
 namespace RoguelikeCardGame.Core.Tests.Battle.State;
@@ -94,5 +96,36 @@ public class BattleStateInvariantTests
         var s = Make() with { DrawPile = deck };
         var total = s.DrawPile.Length + s.Hand.Length + s.DiscardPile.Length + s.ExhaustPile.Length;
         Assert.Equal(2, total);
+    }
+
+    [Fact] public void Statuses_values_are_always_positive()
+    {
+        // CombatActor.Statuses に <= 0 のエントリが存在しないことを検証
+        // (post-condition: EffectApplier と TurnStartProcessor は <= 0 でキーを削除する)
+        var hero = BattleFixtures.WithStrength(BattleFixtures.Hero(), 3);
+        foreach (var kv in hero.Statuses)
+            Assert.True(kv.Value > 0, $"Status '{kv.Key}' has non-positive amount {kv.Value}");
+    }
+
+    [Fact] public void Statuses_keys_are_in_StatusDefinition_All()
+    {
+        // CombatActor.Statuses のキーは既知の StatusDefinition でなければならない
+        var validIds = RoguelikeCardGame.Core.Battle.Statuses.StatusDefinition.All
+            .Select(s => s.Id).ToHashSet();
+        var hero = BattleFixtures.WithStatus(BattleFixtures.Hero(), "strength", 3);
+        foreach (var key in hero.Statuses.Keys)
+            Assert.Contains(key, validIds);
+    }
+
+    [Fact] public void Resolved_phase_implies_outcome_not_pending()
+    {
+        // Phase=Resolved iff Outcome != Pending の対称性を検証
+        var s = Make(
+            allies: ImmutableArray.Create(Hero(0)), // HP=0 (dead)
+            enemies: ImmutableArray.Create(Goblin(0)),
+            phase: BattlePhase.Resolved,
+            outcome: RoguelikeCardGame.Core.Battle.State.BattleOutcome.Defeat);
+        Assert.Equal(BattlePhase.Resolved, s.Phase);
+        Assert.NotEqual(RoguelikeCardGame.Core.Battle.State.BattleOutcome.Pending, s.Outcome);
     }
 }

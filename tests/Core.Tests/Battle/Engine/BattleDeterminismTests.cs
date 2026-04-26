@@ -69,13 +69,15 @@ public class BattleDeterminismTests
                 a.SlotIndex, a.CurrentHp, a.MaxHp,
                 Block = a.Block.Sum, AttackSingle = a.AttackSingle.Sum,
                 AttackRandom = a.AttackRandom.Sum, AttackAll = a.AttackAll.Sum,
-                a.CurrentMoveId }),
+                a.CurrentMoveId,
+                Statuses = a.Statuses.OrderBy(kv => kv.Key).Select(kv => new { kv.Key, kv.Value }) }),
             Enemies = s.Enemies.Select(e => new {
                 e.InstanceId, e.DefinitionId, Side = e.Side.ToString(),
                 e.SlotIndex, e.CurrentHp, e.MaxHp,
                 Block = e.Block.Sum, AttackSingle = e.AttackSingle.Sum,
                 AttackRandom = e.AttackRandom.Sum, AttackAll = e.AttackAll.Sum,
-                e.CurrentMoveId }),
+                e.CurrentMoveId,
+                Statuses = e.Statuses.OrderBy(kv => kv.Key).Select(kv => new { kv.Key, kv.Value }) }),
             DrawPile = s.DrawPile.Select(c => new { c.InstanceId, c.CardDefinitionId, c.IsUpgraded, c.CostOverride }),
             Hand = s.Hand.Select(c => new { c.InstanceId, c.CardDefinitionId, c.IsUpgraded, c.CostOverride }),
             DiscardPile = s.DiscardPile.Select(c => new { c.InstanceId, c.CardDefinitionId, c.IsUpgraded, c.CostOverride }),
@@ -98,11 +100,21 @@ public class BattleDeterminismTests
 
     [Fact] public void Same_seed_with_status_card_yields_identical_state()
     {
-        // strike + buff(strength) を含む 1 戦闘で 2 回回し、State 一致を検証
+        // buff_self_str を含むデッキで 2 回回し、State 一致を検証（デッキに buff_self_str を確実に含める）
         BattleState RunWithBuff(int seed)
         {
             var rng = new SequentialRng((ulong)seed);
-            var run = MakeRun();
+            var run = MakeRun() with
+            {
+                Deck = ImmutableArray.Create(
+                    new CardInstance("buff_self_str", false),
+                    new CardInstance("buff_self_str", false),
+                    new CardInstance("strike", false),
+                    new CardInstance("strike", false),
+                    new CardInstance("strike", false),
+                    new CardInstance("strike", false),
+                    new CardInstance("strike", false)),
+            };
             var cards = new[]
             {
                 BattleFixtures.Strike(),
@@ -118,10 +130,13 @@ public class BattleDeterminismTests
             };
             var cat = BattleFixtures.MinimalCatalog(cards: cards);
             var s = BattleEngine.Start(run, "enc_test", rng, cat);
-            // 1 ターン目: buff カードを引いていれば打つ、そうでなければ EndTurn
-            if (s.Hand.Length > 0)
+            // buff_self_str が手札にあれば打つ（シード固定なので毎回同じ引きになる）
+            int buffIdx = -1;
+            for (int i = 0; i < s.Hand.Length; i++)
+                if (s.Hand[i].CardDefinitionId == "buff_self_str") { buffIdx = i; break; }
+            if (buffIdx >= 0)
             {
-                var (s2, _) = BattleEngine.PlayCard(s, 0, 0, 0, rng, cat);
+                var (s2, _) = BattleEngine.PlayCard(s, buffIdx, 0, 0, rng, cat);
                 var (s3, _) = BattleEngine.EndTurn(s2, rng, cat);
                 return s3;
             }
