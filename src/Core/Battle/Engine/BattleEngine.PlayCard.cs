@@ -35,7 +35,7 @@ public static partial class BattleEngine
         bool matchesNormal =
             state.LastPlayedOrigCost is { } prev && actualCost == prev + 1;
         bool isWild = def.Keywords?.Contains("wild") == true;
-        bool isSuperWild = false;     // Task 12
+        bool isSuperWild = def.Keywords?.Contains("superwild") == true;
 
         bool isContinuing =
             state.NextCardComboFreePass ? true

@@ -92,4 +92,44 @@ public class BattleEnginePlayCardComboTests
         Assert.Equal(2, next.ComboCount);
         Assert.Equal(2, next.LastPlayedOrigCost);
     }
+
+    [Fact] public void Example4_superwild_sets_free_pass()
+    {
+        var def = CardWithCost("sw7", 7, keywords: new[] { "superwild" });
+        var card = new BattleCardInstance("inst1", "sw7", false, null);
+        var hand = ImmutableArray.Create(card);
+        var s = Make(hand, lastOrigCost: 1, combo: 1);
+        var cat = BattleFixtures.MinimalCatalog(cards: new[] { def });
+        var (next, _) = BattleEngine.PlayCard(s, 0, 0, 0, Rng(), cat);
+        Assert.Equal(3, next.Energy);
+        Assert.Equal(2, next.ComboCount);
+        Assert.Equal(7, next.LastPlayedOrigCost);
+        Assert.True(next.NextCardComboFreePass);
+    }
+
+    [Fact] public void Example4_cont_next_card_bypasses_via_free_pass()
+    {
+        var def = CardWithCost("c3", 3);
+        var card = new BattleCardInstance("inst1", "c3", false, null);
+        var hand = ImmutableArray.Create(card);
+        var s = Make(hand, lastOrigCost: 7, combo: 2, freePass: true);
+        var cat = BattleFixtures.MinimalCatalog(cards: new[] { def });
+        var (next, _) = BattleEngine.PlayCard(s, 0, 0, 0, Rng(), cat);
+        Assert.Equal(7, next.Energy);
+        Assert.Equal(3, next.ComboCount);
+        Assert.Equal(3, next.LastPlayedOrigCost);
+        Assert.False(next.NextCardComboFreePass);
+    }
+
+    [Fact] public void Wild_and_superwild_both_present_superwild_wins()
+    {
+        var def = CardWithCost("ws", 4, keywords: new[] { "wild", "superwild" });
+        var card = new BattleCardInstance("inst1", "ws", false, null);
+        var hand = ImmutableArray.Create(card);
+        var s = Make(hand, lastOrigCost: 1, combo: 1);
+        var cat = BattleFixtures.MinimalCatalog(cards: new[] { def });
+        var (next, _) = BattleEngine.PlayCard(s, 0, 0, 0, Rng(), cat);
+        Assert.Equal(2, next.ComboCount);
+        Assert.True(next.NextCardComboFreePass);
+    }
 }
