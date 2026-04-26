@@ -95,4 +95,42 @@ public class BattleDeterminismTests
         var (_, eb) = RunBattle(seed: 42);
         Assert.Equal(ea, eb);
     }
+
+    [Fact] public void Same_seed_with_status_card_yields_identical_state()
+    {
+        // strike + buff(strength) を含む 1 戦闘で 2 回回し、State 一致を検証
+        BattleState RunWithBuff(int seed)
+        {
+            var rng = new SequentialRng((ulong)seed);
+            var run = MakeRun();
+            var cards = new[]
+            {
+                BattleFixtures.Strike(),
+                new RoguelikeCardGame.Core.Cards.CardDefinition(
+                    "buff_self_str", "Buff Self Str", null,
+                    RoguelikeCardGame.Core.Cards.CardRarity.Common,
+                    RoguelikeCardGame.Core.Cards.CardType.Skill,
+                    Cost: 1, UpgradedCost: null,
+                    Effects: new[] { new RoguelikeCardGame.Core.Cards.CardEffect(
+                        "buff", RoguelikeCardGame.Core.Cards.EffectScope.Self, null, 2,
+                        Name: "strength") },
+                    UpgradedEffects: null, Keywords: null),
+            };
+            var cat = BattleFixtures.MinimalCatalog(cards: cards);
+            var s = BattleEngine.Start(run, "enc_test", rng, cat);
+            // 1 ターン目: buff カードを引いていれば打つ、そうでなければ EndTurn
+            if (s.Hand.Length > 0)
+            {
+                var (s2, _) = BattleEngine.PlayCard(s, 0, 0, 0, rng, cat);
+                var (s3, _) = BattleEngine.EndTurn(s2, rng, cat);
+                return s3;
+            }
+            var (sNext, _) = BattleEngine.EndTurn(s, rng, cat);
+            return sNext;
+        }
+
+        var a = RunWithBuff(seed: 100);
+        var b = RunWithBuff(seed: 100);
+        Assert.Equal(StateJson(a), StateJson(b));
+    }
 }
