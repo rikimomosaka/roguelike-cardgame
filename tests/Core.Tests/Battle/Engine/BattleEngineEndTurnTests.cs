@@ -127,4 +127,42 @@ public class BattleEngineEndTurnTests
         Assert.Equal(RoguelikeCardGame.Core.Battle.State.BattleOutcome.Defeat, next.Outcome);
         Assert.Equal(BattlePhase.Resolved, next.Phase); // PlayerInput に上書きされていない
     }
+
+    [Fact] public void EndTurn_resets_combo_fields_after_TurnEnd()
+    {
+        // Build a state mid-combo (simulating SuperWild played, FreePass active),
+        // then call EndTurn → PlayerAttacking → EnemyAttacking → TurnEndProcessor → TurnStartProcessor.
+        // After EndTurn returns (Outcome=Pending), combo 3 fields should be reset.
+        var s = MakeStateWithCombo(combo: 3, lastOrigCost: 5, freePass: true);
+        var cat = BattleFixtures.MinimalCatalog();
+
+        var (next, _) = BattleEngine.EndTurn(s, Rng(), cat);
+
+        // PlayerAttacking + EnemyAttacking + TurnEndProcessor + TurnStartProcessor
+        // 万一 EndTurn 中に Outcome 確定したらこのテストは別の挙動を測ることになる
+        if (next.Outcome == BattleOutcome.Pending)
+        {
+            Assert.Equal(0, next.ComboCount);
+            Assert.Null(next.LastPlayedOrigCost);
+            Assert.False(next.NextCardComboFreePass);
+        }
+    }
+
+    private static BattleState MakeStateWithCombo(int combo, int? lastOrigCost, bool freePass)
+    {
+        return new(
+            Turn: 1, Phase: BattlePhase.PlayerInput, Outcome: BattleOutcome.Pending,
+            Allies: ImmutableArray.Create(BattleFixtures.Hero()),
+            Enemies: ImmutableArray.Create(BattleFixtures.Goblin()),
+            TargetAllyIndex: 0, TargetEnemyIndex: 0,
+            Energy: 3, EnergyMax: 3,
+            DrawPile: ImmutableArray<BattleCardInstance>.Empty,
+            Hand: ImmutableArray<BattleCardInstance>.Empty,
+            DiscardPile: ImmutableArray<BattleCardInstance>.Empty,
+            ExhaustPile: ImmutableArray<BattleCardInstance>.Empty,
+            ComboCount: combo,
+            LastPlayedOrigCost: lastOrigCost,
+            NextCardComboFreePass: freePass,
+            EncounterId: "enc_test");
+    }
 }
