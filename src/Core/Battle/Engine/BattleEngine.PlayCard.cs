@@ -84,7 +84,10 @@ public static partial class BattleEngine
 
         foreach (var eff in effects)
         {
-            // 10.2.C Task 14 で comboMin filter 追加予定
+            // 10.2.C: per-effect comboMin filter（PlayCard 経路のみ）
+            if (eff.ComboMin is { } min && newCombo < min)
+                continue;
+
             var (afterEffect, evs) = EffectApplier.Apply(s, caster, eff, rng);
             s = afterEffect;
             foreach (var ev in evs)
