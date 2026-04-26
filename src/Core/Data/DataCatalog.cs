@@ -29,7 +29,8 @@ public sealed record DataCatalog(
     IReadOnlyDictionary<string, CharacterDefinition> Characters,
     IReadOnlyDictionary<string, EventDefinition> Events,
     MerchantPrices? MerchantPrices = null,
-    IReadOnlyDictionary<int, ImmutableArray<string>>? ActStartRelicPools = null)
+    IReadOnlyDictionary<int, ImmutableArray<string>>? ActStartRelicPools = null,
+    IReadOnlyDictionary<string, UnitDefinition>? Units = null)   // 10.2.D: 召喚キャラ
 {
     public static DataCatalog LoadFromStrings(
         IEnumerable<string> cards,
@@ -147,4 +148,9 @@ public sealed record DataCatalog(
     public bool TryGetRewardTable(string id, [MaybeNullWhen(false)] out RewardTable def) => RewardTables.TryGetValue(id, out def);
     public bool TryGetCharacter(string id, [MaybeNullWhen(false)] out CharacterDefinition def) => Characters.TryGetValue(id, out def);
     public bool TryGetEvent(string id, [MaybeNullWhen(false)] out EventDefinition def) => Events.TryGetValue(id, out def);
+    public bool TryGetUnit(string id, [MaybeNullWhen(false)] out UnitDefinition def)
+    {
+        if (Units is null) { def = null; return false; }
+        return Units.TryGetValue(id, out def);
+    }
 }

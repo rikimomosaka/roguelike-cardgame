@@ -70,13 +70,26 @@ public static class BattleFixtures
     public static EncounterDefinition SingleGoblinEncounter() =>
         new("enc_test", new EnemyPool(1, EnemyTier.Weak), new[] { "goblin" });
 
+    // ===== UnitDefinition factory =====
+
+    /// <summary>10.2.D: 召喚キャラ定義 factory。デフォルトは hp=10、wait move 持ち、永続。</summary>
+    public static UnitDefinition MinionDef(string id = "minion", int hp = 10, int? lifetime = null) =>
+        new(id, id, $"img_{id}", hp,
+            InitialMoveId: "wait",
+            Moves: new[] {
+                new MoveDefinition("wait", MoveKind.Defend,
+                    new[] { new CardEffect("block", EffectScope.Self, null, 0) }, "wait")
+            },
+            LifetimeTurns: lifetime);
+
     // ===== DataCatalog factory =====
 
     /// <summary>テスト用最小限の DataCatalog。必要に応じて defs を上書き可能。</summary>
     public static DataCatalog MinimalCatalog(
         IEnumerable<CardDefinition>? cards = null,
         IEnumerable<EnemyDefinition>? enemies = null,
-        IEnumerable<EncounterDefinition>? encounters = null)
+        IEnumerable<EncounterDefinition>? encounters = null,
+        IEnumerable<UnitDefinition>? units = null)   // 10.2.D 追加
     {
         var cardDict = (cards ?? new[] { Strike(), Defend() })
             .ToDictionary(c => c.Id);
@@ -84,6 +97,8 @@ public static class BattleFixtures
             .ToDictionary(e => e.Id);
         var encDict = (encounters ?? new[] { SingleGoblinEncounter() })
             .ToDictionary(e => e.Id);
+        var unitDict = (units ?? new[] { MinionDef() })
+            .ToDictionary(u => u.Id);
         return new DataCatalog(
             Cards: cardDict,
             Relics: new Dictionary<string, RoguelikeCardGame.Core.Relics.RelicDefinition>(),
@@ -92,7 +107,8 @@ public static class BattleFixtures
             Encounters: encDict,
             RewardTables: new Dictionary<string, RewardTable>(),
             Characters: new Dictionary<string, CharacterDefinition>(),
-            Events: new Dictionary<string, RoguelikeCardGame.Core.Events.EventDefinition>());
+            Events: new Dictionary<string, RoguelikeCardGame.Core.Events.EventDefinition>(),
+            Units: unitDict);   // 10.2.D
     }
 
     // ===== BattleCardInstance helpers =====

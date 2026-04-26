@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using RoguelikeCardGame.Core.Battle.Definitions;   // 10.2.D: UnitDefinition
 using RoguelikeCardGame.Core.Battle.Events;
 using RoguelikeCardGame.Core.Battle.State;
 using RoguelikeCardGame.Core.Cards;
@@ -37,6 +38,7 @@ internal static class EffectApplier
             "gainEnergy"  => ApplyGainEnergy(state, caster, effect),
             "exhaustCard" => ApplyExhaustCard(state, caster, effect, rng),
             "upgrade"     => ApplyUpgrade(state, caster, effect, rng, catalog),
+            "summon"      => ApplySummon(state, caster, effect, catalog),
             _        => (state, Array.Empty<BattleEvent>()),
         };
     }
@@ -469,6 +471,55 @@ internal static class EffectApplier
             null => throw new InvalidOperationException("upgrade requires Pile (hand|discard|draw)"),
             _ => throw new InvalidOperationException($"upgrade invalid Pile '{pileName}', expected hand|discard|draw"),
         };
+    }
+
+    /// <summary>
+    /// 10.2.D: summon action。effect.UnitId のキャラを catalog から取り出し、
+    /// state.Allies の空き slot (1〜3) に追加する。null/未知 UnitId は throw。slot 満杯時は silent skip。
+    /// AssociatedSummonHeldInstanceId は null（PlayCard 側 card-move logic が後で設定）。
+    /// </summary>
+    private static (BattleState, IReadOnlyList<BattleEvent>) ApplySummon(
+        BattleState state, CombatActor caster, CardEffect effect, DataCatalog catalog)
+    {
+        if (string.IsNullOrEmpty(effect.UnitId))
+            throw new InvalidOperationException("summon requires UnitId");
+        if (!catalog.TryGetUnit(effect.UnitId, out var unitDef))
+            throw new InvalidOperationException($"summon unknown UnitId '{effect.UnitId}'");
+
+        // 空き slot 検索（hero=0 を除く 1〜3）
+        var occupiedSlots = state.Allies.Select(a => a.SlotIndex).ToHashSet();
+        int emptySlot = -1;
+        for (int i = 1; i <= 3; i++)
+        {
+            if (!occupiedSlots.Contains(i)) { emptySlot = i; break; }
+        }
+        if (emptySlot == -1)
+            return (state, Array.Empty<BattleEvent>());  // 不発、silent skip
+
+        string newInstanceId = $"summon_inst_{state.Turn}_{state.Allies.Length}";
+        var newActor = new CombatActor(
+            InstanceId: newInstanceId,
+            DefinitionId: effect.UnitId,
+            Side: ActorSide.Ally,
+            SlotIndex: emptySlot,
+            CurrentHp: unitDef.Hp,
+            MaxHp: unitDef.Hp,
+            Block: BlockPool.Empty,
+            AttackSingle: AttackPool.Empty,
+            AttackRandom: AttackPool.Empty,
+            AttackAll: AttackPool.Empty,
+            Statuses: ImmutableDictionary<string, int>.Empty,
+            CurrentMoveId: unitDef.InitialMoveId,
+            RemainingLifetimeTurns: unitDef.LifetimeTurns,
+            AssociatedSummonHeldInstanceId: null);   // PlayCard card-move logic で設定
+
+        var next = state with { Allies = state.Allies.Add(newActor) };
+        var ev = new BattleEvent(
+            BattleEventKind.Summon, Order: 0,
+            CasterInstanceId: caster.InstanceId,
+            TargetInstanceId: newInstanceId,
+            Note: effect.UnitId);
+        return (next, new[] { ev });
     }
 
     /// <summary>
