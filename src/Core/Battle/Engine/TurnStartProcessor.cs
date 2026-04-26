@@ -26,8 +26,30 @@ internal static class TurnStartProcessor
         // Step 2: 毒ダメージ tick（Allies → Enemies、SlotIndex 順、InstanceId 検索で更新）
         s = ApplyPoisonTick(s, events, ref order);
 
-        // Step 3-7（死亡判定 / countdown / Energy / Draw / TurnStart event）は Task 14, 15 以降で追加
+        // Step 3: tick 後の死亡判定 + 自動切替 + Outcome 確定
+        s = TargetingAutoSwitch.Apply(s);
+        if (!s.Enemies.Any(e => e.IsAlive))
+        {
+            s = s with
+            {
+                Outcome = RoguelikeCardGame.Core.Battle.State.BattleOutcome.Victory,
+                Phase = BattlePhase.Resolved,
+            };
+            events.Add(new BattleEvent(BattleEventKind.BattleEnd, Order: order++, Note: "Victory"));
+            return (s, events);
+        }
+        if (!s.Allies.Any(a => a.IsAlive))
+        {
+            s = s with
+            {
+                Outcome = RoguelikeCardGame.Core.Battle.State.BattleOutcome.Defeat,
+                Phase = BattlePhase.Resolved,
+            };
+            events.Add(new BattleEvent(BattleEventKind.BattleEnd, Order: order++, Note: "Defeat"));
+            return (s, events);
+        }
 
+        // Step 5-7（Energy / Draw / TurnStart event）。countdown は Task 15 で追加
         s = s with { Energy = s.EnergyMax };
         s = DrawCards(s, DrawPerTurn, rng);
         events.Add(new BattleEvent(BattleEventKind.TurnStart, Order: order++, Note: $"turn={s.Turn}"));

@@ -84,4 +84,51 @@ public class TurnStartProcessorTickTests
         Assert.Equal(3, next.Energy); // EnergyMax = 3
         Assert.Equal(5, next.Hand.Length);
     }
+
+    [Fact] public void Poison_kills_all_enemies_outcome_victory()
+    {
+        var hero = BattleFixtures.Hero(70);
+        var goblin = BattleFixtures.WithPoison(BattleFixtures.Goblin(hp: 3), 5);
+        var s = State(hero, goblin);
+        var (next, evs) = TurnStartProcessor.Process(s, Rng());
+        Assert.Equal(RoguelikeCardGame.Core.Battle.State.BattleOutcome.Victory, next.Outcome);
+        Assert.Equal(BattlePhase.Resolved, next.Phase);
+        Assert.Contains(evs, e => e.Kind == BattleEventKind.BattleEnd);
+    }
+
+    [Fact] public void Poison_kills_hero_outcome_defeat()
+    {
+        var hero = BattleFixtures.WithPoison(BattleFixtures.Hero(hp: 2), 5);
+        var s = State(hero, BattleFixtures.Goblin());
+        var (next, evs) = TurnStartProcessor.Process(s, Rng());
+        Assert.Equal(RoguelikeCardGame.Core.Battle.State.BattleOutcome.Defeat, next.Outcome);
+        Assert.Equal(BattlePhase.Resolved, next.Phase);
+        Assert.Contains(evs, e => e.Kind == BattleEventKind.BattleEnd);
+    }
+
+    [Fact] public void Outcome_confirmed_skips_energy_and_draw()
+    {
+        var hero = BattleFixtures.WithPoison(BattleFixtures.Hero(hp: 2), 5);
+        var s = State(hero, BattleFixtures.Goblin()) with
+        {
+            DrawPile = ImmutableArray.Create(
+                BattleFixtures.MakeBattleCard("strike", "c1"),
+                BattleFixtures.MakeBattleCard("strike", "c2")),
+        };
+        var (next, _) = TurnStartProcessor.Process(s, Rng());
+        Assert.Equal(0, next.Energy);    // EnergyMax まで回復しない
+        Assert.Empty(next.Hand);          // ドローしない
+    }
+
+    [Fact] public void Targeting_auto_switch_after_poison_kill()
+    {
+        // 敵が複数、最内側が毒死 → TargetEnemyIndex が次の生存敵へ
+        var hero = BattleFixtures.Hero();
+        var goblin0 = BattleFixtures.WithPoison(BattleFixtures.Goblin(0, hp: 3), 5); // 死ぬ
+        var goblin1 = BattleFixtures.Goblin(1, hp: 20);                              // 生存
+        var s = State(hero, goblin0, goblin1);
+        var (next, _) = TurnStartProcessor.Process(s, Rng());
+        Assert.Equal(RoguelikeCardGame.Core.Battle.State.BattleOutcome.Pending, next.Outcome);
+        Assert.Equal(1, next.TargetEnemyIndex);
+    }
 }
