@@ -47,7 +47,7 @@ public class BattleDeterminismTests
         var rng = new SequentialRng((ulong)seed);
         var run = MakeRun();
         var cat = BattleFixtures.MinimalCatalog();
-        var s = BattleEngine.Start(run, "enc_test", rng, cat);
+        var (s, _) = BattleEngine.Start(run, "enc_test", rng, cat);
         var allEvents = new System.Collections.Generic.List<BattleEvent>();
 
         // 1 ターン目：先頭の strike を打って EndTurn
@@ -129,7 +129,7 @@ public class BattleDeterminismTests
                     UpgradedEffects: null, Keywords: null),
             };
             var cat = BattleFixtures.MinimalCatalog(cards: cards);
-            var s = BattleEngine.Start(run, "enc_test", rng, cat);
+            var (s, _) = BattleEngine.Start(run, "enc_test", rng, cat);
             // buff_self_str が手札にあれば打つ（シード固定なので毎回同じ引きになる）
             int buffIdx = -1;
             for (int i = 0; i < s.Hand.Length; i++)
@@ -157,7 +157,7 @@ public class BattleDeterminismTests
             var rng = new SequentialRng((ulong)seed);
             var run = MakeRun();
             var cat = BattleFixtures.MinimalCatalog();
-            var s = BattleEngine.Start(run, "enc_test", rng, cat);
+            var (s, _) = BattleEngine.Start(run, "enc_test", rng, cat);
 
             // SetTarget(Enemy, 0) → PlayCard(0)
             s = BattleEngine.SetTarget(s, ActorSide.Enemy, 0);
@@ -204,7 +204,8 @@ public class BattleDeterminismTests
             var cat = BattleFixtures.MinimalCatalog(
                 cards: new[] { BattleFixtures.Strike(), summonCard, healCard },
                 units: new[] { BattleFixtures.MinionDef() });
-            return BattleEngine.Start(run, "enc_test", rng, cat);
+            var (startState, _) = BattleEngine.Start(run, "enc_test", rng, cat);
+            return startState;
         }
 
         var a = RunWithSummonAndHeal(seed: 314);

@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Linq;
 using RoguelikeCardGame.Core.Battle.Engine;
+using RoguelikeCardGame.Core.Battle.Events;
 using RoguelikeCardGame.Core.Battle.State;
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Random;
@@ -49,7 +50,7 @@ public class BattleEngineStartTests
     {
         var run = MakeRun("strike", "defend");
         var cat = BattleFixtures.MinimalCatalog();
-        var s = BattleEngine.Start(run, "enc_test", Rng(), cat);
+        var (s, _) = BattleEngine.Start(run, "enc_test", Rng(), cat);
         Assert.Equal("hero", s.Allies[0].DefinitionId);
         Assert.Equal(0, s.Allies[0].SlotIndex);
         Assert.Equal(70, s.Allies[0].CurrentHp);
@@ -60,7 +61,7 @@ public class BattleEngineStartTests
     {
         var run = MakeRun("strike");
         var cat = BattleFixtures.MinimalCatalog();
-        var s = BattleEngine.Start(run, "enc_test", Rng(), cat);
+        var (s, _) = BattleEngine.Start(run, "enc_test", Rng(), cat);
         Assert.Single(s.Enemies);
         Assert.Equal("goblin", s.Enemies[0].DefinitionId);
         Assert.Equal("swing", s.Enemies[0].CurrentMoveId);
@@ -70,7 +71,7 @@ public class BattleEngineStartTests
     {
         var run = MakeRun("strike", "strike", "strike", "strike", "strike", "strike", "strike", "defend");
         var cat = BattleFixtures.MinimalCatalog();
-        var s = BattleEngine.Start(run, "enc_test", Rng(), cat);
+        var (s, _) = BattleEngine.Start(run, "enc_test", Rng(), cat);
         Assert.Equal(5, s.Hand.Length);
         Assert.Equal(3, s.DrawPile.Length); // 8 - 5
     }
@@ -79,7 +80,7 @@ public class BattleEngineStartTests
     {
         var run = MakeRun("strike");
         var cat = BattleFixtures.MinimalCatalog();
-        var s = BattleEngine.Start(run, "enc_test", Rng(), cat);
+        var (s, _) = BattleEngine.Start(run, "enc_test", Rng(), cat);
         Assert.Equal(BattlePhase.PlayerInput, s.Phase);
         Assert.Equal(BattleOutcome.Pending, s.Outcome);
         // 注: Start で Turn=0 で初期化 → TurnStartProcessor が +1 して Turn=1
@@ -90,7 +91,7 @@ public class BattleEngineStartTests
     {
         var run = MakeRun("strike");
         var cat = BattleFixtures.MinimalCatalog();
-        var s = BattleEngine.Start(run, "enc_test", Rng(), cat);
+        var (s, _) = BattleEngine.Start(run, "enc_test", Rng(), cat);
         Assert.Equal(0, s.TargetAllyIndex);
         Assert.Equal(0, s.TargetEnemyIndex);
     }
@@ -99,7 +100,7 @@ public class BattleEngineStartTests
     {
         var run = MakeRun("strike");
         var cat = BattleFixtures.MinimalCatalog();
-        var s = BattleEngine.Start(run, "enc_test", Rng(), cat);
+        var (s, _) = BattleEngine.Start(run, "enc_test", Rng(), cat);
         Assert.Equal(3, s.Energy);
         Assert.Equal(3, s.EnergyMax);
     }
@@ -108,7 +109,7 @@ public class BattleEngineStartTests
     {
         var run = MakeRun("strike");
         var cat = BattleFixtures.MinimalCatalog();
-        var s = BattleEngine.Start(run, "enc_test", Rng(), cat);
+        var (s, _) = BattleEngine.Start(run, "enc_test", Rng(), cat);
         Assert.Equal("enc_test", s.EncounterId);
     }
 
@@ -116,7 +117,7 @@ public class BattleEngineStartTests
     {
         var run = MakeRun("strike");
         var cat = BattleFixtures.MinimalCatalog();
-        var s = BattleEngine.Start(run, "enc_test", Rng(), cat);
+        var (s, _) = BattleEngine.Start(run, "enc_test", Rng(), cat);
         Assert.Equal(0, s.ComboCount);
         Assert.Null(s.LastPlayedOrigCost);
         Assert.False(s.NextCardComboFreePass);
@@ -126,8 +127,52 @@ public class BattleEngineStartTests
     {
         var run = MakeRun("strike");
         var cat = BattleFixtures.MinimalCatalog();
-        var s = BattleEngine.Start(run, "enc_test", Rng(), cat);
+        var (s, _) = BattleEngine.Start(run, "enc_test", Rng(), cat);
         Assert.Empty(s.SummonHeld);
         Assert.Empty(s.PowerCards);
+    }
+
+    [Fact]
+    public void Start_returns_events_with_BattleStart_and_TurnStart()
+    {
+        var run = MakeRun("strike");
+        var catalog = BattleFixtures.MinimalCatalog();
+
+        var (state, events) = BattleEngine.Start(run, "enc_test", Rng(), catalog);
+
+        Assert.Equal(BattlePhase.PlayerInput, state.Phase);
+        Assert.Contains(events, e => e.Kind == BattleEventKind.BattleStart);
+        Assert.Contains(events, e => e.Kind == BattleEventKind.TurnStart);
+    }
+
+    [Fact]
+    public void Start_snapshots_OwnedRelicIds_from_RunState()
+    {
+        // RunState.Relics を設定して Start 呼出 → state.OwnedRelicIds に反映
+        var run = MakeRun("strike") with
+        {
+            Relics = new[] { "test_relic_1" }
+        };
+        var catalog = BattleFixtures.MinimalCatalog();
+
+        var (state, _) = BattleEngine.Start(run, "enc_test", Rng(), catalog);
+
+        Assert.Equal(run.Relics.Count, state.OwnedRelicIds.Length);
+        Assert.Equal(run.Relics[0], state.OwnedRelicIds[0]);
+    }
+
+    [Fact]
+    public void Start_snapshots_Potions_from_RunState()
+    {
+        var run = MakeRun("strike") with
+        {
+            Potions = ImmutableArray.Create("potion_heal", "potion_str"),
+            PotionSlotCount = 2
+        };
+        var catalog = BattleFixtures.MinimalCatalog();
+
+        var (state, _) = BattleEngine.Start(run, "enc_test", Rng(), catalog);
+
+        Assert.Equal(run.Potions, state.Potions);
     }
 }

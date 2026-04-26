@@ -25,4 +25,5 @@ public enum BattleEventKind
     Exhaust       = 16,    // 10.2.D（exhaustCard / exhaustSelf 共通）
     GainEnergy    = 17,    // 10.2.D
     Summon        = 18,    // 10.2.D
+    UsePotion     = 19,    // 10.2.E
 }

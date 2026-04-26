@@ -17,7 +17,7 @@ public static partial class BattleEngine
 {
     public const int InitialEnergy = 3;
 
-    public static BattleState Start(
+    public static (BattleState, IReadOnlyList<BattleEvent>) Start(
         RunState run, string encounterId, IRng rng, DataCatalog catalog)
     {
         if (!catalog.TryGetEncounter(encounterId, out var encounter))
@@ -88,9 +88,22 @@ public static partial class BattleEngine
             Potions: run.Potions,                           // 10.2.E (already ImmutableArray<string>)
             EncounterId: encounterId);
 
+        var events = new List<BattleEvent>();
+        int order = 0;
+
+        // BattleStart event 発火
+        events.Add(new BattleEvent(
+            BattleEventKind.BattleStart, Order: order++,
+            Note: encounterId));
+
         // 5. ターン 1 開始処理（5 ドロー、Energy=3、TurnStart イベント発火）
-        var (afterTurnStart, _) = TurnStartProcessor.Process(initial, rng);
-        return afterTurnStart;
+        var (afterTurnStart, evsTurnStart) = TurnStartProcessor.Process(initial, rng);
+        foreach (var ev in evsTurnStart)
+        {
+            events.Add(ev with { Order = order++ });
+        }
+
+        return (afterTurnStart, events);
     }
 
     private static void ShuffleInPlace(BattleCardInstance[] arr, IRng rng)
