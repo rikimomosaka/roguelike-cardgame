@@ -14,4 +14,7 @@ public class BattleEventKindTests
     [Fact] public void ActorDeath_value_is_six()  => Assert.Equal(6, (int)BattleEventKind.ActorDeath);
     [Fact] public void EndTurn_value_is_seven()   => Assert.Equal(7, (int)BattleEventKind.EndTurn);
     [Fact] public void BattleEnd_value_is_eight() => Assert.Equal(8, (int)BattleEventKind.BattleEnd);
+    [Fact] public void ApplyStatus_value_is_nine()    => Assert.Equal(9,  (int)BattleEventKind.ApplyStatus);
+    [Fact] public void RemoveStatus_value_is_ten()    => Assert.Equal(10, (int)BattleEventKind.RemoveStatus);
+    [Fact] public void PoisonTick_value_is_eleven()   => Assert.Equal(11, (int)BattleEventKind.PoisonTick);
 }
