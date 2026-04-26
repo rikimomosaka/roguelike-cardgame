@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using RoguelikeCardGame.Core.Battle.Events;
 using RoguelikeCardGame.Core.Battle.State;
+using RoguelikeCardGame.Core.Battle.Statuses;
 using RoguelikeCardGame.Core.Random;
 
 namespace RoguelikeCardGame.Core.Battle.Engine;
@@ -49,7 +50,10 @@ internal static class TurnStartProcessor
             return (s, events);
         }
 
-        // Step 5-7（Energy / Draw / TurnStart event）。countdown は Task 15 で追加
+        // Step 4: status countdown（Allies → Enemies、SlotIndex 順）
+        s = ApplyStatusCountdown(s, events, ref order);
+
+        // Step 5-7（Energy / Draw / TurnStart event）
         s = s with { Energy = s.EnergyMax };
         s = DrawCards(s, DrawPerTurn, rng);
         events.Add(new BattleEvent(BattleEventKind.TurnStart, Order: order++, Note: $"turn={s.Turn}"));
@@ -84,6 +88,48 @@ internal static class TurnStartProcessor
                 events.Add(new BattleEvent(
                     BattleEventKind.ActorDeath, Order: order++,
                     TargetInstanceId: aid, Note: "poison"));
+            }
+        }
+        return s;
+    }
+
+    private static BattleState ApplyStatusCountdown(BattleState state, List<BattleEvent> events, ref int order)
+    {
+        // Allies と Enemies の InstanceId スナップショットを採る（SlotIndex 順）
+        var actorIds = state.Allies.OrderBy(a => a.SlotIndex).Select(a => a.InstanceId)
+            .Concat(state.Enemies.OrderBy(e => e.SlotIndex).Select(e => e.InstanceId))
+            .ToList();
+
+        var s = state;
+        foreach (var aid in actorIds)
+        {
+            CombatActor? actor = FindActor(s, aid);
+            if (actor is null) continue;
+
+            // status キー一覧のスナップショットを取り、順次 -1
+            foreach (var id in actor.Statuses.Keys.ToList())
+            {
+                var def = StatusDefinition.Get(id);
+                if (def.TickDirection != StatusTickDirection.Decrement)
+                    continue;
+
+                // 同 actor 内で複数 status を更新するため再 fetch（InstanceId 検索）
+                actor = FindActor(s, aid)!;
+                int newAmount = actor.GetStatus(id) - 1;
+                ImmutableDictionary<string, int> newStatuses;
+                if (newAmount <= 0)
+                {
+                    newStatuses = actor.Statuses.Remove(id);
+                    events.Add(new BattleEvent(
+                        BattleEventKind.RemoveStatus, Order: order++,
+                        TargetInstanceId: aid, Note: id));
+                }
+                else
+                {
+                    newStatuses = actor.Statuses.SetItem(id, newAmount);
+                    // countdown では ApplyStatus event は発火しない（spec §5-2）
+                }
+                s = ReplaceActor(s, aid, actor with { Statuses = newStatuses });
             }
         }
         return s;

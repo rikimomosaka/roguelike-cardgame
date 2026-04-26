@@ -131,4 +131,68 @@ public class TurnStartProcessorTickTests
         Assert.Equal(RoguelikeCardGame.Core.Battle.State.BattleOutcome.Pending, next.Outcome);
         Assert.Equal(1, next.TargetEnemyIndex);
     }
+
+    [Fact] public void Vulnerable_decrements_by_one_per_turn()
+    {
+        var hero = BattleFixtures.Hero();
+        var goblin = BattleFixtures.WithVulnerable(BattleFixtures.Goblin(), 3);
+        var s = State(hero, goblin);
+        var (next, _) = TurnStartProcessor.Process(s, Rng());
+        Assert.Equal(2, next.Enemies[0].GetStatus("vulnerable"));
+    }
+
+    [Fact] public void Status_at_one_decrements_to_zero_and_emits_RemoveStatus()
+    {
+        var hero = BattleFixtures.Hero();
+        var goblin = BattleFixtures.WithVulnerable(BattleFixtures.Goblin(), 1);
+        var s = State(hero, goblin);
+        var (next, evs) = TurnStartProcessor.Process(s, Rng());
+        Assert.False(next.Enemies[0].Statuses.ContainsKey("vulnerable"));
+        Assert.Contains(evs, e => e.Kind == BattleEventKind.RemoveStatus
+                                  && e.Note == "vulnerable"
+                                  && e.TargetInstanceId == goblin.InstanceId);
+    }
+
+    [Fact] public void Strength_does_not_countdown()
+    {
+        var hero = BattleFixtures.WithStrength(BattleFixtures.Hero(), 5);
+        var s = State(hero, BattleFixtures.Goblin());
+        var (next, _) = TurnStartProcessor.Process(s, Rng());
+        Assert.Equal(5, next.Allies[0].GetStatus("strength"));
+    }
+
+    [Fact] public void Dexterity_does_not_countdown()
+    {
+        var hero = BattleFixtures.WithDexterity(BattleFixtures.Hero(), 4);
+        var s = State(hero, BattleFixtures.Goblin());
+        var (next, _) = TurnStartProcessor.Process(s, Rng());
+        Assert.Equal(4, next.Allies[0].GetStatus("dexterity"));
+    }
+
+    [Fact] public void Poison_decrements_after_damage()
+    {
+        // 毒 3 ターン → ダメージ 3、その後 countdown で 2 に
+        var hero = BattleFixtures.WithPoison(BattleFixtures.Hero(70), 3);
+        var s = State(hero, BattleFixtures.Goblin());
+        var (next, _) = TurnStartProcessor.Process(s, Rng());
+        Assert.Equal(70 - 3, next.Allies[0].CurrentHp);
+        Assert.Equal(2, next.Allies[0].GetStatus("poison"));
+    }
+
+    [Fact] public void Multiple_decrement_statuses_all_tick()
+    {
+        var hero = BattleFixtures.Hero();
+        var goblin = BattleFixtures.Goblin() with
+        {
+            Statuses = ImmutableDictionary<string, int>.Empty
+                .Add("vulnerable", 2)
+                .Add("weak", 1)
+                .Add("omnistrike", 3),
+        };
+        var s = State(hero, goblin);
+        var (next, _) = TurnStartProcessor.Process(s, Rng());
+        Assert.Equal(1, next.Enemies[0].GetStatus("vulnerable"));
+        Assert.False(next.Enemies[0].Statuses.ContainsKey("weak")); // 1 → 0 で削除
+        Assert.Equal(2, next.Enemies[0].GetStatus("omnistrike"));
+    }
 }
