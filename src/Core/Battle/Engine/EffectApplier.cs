@@ -27,14 +27,16 @@ internal static class EffectApplier
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyAttack(
         BattleState state, CombatActor caster, CardEffect effect)
     {
+        // stale ref 対策: state から InstanceId で最新の actor を再取得する
+        var current = FetchActor(state, caster.InstanceId, caster.Side) ?? caster;
         var updated = effect.Scope switch
         {
-            EffectScope.Single => caster with { AttackSingle = caster.AttackSingle.Add(effect.Amount) },
-            EffectScope.Random => caster with { AttackRandom = caster.AttackRandom.Add(effect.Amount) },
-            EffectScope.All    => caster with { AttackAll    = caster.AttackAll.Add(effect.Amount) },
-            _ => caster, // Self は CardEffect.Normalize で弾かれる想定
+            EffectScope.Single => current with { AttackSingle = current.AttackSingle.Add(effect.Amount) },
+            EffectScope.Random => current with { AttackRandom = current.AttackRandom.Add(effect.Amount) },
+            EffectScope.All    => current with { AttackAll    = current.AttackAll.Add(effect.Amount) },
+            _ => current, // Self は CardEffect.Normalize で弾かれる想定
         };
-        var next = ReplaceActor(state, caster, updated);
+        var next = ReplaceActor(state, caster.InstanceId, updated);
         return (next, System.Array.Empty<BattleEvent>());
     }
 
@@ -43,8 +45,10 @@ internal static class EffectApplier
     {
         // 10.2.A は scope=Self のみ実装（敵の block も self、プレイヤーの defend も self）
         // scope=All / Random は 10.2.D で対応
-        var updated = caster with { Block = caster.Block.Add(effect.Amount) };
-        var next = ReplaceActor(state, caster, updated);
+        // stale ref 対策: state から InstanceId で最新の actor を再取得する
+        var current = FetchActor(state, caster.InstanceId, caster.Side) ?? caster;
+        var updated = current with { Block = current.Block.Add(effect.Amount) };
+        var next = ReplaceActor(state, caster.InstanceId, updated);
         var ev = new BattleEvent(
             BattleEventKind.GainBlock, Order: 0,
             CasterInstanceId: caster.InstanceId,
@@ -53,17 +57,43 @@ internal static class EffectApplier
         return (next, new[] { ev });
     }
 
-    private static BattleState ReplaceActor(BattleState state, CombatActor before, CombatActor after)
+    /// <summary>
+    /// state から InstanceId で最新の actor を取得する。
+    /// caster が stale snapshot の場合でも正しい actor を返す。
+    /// </summary>
+    private static CombatActor? FetchActor(BattleState state, string instanceId, ActorSide side)
     {
-        if (before.Side == ActorSide.Ally)
+        if (side == ActorSide.Ally)
         {
-            int idx = state.Allies.IndexOf(before);
-            return state with { Allies = state.Allies.SetItem(idx, after) };
+            foreach (var a in state.Allies)
+                if (a.InstanceId == instanceId) return a;
         }
         else
         {
-            int idx = state.Enemies.IndexOf(before);
-            return state with { Enemies = state.Enemies.SetItem(idx, after) };
+            foreach (var e in state.Enemies)
+                if (e.InstanceId == instanceId) return e;
         }
+        return null;
+    }
+
+    private static BattleState ReplaceActor(BattleState state, string instanceId, CombatActor after)
+    {
+        if (after.Side == ActorSide.Ally)
+        {
+            for (int i = 0; i < state.Allies.Length; i++)
+            {
+                if (state.Allies[i].InstanceId == instanceId)
+                    return state with { Allies = state.Allies.SetItem(i, after) };
+            }
+        }
+        else
+        {
+            for (int i = 0; i < state.Enemies.Length; i++)
+            {
+                if (state.Enemies[i].InstanceId == instanceId)
+                    return state with { Enemies = state.Enemies.SetItem(i, after) };
+            }
+        }
+        return state;
     }
 }
