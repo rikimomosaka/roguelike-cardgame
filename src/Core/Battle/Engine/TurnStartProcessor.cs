@@ -53,7 +53,10 @@ internal static class TurnStartProcessor
         // Step 4: status countdown（Allies → Enemies、SlotIndex 順）
         s = ApplyStatusCountdown(s, events, ref order);
 
-        // Step 5-7（Energy / Draw / TurnStart event）
+        // Step 5: Lifetime tick（10.2.D）
+        s = ApplyLifetimeTick(s, events, ref order);
+
+        // Step 6-8（Energy / Draw / TurnStart event）
         s = s with { Energy = s.EnergyMax };
         s = DrawCards(s, DrawPerTurn, rng);
         events.Add(new BattleEvent(BattleEventKind.TurnStart, Order: order++, Note: $"turn={s.Turn}"));
@@ -130,6 +133,48 @@ internal static class TurnStartProcessor
                     // countdown では ApplyStatus event は発火しない（spec §5-2）
                 }
                 s = ReplaceActor(s, aid, actor with { Statuses = newStatuses });
+            }
+        }
+        return s;
+    }
+
+    private static BattleState ApplyLifetimeTick(
+        BattleState state, List<BattleEvent> events, ref int order)
+    {
+        // Lifetime あり ally の InstanceId スナップショット
+        var allyIds = state.Allies
+            .Where(a => a.Side == ActorSide.Ally
+                     && a.RemainingLifetimeTurns is not null
+                     && a.IsAlive)
+            .OrderBy(a => a.SlotIndex)
+            .Select(a => a.InstanceId)
+            .ToList();
+
+        var s = state;
+        foreach (var aid in allyIds)
+        {
+            var actor = FindActor(s, aid);
+            if (actor is null || !actor.IsAlive) continue;
+            if (actor.RemainingLifetimeTurns is null) continue;
+
+            int newRemaining = actor.RemainingLifetimeTurns.Value - 1;
+
+            if (newRemaining <= 0)
+            {
+                // 死亡
+                var diedActor = actor with
+                {
+                    RemainingLifetimeTurns = newRemaining,
+                    CurrentHp = 0,
+                };
+                s = ReplaceActor(s, aid, diedActor);
+                events.Add(new BattleEvent(
+                    BattleEventKind.ActorDeath, Order: order++,
+                    TargetInstanceId: aid, Note: "lifetime"));
+            }
+            else
+            {
+                s = ReplaceActor(s, aid, actor with { RemainingLifetimeTurns = newRemaining });
             }
         }
         return s;
