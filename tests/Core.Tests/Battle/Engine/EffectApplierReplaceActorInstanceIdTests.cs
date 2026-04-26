@@ -26,6 +26,8 @@ public class EffectApplierReplaceActorInstanceIdTests
         Hand: ImmutableArray<BattleCardInstance>.Empty,
         DiscardPile: ImmutableArray<BattleCardInstance>.Empty,
         ExhaustPile: ImmutableArray<BattleCardInstance>.Empty,
+        SummonHeld: ImmutableArray<BattleCardInstance>.Empty,
+        PowerCards: ImmutableArray<BattleCardInstance>.Empty,
         ComboCount: 0,
         LastPlayedOrigCost: null,
         NextCardComboFreePass: false,

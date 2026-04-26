@@ -19,6 +19,8 @@ public class TurnEndProcessorComboResetTests
             Hand: ImmutableArray<BattleCardInstance>.Empty,
             DiscardPile: ImmutableArray<BattleCardInstance>.Empty,
             ExhaustPile: ImmutableArray<BattleCardInstance>.Empty,
+            SummonHeld: ImmutableArray<BattleCardInstance>.Empty,
+            PowerCards: ImmutableArray<BattleCardInstance>.Empty,
             ComboCount: combo,
             LastPlayedOrigCost: lastOrigCost,
             NextCardComboFreePass: freePass,

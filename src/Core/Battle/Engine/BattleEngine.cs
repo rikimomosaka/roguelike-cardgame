@@ -75,6 +75,8 @@ public static partial class BattleEngine
             Hand: ImmutableArray<BattleCardInstance>.Empty,
             DiscardPile: ImmutableArray<BattleCardInstance>.Empty,
             ExhaustPile: ImmutableArray<BattleCardInstance>.Empty,
+            SummonHeld: ImmutableArray<BattleCardInstance>.Empty,    // 10.2.D
+            PowerCards: ImmutableArray<BattleCardInstance>.Empty,    // 10.2.D
             ComboCount: 0,                        // 10.2.C
             LastPlayedOrigCost: null,             // 10.2.C
             NextCardComboFreePass: false,         // 10.2.C

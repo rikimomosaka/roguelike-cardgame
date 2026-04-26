@@ -28,6 +28,8 @@ public class BattleEnginePlayCardComboMinTests
             Hand: hand,
             DiscardPile: ImmutableArray<BattleCardInstance>.Empty,
             ExhaustPile: ImmutableArray<BattleCardInstance>.Empty,
+            SummonHeld: ImmutableArray<BattleCardInstance>.Empty,
+            PowerCards: ImmutableArray<BattleCardInstance>.Empty,
             ComboCount: combo,
             LastPlayedOrigCost: lastOrigCost,
             NextCardComboFreePass: freePass,

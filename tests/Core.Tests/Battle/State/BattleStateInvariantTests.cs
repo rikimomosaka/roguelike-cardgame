@@ -35,6 +35,8 @@ public class BattleStateInvariantTests
             Hand: ImmutableArray<BattleCardInstance>.Empty,
             DiscardPile: ImmutableArray<BattleCardInstance>.Empty,
             ExhaustPile: ImmutableArray<BattleCardInstance>.Empty,
+            SummonHeld: ImmutableArray<BattleCardInstance>.Empty,
+            PowerCards: ImmutableArray<BattleCardInstance>.Empty,
             ComboCount: 0,
             LastPlayedOrigCost: null,
             NextCardComboFreePass: false,
@@ -160,5 +162,35 @@ public class BattleStateInvariantTests
         Assert.True(s.ComboCount >= 0);
         s = s with { ComboCount = 5 };
         Assert.True(s.ComboCount >= 0);
+    }
+
+    // === 10.2.D: SummonHeld / PowerCards ===
+
+    [Fact] public void SummonHeld_default_is_empty()
+    {
+        var s = Make();
+        Assert.True(s.SummonHeld.IsDefaultOrEmpty || s.SummonHeld.Length == 0);
+    }
+
+    [Fact] public void PowerCards_default_is_empty()
+    {
+        var s = Make();
+        Assert.True(s.PowerCards.IsDefaultOrEmpty || s.PowerCards.Length == 0);
+    }
+
+    [Fact] public void SummonHeld_record_equality_distinguishes()
+    {
+        var s1 = Make();
+        var card = new BattleCardInstance("c1", "strike", false, null);
+        var s2 = s1 with { SummonHeld = ImmutableArray.Create(card) };
+        Assert.NotEqual(s1, s2);
+    }
+
+    [Fact] public void PowerCards_record_equality_distinguishes()
+    {
+        var s1 = Make();
+        var card = new BattleCardInstance("c1", "strike", false, null);
+        var s2 = s1 with { PowerCards = ImmutableArray.Create(card) };
+        Assert.NotEqual(s1, s2);
     }
 }

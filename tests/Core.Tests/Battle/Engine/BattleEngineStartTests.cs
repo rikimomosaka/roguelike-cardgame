@@ -121,4 +121,13 @@ public class BattleEngineStartTests
         Assert.Null(s.LastPlayedOrigCost);
         Assert.False(s.NextCardComboFreePass);
     }
+
+    [Fact] public void Start_initializes_summon_held_and_power_cards_to_empty()
+    {
+        var run = MakeRun("strike");
+        var cat = BattleFixtures.MinimalCatalog();
+        var s = BattleEngine.Start(run, "enc_test", Rng(), cat);
+        Assert.Empty(s.SummonHeld);
+        Assert.Empty(s.PowerCards);
+    }
 }
