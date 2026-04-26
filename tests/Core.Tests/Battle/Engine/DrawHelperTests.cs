@@ -131,9 +131,17 @@ public class DrawHelperTests
         Assert.Equal(0, drawn);
     }
 
+    // 5枚シャッフル時に Fisher-Yates が呼ぶ NextInt の回数と範囲:
+    //   j=4: NextInt(0,5)、j=3: NextInt(0,4)、j=2: NextInt(0,3)、j=1: NextInt(0,2) → 計4回
+    // seqA=[2,1,0,1] は全て各範囲内の有効値で、結果は [c4,c3,c0,c1,c2] 順になる
+    // seqB=[0,0,0,0] は全て0で、結果は [c1,c2,c3,c4,c0] 順になる（seqA と異なる）
+
     [Fact]
-    public void Draw_is_deterministic_for_same_seed()
+    public void Draw_is_deterministic_for_same_rng_sequence()
     {
+        // 非自明な int 配列: 5枚シャッフルに必要な4回分の有効値
+        var seqA = new[] { 2, 1, 0, 1 };
+
         var cards = Enumerable.Range(0, 5)
             .Select(i => BattleFixtures.MakeBattleCard("strike", $"c{i}"))
             .ToImmutableArray();
@@ -144,12 +152,38 @@ public class DrawHelperTests
             ImmutableArray<BattleCardInstance>.Empty,
             ImmutableArray<BattleCardInstance>.Empty, cards);
 
-        // 同一 seed (全 0) を使えば結果が同じになることを確認
-        var r1 = DrawHelper.Draw(state1, 5, ZeroRng(), out _);
-        var r2 = DrawHelper.Draw(state2, 5, ZeroRng(), out _);
+        // 同一 RNG シーケンス (seqA) を 2 回構築して実行 → Hand 順が完全一致する
+        var r1 = DrawHelper.Draw(state1, 5, new FakeRng(seqA, System.Array.Empty<double>()), out _);
+        var r2 = DrawHelper.Draw(state2, 5, new FakeRng(seqA, System.Array.Empty<double>()), out _);
 
         Assert.Equal(
             r1.Hand.Select(c => c.InstanceId),
             r2.Hand.Select(c => c.InstanceId));
+    }
+
+    [Fact]
+    public void Draw_produces_different_order_for_different_rng_sequence()
+    {
+        // seqA と seqB は異なる並び順を生成することで、実装が RNG を本当に使っていることを確認
+        var seqA = new[] { 2, 1, 0, 1 };
+        var seqB = new[] { 0, 0, 0, 0 };
+
+        var cards = Enumerable.Range(0, 5)
+            .Select(i => BattleFixtures.MakeBattleCard("strike", $"c{i}"))
+            .ToImmutableArray();
+        var stateA = MakeStateWithPiles(
+            ImmutableArray<BattleCardInstance>.Empty,
+            ImmutableArray<BattleCardInstance>.Empty, cards);
+        var stateB = MakeStateWithPiles(
+            ImmutableArray<BattleCardInstance>.Empty,
+            ImmutableArray<BattleCardInstance>.Empty, cards);
+
+        var rA = DrawHelper.Draw(stateA, 5, new FakeRng(seqA, System.Array.Empty<double>()), out _);
+        var rB = DrawHelper.Draw(stateB, 5, new FakeRng(seqB, System.Array.Empty<double>()), out _);
+
+        // 異なる RNG シーケンスは異なる Hand 順を生成する（rng 依存性の確認）
+        Assert.NotEqual(
+            rA.Hand.Select(c => c.InstanceId),
+            rB.Hand.Select(c => c.InstanceId));
     }
 }
