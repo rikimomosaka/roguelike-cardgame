@@ -24,6 +24,9 @@ public class EnemyAttackingResolverTests
         Hand: ImmutableArray<BattleCardInstance>.Empty,
         DiscardPile: ImmutableArray<BattleCardInstance>.Empty,
         ExhaustPile: ImmutableArray<BattleCardInstance>.Empty,
+        ComboCount: 0,
+        LastPlayedOrigCost: null,
+        NextCardComboFreePass: false,
         EncounterId: "enc_test");
 
     private static IRng Rng() => new FakeRng(new int[10], new double[0]);
@@ -138,6 +141,9 @@ public class EnemyAttackingResolverTests
             Hand: ImmutableArray<BattleCardInstance>.Empty,
             DiscardPile: ImmutableArray<BattleCardInstance>.Empty,
             ExhaustPile: ImmutableArray<BattleCardInstance>.Empty,
+            ComboCount: 0,
+            LastPlayedOrigCost: null,
+            NextCardComboFreePass: false,
             EncounterId: "enc_test");
         var cat = BattleFixtures.MinimalCatalog(
             enemies: new[] { BattleFixtures.GoblinDef(hp: 20, attack: 5) });

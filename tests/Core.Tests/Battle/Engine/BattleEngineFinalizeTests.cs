@@ -50,6 +50,9 @@ public class BattleEngineFinalizeTests
         Hand: ImmutableArray<BattleCardInstance>.Empty,
         DiscardPile: ImmutableArray<BattleCardInstance>.Empty,
         ExhaustPile: ImmutableArray<BattleCardInstance>.Empty,
+        ComboCount: 0,
+        LastPlayedOrigCost: null,
+        NextCardComboFreePass: false,
         EncounterId: "enc_test");
 
     [Fact] public void Throws_when_battle_not_resolved()

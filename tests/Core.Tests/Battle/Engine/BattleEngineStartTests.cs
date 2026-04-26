@@ -111,4 +111,14 @@ public class BattleEngineStartTests
         var s = BattleEngine.Start(run, "enc_test", Rng(), cat);
         Assert.Equal("enc_test", s.EncounterId);
     }
+
+    [Fact] public void Start_initializes_combo_fields_to_default()
+    {
+        var run = MakeRun("strike");
+        var cat = BattleFixtures.MinimalCatalog();
+        var s = BattleEngine.Start(run, "enc_test", Rng(), cat);
+        Assert.Equal(0, s.ComboCount);
+        Assert.Null(s.LastPlayedOrigCost);
+        Assert.False(s.NextCardComboFreePass);
+    }
 }

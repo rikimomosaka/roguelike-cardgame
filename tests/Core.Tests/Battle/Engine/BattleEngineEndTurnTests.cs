@@ -30,6 +30,9 @@ public class BattleEngineEndTurnTests
             Hand: ImmutableArray<BattleCardInstance>.Empty,
             DiscardPile: ImmutableArray<BattleCardInstance>.Empty,
             ExhaustPile: ImmutableArray<BattleCardInstance>.Empty,
+            ComboCount: 0,
+            LastPlayedOrigCost: null,
+            NextCardComboFreePass: false,
             EncounterId: "enc_test");
 
     private static IRng Rng(params int[] ints) => new FakeRng(ints, new double[0]);

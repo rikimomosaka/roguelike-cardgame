@@ -35,6 +35,9 @@ public class BattleStateInvariantTests
             Hand: ImmutableArray<BattleCardInstance>.Empty,
             DiscardPile: ImmutableArray<BattleCardInstance>.Empty,
             ExhaustPile: ImmutableArray<BattleCardInstance>.Empty,
+            ComboCount: 0,
+            LastPlayedOrigCost: null,
+            NextCardComboFreePass: false,
             EncounterId: "enc1");
 
     [Fact] public void Allies_count_at_least_one_at_most_four()
@@ -127,5 +130,35 @@ public class BattleStateInvariantTests
             outcome: RoguelikeCardGame.Core.Battle.State.BattleOutcome.Defeat);
         Assert.Equal(BattlePhase.Resolved, s.Phase);
         Assert.NotEqual(RoguelikeCardGame.Core.Battle.State.BattleOutcome.Pending, s.Outcome);
+    }
+
+    // === 10.2.C: コンボフィールド ===
+
+    [Fact] public void ComboCount_default_is_zero_via_with()
+    {
+        var s = Make();
+        Assert.Equal(0, s.ComboCount);
+        Assert.Null(s.LastPlayedOrigCost);
+        Assert.False(s.NextCardComboFreePass);
+    }
+
+    [Fact] public void ComboFields_record_equality_distinguishes()
+    {
+        var s1 = Make();
+        var s2 = s1 with { ComboCount = 1 };
+        var s3 = s1 with { LastPlayedOrigCost = 2 };
+        var s4 = s1 with { NextCardComboFreePass = true };
+        Assert.NotEqual(s1, s2);
+        Assert.NotEqual(s1, s3);
+        Assert.NotEqual(s1, s4);
+        Assert.NotEqual(s2, s3);
+    }
+
+    [Fact] public void ComboCount_invariant_non_negative()
+    {
+        var s = Make() with { ComboCount = 0 };
+        Assert.True(s.ComboCount >= 0);
+        s = s with { ComboCount = 5 };
+        Assert.True(s.ComboCount >= 0);
     }
 }

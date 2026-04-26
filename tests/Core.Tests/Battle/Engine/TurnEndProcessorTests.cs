@@ -26,6 +26,9 @@ public class TurnEndProcessorTests
             Hand: hand,
             DiscardPile: ImmutableArray<BattleCardInstance>.Empty,
             ExhaustPile: ImmutableArray<BattleCardInstance>.Empty,
+            ComboCount: 0,
+            LastPlayedOrigCost: null,
+            NextCardComboFreePass: false,
             EncounterId: "enc_test");
     }
 

@@ -26,6 +26,9 @@ public class EffectApplierReplaceActorInstanceIdTests
         Hand: ImmutableArray<BattleCardInstance>.Empty,
         DiscardPile: ImmutableArray<BattleCardInstance>.Empty,
         ExhaustPile: ImmutableArray<BattleCardInstance>.Empty,
+        ComboCount: 0,
+        LastPlayedOrigCost: null,
+        NextCardComboFreePass: false,
         EncounterId: "enc_test");
 
     [Fact] public void Apply_attack_then_block_on_same_caster_succeeds()

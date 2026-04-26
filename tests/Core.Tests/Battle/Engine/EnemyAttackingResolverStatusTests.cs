@@ -22,6 +22,9 @@ public class EnemyAttackingResolverStatusTests
         Hand: ImmutableArray<BattleCardInstance>.Empty,
         DiscardPile: ImmutableArray<BattleCardInstance>.Empty,
         ExhaustPile: ImmutableArray<BattleCardInstance>.Empty,
+        ComboCount: 0,
+        LastPlayedOrigCost: null,
+        NextCardComboFreePass: false,
         EncounterId: "enc_test");
 
     private static IRng Rng() => new FakeRng(new int[0], new double[0]);
