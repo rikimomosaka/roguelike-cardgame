@@ -42,4 +42,22 @@ public class BlockPoolTests
         Assert.Equal(7, after.Sum);
         Assert.Equal(0, after.AddCount);
     }
+
+    [Fact] public void Display_no_dex_returns_sum()
+    {
+        var p = BlockPool.Empty.Add(5).Add(3);
+        Assert.Equal(8, p.Display(dexterity: 0));
+    }
+
+    [Fact] public void Display_dex_adds_per_addcount()
+    {
+        // Sum=8, AddCount=2, dex=3 → 8 + 2*3 = 14
+        var p = BlockPool.Empty.Add(5).Add(3);
+        Assert.Equal(14, p.Display(dexterity: 3));
+    }
+
+    [Fact] public void Display_zero_when_empty()
+    {
+        Assert.Equal(0, BlockPool.Empty.Display(dexterity: 10));
+    }
 }
