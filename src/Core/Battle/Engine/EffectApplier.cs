@@ -29,6 +29,7 @@ internal static class EffectApplier
             "block"  => ApplyBlock(state, caster, effect),
             "buff"   => ApplyStatusChange(state, caster, effect, rng),
             "debuff" => ApplyStatusChange(state, caster, effect, rng),
+            "heal"   => ApplyHeal(state, caster, effect, rng),
             _        => (state, Array.Empty<BattleEvent>()),
         };
     }
@@ -162,6 +163,62 @@ internal static class EffectApplier
             }
         }
         return Array.Empty<CombatActor>();
+    }
+
+    private static (BattleState, IReadOnlyList<BattleEvent>) ApplyHeal(
+        BattleState state, CombatActor caster, CardEffect effect, IRng rng)
+    {
+        if (effect.Scope != EffectScope.Self && effect.Side != EffectSide.Ally)
+            throw new InvalidOperationException(
+                $"heal requires Side=Ally for scope {effect.Scope}, got {effect.Side}");
+
+        // Self / Single / Random / All target 解決
+        var targets = ResolveHealTargets(state, caster, effect, rng);
+        if (targets.Count == 0) return (state, Array.Empty<BattleEvent>());
+
+        var events = new List<BattleEvent>();
+        int order = 0;
+        var s = state;
+        foreach (var target in targets)
+        {
+            var current = FindActor(s, target.InstanceId);
+            if (current is null || !current.IsAlive) continue;
+            int actualHeal = Math.Min(effect.Amount, current.MaxHp - current.CurrentHp);
+            if (actualHeal <= 0) continue;  // already at MaxHp
+
+            var updated = current with { CurrentHp = current.CurrentHp + actualHeal };
+            s = ReplaceActor(s, target.InstanceId, updated);
+            events.Add(new BattleEvent(
+                BattleEventKind.Heal, Order: order++,
+                CasterInstanceId: caster.InstanceId,
+                TargetInstanceId: target.InstanceId,
+                Amount: actualHeal));
+        }
+        return (s, events);
+    }
+
+    private static IReadOnlyList<CombatActor> ResolveHealTargets(
+        BattleState state, CombatActor caster, CardEffect effect, IRng rng)
+    {
+        return effect.Scope switch
+        {
+            EffectScope.Self => new[] { caster },
+            EffectScope.Single => state.TargetAllyIndex is { } ai && ai < state.Allies.Length
+                ? new[] { state.Allies[ai] }
+                : (IReadOnlyList<CombatActor>)Array.Empty<CombatActor>(),
+            EffectScope.Random => PickRandomAlive(state.Allies, rng),
+            EffectScope.All => state.Allies.Where(a => a.IsAlive).ToList(),
+            _ => Array.Empty<CombatActor>(),
+        };
+    }
+
+    private static IReadOnlyList<CombatActor> PickRandomAlive(
+        ImmutableArray<CombatActor> pool, IRng rng)
+    {
+        var alive = pool.Where(a => a.IsAlive).ToList();
+        if (alive.Count == 0) return Array.Empty<CombatActor>();
+        int idx = rng.NextInt(0, alive.Count);
+        return new[] { alive[idx] };
     }
 
     /// <summary>
