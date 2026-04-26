@@ -5,20 +5,23 @@ using System.Linq;
 using RoguelikeCardGame.Core.Battle.Events;
 using RoguelikeCardGame.Core.Battle.State;
 using RoguelikeCardGame.Core.Cards;
+using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Random;
 
 namespace RoguelikeCardGame.Core.Battle.Engine;
 
 /// <summary>
 /// 単一 CardEffect を BattleState に適用する。
-/// Phase 10.2.B で buff / debuff action を追加（4 scope 対応）。
-/// その他 action（heal/draw/discard/upgrade/exhaust*/retainSelf/gainEnergy/summon）は no-op。
-/// 親 spec §5 / Phase 10.2.B spec §4 参照。
+/// Phase 10.2.B で buff / debuff action 追加（4 scope 対応）。
+/// Phase 10.2.D で DataCatalog 引数を追加（upgrade / summon で使用予定）。
+/// その他 action（heal/draw/discard/upgrade/exhaust*/retainSelf/gainEnergy/summon）は Tasks 5-11 で実装予定。
+/// 親 spec §5 / Phase 10.2.D spec §3-1 参照。
 /// </summary>
 internal static class EffectApplier
 {
     public static (BattleState, IReadOnlyList<BattleEvent>) Apply(
-        BattleState state, CombatActor caster, CardEffect effect, IRng rng)
+        BattleState state, CombatActor caster, CardEffect effect, IRng rng,
+        DataCatalog catalog)                        // 10.2.D
     {
         return effect.Action switch
         {

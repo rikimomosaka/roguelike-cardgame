@@ -88,7 +88,7 @@ public static partial class BattleEngine
             if (eff.ComboMin is { } min && newCombo < min)
                 continue;
 
-            var (afterEffect, evs) = EffectApplier.Apply(s, caster, eff, rng);
+            var (afterEffect, evs) = EffectApplier.Apply(s, caster, eff, rng, catalog);
             s = afterEffect;
             foreach (var ev in evs)
             {

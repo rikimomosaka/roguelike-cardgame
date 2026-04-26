@@ -42,13 +42,13 @@ public class EffectApplierReplaceActorInstanceIdTests
 
         // 1 つ目: attack（caster.AttackSingle に加算）
         var atkEff = new CardEffect("attack", EffectScope.Single, EffectSide.Enemy, 5);
-        var (s1, _) = EffectApplier.Apply(s, hero, atkEff, rng);
+        var (s1, _) = EffectApplier.Apply(s, hero, atkEff, rng, BattleFixtures.MinimalCatalog());
         Assert.Equal(5, s1.Allies[0].AttackSingle.Sum);
 
         // 2 つ目: block（caster.Block に加算）。caster ref は古い hero のまま渡しても InstanceId で再 fetch されて正しく動作することを検証
         var blkEff = new CardEffect("block", EffectScope.Self, null, 3);
         var caster1 = s1.Allies[0];   // 最新の hero
-        var (s2, _) = EffectApplier.Apply(s1, caster1, blkEff, rng);
+        var (s2, _) = EffectApplier.Apply(s1, caster1, blkEff, rng, BattleFixtures.MinimalCatalog());
         Assert.Equal(5, s2.Allies[0].AttackSingle.Sum);  // attack 結果が保持
         Assert.Equal(3, s2.Allies[0].Block.Sum);          // block も加算
     }
@@ -64,12 +64,12 @@ public class EffectApplierReplaceActorInstanceIdTests
 
         // hero に AttackSingle を加算（実 state を変える）
         var atkEff = new CardEffect("attack", EffectScope.Single, EffectSide.Enemy, 5);
-        var (s1, _) = EffectApplier.Apply(s, hero, atkEff, rng);
+        var (s1, _) = EffectApplier.Apply(s, hero, atkEff, rng, BattleFixtures.MinimalCatalog());
 
         // 古い hero ref（=Statuses 等が更新前）を caster として block effect を再度適用
         var blkEff = new CardEffect("block", EffectScope.Self, null, 4);
         // stale caster (= 元の hero) を渡す。InstanceId 検索なら最新 actor を見つけて更新できる
-        var (s2, _) = EffectApplier.Apply(s1, hero, blkEff, rng);
+        var (s2, _) = EffectApplier.Apply(s1, hero, blkEff, rng, BattleFixtures.MinimalCatalog());
 
         // attack の結果が消失していないことを確認
         Assert.Equal(5, s2.Allies[0].AttackSingle.Sum);

@@ -37,7 +37,7 @@ public class EffectApplierBuffDebuffTests
         var hero = BattleFixtures.Hero();
         var s = State(hero, BattleFixtures.Goblin());
         var eff = new CardEffect("buff", EffectScope.Self, null, 2, Name: "strength");
-        var (next, evs) = EffectApplier.Apply(s, hero, eff, Rng());
+        var (next, evs) = EffectApplier.Apply(s, hero, eff, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(2, next.Allies[0].GetStatus("strength"));
         Assert.Single(evs);
         Assert.Equal(BattleEventKind.ApplyStatus, evs[0].Kind);
@@ -51,7 +51,7 @@ public class EffectApplierBuffDebuffTests
         var goblin = BattleFixtures.Goblin();
         var s = State(hero, goblin);
         var eff = new CardEffect("debuff", EffectScope.Single, EffectSide.Enemy, 1, Name: "vulnerable");
-        var (next, evs) = EffectApplier.Apply(s, hero, eff, Rng());
+        var (next, evs) = EffectApplier.Apply(s, hero, eff, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(1, next.Enemies[0].GetStatus("vulnerable"));
     }
 
@@ -60,7 +60,7 @@ public class EffectApplierBuffDebuffTests
         var hero = BattleFixtures.Hero();
         var s = State(hero, BattleFixtures.Goblin(0), BattleFixtures.Goblin(1));
         var eff = new CardEffect("debuff", EffectScope.All, EffectSide.Enemy, 1, Name: "weak");
-        var (next, evs) = EffectApplier.Apply(s, hero, eff, Rng());
+        var (next, evs) = EffectApplier.Apply(s, hero, eff, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(1, next.Enemies[0].GetStatus("weak"));
         Assert.Equal(1, next.Enemies[1].GetStatus("weak"));
         Assert.Equal(2, evs.Count(e => e.Kind == BattleEventKind.ApplyStatus));
@@ -72,7 +72,7 @@ public class EffectApplierBuffDebuffTests
         var s = State(hero, BattleFixtures.Goblin(0), BattleFixtures.Goblin(1));
         var eff = new CardEffect("debuff", EffectScope.Random, EffectSide.Enemy, 1, Name: "weak");
         // FakeRng で index 1 を指す
-        var (next, _) = EffectApplier.Apply(s, hero, eff, Rng(1));
+        var (next, _) = EffectApplier.Apply(s, hero, eff, Rng(1), BattleFixtures.MinimalCatalog());
         Assert.Equal(0, next.Enemies[0].GetStatus("weak"));
         Assert.Equal(1, next.Enemies[1].GetStatus("weak"));
     }
@@ -82,7 +82,7 @@ public class EffectApplierBuffDebuffTests
         var hero = BattleFixtures.WithStrength(BattleFixtures.Hero(), 2);
         var s = State(hero, BattleFixtures.Goblin());
         var eff = new CardEffect("buff", EffectScope.Self, null, 3, Name: "strength");
-        var (next, _) = EffectApplier.Apply(s, hero, eff, Rng());
+        var (next, _) = EffectApplier.Apply(s, hero, eff, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(5, next.Allies[0].GetStatus("strength"));
     }
 
@@ -91,7 +91,7 @@ public class EffectApplierBuffDebuffTests
         var hero = BattleFixtures.WithStrength(BattleFixtures.Hero(), 2);
         var s = State(hero, BattleFixtures.Goblin());
         var eff = new CardEffect("debuff", EffectScope.Self, null, -5, Name: "strength");
-        var (next, evs) = EffectApplier.Apply(s, hero, eff, Rng());
+        var (next, evs) = EffectApplier.Apply(s, hero, eff, Rng(), BattleFixtures.MinimalCatalog());
         Assert.False(next.Allies[0].Statuses.ContainsKey("strength"));
         Assert.Equal(BattleEventKind.RemoveStatus, evs[0].Kind);
         Assert.Equal("strength", evs[0].Note);
@@ -102,7 +102,7 @@ public class EffectApplierBuffDebuffTests
         var hero = BattleFixtures.Hero();
         var s = State(hero, BattleFixtures.Goblin());
         var eff = new CardEffect("buff", EffectScope.Single, null, 1, Name: "strength");
-        Assert.Throws<System.InvalidOperationException>(() => EffectApplier.Apply(s, hero, eff, Rng()));
+        Assert.Throws<System.InvalidOperationException>(() => EffectApplier.Apply(s, hero, eff, Rng(), BattleFixtures.MinimalCatalog()));
     }
 
     [Fact] public void Debuff_single_with_no_target_index_is_noop()
@@ -111,7 +111,7 @@ public class EffectApplierBuffDebuffTests
         var goblin = BattleFixtures.Goblin();
         var s = State(hero, goblin) with { TargetEnemyIndex = null };
         var eff = new CardEffect("debuff", EffectScope.Single, EffectSide.Enemy, 1, Name: "weak");
-        var (next, evs) = EffectApplier.Apply(s, hero, eff, Rng());
+        var (next, evs) = EffectApplier.Apply(s, hero, eff, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(0, next.Enemies[0].GetStatus("weak"));
         Assert.Empty(evs);
     }
@@ -121,7 +121,7 @@ public class EffectApplierBuffDebuffTests
         var hero = BattleFixtures.Hero();
         var s = State(hero, BattleFixtures.Goblin());
         var eff = new CardEffect("buff", EffectScope.Random, EffectSide.Ally, 1, Name: "strength");
-        var (next, _) = EffectApplier.Apply(s, hero, eff, Rng(0));
+        var (next, _) = EffectApplier.Apply(s, hero, eff, Rng(0), BattleFixtures.MinimalCatalog());
         Assert.Equal(1, next.Allies[0].GetStatus("strength"));
     }
 
@@ -131,7 +131,7 @@ public class EffectApplierBuffDebuffTests
         var goblin = BattleFixtures.Goblin();
         var s = State(hero, goblin);
         var eff = new CardEffect("debuff", EffectScope.Single, EffectSide.Enemy, 1, Name: "vulnerable");
-        var (_, evs) = EffectApplier.Apply(s, hero, eff, Rng());
+        var (_, evs) = EffectApplier.Apply(s, hero, eff, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(hero.InstanceId, evs[0].CasterInstanceId);
         Assert.Equal(goblin.InstanceId, evs[0].TargetInstanceId);
     }
@@ -141,7 +141,7 @@ public class EffectApplierBuffDebuffTests
         var hero = BattleFixtures.Hero();
         var s = State(hero, BattleFixtures.Goblin());
         var eff = new CardEffect("buff", EffectScope.Random, null, 1, Name: "strength");
-        Assert.Throws<System.InvalidOperationException>(() => EffectApplier.Apply(s, hero, eff, Rng()));
+        Assert.Throws<System.InvalidOperationException>(() => EffectApplier.Apply(s, hero, eff, Rng(), BattleFixtures.MinimalCatalog()));
     }
 
     [Fact] public void Buff_all_with_null_side_throws()
@@ -149,7 +149,7 @@ public class EffectApplierBuffDebuffTests
         var hero = BattleFixtures.Hero();
         var s = State(hero, BattleFixtures.Goblin());
         var eff = new CardEffect("buff", EffectScope.All, null, 1, Name: "strength");
-        Assert.Throws<System.InvalidOperationException>(() => EffectApplier.Apply(s, hero, eff, Rng()));
+        Assert.Throws<System.InvalidOperationException>(() => EffectApplier.Apply(s, hero, eff, Rng(), BattleFixtures.MinimalCatalog()));
     }
 
     [Fact] public void Buff_single_ally_targets_target_ally_index()
@@ -157,7 +157,7 @@ public class EffectApplierBuffDebuffTests
         var hero = BattleFixtures.Hero();
         var s = State(hero, BattleFixtures.Goblin());
         var eff = new CardEffect("buff", EffectScope.Single, EffectSide.Ally, 2, Name: "strength");
-        var (next, _) = EffectApplier.Apply(s, hero, eff, Rng());
+        var (next, _) = EffectApplier.Apply(s, hero, eff, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(2, next.Allies[0].GetStatus("strength"));
     }
 
@@ -166,7 +166,7 @@ public class EffectApplierBuffDebuffTests
         var hero = BattleFixtures.Hero();
         var s = State(hero, BattleFixtures.Goblin());
         var eff = new CardEffect("buff", EffectScope.All, EffectSide.Ally, 1, Name: "strength");
-        var (next, _) = EffectApplier.Apply(s, hero, eff, Rng());
+        var (next, _) = EffectApplier.Apply(s, hero, eff, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(1, next.Allies[0].GetStatus("strength"));
     }
 }
