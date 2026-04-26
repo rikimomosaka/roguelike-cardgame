@@ -139,13 +139,13 @@ public class BattleEngineEndTurnTests
         var (next, _) = BattleEngine.EndTurn(s, Rng(), cat);
 
         // PlayerAttacking + EnemyAttacking + TurnEndProcessor + TurnStartProcessor
-        // 万一 EndTurn 中に Outcome 確定したらこのテストは別の挙動を測ることになる
-        if (next.Outcome == BattleOutcome.Pending)
-        {
-            Assert.Equal(0, next.ComboCount);
-            Assert.Null(next.LastPlayedOrigCost);
-            Assert.False(next.NextCardComboFreePass);
-        }
+        // Precondition: this fixture must not end combat — otherwise the combo-reset
+        // invariant we want to verify never triggers.
+        Assert.Equal(BattleOutcome.Pending, next.Outcome);
+
+        Assert.Equal(0, next.ComboCount);
+        Assert.Null(next.LastPlayedOrigCost);
+        Assert.False(next.NextCardComboFreePass);
     }
 
     private static BattleState MakeStateWithCombo(int combo, int? lastOrigCost, bool freePass)
