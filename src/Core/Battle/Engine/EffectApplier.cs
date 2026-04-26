@@ -30,6 +30,7 @@ internal static class EffectApplier
             "buff"   => ApplyStatusChange(state, caster, effect, rng),
             "debuff" => ApplyStatusChange(state, caster, effect, rng),
             "heal"   => ApplyHeal(state, caster, effect, rng),
+            "draw"   => ApplyDraw(state, caster, effect, rng),
             _        => (state, Array.Empty<BattleEvent>()),
         };
     }
@@ -219,6 +220,57 @@ internal static class EffectApplier
         if (alive.Count == 0) return Array.Empty<CombatActor>();
         int idx = rng.NextInt(0, alive.Count);
         return new[] { alive[idx] };
+    }
+
+    private static (BattleState, IReadOnlyList<BattleEvent>) ApplyDraw(
+        BattleState state, CombatActor caster, CardEffect effect, IRng rng)
+    {
+        if (effect.Scope != EffectScope.Self)
+            throw new InvalidOperationException(
+                $"draw requires Scope=Self, got {effect.Scope}");
+
+        int requestedCount = effect.Amount;
+        var hand = state.Hand.ToBuilder();
+        var draw = state.DrawPile.ToBuilder();
+        var discard = state.DiscardPile.ToBuilder();
+        int actualDrawn = 0;
+        const int handCap = 10;
+
+        for (int i = 0; i < requestedCount; i++)
+        {
+            if (hand.Count >= handCap) break;
+            if (draw.Count == 0)
+            {
+                if (discard.Count == 0) break;
+                // Fisher-Yates shuffle discard → draw
+                var arr = discard.ToArray();
+                for (int j = arr.Length - 1; j > 0; j--)
+                {
+                    int k = rng.NextInt(0, j + 1);
+                    (arr[j], arr[k]) = (arr[k], arr[j]);
+                }
+                foreach (var c in arr) draw.Add(c);
+                discard.Clear();
+            }
+            var top = draw[0];
+            draw.RemoveAt(0);
+            hand.Add(top);
+            actualDrawn++;
+        }
+
+        if (actualDrawn == 0) return (state, Array.Empty<BattleEvent>());
+
+        var newState = state with
+        {
+            Hand = hand.ToImmutable(),
+            DrawPile = draw.ToImmutable(),
+            DiscardPile = discard.ToImmutable(),
+        };
+        var evs = new[] {
+            new BattleEvent(BattleEventKind.Draw, Order: 0,
+                CasterInstanceId: caster.InstanceId, Amount: actualDrawn),
+        };
+        return (newState, evs);
     }
 
     /// <summary>
