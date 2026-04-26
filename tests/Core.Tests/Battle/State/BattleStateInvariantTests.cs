@@ -42,6 +42,8 @@ public class BattleStateInvariantTests
             ComboCount: 0,
             LastPlayedOrigCost: null,
             NextCardComboFreePass: false,
+            OwnedRelicIds: ImmutableArray<string>.Empty,
+            Potions: ImmutableArray<string>.Empty,
             EncounterId: "enc1");
 
     [Fact] public void Allies_count_at_least_one_at_most_four()
@@ -194,5 +196,21 @@ public class BattleStateInvariantTests
         var card = new BattleCardInstance("c1", "strike", false, null);
         var s2 = s1 with { PowerCards = ImmutableArray.Create(card) };
         Assert.NotEqual(s1, s2);
+    }
+
+    // === 10.2.E: OwnedRelicIds / Potions snapshot ===
+
+    [Fact]
+    public void OwnedRelicIds_is_empty_by_default_for_test_fixture()
+    {
+        var s = BattleFixtures.MinimalState();
+        Assert.Empty(s.OwnedRelicIds);
+    }
+
+    [Fact]
+    public void Potions_can_be_set_via_MinimalState_helper()
+    {
+        var s = BattleFixtures.MinimalState(potions: ImmutableArray.Create("", "", ""));
+        Assert.Equal(3, s.Potions.Length);
     }
 }

@@ -33,6 +33,8 @@ public class BattleEnginePlayCardCostReductionTests
             ComboCount: combo,
             LastPlayedOrigCost: lastOrigCost,
             NextCardComboFreePass: freePass,
+            OwnedRelicIds: ImmutableArray<string>.Empty,
+            Potions: ImmutableArray<string>.Empty,
             EncounterId: "enc_test");
 
     private static CardDefinition CardWithCost(string id, int cost) =>

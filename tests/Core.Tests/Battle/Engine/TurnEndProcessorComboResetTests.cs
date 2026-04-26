@@ -24,6 +24,8 @@ public class TurnEndProcessorComboResetTests
             ComboCount: combo,
             LastPlayedOrigCost: lastOrigCost,
             NextCardComboFreePass: freePass,
+            OwnedRelicIds: ImmutableArray<string>.Empty,
+            Potions: ImmutableArray<string>.Empty,
             EncounterId: "enc_test");
 
     [Fact] public void Resets_combo_count_to_zero()

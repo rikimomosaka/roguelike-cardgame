@@ -30,6 +30,8 @@ public class TurnStartProcessorTests
             ComboCount: 0,
             LastPlayedOrigCost: null,
             NextCardComboFreePass: false,
+            OwnedRelicIds: ImmutableArray<string>.Empty,
+            Potions: ImmutableArray<string>.Empty,
             EncounterId: "enc_test");
 
     private static ImmutableArray<BattleCardInstance> Deck(int n) =>

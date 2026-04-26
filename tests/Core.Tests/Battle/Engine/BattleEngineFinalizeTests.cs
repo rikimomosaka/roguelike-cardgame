@@ -55,6 +55,8 @@ public class BattleEngineFinalizeTests
         ComboCount: 0,
         LastPlayedOrigCost: null,
         NextCardComboFreePass: false,
+        OwnedRelicIds: ImmutableArray<string>.Empty,
+        Potions: ImmutableArray<string>.Empty,
         EncounterId: "enc_test");
 
     [Fact] public void Throws_when_battle_not_resolved()

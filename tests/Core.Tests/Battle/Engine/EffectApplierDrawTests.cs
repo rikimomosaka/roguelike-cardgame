@@ -29,6 +29,8 @@ public class EffectApplierDrawTests
             SummonHeld: ImmutableArray<BattleCardInstance>.Empty,
             PowerCards: ImmutableArray<BattleCardInstance>.Empty,
             ComboCount: 0, LastPlayedOrigCost: null, NextCardComboFreePass: false,
+            OwnedRelicIds: ImmutableArray<string>.Empty,
+            Potions: ImmutableArray<string>.Empty,
             EncounterId: "enc_test");
 
     [Fact] public void Draw_2_from_full_pile()

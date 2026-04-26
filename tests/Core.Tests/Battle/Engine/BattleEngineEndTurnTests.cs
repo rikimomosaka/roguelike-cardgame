@@ -35,6 +35,8 @@ public class BattleEngineEndTurnTests
             ComboCount: 0,
             LastPlayedOrigCost: null,
             NextCardComboFreePass: false,
+            OwnedRelicIds: ImmutableArray<string>.Empty,
+            Potions: ImmutableArray<string>.Empty,
             EncounterId: "enc_test");
 
     private static IRng Rng(params int[] ints) => new FakeRng(ints, new double[0]);
@@ -167,6 +169,8 @@ public class BattleEngineEndTurnTests
             ComboCount: combo,
             LastPlayedOrigCost: lastOrigCost,
             NextCardComboFreePass: freePass,
+            OwnedRelicIds: ImmutableArray<string>.Empty,
+            Potions: ImmutableArray<string>.Empty,
             EncounterId: "enc_test");
     }
 }

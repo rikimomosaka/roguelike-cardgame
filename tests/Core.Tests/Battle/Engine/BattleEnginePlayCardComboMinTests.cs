@@ -33,6 +33,8 @@ public class BattleEnginePlayCardComboMinTests
             ComboCount: combo,
             LastPlayedOrigCost: lastOrigCost,
             NextCardComboFreePass: freePass,
+            OwnedRelicIds: ImmutableArray<string>.Empty,
+            Potions: ImmutableArray<string>.Empty,
             EncounterId: "enc_test");
 
     private static CardDefinition WithEffects(string id, int cost, params CardEffect[] effects) =>

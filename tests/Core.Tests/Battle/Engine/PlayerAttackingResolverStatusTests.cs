@@ -25,6 +25,8 @@ public class PlayerAttackingResolverStatusTests
         ComboCount: 0,
         LastPlayedOrigCost: null,
         NextCardComboFreePass: false,
+        OwnedRelicIds: ImmutableArray<string>.Empty,
+        Potions: ImmutableArray<string>.Empty,
         EncounterId: "enc_test");
 
     private static IRng Rng() => new FakeRng(new int[0], new double[0]);

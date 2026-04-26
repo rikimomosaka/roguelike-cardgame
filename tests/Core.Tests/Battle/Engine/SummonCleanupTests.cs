@@ -33,6 +33,8 @@ public class SummonCleanupTests
             SummonHeld: summonHeld,
             PowerCards: ImmutableArray<BattleCardInstance>.Empty,
             ComboCount: 0, LastPlayedOrigCost: null, NextCardComboFreePass: false,
+            OwnedRelicIds: ImmutableArray<string>.Empty,
+            Potions: ImmutableArray<string>.Empty,
             EncounterId: "enc_test");
 
     [Fact]

@@ -23,6 +23,8 @@ public class TargetingAutoSwitchTests
         ComboCount: 0,
         LastPlayedOrigCost: null,
         NextCardComboFreePass: false,
+        OwnedRelicIds: ImmutableArray<string>.Empty,
+        Potions: ImmutableArray<string>.Empty,
         EncounterId: "enc_test");
 
     [Fact] public void Dead_target_switches_to_innermost_alive()

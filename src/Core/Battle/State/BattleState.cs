@@ -5,7 +5,7 @@ namespace RoguelikeCardGame.Core.Battle.State;
 /// <summary>
 /// バトル全体の不変状態。
 /// 親 spec §3-1 参照。
-/// 10.2.D で SummonHeld / PowerCards を追加（フィールド順は最終形に揃った）。
+/// 10.2.D で SummonHeld / PowerCards を追加。10.2.E で OwnedRelicIds / Potions を追加。
 /// </summary>
 public sealed record BattleState(
     int Turn,
@@ -26,4 +26,6 @@ public sealed record BattleState(
     int ComboCount,
     int? LastPlayedOrigCost,
     bool NextCardComboFreePass,
+    ImmutableArray<string> OwnedRelicIds,         // ← 10.2.E 追加
+    ImmutableArray<string> Potions,               // ← 10.2.E 追加
     string EncounterId);

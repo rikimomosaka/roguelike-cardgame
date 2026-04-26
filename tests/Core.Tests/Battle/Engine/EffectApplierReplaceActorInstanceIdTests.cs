@@ -31,6 +31,8 @@ public class EffectApplierReplaceActorInstanceIdTests
         ComboCount: 0,
         LastPlayedOrigCost: null,
         NextCardComboFreePass: false,
+        OwnedRelicIds: ImmutableArray<string>.Empty,
+        Potions: ImmutableArray<string>.Empty,
         EncounterId: "enc_test");
 
     [Fact] public void Apply_attack_then_block_on_same_caster_succeeds()

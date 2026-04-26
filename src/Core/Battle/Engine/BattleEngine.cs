@@ -84,6 +84,8 @@ public static partial class BattleEngine
             ComboCount: 0,                        // 10.2.C
             LastPlayedOrigCost: null,             // 10.2.C
             NextCardComboFreePass: false,         // 10.2.C
+            OwnedRelicIds: run.Relics.ToImmutableArray(),   // 10.2.E
+            Potions: run.Potions,                           // 10.2.E (already ImmutableArray<string>)
             EncounterId: encounterId);
 
         // 5. ターン 1 開始処理（5 ドロー、Energy=3、TurnStart イベント発火）

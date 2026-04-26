@@ -39,6 +39,8 @@ public class BattleEnginePlayCardComboTests
             ComboCount: combo,
             LastPlayedOrigCost: lastOrigCost,
             NextCardComboFreePass: freePass,
+            OwnedRelicIds: ImmutableArray<string>.Empty,
+            Potions: ImmutableArray<string>.Empty,
             EncounterId: "enc_test");
 
     [Fact] public void Example1_normal_staircase()

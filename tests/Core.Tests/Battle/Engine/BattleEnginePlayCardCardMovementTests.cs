@@ -36,6 +36,8 @@ public class BattleEnginePlayCardCardMovementTests
             ComboCount: 0,
             LastPlayedOrigCost: null,
             NextCardComboFreePass: false,
+            OwnedRelicIds: ImmutableArray<string>.Empty,
+            Potions: ImmutableArray<string>.Empty,
             EncounterId: "enc_test");
 
     [Fact] public void Default_routing_to_discard()
