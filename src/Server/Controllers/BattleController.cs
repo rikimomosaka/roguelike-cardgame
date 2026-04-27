@@ -10,6 +10,7 @@ using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Random;
 using RoguelikeCardGame.Core.Run;
 using RoguelikeCardGame.Server.Abstractions;
+using RoguelikeCardGame.Server.Dtos;
 using RoguelikeCardGame.Server.Services;
 
 namespace RoguelikeCardGame.Server.Controllers;
@@ -110,6 +111,43 @@ public sealed class BattleController : ControllerBase
                 title: "戦闘セッションが存在しません。");
 
         return Ok(BattleStateDtoMapper.ToDto(state));
+    }
+
+    /// <summary>
+    /// spec §2-4 / §4-5: 手札からカードプレイ。BattleEngine.PlayCard 呼出、
+    /// InvalidOperationException (cost 不足 / handIndex 範囲外 / Phase 不正) を 400 に変換。
+    /// </summary>
+    [HttpPost("play-card")]
+    public async Task<IActionResult> PlayCard(
+        [FromBody] PlayCardRequestDto body, CancellationToken ct)
+    {
+        if (!TryGetAccountId(out var accountId, out var err)) return err!;
+        if (body is null) return BadRequest();
+        if (!await _accounts.ExistsAsync(accountId, ct))
+            return Problem(statusCode: StatusCodes.Status404NotFound,
+                title: $"アカウントが見つかりません: {accountId}");
+
+        if (!_sessions.TryGet(accountId, out var state))
+            return Problem(statusCode: StatusCodes.Status409Conflict,
+                title: "戦闘セッションが存在しません。");
+
+        var run = await _saves.TryLoadAsync(accountId, ct);
+        if (run is null)
+            return Problem(statusCode: StatusCodes.Status409Conflict,
+                title: "進行中のランがありません。");
+
+        var rng = MakeBattleRng(run);
+        try
+        {
+            var (newState, events) = BattleEngine.PlayCard(
+                state, body.HandIndex, body.TargetEnemyIndex, body.TargetAllyIndex, rng, _data);
+            _sessions.Set(accountId, newState);
+            return Ok(BattleStateDtoMapper.ToActionResponse(newState, events));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, title: ex.Message);
+        }
     }
 
     private bool TryGetAccountId(out string accountId, out IActionResult? err)

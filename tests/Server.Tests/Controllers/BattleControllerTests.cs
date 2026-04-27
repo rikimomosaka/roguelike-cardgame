@@ -125,4 +125,66 @@ public class BattleControllerTests : IClassFixture<TempDataFactory>
             client.Dispose();
         }
     }
+
+    [Fact]
+    public async Task PlayCard_with_valid_index_advances_state_and_returns_events()
+    {
+        var (client, _) = await BattleControllerFixtures.SetupRunWithActiveBattleAsync(_factory);
+        try
+        {
+            await client.PostAsync("/api/v1/runs/current/battle/start", null);
+
+            var resp = await client.PostAsJsonAsync(
+                "/api/v1/runs/current/battle/play-card",
+                new PlayCardRequestDto(0, 0, 0));
+
+            Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+            var body = await resp.Content.ReadFromJsonAsync<BattleActionResponseDto>();
+            Assert.NotNull(body);
+            Assert.Contains(body!.Steps, s => s.Event.Kind == "PlayCard");
+        }
+        finally
+        {
+            client.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task PlayCard_with_invalid_handIndex_returns_400()
+    {
+        var (client, _) = await BattleControllerFixtures.SetupRunWithActiveBattleAsync(_factory);
+        try
+        {
+            await client.PostAsync("/api/v1/runs/current/battle/start", null);
+
+            var resp = await client.PostAsJsonAsync(
+                "/api/v1/runs/current/battle/play-card",
+                new PlayCardRequestDto(99, 0, 0));
+
+            Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        }
+        finally
+        {
+            client.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task PlayCard_when_no_session_returns_409()
+    {
+        var (client, _) = await BattleControllerFixtures.SetupRunWithActiveBattleAsync(_factory);
+        try
+        {
+            // start を呼ばずに play-card
+            var resp = await client.PostAsJsonAsync(
+                "/api/v1/runs/current/battle/play-card",
+                new PlayCardRequestDto(0, 0, 0));
+
+            Assert.Equal(HttpStatusCode.Conflict, resp.StatusCode);
+        }
+        finally
+        {
+            client.Dispose();
+        }
+    }
 }
