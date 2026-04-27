@@ -31,8 +31,9 @@ public sealed class RunsController : ControllerBase
     private readonly DataCatalog _data;
     private readonly IHistoryRepository _history;
     private readonly IBestiaryRepository _bestiary;
+    private readonly BattleSessionStore _sessions;
 
-    public RunsController(IAccountRepository accounts, ISaveRepository saves, RunStartService runStart, DataCatalog data, IHistoryRepository history, IBestiaryRepository bestiary)
+    public RunsController(IAccountRepository accounts, ISaveRepository saves, RunStartService runStart, DataCatalog data, IHistoryRepository history, IBestiaryRepository bestiary, BattleSessionStore sessions)
     {
         _accounts = accounts;
         _saves = saves;
@@ -40,6 +41,7 @@ public sealed class RunsController : ControllerBase
         _data = data;
         _history = history;
         _bestiary = bestiary;
+        _sessions = sessions;
     }
 
     [HttpGet("current")]
@@ -363,6 +365,7 @@ public sealed class RunsController : ControllerBase
         var rec = RunHistoryBuilder.From(accountId, finished, abandonMap, finished.VisitedNodeIds.Length, RunProgress.Abandoned);
         await _history.AppendAsync(accountId, rec, ct);
         await _bestiary.MergeAsync(accountId, rec, ct);
+        _sessions.Remove(accountId);   // F2: 戦闘中放棄時の session cleanup
         await _saves.DeleteAsync(accountId, ct);
         return Ok(RunSnapshotDtoMapper.ToResultDto(rec));
     }
