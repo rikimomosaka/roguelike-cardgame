@@ -118,11 +118,24 @@ public sealed class TempDataFactory : WebApplicationFactory<Program>
     public void ResetData()
     {
         if (Directory.Exists(_dataRoot)) Directory.Delete(_dataRoot, recursive: true);
+        // BattleSessionStore は singleton で test 間共有のため、disk reset と一緒に in-memory も clear する。
+        // Dispose 経路では Services が破棄済みのため、host が生きているときだけ実行する。
+        if (!_disposed)
+        {
+            var store = Services.GetRequiredService<BattleSessionStore>();
+            store.Clear();
+        }
     }
+
+    private bool _disposed;
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing) ResetData();
+        if (disposing)
+        {
+            ResetData();
+            _disposed = true;
+        }
         base.Dispose(disposing);
     }
 }

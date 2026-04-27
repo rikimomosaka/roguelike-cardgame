@@ -20,4 +20,10 @@ public sealed class BattleSessionStore
 
     public void Remove(string accountId)
         => _sessions.TryRemove(accountId, out _);
+
+    /// <summary>
+    /// 全 session を一括削除する。test 間の isolation 用。
+    /// 本番経路では accountId 単位の <see cref="Remove"/> を使うこと。
+    /// </summary>
+    public void Clear() => _sessions.Clear();
 }

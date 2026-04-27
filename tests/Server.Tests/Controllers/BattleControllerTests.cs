@@ -112,10 +112,7 @@ public class BattleControllerTests : IClassFixture<TempDataFactory>
     [Fact]
     public async Task Get_when_no_session_returns_404()
     {
-        // BattleSessionStore は singleton で test 間共有のため、
-        // 他テストの "test-account" session が残っている可能性を避けて専用 accountId を使う。
-        var (client, _) = await BattleControllerFixtures
-            .SetupRunWithActiveBattleAsync(_factory, accountId: "get-no-session-account");
+        var (client, _) = await BattleControllerFixtures.SetupRunWithActiveBattleAsync(_factory);
         try
         {
             // start を呼ばずに直接 GET
