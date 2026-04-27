@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Net;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
@@ -181,6 +182,35 @@ public class BattleControllerTests : IClassFixture<TempDataFactory>
                 new PlayCardRequestDto(0, 0, 0));
 
             Assert.Equal(HttpStatusCode.Conflict, resp.StatusCode);
+        }
+        finally
+        {
+            client.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task PlayCard_with_negative_targetEnemyIndex_does_not_500()
+    {
+        // Issue 2 review: BattleEngine.PlayCard は負の target index を validate せず、
+        // EffectApplier.ResolveTargets が "ei < state.Enemies.Length" の上限のみを
+        // チェックする (line 169-174)。ei = -1 を渡すと state.Allies[-1] /
+        // state.Enemies[-1] で IndexOutOfRangeException が発生し得る。
+        // 現スターター (strike + defend のみ) では実トリガーは難しいが、
+        // Tasks 7-10 で追加予定の buff/debuff カードや SetTarget endpoint で
+        // 同経路が有効化されるため、controller の catch を broaden した。
+        // この test は「負の target index で 500 が漏れない」ことを保証する
+        // (200 でグレースフル無視、または 400 ならどちらも OK、500 のみ NG)。
+        var (client, _) = await BattleControllerFixtures.SetupRunWithActiveBattleAsync(_factory);
+        try
+        {
+            await client.PostAsync("/api/v1/runs/current/battle/start", null);
+
+            var resp = await client.PostAsJsonAsync(
+                "/api/v1/runs/current/battle/play-card",
+                new PlayCardRequestDto(0, -1, -1));
+
+            Assert.NotEqual(HttpStatusCode.InternalServerError, resp.StatusCode);
         }
         finally
         {

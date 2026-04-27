@@ -54,10 +54,8 @@ public sealed class BattleController : ControllerBase
     [HttpPost("start")]
     public async Task<IActionResult> Start(CancellationToken ct)
     {
-        if (!TryGetAccountId(out var accountId, out var err)) return err!;
-        if (!await _accounts.ExistsAsync(accountId, ct))
-            return Problem(statusCode: StatusCodes.Status404NotFound,
-                title: $"アカウントが見つかりません: {accountId}");
+        var (accountId, err) = await ResolveAccountAsync(ct);
+        if (err is not null) return err;
 
         var run = await _saves.TryLoadAsync(accountId, ct);
         if (run is null || run.Progress != RunProgress.InProgress)
@@ -71,7 +69,7 @@ public sealed class BattleController : ControllerBase
         if (_sessions.TryGet(accountId, out var existing))
         {
             return Ok(BattleStateDtoMapper.ToActionResponse(
-                existing, Array.Empty<BattleEvent>()));
+                existing.State, Array.Empty<BattleEvent>()));
         }
 
         var rng = MakeBattleRng(run);
@@ -89,7 +87,9 @@ public sealed class BattleController : ControllerBase
                 await _saves.SaveAsync(accountId, noted, ct);
         }
 
-        _sessions.Set(accountId, state);
+        // §4-1: state と rng を組で保持。以降の PlayCard / EndTurn は同じ rng instance を
+        // 受け取り、決定性 (BattleDeterminismTests と同等) を維持する。
+        _sessions.Set(accountId, new BattleSession(state, rng));
 
         return Ok(BattleStateDtoMapper.ToActionResponse(state, events));
     }
@@ -101,53 +101,62 @@ public sealed class BattleController : ControllerBase
     [HttpGet("")]
     public async Task<IActionResult> Get(CancellationToken ct)
     {
-        if (!TryGetAccountId(out var accountId, out var err)) return err!;
-        if (!await _accounts.ExistsAsync(accountId, ct))
-            return Problem(statusCode: StatusCodes.Status404NotFound,
-                title: $"アカウントが見つかりません: {accountId}");
+        var (accountId, err) = await ResolveAccountAsync(ct);
+        if (err is not null) return err;
 
-        if (!_sessions.TryGet(accountId, out var state))
+        if (!_sessions.TryGet(accountId, out var session))
             return Problem(statusCode: StatusCodes.Status404NotFound,
                 title: "戦闘セッションが存在しません。");
 
-        return Ok(BattleStateDtoMapper.ToDto(state));
+        return Ok(BattleStateDtoMapper.ToDto(session.State));
     }
 
     /// <summary>
     /// spec §2-4 / §4-5: 手札からカードプレイ。BattleEngine.PlayCard 呼出、
-    /// InvalidOperationException (cost 不足 / handIndex 範囲外 / Phase 不正) を 400 に変換。
+    /// InvalidOperationException (cost 不足 / handIndex 範囲外 / Phase 不正) +
+    /// IndexOutOfRangeException (target index 負値) +
+    /// ArgumentException を 400 に変換。
     /// </summary>
     [HttpPost("play-card")]
     public async Task<IActionResult> PlayCard(
         [FromBody] PlayCardRequestDto body, CancellationToken ct)
     {
-        if (!TryGetAccountId(out var accountId, out var err)) return err!;
         if (body is null) return BadRequest();
-        if (!await _accounts.ExistsAsync(accountId, ct))
-            return Problem(statusCode: StatusCodes.Status404NotFound,
-                title: $"アカウントが見つかりません: {accountId}");
+        var (accountId, err) = await ResolveAccountAsync(ct);
+        if (err is not null) return err;
 
-        if (!_sessions.TryGet(accountId, out var state))
+        if (!_sessions.TryGet(accountId, out var session))
             return Problem(statusCode: StatusCodes.Status409Conflict,
                 title: "戦闘セッションが存在しません。");
 
-        var run = await _saves.TryLoadAsync(accountId, ct);
-        if (run is null)
-            return Problem(statusCode: StatusCodes.Status409Conflict,
-                title: "進行中のランがありません。");
-
-        var rng = MakeBattleRng(run);
         try
         {
             var (newState, events) = BattleEngine.PlayCard(
-                state, body.HandIndex, body.TargetEnemyIndex, body.TargetAllyIndex, rng, _data);
-            _sessions.Set(accountId, newState);
+                session.State, body.HandIndex, body.TargetEnemyIndex, body.TargetAllyIndex,
+                session.Rng, _data);
+            _sessions.Set(accountId, session with { State = newState });
             return Ok(BattleStateDtoMapper.ToActionResponse(newState, events));
         }
-        catch (InvalidOperationException ex)
+        catch (Exception ex) when (ex is InvalidOperationException
+                                      or ArgumentException
+                                      or IndexOutOfRangeException)
         {
             return Problem(statusCode: StatusCodes.Status400BadRequest, title: ex.Message);
         }
+    }
+
+    /// <summary>
+    /// 共通 prologue: header から accountId を取得し、アカウント存在を確認する。
+    /// 失敗時は <see cref="IActionResult"/> を返し、呼出側はそのまま return する。
+    /// </summary>
+    private async Task<(string accountId, IActionResult? error)> ResolveAccountAsync(CancellationToken ct)
+    {
+        if (!TryGetAccountId(out var accountId, out var err))
+            return (string.Empty, err);
+        if (!await _accounts.ExistsAsync(accountId, ct))
+            return (string.Empty, Problem(statusCode: StatusCodes.Status404NotFound,
+                title: $"アカウントが見つかりません: {accountId}"));
+        return (accountId, null);
     }
 
     private bool TryGetAccountId(out string accountId, out IActionResult? err)
@@ -174,6 +183,8 @@ public sealed class BattleController : ControllerBase
     /// <summary>
     /// 戦闘用 RNG。run の RngSeed / PlaySeconds / 戦闘マジック (0xBA771E) を XOR して
     /// 同じ run / 同じ進行から同じ shuffle を再現できるようにする。
+    /// 注意: この関数は Start でしか呼ばない。PlayCard / EndTurn 等は session.Rng を
+    /// 再利用する (spec §4-1 / Issue 1 review)。
     /// </summary>
     private static IRng MakeBattleRng(RunState run) =>
         new SystemRng(unchecked((int)run.RngSeed ^ (int)run.PlaySeconds ^ 0xBA771E));
