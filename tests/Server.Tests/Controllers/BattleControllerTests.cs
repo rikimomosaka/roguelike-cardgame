@@ -279,6 +279,29 @@ public class BattleControllerTests : IClassFixture<TempDataFactory>
     }
 
     [Fact]
+    public async Task SetTarget_updates_target_indices_without_events()
+    {
+        var (client, _) = await BattleControllerFixtures.SetupRunWithActiveBattleAsync(_factory);
+        try
+        {
+            await client.PostAsync("/api/v1/runs/current/battle/start", null);
+
+            var resp = await client.PostAsJsonAsync(
+                "/api/v1/runs/current/battle/set-target",
+                new SetTargetRequestDto("Enemy", 0));
+
+            Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+            var body = await resp.Content.ReadFromJsonAsync<BattleStateDto>();
+            Assert.NotNull(body);
+            Assert.Equal(0, body!.TargetEnemyIndex);
+        }
+        finally
+        {
+            client.Dispose();
+        }
+    }
+
+    [Fact]
     public async Task PlayCard_with_negative_targetEnemyIndex_does_not_500()
     {
         // Issue 2 review: BattleEngine.PlayCard は負の target index を validate せず、

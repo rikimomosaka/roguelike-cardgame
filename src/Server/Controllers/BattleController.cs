@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using RoguelikeCardGame.Core.Battle.Engine;
 using RoguelikeCardGame.Core.Battle.Events;
+using RoguelikeCardGame.Core.Battle.State;
 using RoguelikeCardGame.Core.Bestiary;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Random;
@@ -170,6 +171,41 @@ public sealed class BattleController : ControllerBase
             var (newState, events) = BattleEngine.EndTurn(session.State, session.Rng, _data);
             _sessions.Set(accountId, session with { State = newState });
             return Ok(BattleStateDtoMapper.ToActionResponse(newState, events));
+        }
+        catch (Exception ex) when (ex is InvalidOperationException
+                                      or ArgumentException
+                                      or IndexOutOfRangeException)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, title: ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// spec §2-7: ターゲット切替。BattleEngine.SetTarget 呼出。events 発火なしのため、
+    /// レスポンスは <see cref="BattleStateDto"/> のみ (steps 配列なし)。
+    /// 不正な Side / 範囲外 / 死亡スロットなどはすべて 400 に変換 (broad catch)。
+    /// </summary>
+    [HttpPost("set-target")]
+    public async Task<IActionResult> SetTarget(
+        [FromBody] SetTargetRequestDto body, CancellationToken ct)
+    {
+        var (accountId, err) = await ResolveAccountAsync(ct);
+        if (err is not null) return err;
+        if (body is null) return BadRequest();
+
+        if (!_sessions.TryGet(accountId, out var session))
+            return Problem(statusCode: StatusCodes.Status409Conflict,
+                title: "戦闘セッションが存在しません。");
+
+        if (!Enum.TryParse<ActorSide>(body.Side, out var side))
+            return Problem(statusCode: StatusCodes.Status400BadRequest,
+                title: $"不正な Side: {body.Side}");
+
+        try
+        {
+            var newState = BattleEngine.SetTarget(session.State, side, body.SlotIndex);
+            _sessions.Set(accountId, session with { State = newState });
+            return Ok(BattleStateDtoMapper.ToDto(newState));
         }
         catch (Exception ex) when (ex is InvalidOperationException
                                       or ArgumentException
