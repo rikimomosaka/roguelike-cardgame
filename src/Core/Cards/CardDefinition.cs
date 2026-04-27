@@ -13,6 +13,7 @@ namespace RoguelikeCardGame.Core.Cards;
 /// <param name="Effects">効果プリミティブ配列</param>
 /// <param name="UpgradedEffects">強化時の効果配列。null/省略 = Effects と同じ</param>
 /// <param name="Keywords">キーワード能力（"wild"|"superwild" 等）。null/省略 = なし</param>
+/// <param name="UpgradedKeywords">強化時のキーワード能力。null/省略 = Keywords を継承</param>
 public sealed record CardDefinition(
     string Id,
     string Name,
@@ -23,11 +24,21 @@ public sealed record CardDefinition(
     int? UpgradedCost,
     IReadOnlyList<CardEffect> Effects,
     IReadOnlyList<CardEffect>? UpgradedEffects,
-    IReadOnlyList<string>? Keywords)
+    IReadOnlyList<string>? Keywords,
+    IReadOnlyList<string>? UpgradedKeywords = null)
 {
     /// <summary>
-    /// UpgradedCost か UpgradedEffects のどちらかが指定されているとき強化可能。
-    /// 両方とも null/省略のカードは強化対象外。
+    /// UpgradedCost / UpgradedEffects / UpgradedKeywords のいずれかが指定されているとき強化可能。
+    /// すべて null/省略のカードは強化対象外。
     /// </summary>
-    public bool IsUpgradable => UpgradedCost is not null || UpgradedEffects is not null;
+    public bool IsUpgradable => UpgradedCost is not null
+        || UpgradedEffects is not null
+        || UpgradedKeywords is not null;
+
+    /// <summary>
+    /// 強化状態に応じた有効キーワードを返す。
+    /// upgraded=true かつ UpgradedKeywords が指定されているならそれ、それ以外は Keywords を継承。
+    /// </summary>
+    public IReadOnlyList<string>? EffectiveKeywords(bool upgraded) =>
+        upgraded && UpgradedKeywords is not null ? UpgradedKeywords : Keywords;
 }

@@ -8,6 +8,7 @@ export type CardCatalogEntry = {
   rarity: number
   cardType: string
   cost: number | null
+  upgradedCost: number | null
   upgradable: boolean
   description: string
   upgradedDescription: string | null

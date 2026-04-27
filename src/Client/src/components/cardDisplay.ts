@@ -16,6 +16,7 @@ const TYPE_MAP: Record<string, CardType> = {
   power: 'power',
   curse: 'curse',
   status: 'status',
+  unit: 'unit',
 }
 
 function rarityFromNumber(n: number): CardRarity {

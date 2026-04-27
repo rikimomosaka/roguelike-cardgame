@@ -201,6 +201,15 @@ export type BattleEventKind =
   | 'Heal' | 'Draw' | 'Discard' | 'Upgrade' | 'Exhaust'
   | 'GainEnergy' | 'Summon' | 'UsePotion'
 
+export type IntentKindDto =
+  | 'attack' | 'defend' | 'buff' | 'debuff' | 'heal' | 'multi' | 'unknown'
+
+export type IntentDto = {
+  kind: IntentKindDto
+  amount: number | null
+  hits: number | null
+}
+
 export type CombatActorDto = {
   instanceId: string
   definitionId: string
@@ -216,6 +225,7 @@ export type CombatActorDto = {
   currentMoveId: string | null
   remainingLifetimeTurns: number | null
   associatedSummonHeldInstanceId: string | null
+  intent: IntentDto | null
 }
 
 export type BattleCardInstanceDto = {

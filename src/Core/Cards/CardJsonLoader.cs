@@ -75,8 +75,21 @@ public static class CardJsonLoader
                     keywords = list;
                 }
 
+                IReadOnlyList<string>? upgradedKeywords = null;
+                if (root.TryGetProperty("upgradedKeywords", out var ukwEl) && ukwEl.ValueKind == JsonValueKind.Array)
+                {
+                    var list = new List<string>();
+                    foreach (var k in ukwEl.EnumerateArray())
+                    {
+                        if (k.ValueKind != JsonValueKind.String)
+                            throw new CardJsonException($"upgradedKeywords の要素は string でなければなりません (card id={id})。");
+                        list.Add(k.GetString()!);
+                    }
+                    upgradedKeywords = list;
+                }
+
                 return new CardDefinition(id, name, displayName, rarity, cardType,
-                    cost, upgradedCost, effects, upgraded, keywords);
+                    cost, upgradedCost, effects, upgraded, keywords, upgradedKeywords);
             }
             catch (CardJsonException) { throw; }
             catch (Exception ex)

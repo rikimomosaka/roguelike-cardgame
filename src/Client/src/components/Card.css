@@ -64,6 +64,15 @@
 .card--type-status .card__bg {
   background: linear-gradient(180deg, #3a3a4a 0%, #101018 100%);
 }
+.card--type-unit .card__bg {
+  background:
+    linear-gradient(180deg, #6a5a1a 0%, #3a2f10 100%),
+    repeating-linear-gradient(45deg, rgba(0,0,0,0.2) 0 2px, transparent 2px 4px);
+}
+.card--type-unit {
+  border-color: #d4b048;
+  box-shadow: 0 0 4px rgba(212,176,72,0.45);
+}
 
 /* ---------- Top strip (cost + name) ---------- */
 .card__top {

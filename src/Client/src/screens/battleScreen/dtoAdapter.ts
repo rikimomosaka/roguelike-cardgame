@@ -11,6 +11,7 @@
 import type {
   BattleCardInstanceDto,
   CombatActorDto,
+  IntentDto,
 } from '../../api/types'
 import type {
   CardCatalog,
@@ -24,6 +25,7 @@ import type {
   CharacterDemo,
   HandCardDemo,
   HpLv,
+  IntentDemo,
   RelicDemo,
 } from '../BattleScreen'
 
@@ -61,7 +63,7 @@ function relicRarityFromString(rarity: string | undefined): CardRarity {
 function cardTypeFromString(s: string | undefined): CardType {
   const lower = (s ?? 'attack').toLowerCase()
   if (lower === 'attack' || lower === 'skill' || lower === 'power' ||
-      lower === 'curse' || lower === 'status') {
+      lower === 'curse' || lower === 'status' || lower === 'unit') {
     return lower
   }
   return 'attack'
@@ -149,8 +151,56 @@ export function toCharacterDemo(
     hpCur: actor.currentHp,
     hpMax: actor.maxHp,
     hpLv: hpLevel(actor.currentHp, actor.maxHp),
-    intent: undefined, // MVP: intent 表示は最小、Phase 10.4 で詳細化
+    intent: actor.intent ? toIntentDemo(actor.intent) : undefined,
     buffs: toBuffs(actor),
+  }
+}
+
+// ---------------- toIntentDemo ----------------
+
+/**
+ * Server 側の IntentDto (kind="attack"|"defend"|...) を IntentDemo に変換。
+ * BattleScreen の頭上チップで「次の予定行動」を表示する用途。
+ */
+export function toIntentDemo(intent: IntentDto): IntentDemo {
+  switch (intent.kind) {
+    case 'attack': {
+      const hits = intent.hits && intent.hits > 1 ? `×${intent.hits}` : ''
+      return {
+        kind: 'attack',
+        icon: '⚔',
+        num: intent.amount ?? undefined,
+        name: '攻撃',
+        desc: `次のターンに ${intent.amount ?? '?'} ダメージを与える${hits}。`,
+      }
+    }
+    case 'defend':
+      return {
+        kind: 'defend',
+        icon: '◆',
+        num: intent.amount ?? undefined,
+        name: '防御',
+        desc: `次のターンに ${intent.amount ?? '?'} のブロックを得る。`,
+      }
+    case 'multi': {
+      const hits = intent.hits && intent.hits > 1 ? `×${intent.hits}` : ''
+      return {
+        kind: 'attack',
+        icon: '⚡',
+        num: intent.amount ?? undefined,
+        name: '攻撃 + 補助',
+        desc: `次のターンに ${intent.amount ?? '?'} ダメージ${hits} と補助行動。`,
+      }
+    }
+    case 'buff':
+      return { kind: 'buff', icon: '✦', name: '強化', desc: '次のターンに自身を強化する。' }
+    case 'debuff':
+      return { kind: 'buff', icon: '☄', name: '弱体化', desc: '次のターンにこちらを弱体化する。' }
+    case 'heal':
+      return { kind: 'heal', icon: '✚', name: '回復', desc: '次のターンに自身を回復する。' }
+    case 'unknown':
+    default:
+      return { kind: 'unknown', icon: '?', name: '不明', desc: '次の行動は不明。' }
   }
 }
 
@@ -207,19 +257,46 @@ function statusMeta(id: string): {
 
 // ---------------- toHandCardDemo ----------------
 
+/**
+ * card のオリジナルコスト (CostOverride 無視) を返す。
+ * 強化済みなら upgradedCost を優先。combo 判定で参照される値。
+ */
+function origCostOf(
+  card: BattleCardInstanceDto,
+  catalog: CardCatalog | null,
+): number | null {
+  const def = catalog?.[card.cardDefinitionId]
+  if (!def) return null
+  if (card.isUpgraded && def.upgradedCost !== null && def.upgradedCost !== undefined) {
+    return def.upgradedCost
+  }
+  return def.cost ?? null
+}
+
 export function toHandCardDemo(
   card: BattleCardInstanceDto,
   catalog: CardCatalog | null,
   energy: number,
+  /** Server engine の state.lastPlayedOrigCost (combo 軽減判定用)。 */
+  lastPlayedOrigCost: number | null = null,
 ): HandCardDemo {
   const def = catalog?.[card.cardDefinitionId]
-  const baseCost = def?.cost ?? null
-  const cost = card.costOverride ?? baseCost
+  const orig = origCostOf(card, catalog)
+  const baseCost = card.costOverride ?? orig
+  // Why: BattleEngine.PlayCard と同じ combo 軽減ロジック (orig === lastPlayedOrigCost + 1)
+  // を再現することで、見た目のコストを実際の支払いコストに合わせる。Server 側は
+  // CostOverride とは独立に支払い時に -1 する (BattleEngine.PlayCard.cs:50-51 参照)。
+  const willCombo =
+    orig !== null && lastPlayedOrigCost !== null && orig === lastPlayedOrigCost + 1
+  const reducedCost =
+    baseCost !== null && baseCost !== undefined
+      ? Math.max(0, baseCost - (willCombo ? 1 : 0))
+      : null
   const playable =
-    cost !== null && cost !== undefined && cost <= energy
+    reducedCost !== null && reducedCost !== undefined && reducedCost <= energy
   return {
     name: def?.displayName ?? def?.name ?? card.cardDefinitionId,
-    cost: cost ?? 'X',
+    cost: reducedCost ?? 'X',
     type: cardTypeFromString(def?.cardType),
     rarity: def ? cardRarityFromNumber(def.rarity) : 'c',
     playable,

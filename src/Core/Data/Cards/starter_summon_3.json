@@ -2,7 +2,7 @@
   "id": "starter_summon_3",
   "name": "ウィスプ召喚",
   "rarity": 1,
-  "cardType": "Skill",
+  "cardType": "Unit",
   "cost": 3,
   "effects": [
     {
@@ -19,5 +19,6 @@
       "amount": 0,
       "unitId": "wisp"
     }
-  ]
+  ],
+  "upgradedKeywords": ["superwild"]
 }

@@ -4,7 +4,7 @@ import { useTooltipTarget } from './Tooltip'
 import type { TooltipContent } from './Tooltip'
 import './Card.css'
 
-export type CardType = 'attack' | 'skill' | 'power' | 'curse' | 'status'
+export type CardType = 'attack' | 'skill' | 'power' | 'curse' | 'status' | 'unit'
 export type CardRarity = 'c' | 'r' | 'e' | 'l'
 
 type Props = {
@@ -54,7 +54,8 @@ export function Card({
     .join(' ')
 
   const style: CSSProperties = { width: `${width}px` }
-  const typeLabel = type.toUpperCase()
+  // Why: 'unit' は内部 enum 値だが UI では「召喚カード」を表す概念で「SUMMON」表示。
+  const typeLabel = type === 'unit' ? 'SUMMON' : type.toUpperCase()
 
   const activeDesc = upgraded && upgradedDescription ? upgradedDescription : description
   const tooltipContent = useMemo<TooltipContent | null>(() => {

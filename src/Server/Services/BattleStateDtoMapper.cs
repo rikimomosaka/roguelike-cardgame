@@ -1,7 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
+using RoguelikeCardGame.Core.Battle.Definitions;
 using RoguelikeCardGame.Core.Battle.Events;
 using RoguelikeCardGame.Core.Battle.State;
+using RoguelikeCardGame.Core.Cards;
+using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Server.Dtos;
 
 namespace RoguelikeCardGame.Server.Services;
@@ -11,16 +14,17 @@ namespace RoguelikeCardGame.Server.Services;
 /// Phase 10.3-MVP spec §4-2 参照。
 /// 10.2.B で実装済の <see cref="AttackPool.Display"/> / <see cref="BlockPool.Display"/>
 /// を使い、力/敏捷/脱力反映後の表示値を計算する。
+/// data 引数は intent 計算で actor 定義を参照する目的（UX 補強）。
 /// </summary>
 internal static class BattleStateDtoMapper
 {
-    public static BattleStateDto ToDto(BattleState state) =>
+    public static BattleStateDto ToDto(BattleState state, DataCatalog data) =>
         new(
             Turn: state.Turn,
             Phase: state.Phase.ToString(),
             Outcome: state.Outcome.ToString(),
-            Allies: state.Allies.Select(ToActorDto).ToList(),
-            Enemies: state.Enemies.Select(ToActorDto).ToList(),
+            Allies: state.Allies.Select(a => ToActorDto(a, data)).ToList(),
+            Enemies: state.Enemies.Select(a => ToActorDto(a, data)).ToList(),
             TargetAllyIndex: state.TargetAllyIndex,
             TargetEnemyIndex: state.TargetEnemyIndex,
             Energy: state.Energy,
@@ -38,7 +42,7 @@ internal static class BattleStateDtoMapper
             Potions: state.Potions.ToList(),
             EncounterId: state.EncounterId);
 
-    private static CombatActorDto ToActorDto(CombatActor a) =>
+    private static CombatActorDto ToActorDto(CombatActor a, DataCatalog data) =>
         new(
             InstanceId: a.InstanceId,
             DefinitionId: a.DefinitionId,
@@ -53,7 +57,84 @@ internal static class BattleStateDtoMapper
             Statuses: a.Statuses.ToDictionary(kv => kv.Key, kv => kv.Value),
             CurrentMoveId: a.CurrentMoveId,
             RemainingLifetimeTurns: a.RemainingLifetimeTurns,
-            AssociatedSummonHeldInstanceId: a.AssociatedSummonHeldInstanceId);
+            AssociatedSummonHeldInstanceId: a.AssociatedSummonHeldInstanceId,
+            Intent: ComputeIntent(a, data));
+
+    /// <summary>
+    /// actor.CurrentMoveId + DataCatalog から「次の予定行動」を計算する。
+    /// hero (DefinitionId="hero") は手札駆動なので intent なし (null)。
+    /// 攻撃 effect の amount は strength/weak 反映済の予定値で表示する。
+    /// </summary>
+    private static IntentDto? ComputeIntent(CombatActor a, DataCatalog data)
+    {
+        if (a.DefinitionId == "hero" || a.CurrentMoveId is null) return null;
+
+        IReadOnlyList<MoveDefinition>? moves = null;
+        if (a.Side == ActorSide.Enemy && data.Enemies.TryGetValue(a.DefinitionId, out var enemyDef))
+            moves = enemyDef.Moves;
+        else if (a.Side == ActorSide.Ally && data.TryGetUnit(a.DefinitionId, out var unitDef))
+            moves = unitDef.Moves;
+
+        if (moves is null) return null;
+        var move = moves.FirstOrDefault(m => m.Id == a.CurrentMoveId);
+        if (move is null) return null;
+
+        // 攻撃合計と命中数を集計。strength/weak は actor 自身の status を反映。
+        int strength = a.GetStatus("strength");
+        int weak = a.GetStatus("weak");
+        int attackAmount = 0;
+        int attackHits = 0;
+        int blockAmount = 0;
+        bool hasBuff = false;
+        bool hasDebuff = false;
+        bool hasHeal = false;
+
+        foreach (var eff in move.Effects)
+        {
+            switch (eff.Action)
+            {
+                case "attack":
+                    int adjusted = AdjustAttackAmount(eff.Amount, strength, weak);
+                    attackAmount += adjusted;
+                    attackHits += 1;
+                    break;
+                case "block":
+                    blockAmount += eff.Amount;
+                    break;
+                case "buff":
+                    hasBuff = true;
+                    break;
+                case "debuff":
+                    hasDebuff = true;
+                    break;
+                case "heal":
+                    hasHeal = true;
+                    break;
+            }
+        }
+
+        // 優先順位: attack あれば attack、それ以外は block / buff / debuff / heal。
+        if (attackHits > 0 && (blockAmount > 0 || hasBuff || hasDebuff || hasHeal))
+            return new IntentDto("multi", attackAmount, attackHits);
+        if (attackHits > 0)
+            return new IntentDto("attack", attackAmount, attackHits);
+        if (blockAmount > 0)
+            return new IntentDto("defend", blockAmount, null);
+        if (hasBuff) return new IntentDto("buff", null, null);
+        if (hasDebuff) return new IntentDto("debuff", null, null);
+        if (hasHeal) return new IntentDto("heal", null, null);
+        return new IntentDto("unknown", null, null);
+    }
+
+    /// <summary>
+    /// AttackPool.Display と同等の整数版調整。strength は加算、weak は 0.75 倍 (端数切り捨て)。
+    /// </summary>
+    private static int AdjustAttackAmount(int baseAmount, int strength, int weak)
+    {
+        int withStr = baseAmount + strength;
+        if (weak > 0) return (int)(withStr * 0.75);
+        return withStr;
+    }
 
     private static BattleCardInstanceDto ToCardDto(BattleCardInstance c) =>
         new(c.InstanceId, c.CardDefinitionId, c.IsUpgraded, c.CostOverride);
@@ -75,9 +156,9 @@ internal static class BattleStateDtoMapper
     /// 中身だけ差し替え可能。
     /// </summary>
     public static BattleActionResponseDto ToActionResponse(
-        BattleState finalState, IReadOnlyList<BattleEvent> events)
+        BattleState finalState, IReadOnlyList<BattleEvent> events, DataCatalog data)
     {
-        var stateDto = ToDto(finalState);
+        var stateDto = ToDto(finalState, data);
         var steps = events
             .Select(ev => new BattleEventStepDto(ToEventDto(ev), stateDto))
             .ToList();

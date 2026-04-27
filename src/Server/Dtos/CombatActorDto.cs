@@ -16,4 +16,5 @@ public sealed record CombatActorDto(
     IReadOnlyDictionary<string, int> Statuses,
     string? CurrentMoveId,
     int? RemainingLifetimeTurns,
-    string? AssociatedSummonHeldInstanceId);
+    string? AssociatedSummonHeldInstanceId,
+    IntentDto? Intent);

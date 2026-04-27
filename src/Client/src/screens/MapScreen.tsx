@@ -483,6 +483,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
     return (
       <BattleScreen
         accountId={accountId}
+        snapshot={snap}
         onBattleResolved={(result) => {
           if ('outcome' in result) {
             onRunFinished?.(result, snapRef.current)

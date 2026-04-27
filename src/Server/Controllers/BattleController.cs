@@ -74,7 +74,7 @@ public sealed class BattleController : ControllerBase
         if (_sessions.TryGet(accountId, out var existing))
         {
             return Ok(BattleStateDtoMapper.ToActionResponse(
-                existing.State, Array.Empty<BattleEvent>()));
+                existing.State, Array.Empty<BattleEvent>(), _data));
         }
 
         var rng = MakeBattleRng(run);
@@ -96,7 +96,7 @@ public sealed class BattleController : ControllerBase
         // 受け取り、決定性 (BattleDeterminismTests と同等) を維持する。
         _sessions.Set(accountId, new BattleSession(state, rng));
 
-        return Ok(BattleStateDtoMapper.ToActionResponse(state, events));
+        return Ok(BattleStateDtoMapper.ToActionResponse(state, events, _data));
     }
 
     /// <summary>
@@ -113,7 +113,7 @@ public sealed class BattleController : ControllerBase
             return Problem(statusCode: StatusCodes.Status404NotFound,
                 title: "戦闘セッションが存在しません。");
 
-        return Ok(BattleStateDtoMapper.ToDto(session.State));
+        return Ok(BattleStateDtoMapper.ToDto(session.State, _data));
     }
 
     /// <summary>
@@ -140,7 +140,7 @@ public sealed class BattleController : ControllerBase
                 session.State, body.HandIndex, body.TargetEnemyIndex, body.TargetAllyIndex,
                 session.Rng, _data);
             _sessions.Set(accountId, session with { State = newState });
-            return Ok(BattleStateDtoMapper.ToActionResponse(newState, events));
+            return Ok(BattleStateDtoMapper.ToActionResponse(newState, events, _data));
         }
         catch (Exception ex) when (ex is InvalidOperationException
                                       or ArgumentException
@@ -174,7 +174,7 @@ public sealed class BattleController : ControllerBase
         {
             var (newState, events) = BattleEngine.EndTurn(session.State, session.Rng, _data);
             _sessions.Set(accountId, session with { State = newState });
-            return Ok(BattleStateDtoMapper.ToActionResponse(newState, events));
+            return Ok(BattleStateDtoMapper.ToActionResponse(newState, events, _data));
         }
         catch (Exception ex) when (ex is InvalidOperationException
                                       or ArgumentException
@@ -209,7 +209,7 @@ public sealed class BattleController : ControllerBase
         {
             var newState = BattleEngine.SetTarget(session.State, side, body.SlotIndex);
             _sessions.Set(accountId, session with { State = newState });
-            return Ok(BattleStateDtoMapper.ToDto(newState));
+            return Ok(BattleStateDtoMapper.ToDto(newState, _data));
         }
         catch (Exception ex) when (ex is InvalidOperationException
                                       or ArgumentException
@@ -242,7 +242,7 @@ public sealed class BattleController : ControllerBase
                 session.State, body.PotionIndex, body.TargetEnemyIndex, body.TargetAllyIndex,
                 session.Rng, _data);
             _sessions.Set(accountId, session with { State = newState });
-            return Ok(BattleStateDtoMapper.ToActionResponse(newState, events));
+            return Ok(BattleStateDtoMapper.ToActionResponse(newState, events, _data));
         }
         catch (Exception ex) when (ex is InvalidOperationException
                                       or ArgumentException

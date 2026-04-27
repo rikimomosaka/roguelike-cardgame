@@ -24,6 +24,7 @@ public sealed class CatalogController : ControllerBase
         int Rarity,
         string CardType,
         int? Cost,
+        int? UpgradedCost,
         bool Upgradable,
         string Description,
         string? UpgradedDescription);
@@ -63,6 +64,7 @@ public sealed class CatalogController : ControllerBase
                 (int)def.Rarity,
                 def.CardType.ToString(),
                 def.Cost,
+                def.UpgradedCost,
                 def.IsUpgradable,
                 DescribeEffects(def.Effects),
                 def.UpgradedEffects is null ? null : DescribeEffects(def.UpgradedEffects));

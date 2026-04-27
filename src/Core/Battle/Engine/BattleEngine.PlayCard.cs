@@ -35,8 +35,11 @@ public static partial class BattleEngine
         // 10.2.C: コンボ判定
         bool matchesNormal =
             state.LastPlayedOrigCost is { } prev && actualCost == prev + 1;
-        bool isWild = def.Keywords?.Contains("wild") == true;
-        bool isSuperWild = def.Keywords?.Contains("superwild") == true;
+        // Why: 強化により獲得するキーワード (例: starter_summon_3+ で superwild) を反映するため、
+        // 単一 Keywords ではなく EffectiveKeywords(IsUpgraded) を参照する。
+        var keywords = def.EffectiveKeywords(card.IsUpgraded);
+        bool isWild = keywords?.Contains("wild") == true;
+        bool isSuperWild = keywords?.Contains("superwild") == true;
 
         bool isContinuing =
             state.NextCardComboFreePass ? true

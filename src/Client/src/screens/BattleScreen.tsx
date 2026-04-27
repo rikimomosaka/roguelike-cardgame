@@ -40,6 +40,7 @@ import { useCardCatalog, usePotionCatalog } from '../hooks/useCardCatalog'
 import { useRelicCatalog } from '../hooks/useRelicCatalog'
 import { useEnemyCatalog } from '../hooks/useEnemyCatalog'
 import { useUnitCatalog } from '../hooks/useUnitCatalog'
+import { TopBar } from '../components/TopBar'
 import {
   hpLevel,
   toCharacterDemo,
@@ -117,6 +118,8 @@ export type HandCardDemo = {
 
 type Props = {
   accountId: string
+  /** ラン全体の最新 snapshot。TopBar (gold/playSeconds/deck/relics) の表示用。 */
+  snapshot: RunSnapshotDto
   onBattleResolved: (result: RunSnapshotDto | RunResultDto) => void
 }
 
@@ -359,7 +362,7 @@ function EnergyOrb({ cur, max }: { cur: number; max: number }) {
 
 // -------------------- Main component --------------------
 
-export function BattleScreen({ accountId, onBattleResolved }: Props) {
+export function BattleScreen({ accountId, snapshot, onBattleResolved }: Props) {
   const [state, setState] = useState<BattleStateDto | null>(null)
   const [animating, setAnimating] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -518,18 +521,24 @@ export function BattleScreen({ accountId, onBattleResolved }: Props) {
     }
   }
 
+  // Why: BattleEngine は死亡した actor を state.Allies / Enemies から削除せず、
+  // CurrentHp=0 のまま残す (.Where(a => a.IsAlive) で都度フィルタ)。Client 側でも
+  // 表示前にフィルタして「死んだのに残り続ける」現象を回避する。
+  const aliveAllies = state.allies.filter((a) => a.currentHp > 0)
+  const aliveEnemies = state.enemies.filter((e) => e.currentHp > 0)
+
   // 4 スロット zero-pad で side ごとに描画。
-  const allyDemos = state.allies.map((a) =>
+  const allyDemos = aliveAllies.map((a) =>
     toCharacterDemo(a, { enemies: enemyCatalog, units: unitCatalog }),
   )
-  const enemyDemos = state.enemies.map((e) =>
+  const enemyDemos = aliveEnemies.map((e) =>
     toCharacterDemo(e, { enemies: enemyCatalog, units: unitCatalog }),
   )
   const playerSlots = padSlots(allyDemos, 4)
   const enemySlots = padSlots(enemyDemos, 4)
 
   const handDemos = state.hand.map((c) =>
-    toHandCardDemo(c, cardCatalog, state.energy),
+    toHandCardDemo(c, cardCatalog, state.energy, state.lastPlayedOrigCost),
   )
   const fan = fanLayout(handDemos.length)
 
@@ -538,8 +547,22 @@ export function BattleScreen({ accountId, onBattleResolved }: Props) {
   return (
     <div className="battle">
       <div className="battle__pattern" />
+      {/* Why: ユーザ要望「上のバーは map 画面のものをそのまま」。
+          HP は live battle override (heroHp.cur)、potion 操作は battle 内で
+          discard 不可なので onDiscardPotion は no-op。 */}
+      <TopBar
+        currentHp={heroHp.cur}
+        maxHp={heroHp.max}
+        gold={snapshot.run.gold}
+        potions={state.potions}
+        deck={snapshot.run.deck}
+        relics={state.ownedRelicIds}
+        onDiscardPotion={() => { /* battle 中は discard 不可 */ }}
+        onOpenMenu={() => { /* battle 中の menu は後続フェーズで対応 */ }}
+        playSeconds={snapshot.run.playSeconds}
+      />
       <div className="battle__content">
-        {/* Top HUD */}
+        {/* Battle 内 HUD: combo + 操作系。run-level 情報は上の TopBar 参照。 */}
         <div className="battle__hud">
           <div className="hud-group hud-hp">
             <span className="hud-k">HP</span>
@@ -572,6 +595,10 @@ export function BattleScreen({ accountId, onBattleResolved }: Props) {
             <span className="hud-k">DECK</span>
             <span className="hud-v">{state.drawPile.length}</span>
           </div>
+          <div className={`hud-group hud-combo${state.comboCount > 1 ? ' is-active' : ''}`}>
+            <span className="hud-k">COMBO</span>
+            <span className="hud-v">×{state.comboCount}</span>
+          </div>
           <button type="button" className="hud-btn">
             MAP
           </button>
@@ -585,7 +612,9 @@ export function BattleScreen({ accountId, onBattleResolved }: Props) {
           <div className="battle__chars">
             <div className="battle__side battle__side--player">
               {playerSlots.map((c, i) => {
-                const actor = state.allies[i]
+                // Why: 死亡 actor を除外した aliveAllies に対する index で参照する。
+                // state.allies[i] では死亡 actor を含むため整合しない。
+                const actor = aliveAllies[i]
                 const isHero = actor?.definitionId === 'hero'
                 const isTargeted =
                   actor !== undefined &&
@@ -607,7 +636,7 @@ export function BattleScreen({ accountId, onBattleResolved }: Props) {
             </div>
             <div className="battle__side battle__side--enemy">
               {enemySlots.map((c, i) => {
-                const actor = state.enemies[i]
+                const actor = aliveEnemies[i]
                 const isTargeted =
                   actor !== undefined &&
                   state.targetEnemyIndex === actor.slotIndex
