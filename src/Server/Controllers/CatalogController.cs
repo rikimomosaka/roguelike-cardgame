@@ -35,6 +35,21 @@ public sealed class CatalogController : ControllerBase
         bool UsableOutsideBattle,
         string Description);
 
+    public sealed record EnemyCatalogEntryDto(
+        string Id,
+        string Name,
+        string ImageId,
+        int Hp,
+        string InitialMoveId);
+
+    public sealed record UnitCatalogEntryDto(
+        string Id,
+        string Name,
+        string ImageId,
+        int Hp,
+        string InitialMoveId,
+        int? LifetimeTurns);
+
     [HttpGet("cards")]
     public IActionResult GetCards()
     {
@@ -67,6 +82,31 @@ public sealed class CatalogController : ControllerBase
                 (int)def.Rarity,
                 def.IsUsableOutsideBattle,
                 DescribePotionEffects(def));
+        }
+        return Ok(result);
+    }
+
+    [HttpGet("enemies")]
+    public IActionResult GetEnemies()
+    {
+        var result = new Dictionary<string, EnemyCatalogEntryDto>(_data.Enemies.Count);
+        foreach (var (id, def) in _data.Enemies)
+        {
+            result[id] = new EnemyCatalogEntryDto(
+                def.Id, def.Name, def.ImageId, def.Hp, def.InitialMoveId);
+        }
+        return Ok(result);
+    }
+
+    [HttpGet("units")]
+    public IActionResult GetUnits()
+    {
+        if (_data.Units is null) return Ok(new Dictionary<string, UnitCatalogEntryDto>());
+        var result = new Dictionary<string, UnitCatalogEntryDto>(_data.Units.Count);
+        foreach (var (id, def) in _data.Units)
+        {
+            result[id] = new UnitCatalogEntryDto(
+                def.Id, def.Name, def.ImageId, def.Hp, def.InitialMoveId, def.LifetimeTurns);
         }
         return Ok(result);
     }

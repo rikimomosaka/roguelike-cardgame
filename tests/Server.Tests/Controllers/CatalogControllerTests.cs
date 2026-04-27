@@ -60,4 +60,35 @@ public class CatalogControllerTests : IClassFixture<TempDataFactory>
         Assert.Contains("shady_merchant", ids);
         Assert.Contains("old_library", ids);
     }
+
+    [Fact]
+    public async Task GetEnemies_Returns200_WithDictionaryOfDefinitions()
+    {
+        var client = _factory.CreateClient();
+        var res = await client.GetAsync("/api/v1/catalog/enemies");
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+
+        var body = await res.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(JsonValueKind.Object, body.ValueKind);
+
+        // jaw_worm is an embedded enemy; verify shape.
+        Assert.True(body.TryGetProperty("jaw_worm", out var jw));
+        Assert.Equal("jaw_worm", jw.GetProperty("id").GetString());
+        Assert.False(string.IsNullOrEmpty(jw.GetProperty("name").GetString()));
+        Assert.False(string.IsNullOrEmpty(jw.GetProperty("imageId").GetString()));
+        Assert.True(jw.GetProperty("hp").GetInt32() > 0);
+        Assert.False(string.IsNullOrEmpty(jw.GetProperty("initialMoveId").GetString()));
+    }
+
+    [Fact]
+    public async Task GetUnits_Returns200_WithDictionary()
+    {
+        // Units catalog はまだ embed されていないため空辞書だが、endpoint は 200 を返す。
+        var client = _factory.CreateClient();
+        var res = await client.GetAsync("/api/v1/catalog/units");
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+
+        var body = await res.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(JsonValueKind.Object, body.ValueKind);
+    }
 }
