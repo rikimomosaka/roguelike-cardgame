@@ -2,12 +2,12 @@ using System.Collections.Generic;
 
 namespace RoguelikeCardGame.Server.Dtos;
 
-public sealed record BattleStateDto(
+public sealed record BattlePlaceholderStateDto(
     string EncounterId,
-    IReadOnlyList<EnemyInstanceDto> Enemies,
+    IReadOnlyList<PlaceholderEnemyInstanceDto> Enemies,
     string Outcome);
 
-public sealed record EnemyInstanceDto(
+public sealed record PlaceholderEnemyInstanceDto(
     string EnemyDefinitionId,
     string Name,
     string ImageId,

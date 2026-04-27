@@ -24,7 +24,7 @@ public sealed record RunStateDto(
     IReadOnlyList<CardInstanceDto> Deck,
     IReadOnlyList<string> Potions,
     int PotionSlotCount,
-    BattleStateDto? ActiveBattle,
+    BattlePlaceholderStateDto? ActiveBattle,
     RewardStateDto? ActiveReward,
     MerchantInventoryDto? ActiveMerchant,
     IReadOnlyList<string> Relics,
@@ -53,17 +53,17 @@ public static class RunSnapshotDtoMapper
 {
     public static RunSnapshotDto From(RunState s, DungeonMap map, DataCatalog data)
     {
-        BattleStateDto? battle = null;
+        BattlePlaceholderStateDto? battle = null;
         if (s.ActiveBattle is { } b)
         {
-            var enemies = new List<EnemyInstanceDto>();
+            var enemies = new List<PlaceholderEnemyInstanceDto>();
             foreach (var e in b.Enemies)
             {
                 var def = data.Enemies[e.EnemyDefinitionId];
-                enemies.Add(new EnemyInstanceDto(e.EnemyDefinitionId, def.Name, def.ImageId,
+                enemies.Add(new PlaceholderEnemyInstanceDto(e.EnemyDefinitionId, def.Name, def.ImageId,
                     e.CurrentHp, e.MaxHp, e.CurrentMoveId));
             }
-            battle = new BattleStateDto(b.EncounterId, enemies, b.Outcome.ToString());
+            battle = new BattlePlaceholderStateDto(b.EncounterId, enemies, b.Outcome.ToString());
         }
 
         RewardStateDto? reward = null;

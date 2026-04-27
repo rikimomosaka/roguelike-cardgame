@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import type { BattleStateDto } from '../api/types'
+import type { BattlePlaceholderStateDto } from '../api/types'
 import { Button } from '../components/Button'
 
 type Props = {
-  battle: BattleStateDto
+  battle: BattlePlaceholderStateDto
   onWin: () => Promise<void> | void
   onDebugDamage?: () => void
 }

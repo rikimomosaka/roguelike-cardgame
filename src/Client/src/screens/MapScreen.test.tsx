@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AccountProvider } from '../context/AccountContext'
-import type { BattleStateDto, CardInstanceDto, RewardStateDto, RunSnapshotDto } from '../api/types'
+import type { BattlePlaceholderStateDto, CardInstanceDto, RewardStateDto, RunSnapshotDto } from '../api/types'
 import { MapScreen } from './MapScreen'
 
 function sampleSnapshot(
@@ -42,7 +42,7 @@ function sampleSnapshot(
   }
 }
 
-function sampleBattle(): BattleStateDto {
+function sampleBattle(): BattlePlaceholderStateDto {
   return {
     encounterId: 'enc_w_jaw_worm',
     outcome: 'Pending',

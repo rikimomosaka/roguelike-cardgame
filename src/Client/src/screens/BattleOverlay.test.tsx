@@ -1,9 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import type { BattleStateDto } from '../api/types'
+import type { BattlePlaceholderStateDto } from '../api/types'
 import { BattleOverlay } from './BattleOverlay'
 
-function sampleBattle(): BattleStateDto {
+function sampleBattle(): BattlePlaceholderStateDto {
   return {
     encounterId: 'enc_w_jaw_worm',
     outcome: 'Pending',

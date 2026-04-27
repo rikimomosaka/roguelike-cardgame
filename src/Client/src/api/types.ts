@@ -62,7 +62,7 @@ export type RunProgress = 'InProgress' | 'Cleared' | 'GameOver' | 'Abandoned'
 export type BattleOutcome = 'Pending' | 'Victory'
 export type CardRewardStatus = 'Pending' | 'Claimed' | 'Skipped'
 
-export type EnemyInstanceDto = {
+export type PlaceholderEnemyInstanceDto = {
   enemyDefinitionId: string
   name: string
   imageId: string
@@ -71,9 +71,9 @@ export type EnemyInstanceDto = {
   currentMoveId: string
 }
 
-export type BattleStateDto = {
+export type BattlePlaceholderStateDto = {
   encounterId: string
-  enemies: EnemyInstanceDto[]
+  enemies: PlaceholderEnemyInstanceDto[]
   outcome: BattleOutcome
 }
 
@@ -142,7 +142,7 @@ export type RunStateDto = {
   deck: CardInstanceDto[]
   potions: string[]
   potionSlotCount: number
-  activeBattle: BattleStateDto | null
+  activeBattle: BattlePlaceholderStateDto | null
   activeReward: RewardStateDto | null
   activeMerchant: MerchantInventoryDto | null
   activeEvent: EventInstanceDto | null
