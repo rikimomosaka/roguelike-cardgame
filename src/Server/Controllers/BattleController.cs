@@ -180,6 +180,39 @@ public sealed class BattleController : ControllerBase
     }
 
     /// <summary>
+    /// spec §2-6: ポーション使用。BattleEngine.UsePotion 呼出。
+    /// PlayerInput 限定 / 空 slot / 範囲外などはすべて 400 に変換 (broad catch)。
+    /// session.Rng を再利用し決定論を維持する。
+    /// </summary>
+    [HttpPost("use-potion")]
+    public async Task<IActionResult> UsePotion(
+        [FromBody] UsePotionRequestDto body, CancellationToken ct)
+    {
+        if (body is null) return BadRequest();
+        var (accountId, err) = await ResolveAccountAsync(ct);
+        if (err is not null) return err;
+
+        if (!_sessions.TryGet(accountId, out var session))
+            return Problem(statusCode: StatusCodes.Status409Conflict,
+                title: "戦闘セッションが存在しません。");
+
+        try
+        {
+            var (newState, events) = BattleEngine.UsePotion(
+                session.State, body.PotionIndex, body.TargetEnemyIndex, body.TargetAllyIndex,
+                session.Rng, _data);
+            _sessions.Set(accountId, session with { State = newState });
+            return Ok(BattleStateDtoMapper.ToActionResponse(newState, events));
+        }
+        catch (Exception ex) when (ex is InvalidOperationException
+                                      or ArgumentException
+                                      or IndexOutOfRangeException)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, title: ex.Message);
+        }
+    }
+
+    /// <summary>
     /// 共通 prologue: header から accountId を取得し、アカウント存在を確認する。
     /// 失敗時は <see cref="IActionResult"/> を返し、呼出側はそのまま return する。
     /// </summary>

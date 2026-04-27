@@ -228,6 +228,57 @@ public class BattleControllerTests : IClassFixture<TempDataFactory>
     }
 
     [Fact]
+    public async Task UsePotion_with_valid_slot_consumes_potion()
+    {
+        // SetupRunWithPotionAsync で RunState.Potions[0]="fire_potion" を仕込み、
+        // /battle/start で BattleState.Potions に伝搬させた上で /use-potion を叩く。
+        // fire_potion は single enemy attack なので targetEnemyIndex=0 を指定。
+        var (client, _) = await BattleControllerFixtures.SetupRunWithPotionAsync(_factory, potionId: "fire_potion");
+        try
+        {
+            await client.PostAsync("/api/v1/runs/current/battle/start", null);
+
+            var resp = await client.PostAsJsonAsync(
+                "/api/v1/runs/current/battle/use-potion",
+                new UsePotionRequestDto(0, 0, null));
+
+            Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+            var body = await resp.Content.ReadFromJsonAsync<BattleActionResponseDto>();
+            Assert.NotNull(body);
+            Assert.Contains(body!.Steps, s => s.Event.Kind == "UsePotion");
+            // BattleEngine.UsePotion は使用後 slot を "" に置換 (Phase 10.2.E spec §4)。
+            Assert.Equal("", body.State.Potions[0]);
+        }
+        finally
+        {
+            client.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task UsePotion_with_empty_slot_returns_400()
+    {
+        // SetupRunWithActiveBattleAsync は Potions を仕込まないため、
+        // 全 slot は空文字。slot 0 を使おうとすると BattleEngine が
+        // InvalidOperationException を投げ、controller は 400 に変換する。
+        var (client, _) = await BattleControllerFixtures.SetupRunWithActiveBattleAsync(_factory);
+        try
+        {
+            await client.PostAsync("/api/v1/runs/current/battle/start", null);
+
+            var resp = await client.PostAsJsonAsync(
+                "/api/v1/runs/current/battle/use-potion",
+                new UsePotionRequestDto(0, null, null));
+
+            Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        }
+        finally
+        {
+            client.Dispose();
+        }
+    }
+
+    [Fact]
     public async Task PlayCard_with_negative_targetEnemyIndex_does_not_500()
     {
         // Issue 2 review: BattleEngine.PlayCard は負の target index を validate せず、

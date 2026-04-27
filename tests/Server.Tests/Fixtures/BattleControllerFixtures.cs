@@ -1,6 +1,9 @@
+using System;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using RoguelikeCardGame.Server.Abstractions;
 using RoguelikeCardGame.Server.Services;
 using RoguelikeCardGame.Server.Tests.Controllers;
 using Xunit;
@@ -31,6 +34,32 @@ internal static class BattleControllerFixtures
         await BattleTestHelpers.EnsureAccountAsync(client, accountId);
         BattleTestHelpers.WithAccount(client, accountId);
         await BattleTestHelpers.StartRunAndMoveToEnemyAsync(client);
+
+        return (client, accountId);
+    }
+
+    /// <summary>
+    /// <see cref="SetupRunWithActiveBattleAsync"/> と同様に敵タイル進入直前まで進めた上で、
+    /// <see cref="ISaveRepository"/> から RunState を読み出して <c>Potions[0]</c> に
+    /// 指定 id を差し込んでから保存する。<c>/battle/start</c> 呼出時に
+    /// <c>BattleEngine.Start</c> が <c>run.Potions</c> を <c>BattleState.Potions</c> に
+    /// コピーするため、battle 内で UsePotion 可能な状態になる。
+    /// </summary>
+    public static async Task<(HttpClient client, string accountId)>
+        SetupRunWithPotionAsync(TempDataFactory factory, string potionId, string accountId = "test-account")
+    {
+        var (client, _) = await SetupRunWithActiveBattleAsync(factory, accountId);
+
+        using var scope = factory.Services.CreateScope();
+        var saves = scope.ServiceProvider.GetRequiredService<ISaveRepository>();
+        var run = await saves.TryLoadAsync(accountId, CancellationToken.None);
+        if (run is null)
+            throw new InvalidOperationException(
+                $"SetupRunWithPotionAsync: run not found for accountId={accountId}");
+
+        var newPotions = run.Potions.SetItem(0, potionId);
+        var updated = run with { Potions = newPotions };
+        await saves.SaveAsync(accountId, updated, CancellationToken.None);
 
         return (client, accountId);
     }
