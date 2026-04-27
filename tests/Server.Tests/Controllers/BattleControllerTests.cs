@@ -87,4 +87,45 @@ public class BattleControllerTests : IClassFixture<TempDataFactory>
             client.Dispose();
         }
     }
+
+    [Fact]
+    public async Task Get_when_session_exists_returns_BattleStateDto()
+    {
+        var (client, _) = await BattleControllerFixtures.SetupRunWithActiveBattleAsync(_factory);
+        try
+        {
+            await client.PostAsync("/api/v1/runs/current/battle/start", null);
+
+            var resp = await client.GetAsync("/api/v1/runs/current/battle");
+
+            Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+            var body = await resp.Content.ReadFromJsonAsync<BattleStateDto>();
+            Assert.NotNull(body);
+            Assert.Equal("PlayerInput", body!.Phase);
+        }
+        finally
+        {
+            client.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task Get_when_no_session_returns_404()
+    {
+        // BattleSessionStore は singleton で test 間共有のため、
+        // 他テストの "test-account" session が残っている可能性を避けて専用 accountId を使う。
+        var (client, _) = await BattleControllerFixtures
+            .SetupRunWithActiveBattleAsync(_factory, accountId: "get-no-session-account");
+        try
+        {
+            // start を呼ばずに直接 GET
+            var resp = await client.GetAsync("/api/v1/runs/current/battle");
+
+            Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+        }
+        finally
+        {
+            client.Dispose();
+        }
+    }
 }

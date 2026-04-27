@@ -93,6 +93,25 @@ public sealed class BattleController : ControllerBase
         return Ok(BattleStateDtoMapper.ToActionResponse(state, events));
     }
 
+    /// <summary>
+    /// spec §2-3: リロード時の State 復元用。session がなければ 404
+    /// (Client は POST /start で再開始する)。
+    /// </summary>
+    [HttpGet("")]
+    public async Task<IActionResult> Get(CancellationToken ct)
+    {
+        if (!TryGetAccountId(out var accountId, out var err)) return err!;
+        if (!await _accounts.ExistsAsync(accountId, ct))
+            return Problem(statusCode: StatusCodes.Status404NotFound,
+                title: $"アカウントが見つかりません: {accountId}");
+
+        if (!_sessions.TryGet(accountId, out var state))
+            return Problem(statusCode: StatusCodes.Status404NotFound,
+                title: "戦闘セッションが存在しません。");
+
+        return Ok(BattleStateDtoMapper.ToDto(state));
+    }
+
     private bool TryGetAccountId(out string accountId, out IActionResult? err)
     {
         accountId = string.Empty;
