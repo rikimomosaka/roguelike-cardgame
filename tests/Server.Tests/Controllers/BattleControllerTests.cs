@@ -190,6 +190,44 @@ public class BattleControllerTests : IClassFixture<TempDataFactory>
     }
 
     [Fact]
+    public async Task EndTurn_resolves_phase_transitions_and_returns_events()
+    {
+        var (client, _) = await BattleControllerFixtures.SetupRunWithActiveBattleAsync(_factory);
+        try
+        {
+            await client.PostAsync("/api/v1/runs/current/battle/start", null);
+
+            var resp = await client.PostAsync("/api/v1/runs/current/battle/end-turn", null);
+
+            Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+            var body = await resp.Content.ReadFromJsonAsync<BattleActionResponseDto>();
+            Assert.NotNull(body);
+            Assert.Contains(body!.Steps, s => s.Event.Kind == "EndTurn");
+            // ターン進行: 最終 state は PlayerInput または Resolved
+            Assert.True(body.State.Phase == "PlayerInput" || body.State.Phase == "Resolved");
+        }
+        finally
+        {
+            client.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task EndTurn_when_no_session_returns_409()
+    {
+        var (client, _) = await BattleControllerFixtures.SetupRunWithActiveBattleAsync(_factory);
+        try
+        {
+            var resp = await client.PostAsync("/api/v1/runs/current/battle/end-turn", null);
+            Assert.Equal(HttpStatusCode.Conflict, resp.StatusCode);
+        }
+        finally
+        {
+            client.Dispose();
+        }
+    }
+
+    [Fact]
     public async Task PlayCard_with_negative_targetEnemyIndex_does_not_500()
     {
         // Issue 2 review: BattleEngine.PlayCard は負の target index を validate せず、

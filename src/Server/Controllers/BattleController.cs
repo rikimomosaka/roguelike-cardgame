@@ -146,6 +146,40 @@ public sealed class BattleController : ControllerBase
     }
 
     /// <summary>
+    /// spec §2-5: ターン終了。BattleEngine.EndTurn 呼出で
+    /// PlayerAttacking → EnemyAttacking → 次 PlayerInput (または Resolved) まで進める。
+    /// session.Rng を再利用し決定論を維持する (Task 6 follow-up)。
+    /// </summary>
+    [HttpPost("end-turn")]
+    public async Task<IActionResult> EndTurn(CancellationToken ct)
+    {
+        var (accountId, err) = await ResolveAccountAsync(ct);
+        if (err is not null) return err;
+
+        if (!_sessions.TryGet(accountId, out var session))
+            return Problem(statusCode: StatusCodes.Status409Conflict,
+                title: "戦闘セッションが存在しません。");
+
+        var run = await _saves.TryLoadAsync(accountId, ct);
+        if (run is null)
+            return Problem(statusCode: StatusCodes.Status409Conflict,
+                title: "進行中のランがありません。");
+
+        try
+        {
+            var (newState, events) = BattleEngine.EndTurn(session.State, session.Rng, _data);
+            _sessions.Set(accountId, session with { State = newState });
+            return Ok(BattleStateDtoMapper.ToActionResponse(newState, events));
+        }
+        catch (Exception ex) when (ex is InvalidOperationException
+                                      or ArgumentException
+                                      or IndexOutOfRangeException)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, title: ex.Message);
+        }
+    }
+
+    /// <summary>
     /// 共通 prologue: header から accountId を取得し、アカウント存在を確認する。
     /// 失敗時は <see cref="IActionResult"/> を返し、呼出側はそのまま return する。
     /// </summary>
