@@ -26,9 +26,12 @@ type Screen =
 
 export default function App() {
   if (typeof window !== 'undefined' && window.location.search.includes('demo=battle')) {
+    // Task 14 暫定: BattleScreen は本番 API 接続版になったため、
+    // demo ルートはダミー accountId で render する（実際には API が 404/400 を返すので動作しない）。
+    // Task 15 でこの demo guard ごと撤廃予定。
     return (
       <TooltipHost>
-        <BattleScreen />
+        <BattleScreen accountId="demo" onBattleResolved={() => {}} />
       </TooltipHost>
     )
   }

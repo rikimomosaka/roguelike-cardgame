@@ -1,40 +1,76 @@
 // src/Client/src/screens/BattleScreen.tsx
 //
-// Visual demo component that mirrors battle-v10.html using existing
-// CSS (BattleScreen.css) and shared primitives (Card, Tooltip).
-// This is intentionally hardcoded / props-driven; it does NOT wire up
-// to the real battle API. Accessed via `?demo=battle`.
+// Phase 10.3-MVP Task 14: 本番 API 接続版 BattleScreen。
+//
+// 旧 demo 実装 (battle-v10.html ポート) の DEFAULT_* と Props ベースの
+// データ供給を撤廃し、accountId / onBattleResolved を受け取って
+// /battle 系 API を呼び出すコンポーネントに変更。
+//
+// JSX レイアウト・サブコンポーネント (Relic / Potion / StatusBuff /
+// IntentChip / Slot / HandCard) と CSS は demo 版から流用。
+// データソースのみ DTO + Catalog → 中間型 (RelicDemo 等) 経由で差し替え。
+//
+// 中間型 (RelicDemo / CharacterDemo / HandCardDemo / BuffDemo / IntentDemo /
+// HpLv) は dtoAdapter から参照できるよう export している。
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { Card } from '../components/Card'
 import type { CardRarity, CardType } from '../components/Card'
 import { useTooltipTarget } from '../components/Tooltip'
 import type { TooltipContent } from '../components/Tooltip'
+import {
+  endTurn,
+  finalizeBattle,
+  getBattle,
+  playCard,
+  setBattleTarget,
+  startBattle,
+  usePotion,
+} from '../api/battle'
+import type {
+  ActorSide,
+  BattleActionResponseDto,
+  BattleStateDto,
+  CombatActorDto,
+  RunResultDto,
+  RunSnapshotDto,
+} from '../api/types'
+import { useCardCatalog, usePotionCatalog } from '../hooks/useCardCatalog'
+import { useRelicCatalog } from '../hooks/useRelicCatalog'
+import { useEnemyCatalog } from '../hooks/useEnemyCatalog'
+import { useUnitCatalog } from '../hooks/useUnitCatalog'
+import {
+  hpLevel,
+  toCharacterDemo,
+  toHandCardDemo,
+  toRelicDemo,
+} from './battleScreen/dtoAdapter'
 import './BattleScreen.css'
 
-// -------------------- Types --------------------
+// -------------------- Exported intermediate types --------------------
 
-type HpLv = '0' | '1' | '2' | '3'
+export type HpLv = '0' | '1' | '2' | '3'
 
-type RelicDemo = {
+export type RelicDemo = {
   icon: string
   rarity: CardRarity
   name: string
   desc: string
 }
 
-type PotionDemo = {
+export type PotionDemo = {
   icon: string
   rarity?: CardRarity
   name?: string
   desc?: string
   empty?: boolean
+  onClick?: () => void
 }
 
-type BuffKind = 'block' | 'buff' | 'debuff'
+export type BuffKind = 'block' | 'buff' | 'debuff'
 
-type BuffDemo = {
+export type BuffDemo = {
   kind: BuffKind
   icon: string
   num: number
@@ -42,9 +78,9 @@ type BuffDemo = {
   desc: string
 }
 
-type IntentKind = 'attack' | 'defend' | 'buff' | 'heal' | 'unknown'
+export type IntentKind = 'attack' | 'defend' | 'buff' | 'heal' | 'unknown'
 
-type IntentDemo = {
+export type IntentDemo = {
   kind: IntentKind
   icon: string
   num?: number
@@ -52,9 +88,9 @@ type IntentDemo = {
   desc: string
 }
 
-type SpriteKind = 'hero' | 'ally' | 'enemy' | 'elite'
+export type SpriteKind = 'hero' | 'ally' | 'enemy' | 'elite'
 
-type CharacterDemo = {
+export type CharacterDemo = {
   occupied: boolean
   name: string
   desc: string
@@ -67,7 +103,7 @@ type CharacterDemo = {
   buffs: BuffDemo[]
 }
 
-type HandCardDemo = {
+export type HandCardDemo = {
   name: string
   cost: number | string
   type: CardType
@@ -77,108 +113,24 @@ type HandCardDemo = {
   desc: string
 }
 
+// -------------------- Props --------------------
+
 type Props = {
-  hp?: { cur: number; max: number; lv: HpLv }
-  gold?: number
-  deck?: number
-  energy?: { cur: number; max: number }
-  relics?: RelicDemo[]
-  potions?: PotionDemo[]
-  players?: CharacterDemo[]
-  enemies?: CharacterDemo[]
-  piles?: { draw: number; discard: number; exhaust: number }
-  hand?: HandCardDemo[]
+  accountId: string
+  onBattleResolved: (result: RunSnapshotDto | RunResultDto) => void
 }
 
-// -------------------- Defaults (match battle-v10.html) --------------------
+// -------------------- Animation timing --------------------
 
-const DEFAULT_RELICS: RelicDemo[] = [
-  { icon: '♆', rarity: 'c', name: '燃え残りの薪', desc: '戦闘開始時、1 ブロックを得る。' },
-  { icon: '⚓', rarity: 'c', name: '鉄の錨', desc: '戦闘開始時、5 ブロックを得る。' },
-  { icon: '❖', rarity: 'r', name: '黄昏の封蝋', desc: '各戦闘の 1 ターン目、ドロー +1。' },
-  { icon: '♜', rarity: 'r', name: '古びた塔', desc: 'エリート戦勝利時、追加でレア報酬カードを得る。' },
-  { icon: '✧', rarity: 'e', name: '虚無の瞳', desc: '毎ターン終了時、最大 HP -1 だが、カードを 1 枚ドロー。' },
-  { icon: '♛', rarity: 'l', name: '炎帝の王冠', desc: 'ACT 2 開始時に獲得。毎戦闘、最初のカードのコストが 0 になる。' },
-  { icon: '✦', rarity: 'c', name: '欠けた砥石', desc: '戦闘開始時、基礎ダメージ +1 のバフを 1 ターン得る。' },
-  { icon: '✪', rarity: 'c', name: '青銅の護符', desc: '毎戦闘開始時、ブロック +3。' },
-]
+const STEP_DELAY_MS = 220
 
-const DEFAULT_POTIONS: PotionDemo[] = [
-  { icon: '🜂', rarity: 'c', name: '小さな治癒薬', desc: 'HP を 25% 回復する。' },
-  { icon: '☠', rarity: 'r', name: '毒の小瓶', desc: '対象に 6 毒を付与する。' },
-  { icon: '—', empty: true },
-]
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
 
-const DEFAULT_PLAYERS: CharacterDemo[] = [
-  {
-    occupied: true,
-    name: '主人公',
-    desc: 'プレイヤー本体。HP 0 で敗北。',
-    sprite: '☗',
-    spriteKind: 'hero',
-    hpCur: 58,
-    hpMax: 80,
-    hpLv: '2',
-    buffs: [
-      { kind: 'block', icon: '◆', num: 12, name: 'ブロック', desc: 'このターン、ダメージを軽減する。' },
-      { kind: 'buff', icon: '✦', num: 2, name: '力', desc: '与えるダメージが +2 増加する。' },
-    ],
-  },
-]
+// -------------------- Layout helpers --------------------
 
-const DEFAULT_ENEMIES: CharacterDemo[] = [
-  {
-    occupied: true,
-    name: '呪われた騎士',
-    desc: 'HP 45 / 攻撃と守りを繰り返す通常敵。',
-    sprite: '☠',
-    spriteKind: 'enemy',
-    hpCur: 32,
-    hpMax: 45,
-    hpLv: '2',
-    intent: {
-      kind: 'attack',
-      icon: '⚔',
-      num: 14,
-      name: '予定行動：攻撃 14',
-      desc: 'このターン、14 ダメージを与えます。',
-    },
-    buffs: [
-      { kind: 'debuff', icon: '☠', num: 3, name: '毒', desc: 'ターン終了時に 3 ダメージ。スタック数が 1 減る。' },
-    ],
-  },
-  {
-    occupied: true,
-    name: '業火の骸骨王',
-    desc: 'HP 120 / エリート。強力な攻撃を放つ。',
-    sprite: '♛',
-    spriteKind: 'elite',
-    hpCur: 88,
-    hpMax: 120,
-    hpLv: '3',
-    intent: {
-      kind: 'attack',
-      icon: '⚔',
-      num: 12,
-      name: '予定行動：攻撃 12',
-      desc: 'このターン、12 ダメージを与えます。',
-    },
-    buffs: [
-      { kind: 'buff', icon: '✦', num: 2, name: '力', desc: '与えるダメージが +2 増加する。' },
-    ],
-  },
-]
-
-const DEFAULT_HAND: HandCardDemo[] = [
-  { name: '打撃', cost: 1, type: 'attack', rarity: 'c', playable: true, desc: '敵 1 体に 6 ダメージ。' },
-  { name: '防御', cost: 1, type: 'skill', rarity: 'c', playable: true, desc: 'ブロック +5。' },
-  { name: '炎の剣', cost: 2, type: 'attack', rarity: 'r', playable: true, desc: '敵 1 体に 10 ダメージ + 炎上 2。' },
-  { name: '祈り', cost: 0, type: 'skill', rarity: 'c', playable: true, desc: 'カードを 1 枚ドロー。' },
-  { name: '烈火', cost: 2, type: 'attack', rarity: 'e', playable: true, desc: '全ての敵に 8 ダメージ。' },
-  { name: '鉄壁', cost: 3, type: 'power', rarity: 'r', playable: false, desc: '毎ターン開始時、ブロック +4。' },
-]
-
-// Fan layout for a 6-card hand. Values ported from battle-v10.html feel.
+// Fan layout for the player's hand. Values ported from battle-v10.html feel.
 function fanLayout(count: number): { x: number; y: number; r: number }[] {
   if (count === 0) return []
   const step = 60 // px horizontal step
@@ -188,10 +140,27 @@ function fanLayout(count: number): { x: number; y: number; r: number }[] {
     const offset = i - center
     const x = offset * step
     const rot = offset * rotStep
-    // lift the center of the fan; ends dip lower (arc)
     const y = Math.abs(offset) * 6
     return { x, y, r: rot }
   })
+}
+
+function padSlots(chars: CharacterDemo[], n: number): CharacterDemo[] {
+  const out = [...chars]
+  while (out.length < n) {
+    out.push({
+      occupied: false,
+      name: '',
+      desc: '',
+      sprite: '',
+      spriteKind: 'enemy',
+      hpCur: 0,
+      hpMax: 0,
+      hpLv: '0',
+      buffs: [],
+    })
+  }
+  return out.slice(0, n)
 }
 
 // -------------------- Small sub-components --------------------
@@ -227,7 +196,13 @@ function Potion({ potion }: { potion: PotionDemo }) {
     ? 'hud-pot is-empty'
     : `hud-pot hud-pot--${potion.rarity ?? 'c'}`
   return (
-    <div className={cls} {...tip}>
+    <div
+      className={cls}
+      {...tip}
+      onClick={potion.empty ? undefined : potion.onClick}
+      role={potion.onClick && !potion.empty ? 'button' : undefined}
+      tabIndex={potion.onClick && !potion.empty ? 0 : undefined}
+    >
       {potion.icon}
     </div>
   )
@@ -255,14 +230,27 @@ function IntentChip({ intent }: { intent: IntentDemo }) {
   )
 }
 
-function Slot({ char }: { char: CharacterDemo }) {
+type SlotProps = {
+  char: CharacterDemo
+  isTargeted?: boolean
+  onClick?: () => void
+}
+
+function Slot({ char, isTargeted, onClick }: SlotProps) {
   if (!char.occupied) {
     return <div className="battle__slot" data-occupied="0" />
   }
   const pct = Math.max(0, Math.min(100, (char.hpCur / char.hpMax) * 100))
   const hpFillStyle: CSSProperties = { width: `${pct}%` }
+  const cls = `battle__slot${isTargeted ? ' is-targeted' : ''}`
   return (
-    <div className="battle__slot" data-occupied="1">
+    <div
+      className={cls}
+      data-occupied="1"
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+    >
       {char.intent ? <IntentChip intent={char.intent} /> : null}
       <div className={`sprite sprite--${char.spriteKind}`}>{char.sprite}</div>
       <div className="sprite-shadow" />
@@ -285,13 +273,13 @@ function Slot({ char }: { char: CharacterDemo }) {
   )
 }
 
-function HandCard({
-  card,
-  fan,
-}: {
+type HandCardProps = {
   card: HandCardDemo
   fan: { x: number; y: number; r: number }
-}) {
+  onClick?: () => void
+}
+
+function HandCard({ card, fan, onClick }: HandCardProps) {
   const tip = useTip({
     name: card.name,
     rarity: card.rarity,
@@ -342,132 +330,12 @@ function HandCard({
         rarity={card.rarity}
         art={card.art}
         className={card.playable ? 'is-playable' : undefined}
+        onClick={onClick}
         onMouseEnter={tip.onMouseEnter}
         onMouseLeave={tip.onMouseLeave}
       />
       <span ref={probeRefCb} aria-hidden="true" className="hand__probe" />
     </>
-  )
-}
-
-// -------------------- Main component --------------------
-
-export function BattleScreen({
-  hp = { cur: 58, max: 80, lv: '2' },
-  gold = 128,
-  deck = 20,
-  energy = { cur: 2, max: 3 },
-  relics = DEFAULT_RELICS,
-  potions = DEFAULT_POTIONS,
-  players = DEFAULT_PLAYERS,
-  enemies = DEFAULT_ENEMIES,
-  piles = { draw: 15, discard: 4, exhaust: 1 },
-  hand = DEFAULT_HAND,
-}: Props = {}) {
-  const hpPct = Math.max(0, Math.min(100, (hp.cur / hp.max) * 100))
-  const fan = fanLayout(hand.length)
-
-  // Pad players/enemies up to 4 slots each (row-reverse on player side
-  // means the hero is already on the rightmost/innermost position).
-  const playerSlots: CharacterDemo[] = padSlots(players, 4)
-  const enemySlots: CharacterDemo[] = padSlots(enemies, 4)
-
-  return (
-    <div className="battle">
-      <div className="battle__pattern" />
-      <div className="battle__content">
-        {/* Top HUD */}
-        <div className="battle__hud">
-          <div className="hud-group hud-hp">
-            <span className="hud-k">HP</span>
-            <div className="track" data-lv={hp.lv}>
-              <div className="fill" style={{ width: `${hpPct}%` }} />
-              <span className="num">
-                {hp.cur}/{hp.max}
-              </span>
-            </div>
-          </div>
-          <div className="hud-group hud-gold">
-            <span className="hud-k">GOLD</span>
-            <span className="hud-v">{gold}</span>
-          </div>
-          <div className="hud-relics">
-            <span className="hud-k">RELICS</span>
-            <div className="hud-relics__list">
-              {relics.map((r, i) => (
-                <Relic key={i} relic={r} />
-              ))}
-            </div>
-          </div>
-          <div className="hud-group hud-potions">
-            <span className="hud-k">POTION</span>
-            {potions.map((p, i) => (
-              <Potion key={i} potion={p} />
-            ))}
-          </div>
-          <div className="hud-group">
-            <span className="hud-k">DECK</span>
-            <span className="hud-v">{deck}</span>
-          </div>
-          <button type="button" className="hud-btn">
-            MAP
-          </button>
-          <button type="button" className="hud-btn">
-            MENU ≡
-          </button>
-        </div>
-
-        {/* Stage */}
-        <div className="battle__stage">
-          <div className="battle__chars">
-            <div className="battle__side battle__side--player">
-              {playerSlots.map((c, i) => (
-                <Slot key={`p-${i}`} char={c} />
-              ))}
-            </div>
-            <div className="battle__side battle__side--enemy">
-              {enemySlots.map((c, i) => (
-                <Slot key={`e-${i}`} char={c} />
-              ))}
-            </div>
-          </div>
-
-          {/* Energy orb */}
-          <EnergyOrb cur={energy.cur} max={energy.max} />
-
-          {/* Piles */}
-          <div className="pile pile--draw">
-            <span className="pile__sym">❖</span>
-            <span className="pile__lbl">山札</span>
-            <span className="pile__num">{piles.draw}</span>
-          </div>
-          <div className="pile pile--exhaust">
-            <span className="pile__sym">✦</span>
-            <span className="pile__lbl">除外</span>
-            <span className="pile__num">{piles.exhaust}</span>
-          </div>
-          <div className="pile pile--discard">
-            <span className="pile__sym">✕</span>
-            <span className="pile__lbl">捨札</span>
-            <span className="pile__num">{piles.discard}</span>
-          </div>
-
-          {/* Turn end */}
-          <button type="button" className="end-turn">
-            TURN END
-          </button>
-
-          {/* Hand (fanned) */}
-          <div className="hand-wrap">
-            <div className="hand">
-              {hand.map((c, i) => (
-                <HandCard key={i} card={c} fan={fan[i]} />
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   )
 }
 
@@ -486,20 +354,339 @@ function EnergyOrb({ cur, max }: { cur: number; max: number }) {
   )
 }
 
-function padSlots(chars: CharacterDemo[], n: number): CharacterDemo[] {
-  const out = [...chars]
-  while (out.length < n) {
-    out.push({
-      occupied: false,
-      name: '',
-      desc: '',
-      sprite: '',
-      spriteKind: 'enemy',
-      hpCur: 0,
-      hpMax: 0,
-      hpLv: '0',
-      buffs: [],
-    })
+// -------------------- Main component --------------------
+
+export function BattleScreen({ accountId, onBattleResolved }: Props) {
+  const [state, setState] = useState<BattleStateDto | null>(null)
+  const [animating, setAnimating] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  // resolvedRef は finalize 後の二重呼び出しを抑止するためのラッチ。
+  const resolvedRef = useRef(false)
+
+  const { catalog: cardCatalog } = useCardCatalog()
+  const { catalog: potionCatalog } = usePotionCatalog()
+  const { catalog: relicCatalog } = useRelicCatalog()
+  const { catalog: enemyCatalog } = useEnemyCatalog()
+  const { catalog: unitCatalog } = useUnitCatalog()
+
+  // 戦闘終了 → /finalize 呼び出し → 親に通知。
+  const handleFinalize = useCallback(async () => {
+    if (resolvedRef.current) return
+    resolvedRef.current = true
+    try {
+      const result = await finalizeBattle(accountId)
+      onBattleResolved(result)
+    } catch (e) {
+      resolvedRef.current = false
+      setError((e as Error).message)
+    }
+  }, [accountId, onBattleResolved])
+
+  // BattleActionResponse を受け取り、各 step を 220ms 間隔で再生する。
+  const playSteps = useCallback(
+    async (resp: BattleActionResponseDto) => {
+      setAnimating(true)
+      for (const step of resp.steps) {
+        setState(step.snapshotAfter)
+        await sleep(STEP_DELAY_MS)
+      }
+      setState(resp.state)
+      setAnimating(false)
+
+      if (resp.state.outcome === 'Victory' || resp.state.outcome === 'Defeat') {
+        await handleFinalize()
+      }
+    },
+    [handleFinalize],
+  )
+
+  // 初期化: GET /battle → 既存ならそれを表示、なければ POST /start。
+  useEffect(() => {
+    let cancelled = false
+    async function init() {
+      try {
+        const existing = await getBattle(accountId)
+        if (cancelled) return
+        if (existing) {
+          setState(existing)
+          if (existing.outcome === 'Victory' || existing.outcome === 'Defeat') {
+            await handleFinalize()
+          }
+        } else {
+          const resp = await startBattle(accountId)
+          if (cancelled) return
+          await playSteps(resp)
+        }
+      } catch (e) {
+        if (!cancelled) setError((e as Error).message)
+      }
+    }
+    void init()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountId])
+
+  async function withBusy<T>(fn: () => Promise<T>): Promise<T | null> {
+    if (animating || busy) return null
+    setBusy(true)
+    setError(null)
+    try {
+      return await fn()
+    } catch (e) {
+      setError((e as Error).message)
+      return null
+    } finally {
+      setBusy(false)
+    }
   }
-  return out.slice(0, n)
+
+  async function handlePlayCard(handIndex: number) {
+    const resp = await withBusy(() => playCard(accountId, { handIndex }))
+    if (resp) await playSteps(resp)
+  }
+
+  async function handleEndTurn() {
+    const resp = await withBusy(() => endTurn(accountId))
+    if (resp) await playSteps(resp)
+  }
+
+  async function handleUsePotion(potionIndex: number) {
+    const resp = await withBusy(() => usePotion(accountId, { potionIndex }))
+    if (resp) await playSteps(resp)
+  }
+
+  async function handleSetTarget(side: ActorSide, slotIndex: number) {
+    const newState = await withBusy(() =>
+      setBattleTarget(accountId, { side, slotIndex }),
+    )
+    if (newState) setState(newState)
+  }
+
+  // ------------- Render -------------
+
+  if (state === null) {
+    return (
+      <div className="battle">
+        <div className="battle__pattern" />
+        <div className="battle__loading">戦闘準備中…</div>
+        {error ? <div className="battle__error">{error}</div> : null}
+      </div>
+    )
+  }
+
+  // データソース変換
+  const heroActor = state.allies.find(
+    (a) => a.definitionId === 'hero',
+  ) as CombatActorDto | undefined
+  const heroHp = heroActor
+    ? {
+        cur: heroActor.currentHp,
+        max: heroActor.maxHp,
+        lv: hpLevel(heroActor.currentHp, heroActor.maxHp),
+      }
+    : { cur: 0, max: 0, lv: '0' as const }
+  const hpPct = heroHp.max > 0
+    ? Math.max(0, Math.min(100, (heroHp.cur / heroHp.max) * 100))
+    : 0
+
+  const relicDemos = state.ownedRelicIds.map((id) =>
+    toRelicDemo(id, relicCatalog),
+  )
+
+  // potions: 配列を 3 枠表示 (POTION 数は MVP では 3 を仮定)。
+  const POTION_SLOT_COUNT = 3
+  const potionDemos: PotionDemo[] = []
+  for (let i = 0; i < POTION_SLOT_COUNT; i++) {
+    const id = state.potions[i]
+    if (id && id.length > 0) {
+      const def = potionCatalog?.[id]
+      potionDemos.push({
+        icon: '🜂',
+        rarity: def ? cardRarityFromCatalogNumber(def.rarity) : 'c',
+        name: def?.name ?? id,
+        desc: def?.description ?? '',
+        onClick: () => void handleUsePotion(i),
+      })
+    } else {
+      potionDemos.push({ icon: '—', empty: true })
+    }
+  }
+
+  // 4 スロット zero-pad で side ごとに描画。
+  const allyDemos = state.allies.map((a) =>
+    toCharacterDemo(a, { enemies: enemyCatalog, units: unitCatalog }),
+  )
+  const enemyDemos = state.enemies.map((e) =>
+    toCharacterDemo(e, { enemies: enemyCatalog, units: unitCatalog }),
+  )
+  const playerSlots = padSlots(allyDemos, 4)
+  const enemySlots = padSlots(enemyDemos, 4)
+
+  const handDemos = state.hand.map((c) =>
+    toHandCardDemo(c, cardCatalog, state.energy),
+  )
+  const fan = fanLayout(handDemos.length)
+
+  const interactionsDisabled = animating || busy
+
+  return (
+    <div className="battle">
+      <div className="battle__pattern" />
+      <div className="battle__content">
+        {/* Top HUD */}
+        <div className="battle__hud">
+          <div className="hud-group hud-hp">
+            <span className="hud-k">HP</span>
+            <div className="track" data-lv={heroHp.lv}>
+              <div className="fill" style={{ width: `${hpPct}%` }} />
+              <span className="num">
+                {heroHp.cur}/{heroHp.max}
+              </span>
+            </div>
+          </div>
+          <div className="hud-group hud-gold">
+            <span className="hud-k">GOLD</span>
+            <span className="hud-v">—</span>
+          </div>
+          <div className="hud-relics">
+            <span className="hud-k">RELICS</span>
+            <div className="hud-relics__list">
+              {relicDemos.map((r, i) => (
+                <Relic key={i} relic={r} />
+              ))}
+            </div>
+          </div>
+          <div className="hud-group hud-potions">
+            <span className="hud-k">POTION</span>
+            {potionDemos.map((p, i) => (
+              <Potion key={i} potion={p} />
+            ))}
+          </div>
+          <div className="hud-group">
+            <span className="hud-k">DECK</span>
+            <span className="hud-v">{state.drawPile.length}</span>
+          </div>
+          <button type="button" className="hud-btn">
+            MAP
+          </button>
+          <button type="button" className="hud-btn">
+            MENU ≡
+          </button>
+        </div>
+
+        {/* Stage */}
+        <div className="battle__stage">
+          <div className="battle__chars">
+            <div className="battle__side battle__side--player">
+              {playerSlots.map((c, i) => {
+                const actor = state.allies[i]
+                const isHero = actor?.definitionId === 'hero'
+                const isTargeted =
+                  actor !== undefined &&
+                  state.targetAllyIndex === actor.slotIndex
+                // hero 自身は target にしない (自身を回復対象にする等は後続)。
+                const onClick =
+                  c.occupied && actor && !isHero && !interactionsDisabled
+                    ? () => void handleSetTarget('Ally', actor.slotIndex)
+                    : undefined
+                return (
+                  <Slot
+                    key={`p-${i}`}
+                    char={c}
+                    isTargeted={isTargeted}
+                    onClick={onClick}
+                  />
+                )
+              })}
+            </div>
+            <div className="battle__side battle__side--enemy">
+              {enemySlots.map((c, i) => {
+                const actor = state.enemies[i]
+                const isTargeted =
+                  actor !== undefined &&
+                  state.targetEnemyIndex === actor.slotIndex
+                const onClick =
+                  c.occupied && actor && !interactionsDisabled
+                    ? () => void handleSetTarget('Enemy', actor.slotIndex)
+                    : undefined
+                return (
+                  <Slot
+                    key={`e-${i}`}
+                    char={c}
+                    isTargeted={isTargeted}
+                    onClick={onClick}
+                  />
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Energy orb */}
+          <EnergyOrb cur={state.energy} max={state.energyMax} />
+
+          {/* Piles */}
+          <div className="pile pile--draw">
+            <span className="pile__sym">❖</span>
+            <span className="pile__lbl">山札</span>
+            <span className="pile__num">{state.drawPile.length}</span>
+          </div>
+          <div className="pile pile--exhaust">
+            <span className="pile__sym">✦</span>
+            <span className="pile__lbl">除外</span>
+            <span className="pile__num">{state.exhaustPile.length}</span>
+          </div>
+          <div className="pile pile--discard">
+            <span className="pile__sym">✕</span>
+            <span className="pile__lbl">捨札</span>
+            <span className="pile__num">{state.discardPile.length}</span>
+          </div>
+
+          {/* Turn end */}
+          <button
+            type="button"
+            className="end-turn"
+            onClick={() => void handleEndTurn()}
+            disabled={interactionsDisabled}
+          >
+            TURN END
+          </button>
+
+          {/* Hand (fanned) */}
+          <div className="hand-wrap">
+            <div className="hand">
+              {handDemos.map((c, i) => (
+                <HandCard
+                  key={i}
+                  card={c}
+                  fan={fan[i]}
+                  onClick={
+                    interactionsDisabled
+                      ? undefined
+                      : () => void handlePlayCard(i)
+                  }
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {error ? <div className="battle__error">{error}</div> : null}
+      </div>
+    </div>
+  )
+}
+
+// 内部用: Potion catalog rarity (number) → CardRarity。
+// dtoAdapter と重複するのを避けるため軽量実装をこちらに置く。
+function cardRarityFromCatalogNumber(n: number): CardRarity {
+  switch (n) {
+    case 0: return 'c'
+    case 1: return 'r'
+    case 2: return 'e'
+    case 3: return 'l'
+    default: return 'c'
+  }
 }
