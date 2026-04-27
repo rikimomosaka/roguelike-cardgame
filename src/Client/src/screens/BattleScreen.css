@@ -236,6 +236,91 @@
 
 .battle__slot[data-occupied="0"] { visibility: hidden; }
 
+/* Pile modal: 山札/捨札/除外 をクリックで開くカードリストポップアップ。 */
+.pile-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pile-modal {
+  background: #1a1418;
+  border: 1px solid #6a4a2a;
+  border-radius: 6px;
+  padding: 12px;
+  max-width: 80vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+}
+.pile-modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  color: var(--gold);
+  border-bottom: 1px solid rgba(106, 74, 42, 0.6);
+  padding-bottom: 6px;
+}
+.pile-modal__close {
+  background: transparent;
+  border: 1px solid #6a4a2a;
+  color: var(--gold);
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+.pile-modal__close:hover { background: rgba(106, 74, 42, 0.3); }
+.pile-modal__empty {
+  color: var(--fg-muted);
+  text-align: center;
+  padding: 24px;
+}
+.pile-modal__list {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  overflow-y: auto;
+  max-height: calc(80vh - 60px);
+}
+.pile-modal__item { display: block; }
+
+/* pile ボタン化: button タグでも見た目は既存 .pile を保つ。 */
+button.pile {
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+}
+button.pile:hover { filter: brightness(1.2); }
+
+/* Why: エラー overlay は通常フローで表示するとレイアウトが押し下がるので
+   absolute で重ねて出す。コスト不足クリック等で頻発しても画面ズレなし。 */
+.battle__error {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 50;
+  background: rgba(80, 20, 20, 0.85);
+  border: 1px solid rgba(241, 91, 91, 0.6);
+  color: #fbb;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  pointer-events: none;
+  max-width: 360px;
+}
+
 .battle__slot.is-targeted {
   outline: 2px solid #f1c95b;
   outline-offset: 4px;
@@ -324,6 +409,33 @@
     0 0 14px rgba(255, 213, 79, 0.55),
     var(--text-shadow-pixel),
     -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+}
+
+/* Why: hero の intent は通常/ランダム/全体の 3 種を縦並び表示するため
+   stack 用コンテナを用意。位置は top のチップ枠と整合。 */
+.intents {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 3;
+}
+.intents .intent { position: static; transform: none; }
+
+/* Why: enemy/unit imageId が単一文字 (絵文字) でなく長い ID 文字列 (例
+   "cultist_dark") の場合、95px だとキャラ枠を大きくはみ出す。長文字判定で
+   font-size を縮小し、word-break で枠内に収める fallback。 */
+.sprite.sprite--text {
+  font-size: 11px !important;
+  font-weight: 700;
+  word-break: break-all;
+  padding: 4px;
+  line-height: 1.15;
+  text-align: center;
+  overflow: hidden;
 }
 
 .sprite-shadow {
@@ -428,6 +540,41 @@
 .energy__val { display: flex; align-items: baseline; gap: 1px; line-height: 1; }
 .energy__cur { font-size: var(--fs-hero); color: var(--gold); font-variant-numeric: tabular-nums; line-height: 1; }
 .energy__max { font-size: 18px; color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+
+/* COMBO chip: TURN END ボタンの左に配置 (画面中央付近の存在感あり)。 */
+.battle__combo {
+  position: absolute;
+  left: calc(50% - 220px);
+  bottom: 168px;
+  z-index: var(--z-hud);
+  height: 52px;
+  width: 110px;
+  box-sizing: border-box;
+  padding: 4px 10px;
+  background: rgba(20, 12, 6, 0.55);
+  border: 2px solid #6a4a2a;
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-family: var(--font-label);
+  color: var(--fg-muted);
+  letter-spacing: 2px;
+  transition: color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.battle__combo-k { font-size: 11px; }
+.battle__combo-v { font-size: 22px; font-variant-numeric: tabular-nums; line-height: 1; }
+.battle__combo.is-active {
+  color: #f1c95b;
+  border-color: #f1c95b;
+  box-shadow: 0 0 10px rgba(241, 201, 91, 0.6);
+}
+.battle__combo.is-active .battle__combo-v {
+  text-shadow: 0 0 6px rgba(241, 201, 91, 0.8);
+  font-weight: 700;
+}
 
 /* ================= End turn ================= */
 .end-turn {

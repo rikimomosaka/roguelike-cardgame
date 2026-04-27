@@ -50,6 +50,8 @@ type Props = {
   deck: CardInstanceDto[]
   relics: string[]
   onDiscardPotion: (slotIndex: number) => void
+  /** 戦闘中の potion 使用ハンドラ。指定されると menu に「使う」が出る。 */
+  onUsePotion?: (slotIndex: number) => void
   onOpenMenu: () => void
   menuActive?: boolean
   onTogglePeek?: () => void
@@ -77,6 +79,7 @@ export function TopBar({
   deck,
   relics,
   onDiscardPotion,
+  onUsePotion,
   onOpenMenu,
   menuActive,
   onTogglePeek,
@@ -184,6 +187,7 @@ export function TopBar({
             slotIndex={i}
             potionId={id}
             onDiscard={() => onDiscardPotion(i)}
+            onUse={onUsePotion ? () => onUsePotion(i) : undefined}
           />
         ))}
       </div>

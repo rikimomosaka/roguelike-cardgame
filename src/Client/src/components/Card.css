@@ -105,6 +105,36 @@
   transform: translateY(-1px);
 }
 
+/* Why: コンボ軽減時に「{costOrig}→{cost}」を縦並び表示する。
+   円の中に収めるため font-size を縮め、orig 側に取り消し線で軽減を強調。 */
+.card__cost--reduced {
+  width: 30px;
+  height: 30px;
+  font-size: 9px;
+  flex-direction: column;
+  gap: 0;
+  border-color: #f1c95b;
+  box-shadow: 0 0 6px rgba(241, 201, 91, 0.7);
+}
+.card__cost--reduced .card__cost-orig {
+  color: #d99;
+  text-decoration: line-through;
+  font-size: 9px;
+  line-height: 1;
+}
+.card__cost--reduced .card__cost-arrow {
+  color: #f1c95b;
+  font-size: 8px;
+  line-height: 1;
+}
+.card__cost--reduced .card__cost-n {
+  color: #f1c95b;
+  font-size: 13px;
+  font-weight: 700;
+  transform: none;
+  line-height: 1;
+}
+
 .card__name {
   width: 100%; height: 22px;
   padding: 0 4px 0 28px;

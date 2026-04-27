@@ -36,8 +36,7 @@ import type {
   RunResultDto,
   RunSnapshotDto,
 } from '../api/types'
-import { useCardCatalog, usePotionCatalog } from '../hooks/useCardCatalog'
-import { useRelicCatalog } from '../hooks/useRelicCatalog'
+import { useCardCatalog } from '../hooks/useCardCatalog'
 import { useEnemyCatalog } from '../hooks/useEnemyCatalog'
 import { useUnitCatalog } from '../hooks/useUnitCatalog'
 import { TopBar } from '../components/TopBar'
@@ -45,7 +44,6 @@ import {
   hpLevel,
   toCharacterDemo,
   toHandCardDemo,
-  toRelicDemo,
 } from './battleScreen/dtoAdapter'
 import './BattleScreen.css'
 
@@ -100,13 +98,18 @@ export type CharacterDemo = {
   hpCur: number
   hpMax: number
   hpLv: HpLv
+  /** 単一の intent (敵の次行動)。intents が無いときの後方互換。 */
   intent?: IntentDemo
+  /** 複数チップ表示 (hero の通常/ランダム/全体予定攻撃を分けて表示する用)。 */
+  intents?: IntentDemo[]
   buffs: BuffDemo[]
 }
 
 export type HandCardDemo = {
   name: string
   cost: number | string
+  /** コンボ軽減で cost と異なる元コスト。未軽減時は null/undefined。 */
+  costOrig?: number | null
   type: CardType
   rarity: CardRarity
   art?: ReactNode
@@ -121,6 +124,8 @@ type Props = {
   /** ラン全体の最新 snapshot。TopBar (gold/playSeconds/deck/relics) の表示用。 */
   snapshot: RunSnapshotDto
   onBattleResolved: (result: RunSnapshotDto | RunResultDto) => void
+  /** TopBar の MAP ボタン押下で BattleScreen → MapScreen へ peek 切替する。 */
+  onTogglePeek?: () => void
 }
 
 // -------------------- Animation timing --------------------
@@ -172,43 +177,8 @@ function useTip(c: TooltipContent | null) {
   return useTooltipTarget(c)
 }
 
-function Relic({ relic }: { relic: RelicDemo }) {
-  const tip = useTip({
-    name: relic.name,
-    rarity: relic.rarity,
-    desc: relic.desc,
-  })
-  return (
-    <div className={`hud-relic hud-relic--${relic.rarity}`} {...tip}>
-      {relic.icon}
-    </div>
-  )
-}
-
-function Potion({ potion }: { potion: PotionDemo }) {
-  const tip = useTip(
-    potion.empty
-      ? null
-      : {
-          name: potion.name ?? '',
-          rarity: potion.rarity,
-          desc: potion.desc ?? '',
-        },
-  )
-  const cls = potion.empty
-    ? 'hud-pot is-empty'
-    : `hud-pot hud-pot--${potion.rarity ?? 'c'}`
-  // Why: Slot 同様、onClick 不在時に role/tabIndex 属性を JSX から外して
-  // axe/aria の誤検出 (条件式の静的解析不可) を回避する目的。
-  const interactiveProps = potion.onClick && !potion.empty
-    ? { onClick: potion.onClick, role: 'button' as const, tabIndex: 0 }
-    : {}
-  return (
-    <div className={cls} {...tip} {...interactiveProps}>
-      {potion.icon}
-    </div>
-  )
-}
+// Relic / Potion 内部コンポーネントは battle__hud 撤去 (TopBar 統合) で
+// 不要になったため削除。RelicDemo / PotionDemo 型は他から参照されていれば残す。
 
 function StatusBuff({ buff }: { buff: BuffDemo }) {
   const tip = useTip({ name: buff.name, desc: buff.desc })
@@ -257,8 +227,20 @@ function Slot({ char, isTargeted, onClick }: SlotProps) {
       data-occupied="1"
       {...interactiveProps}
     >
-      {char.intent ? <IntentChip intent={char.intent} /> : null}
-      <div className={`sprite sprite--${char.spriteKind}`}>{char.sprite}</div>
+      {char.intents && char.intents.length > 0 ? (
+        <div className="intents">
+          {char.intents.map((it, i) => (
+            <IntentChip key={i} intent={it} />
+          ))}
+        </div>
+      ) : char.intent ? (
+        <IntentChip intent={char.intent} />
+      ) : null}
+      <div
+        className={`sprite sprite--${char.spriteKind}${char.sprite.length > 2 ? ' sprite--text' : ''}`}
+      >
+        {char.sprite}
+      </div>
       <div className="sprite-shadow" />
       <div className="status-hp">
         <div className="status-hp__track" data-lv={char.hpLv}>
@@ -332,6 +314,7 @@ function HandCard({ card, fan, onClick }: HandCardProps) {
       <Card
         name={card.name}
         cost={card.cost}
+        costOrig={card.costOrig}
         type={card.type}
         rarity={card.rarity}
         art={card.art}
@@ -342,6 +325,79 @@ function HandCard({ card, fan, onClick }: HandCardProps) {
       />
       <span ref={probeRefCb} aria-hidden="true" className="hand__probe" />
     </>
+  )
+}
+
+// -------------------- Pile modal --------------------
+
+type PileKind = 'draw' | 'discard' | 'exhaust'
+
+type PileModalProps = {
+  kind: PileKind
+  cards: import('../api/types').BattleCardInstanceDto[]
+  onClose: () => void
+}
+
+function PileModal({ kind, cards, onClose }: PileModalProps) {
+  const { catalog } = useCardCatalog()
+  const title = kind === 'draw' ? '山札' : kind === 'discard' ? '捨札' : '除外'
+  // Why: 山札はシャッフル順を伏せるためカード名でソート (TopBar デッキ表示と
+  // 同じ方式)。捨札 / 除外は実際の積み順を保持する。
+  const ordered = kind === 'draw'
+    ? [...cards].sort((a, b) => {
+        const an = catalog?.[a.cardDefinitionId]?.displayName ?? catalog?.[a.cardDefinitionId]?.name ?? a.cardDefinitionId
+        const bn = catalog?.[b.cardDefinitionId]?.displayName ?? catalog?.[b.cardDefinitionId]?.name ?? b.cardDefinitionId
+        return an.localeCompare(bn, 'ja')
+      })
+    : cards
+  return (
+    <div className="pile-modal-backdrop" onClick={onClose} role="presentation">
+      <div
+        className="pile-modal"
+        role="dialog"
+        aria-label={title}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="pile-modal__header">
+          <span>{title} ({cards.length}枚)</span>
+          <button type="button" className="pile-modal__close" onClick={onClose} aria-label="閉じる">
+            ×
+          </button>
+        </header>
+        {ordered.length === 0 ? (
+          <p className="pile-modal__empty">{title}は空です</p>
+        ) : (
+          <ul className="pile-modal__list">
+            {ordered.map((card, i) => {
+              const def = catalog?.[card.cardDefinitionId]
+              const fallbackName = def?.displayName ?? def?.name ?? card.cardDefinitionId
+              const disp = {
+                name: fallbackName,
+                cost: card.costOverride ?? def?.cost ?? 0,
+                type: ((def?.cardType ?? 'attack').toLowerCase()) as CardType,
+                rarity: ((['c','r','e','l'][def?.rarity ?? 0]) ?? 'c') as CardRarity,
+                description: def?.description ?? '',
+                upgradedDescription: def?.upgradedDescription ?? null,
+              }
+              return (
+                <li key={`${card.instanceId}-${i}`} className="pile-modal__item">
+                  <Card
+                    name={disp.name}
+                    cost={disp.cost}
+                    type={disp.type}
+                    rarity={disp.rarity}
+                    description={disp.description}
+                    upgradedDescription={disp.upgradedDescription}
+                    upgraded={card.isUpgraded}
+                    width={112}
+                  />
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -362,17 +418,16 @@ function EnergyOrb({ cur, max }: { cur: number; max: number }) {
 
 // -------------------- Main component --------------------
 
-export function BattleScreen({ accountId, snapshot, onBattleResolved }: Props) {
+export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePeek }: Props) {
   const [state, setState] = useState<BattleStateDto | null>(null)
   const [animating, setAnimating] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [pileOpen, setPileOpen] = useState<PileKind | null>(null)
   // resolvedRef は finalize 後の二重呼び出しを抑止するためのラッチ。
   const resolvedRef = useRef(false)
 
   const { catalog: cardCatalog } = useCardCatalog()
-  const { catalog: potionCatalog } = usePotionCatalog()
-  const { catalog: relicCatalog } = useRelicCatalog()
   const { catalog: enemyCatalog } = useEnemyCatalog()
   const { catalog: unitCatalog } = useUnitCatalog()
 
@@ -450,6 +505,24 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved }: Props) {
   }
 
   async function handlePlayCard(handIndex: number) {
+    // Why: コスト不足 / 範囲外の hand クリックでサーバー 400 が頻発するのは UX
+    // 上ノイズなので、Client 側で事前にプレイ可否を判定して握り潰す。Server は
+    // engine ロジックで無効化されるが、わざわざ呼ばないのが望ましい。
+    const card = state?.hand[handIndex]
+    if (!card) return
+    const def = cardCatalog?.[card.cardDefinitionId]
+    const orig = card.isUpgraded
+      ? def?.upgradedCost ?? def?.cost
+      : def?.cost
+    const baseCost = card.costOverride ?? orig
+    if (baseCost === null || baseCost === undefined) return
+    // combo 軽減も考慮した支払いコスト
+    const willCombo =
+      orig !== null && orig !== undefined &&
+      state?.lastPlayedOrigCost !== null && state?.lastPlayedOrigCost !== undefined &&
+      orig === state.lastPlayedOrigCost + 1
+    const payCost = Math.max(0, baseCost - (willCombo ? 1 : 0))
+    if (state && payCost > state.energy) return
     const resp = await withBusy(() => playCard(accountId, { handIndex }))
     if (resp) await playSteps(resp)
   }
@@ -494,32 +567,8 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved }: Props) {
         lv: hpLevel(heroActor.currentHp, heroActor.maxHp),
       }
     : { cur: 0, max: 0, lv: '0' as const }
-  const hpPct = heroHp.max > 0
-    ? Math.max(0, Math.min(100, (heroHp.cur / heroHp.max) * 100))
-    : 0
-
-  const relicDemos = state.ownedRelicIds.map((id) =>
-    toRelicDemo(id, relicCatalog),
-  )
-
-  // potions: 配列を 3 枠表示 (POTION 数は MVP では 3 を仮定)。
-  const POTION_SLOT_COUNT = 3
-  const potionDemos: PotionDemo[] = []
-  for (let i = 0; i < POTION_SLOT_COUNT; i++) {
-    const id = state.potions[i]
-    if (id && id.length > 0) {
-      const def = potionCatalog?.[id]
-      potionDemos.push({
-        icon: '🜂',
-        rarity: def ? cardRarityFromCatalogNumber(def.rarity) : 'c',
-        name: def?.name ?? id,
-        desc: def?.description ?? '',
-        onClick: () => void handleUsePotion(i),
-      })
-    } else {
-      potionDemos.push({ icon: '—', empty: true })
-    }
-  }
+  // Why: HP / relics / potions は TopBar に集約済 (battle__hud 撤去済)。
+  // 旧 demo 用の hpPct / relicDemos / potionDemos は不要になったため削除。
 
   // Why: BattleEngine は死亡した actor を state.Allies / Enemies から削除せず、
   // CurrentHp=0 のまま残す (.Where(a => a.IsAlive) で都度フィルタ)。Client 側でも
@@ -558,55 +607,14 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved }: Props) {
         deck={snapshot.run.deck}
         relics={state.ownedRelicIds}
         onDiscardPotion={() => { /* battle 中は discard 不可 */ }}
+        onUsePotion={(i) => void handleUsePotion(i)}
         onOpenMenu={() => { /* battle 中の menu は後続フェーズで対応 */ }}
+        onTogglePeek={onTogglePeek}
+        peekActive={false}
+        peekDisabled={!onTogglePeek}
         playSeconds={snapshot.run.playSeconds}
       />
       <div className="battle__content">
-        {/* Battle 内 HUD: combo + 操作系。run-level 情報は上の TopBar 参照。 */}
-        <div className="battle__hud">
-          <div className="hud-group hud-hp">
-            <span className="hud-k">HP</span>
-            <div className="track" data-lv={heroHp.lv}>
-              <div className="fill" style={{ width: `${hpPct}%` }} />
-              <span className="num">
-                {heroHp.cur}/{heroHp.max}
-              </span>
-            </div>
-          </div>
-          <div className="hud-group hud-gold">
-            <span className="hud-k">GOLD</span>
-            <span className="hud-v">—</span>
-          </div>
-          <div className="hud-relics">
-            <span className="hud-k">RELICS</span>
-            <div className="hud-relics__list">
-              {relicDemos.map((r, i) => (
-                <Relic key={i} relic={r} />
-              ))}
-            </div>
-          </div>
-          <div className="hud-group hud-potions">
-            <span className="hud-k">POTION</span>
-            {potionDemos.map((p, i) => (
-              <Potion key={i} potion={p} />
-            ))}
-          </div>
-          <div className="hud-group">
-            <span className="hud-k">DECK</span>
-            <span className="hud-v">{state.drawPile.length}</span>
-          </div>
-          <div className={`hud-group hud-combo${state.comboCount > 1 ? ' is-active' : ''}`}>
-            <span className="hud-k">COMBO</span>
-            <span className="hud-v">×{state.comboCount}</span>
-          </div>
-          <button type="button" className="hud-btn">
-            MAP
-          </button>
-          <button type="button" className="hud-btn">
-            MENU ≡
-          </button>
-        </div>
-
         {/* Stage */}
         <div className="battle__stage">
           <div className="battle__chars">
@@ -615,13 +623,18 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved }: Props) {
                 // Why: 死亡 actor を除外した aliveAllies に対する index で参照する。
                 // state.allies[i] では死亡 actor を含むため整合しない。
                 const actor = aliveAllies[i]
-                const isHero = actor?.definitionId === 'hero'
                 const isTargeted =
                   actor !== undefined &&
                   state.targetAllyIndex === actor.slotIndex
-                // hero 自身は target にしない (自身を回復対象にする等は後続)。
+                // Why: hero クリックは「targetAllyIndex を hero (slot 0) に
+                // 戻す」操作として有効化する。召喚 ally を選択した後に hero へ
+                // 戻せない不具合への対応。targetEnemyIndex も同時にクリアして
+                // ターゲット状態をリセットする (現状 SetTarget は片方しか動かさ
+                // ないのでそのまま敵スロット 0 に戻すか、味方 0 だけ戻すかは
+                // Engine 仕様に従う。ここでは Ally,0 を呼ぶことで味方ターゲットを
+                // hero に戻す挙動を提供)。
                 const onClick =
-                  c.occupied && actor && !isHero && !interactionsDisabled
+                  c.occupied && actor && !interactionsDisabled
                     ? () => void handleSetTarget('Ally', actor.slotIndex)
                     : undefined
                 return (
@@ -659,24 +672,46 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved }: Props) {
           {/* Energy orb */}
           <EnergyOrb cur={state.energy} max={state.energyMax} />
 
-          {/* Piles */}
-          <div className="pile pile--draw">
+          {/* Piles (clickable to open modal) */}
+          <button
+            type="button"
+            className="pile pile--draw"
+            onClick={() => setPileOpen('draw')}
+            aria-label={`山札 (${state.drawPile.length}枚) を表示`}
+          >
             <span className="pile__sym">❖</span>
             <span className="pile__lbl">山札</span>
             <span className="pile__num">{state.drawPile.length}</span>
-          </div>
-          <div className="pile pile--exhaust">
+          </button>
+          <button
+            type="button"
+            className="pile pile--exhaust"
+            onClick={() => setPileOpen('exhaust')}
+            aria-label={`除外 (${state.exhaustPile.length}枚) を表示`}
+          >
             <span className="pile__sym">✦</span>
             <span className="pile__lbl">除外</span>
             <span className="pile__num">{state.exhaustPile.length}</span>
-          </div>
-          <div className="pile pile--discard">
+          </button>
+          <button
+            type="button"
+            className="pile pile--discard"
+            onClick={() => setPileOpen('discard')}
+            aria-label={`捨札 (${state.discardPile.length}枚) を表示`}
+          >
             <span className="pile__sym">✕</span>
             <span className="pile__lbl">捨札</span>
             <span className="pile__num">{state.discardPile.length}</span>
-          </div>
+          </button>
 
-          {/* Turn end */}
+          {/* COMBO chip + Turn end */}
+          <div
+            className={`battle__combo${state.comboCount > 1 ? ' is-active' : ''}`}
+            aria-label={`コンボ ×${state.comboCount}`}
+          >
+            <span className="battle__combo-k">COMBO</span>
+            <span className="battle__combo-v">×{state.comboCount}</span>
+          </div>
           <button
             type="button"
             className="end-turn"
@@ -707,18 +742,18 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved }: Props) {
 
         {error ? <div className="battle__error">{error}</div> : null}
       </div>
+      {pileOpen ? (
+        <PileModal
+          kind={pileOpen}
+          cards={
+            pileOpen === 'draw' ? state.drawPile
+              : pileOpen === 'discard' ? state.discardPile
+              : state.exhaustPile
+          }
+          onClose={() => setPileOpen(null)}
+        />
+      ) : null}
     </div>
   )
 }
 
-// 内部用: Potion catalog rarity (number) → CardRarity。
-// dtoAdapter と重複するのを避けるため軽量実装をこちらに置く。
-function cardRarityFromCatalogNumber(n: number): CardRarity {
-  switch (n) {
-    case 0: return 'c'
-    case 1: return 'r'
-    case 2: return 'e'
-    case 3: return 'l'
-    default: return 'c'
-  }
-}

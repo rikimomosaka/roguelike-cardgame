@@ -479,11 +479,15 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
   // 戦闘中はマップ UI ではなく BattleScreen をフルスクリーン表示する。
   // BattleScreen が /finalize を呼び終えたら RunSnapshotDto (続行) または
   // RunResultDto (ラン終了) を渡してくる。
-  if (activeBattle && accountId) {
+  // peekMap=true のときは戦闘中でもマップ表示にスイッチ (BattleScreen の MAP
+  // ボタンから peek 切替で再帰的に来る)。Server 側の戦闘 session は維持される
+  // ので peek 解除で BattleScreen に戻ると getBattle で復元される。
+  if (activeBattle && accountId && !peekMap) {
     return (
       <BattleScreen
         accountId={accountId}
         snapshot={snap}
+        onTogglePeek={() => setPeekMap(true)}
         onBattleResolved={(result) => {
           if ('outcome' in result) {
             onRunFinished?.(result, snapRef.current)

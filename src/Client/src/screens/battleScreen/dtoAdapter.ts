@@ -142,6 +142,36 @@ export function toCharacterDemo(
       ? 'ally'
       : 'enemy'
 
+  // Why: hero (player) は CurrentMoveId 駆動でなくカードプレイで pool に
+  // 攻撃をキューする。state.AttackSingle/Random/AllDisplay が「ターン終了時に
+  // 発射される予定ダメージ」なので、各非 0 値を separate intent chip として表示。
+  let intents: IntentDemo[] | undefined
+  if (isHero) {
+    const list: IntentDemo[] = []
+    if (actor.attackSingleDisplay > 0) {
+      list.push({
+        kind: 'attack', icon: '⚔', num: actor.attackSingleDisplay,
+        name: '通常攻撃 (予定)',
+        desc: `ターン終了時に対象 1 体に ${actor.attackSingleDisplay} ダメージ。`,
+      })
+    }
+    if (actor.attackRandomDisplay > 0) {
+      list.push({
+        kind: 'attack', icon: '⚂', num: actor.attackRandomDisplay,
+        name: 'ランダム攻撃 (予定)',
+        desc: `ターン終了時にランダム敵 1 体に ${actor.attackRandomDisplay} ダメージ。`,
+      })
+    }
+    if (actor.attackAllDisplay > 0) {
+      list.push({
+        kind: 'attack', icon: '⚡', num: actor.attackAllDisplay,
+        name: '全体攻撃 (予定)',
+        desc: `ターン終了時に全敵に ${actor.attackAllDisplay} ダメージ。`,
+      })
+    }
+    if (list.length > 0) intents = list
+  }
+
   return {
     occupied: true,
     name,
@@ -152,6 +182,7 @@ export function toCharacterDemo(
     hpMax: actor.maxHp,
     hpLv: hpLevel(actor.currentHp, actor.maxHp),
     intent: actor.intent ? toIntentDemo(actor.intent) : undefined,
+    intents,
     buffs: toBuffs(actor),
   }
 }
@@ -297,6 +328,8 @@ export function toHandCardDemo(
   return {
     name: def?.displayName ?? def?.name ?? card.cardDefinitionId,
     cost: reducedCost ?? 'X',
+    // Why: 軽減発生時のみ表示用に元コストを露出。Card が "{orig}→{cost}" を描画する。
+    costOrig: willCombo && baseCost !== null && baseCost !== undefined ? baseCost : null,
     type: cardTypeFromString(def?.cardType),
     rarity: def ? cardRarityFromNumber(def.rarity) : 'c',
     playable,

@@ -9,6 +9,8 @@ type Props = {
   slotIndex: number
   potionId: string
   onDiscard: () => void
+  /** 戦闘中の使用ハンドラ。指定されたときメニューに「使う」を表示する。 */
+  onUse?: () => void
 }
 
 function potionRarityCode(n: number): CardRarity {
@@ -21,7 +23,7 @@ function potionRarityCode(n: number): CardRarity {
   }
 }
 
-export function PotionSlot({ slotIndex, potionId, onDiscard }: Props) {
+export function PotionSlot({ slotIndex, potionId, onDiscard, onUse }: Props) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [menuPos, setMenuPos] = useState<{ left: number; top: number } | null>(null)
   const iconRef = useRef<HTMLButtonElement>(null)
@@ -84,7 +86,19 @@ export function PotionSlot({ slotIndex, potionId, onDiscard }: Props) {
           style={{ left: menuPos.left, top: menuPos.top }}
           onMouseDown={e => e.stopPropagation()}
         >
+          {onUse ? (
+            <button
+              type="button"
+              onClick={() => {
+                onUse()
+                setMenuOpen(false)
+              }}
+            >
+              使う
+            </button>
+          ) : null}
           <button
+            type="button"
             onClick={() => {
               onDiscard()
               setMenuOpen(false)
@@ -92,7 +106,7 @@ export function PotionSlot({ slotIndex, potionId, onDiscard }: Props) {
           >
             捨てる
           </button>
-          <button onClick={() => setMenuOpen(false)}>キャンセル</button>
+          <button type="button" onClick={() => setMenuOpen(false)}>キャンセル</button>
         </div>,
         document.body,
       )}

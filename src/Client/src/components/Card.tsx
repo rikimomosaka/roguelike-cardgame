@@ -10,6 +10,8 @@ export type CardRarity = 'c' | 'r' | 'e' | 'l'
 type Props = {
   name: string
   cost: number | string
+  /** 元コスト。cost と異なるとき「{costOrig}→{cost}」表示でコンボ軽減を可視化する。 */
+  costOrig?: number | string | null
   type: CardType
   rarity: CardRarity
   art?: ReactNode
@@ -28,6 +30,7 @@ type Props = {
 export function Card({
   name,
   cost,
+  costOrig,
   type,
   rarity,
   art,
@@ -89,8 +92,18 @@ export function Card({
     >
       <div className="card__bg" />
       <div className="card__top">
-        <div className="card__cost">
-          <span className="card__cost-n">{cost}</span>
+        <div
+          className={`card__cost${costOrig !== null && costOrig !== undefined && costOrig !== cost ? ' card__cost--reduced' : ''}`}
+        >
+          {costOrig !== null && costOrig !== undefined && costOrig !== cost ? (
+            <>
+              <span className="card__cost-orig">{costOrig}</span>
+              <span className="card__cost-arrow">→</span>
+              <span className="card__cost-n">{cost}</span>
+            </>
+          ) : (
+            <span className="card__cost-n">{cost}</span>
+          )}
         </div>
         <div className="card__name">
           {name}
