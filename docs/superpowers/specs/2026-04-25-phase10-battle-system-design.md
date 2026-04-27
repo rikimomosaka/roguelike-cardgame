@@ -1000,6 +1000,21 @@ public sealed record BattleStateDto(
     IReadOnlyList<BattleEventDto>? PendingEvents);
 ```
 
+> **Phase 10.3-MVP 補記**: 10.3-MVP で初めて `BattleStateDto` をフル定義した（Phase 5 の placeholder DTO は
+> 別 namespace に温存しつつ、戦闘画面は新フル DTO に切替）。Server 側 `BattleStateDtoMapper` で
+> `Core.Battle.State.BattleState` → `BattleStateDto` を変換する。
+>
+> 表示値計算の責任分担:
+> - **Server 側で計算済**: `AttackPool.Display(strength, weak)` / `BlockPool.Display(dexterity)` の計算結果
+>   （`AttackDisplayDto.DisplayValue` / `CombatActorDto.Block`）。Client は計算式を知る必要なし。
+> - **Client 側で catalog 引き**: カード / レリック / ポーション / ユニット / 敵の表示メタ（Name / Description /
+>   Icon / RarityCode 等）は DTO に含めず、Client が `useCardCatalog` / `useRelicCatalog` /
+>   `usePotionCatalog` / `useUnitCatalog` / `useEnemyCatalog` hooks 経由で参照する。
+>   これにより wire size を抑え、Server は DefinitionId を渡すだけで済む。
+>
+> 10.3-MVP 段階では Server → Client は REST レスポンス内に DTO を同梱し、push (`BattleStateUpdated`) は
+> 本格 Phase 10.3（SignalR）まで未導入。
+
 ### 9-2. HUD
 
 ```csharp
@@ -1121,6 +1136,17 @@ public sealed record BattleEventDto(
 > `relic:<id>` プレフィックスを付与する慣例を採用（例: AttackFire の Note が `"relic:burnRelic"` 等）。
 > この慣例により Client がレリック由来の effect をアニメーションで区別できる（Phase 10.3+ 対応）。
 
+> **Phase 10.3-MVP 補記**: 10.3-MVP で `BattleEventStepDto { Event: BattleEventDto, SnapshotAfter: BattleStateDto }`
+> を新設し、各イベントを「直後の state スナップショット」と束ねて Client に返す。
+> `BattleActionResponseDto { State, Steps[] }` を経由し、Client は steps を 200ms 間隔で順次再生して最終 state に着地する。
+>
+> 重要な近似: 10.3-MVP では `SnapshotAfter` は **action 完了後の最終 state と同一** を採用（Core 側に
+> 「event 直後の中間 state を取り出す」API がまだないため）。HP / Block の連続変化は Client 側 CSS transition で補間する。
+> Phase 10.4 で真の中間 snapshot 化を検討するが、DTO shape は維持する（Client コードは不変）。
+>
+> Server push (`BattleStateUpdated` / `BattleEventsRaised`) は本格 Phase 10.3（SignalR）に持ち越し、
+> 10.3-MVP は REST polling + action response 同梱の events で代替する。
+
 ### 9-8. 通信プロトコル
 
 | Server → Client | 内容 |
@@ -1135,6 +1161,26 @@ public sealed record BattleEventDto(
 | `SetTarget(side, slotIndex)` | |
 | `EndTurn()` | |
 | `RequestPileContents(pile)` | DECK / 山札 / 捨札 / 除外 のモーダル表示時 |
+
+> **Phase 10.3-MVP 補記**: 親 spec が想定していた SignalR ベースの push 通信は規模が大きいため、
+> Phase 10.3 を 2 段階に分割した:
+>
+> - **Phase 10.3-MVP (REST + in-memory)**: 実プレイ可能化を最優先。REST 7 endpoint
+>   (`POST /battle/start` / `GET /battle` / `POST /battle/play-card` / `POST /battle/end-turn` /
+>   `POST /battle/use-potion` / `POST /battle/set-target` / `POST /battle/finalize`) と
+>   `BattleSessionStore` (in-memory `ConcurrentDictionary<runId, BattleState>`) で戦闘を実装。
+>   永続化なし（リロードで戦闘リセット、同 encounter で再開）。
+>   Server push の代わりに各 action の REST レスポンスに `BattleActionResponseDto { State, Steps[] }`
+>   を同梱し、Client は events を 200ms 間隔で順次再生（HP / Block は CSS transition で補間）。
+> - **Phase 10.3 本格 (後続)**: SignalR `BattleHub` + 戦闘 state 永続化 (`RunState.ActiveBattle` 切替 +
+>   save schema v8)。リロード時の戦闘継続、マルチプレイ協力戦闘の基盤。本表の `BattleStateUpdated` /
+>   `BattleEventsRaised` push はこの本格版で導入する。
+>
+> Client 結線の主要選択:
+> - `useCardCatalog` / `useRelicCatalog` / `usePotionCatalog` / `useUnitCatalog` / `useEnemyCatalog` hooks で
+>   catalog 引きを Client 責任に統一（DTO の wire size 削減）。
+> - `BattleScreen.tsx` は events 配列を React state machine で進行（200ms 間隔、event index で再生）。
+> - 既存 `POST /battle/win` placeholder 経路は無傷で残し、Phase 5 RewardGenerator / RewardApplier 互換性を維持。
 
 ---
 
