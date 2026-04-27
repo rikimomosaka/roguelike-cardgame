@@ -33,6 +33,7 @@ builder.Services.AddSingleton<MapGenerationConfig>(_ => MapGenerationConfigLoade
 builder.Services.AddSingleton<IDungeonMapGenerator, DungeonMapGenerator>();
 builder.Services.AddSingleton<DataCatalog>(_ => EmbeddedDataLoader.LoadCatalog());
 builder.Services.AddSingleton<RunStartService>();
+builder.Services.AddSingleton<BattleSessionStore>();
 
 const string CorsPolicyName = "ClientCors";
 var allowedOrigins = builder.Configuration
