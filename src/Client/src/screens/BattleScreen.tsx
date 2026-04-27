@@ -359,7 +359,12 @@ function PileModal({ kind, cards, onClose }: PileModalProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <header className="pile-modal__header">
-          <span>{title} ({cards.length}枚)</span>
+          <span>
+            {title} ({cards.length}枚)
+            {kind === 'draw' ? (
+              <span className="pile-modal__note"> ※山札の順番は不明</span>
+            ) : null}
+          </span>
           <button type="button" className="pile-modal__close" onClick={onClose} aria-label="閉じる">
             ×
           </button>
@@ -397,6 +402,44 @@ function PileModal({ kind, cards, onClose }: PileModalProps) {
           </ul>
         )}
       </div>
+    </div>
+  )
+}
+
+/**
+ * COMBO chip with hover tooltip.
+ * Why: コンボ仕様 (元コスト+1 のカードを 1 軽減 + プレイで継続) を hover で
+ * 確認できるようにする。superwild 中は「任意のカードでコンボ継続」と表現。
+ */
+function ComboChip({
+  count,
+  lastPlayedOrigCost,
+  superwild,
+}: {
+  count: number
+  lastPlayedOrigCost: number | null
+  superwild: boolean
+}) {
+  const desc = (() => {
+    if (count === 0) {
+      return '現在０コンボ。カードをプレイすると、そのカードよりコストが1大きいカードのコストをターン中1軽減。'
+    }
+    const reduceTarget =
+      lastPlayedOrigCost !== null ? `${lastPlayedOrigCost + 1}` : '?'
+    if (superwild) {
+      return `現在${count}コンボ。ターン中コストが${reduceTarget}のカードを1軽減し、任意のカードをプレイでコンボ継続。`
+    }
+    return `現在${count}コンボ。ターン中コストが${reduceTarget}のカードを1軽減し、それをプレイでコンボ継続。`
+  })()
+  const tip = useTip({ name: 'コンボ', desc })
+  return (
+    <div
+      className={`battle__combo${count > 1 ? ' is-active' : ''}`}
+      aria-label={`コンボ ×${count}`}
+      {...tip}
+    >
+      <span className="battle__combo-k">COMBO</span>
+      <span className="battle__combo-v">×{count}</span>
     </div>
   )
 }
@@ -594,11 +637,12 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
   const interactionsDisabled = animating || busy
 
   return (
-    <div className="battle">
-      <div className="battle__pattern" />
+    <div className="battle-screen">
       {/* Why: ユーザ要望「上のバーは map 画面のものをそのまま」。
           HP は live battle override (heroHp.cur)、potion 操作は battle 内で
-          discard 不可なので onDiscardPotion は no-op。 */}
+          discard 不可なので onDiscardPotion は no-op。
+          TopBar は .battle の外側に置くことで stage の intent chip 等と
+          視覚的に重ならないようにする。 */}
       <TopBar
         currentHp={heroHp.cur}
         maxHp={heroHp.max}
@@ -614,7 +658,9 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
         peekDisabled={!onTogglePeek}
         playSeconds={snapshot.run.playSeconds}
       />
-      <div className="battle__content">
+      <div className="battle">
+        <div className="battle__pattern" />
+        <div className="battle__content">
         {/* Stage */}
         <div className="battle__stage">
           <div className="battle__chars">
@@ -705,13 +751,11 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
           </button>
 
           {/* COMBO chip + Turn end */}
-          <div
-            className={`battle__combo${state.comboCount > 1 ? ' is-active' : ''}`}
-            aria-label={`コンボ ×${state.comboCount}`}
-          >
-            <span className="battle__combo-k">COMBO</span>
-            <span className="battle__combo-v">×{state.comboCount}</span>
-          </div>
+          <ComboChip
+            count={state.comboCount}
+            lastPlayedOrigCost={state.lastPlayedOrigCost}
+            superwild={state.nextCardComboFreePass}
+          />
           <button
             type="button"
             className="end-turn"
@@ -741,6 +785,7 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
         </div>
 
         {error ? <div className="battle__error">{error}</div> : null}
+        </div>
       </div>
       {pileOpen ? (
         <PileModal

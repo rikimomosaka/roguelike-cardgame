@@ -3,6 +3,17 @@
    Uses tokens from tokens.css and the shared <Card> primitive.
    ============================================================= */
 
+/* Why: BattleScreen の root ラッパー。TopBar (固定/通常フロー) とその下の
+   .battle (アスペクト比固定の stage) を縦積みする。
+   TopBar の上に stage が overlap する不具合を解消するために導入。 */
+.battle-screen {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+.battle-screen > .battle { flex: 1 1 auto; min-height: 0; margin-top: 8px; }
+
 .battle {
   aspect-ratio: var(--stage-aspect);
   width: 100%;
@@ -279,6 +290,11 @@
   line-height: 1;
 }
 .pile-modal__close:hover { background: rgba(106, 74, 42, 0.3); }
+.pile-modal__note {
+  color: var(--fg-muted);
+  font-size: 12px;
+  margin-left: 8px;
+}
 .pile-modal__empty {
   color: var(--fg-muted);
   text-align: center;
@@ -541,10 +557,13 @@ button.pile:hover { filter: brightness(1.2); }
 .energy__cur { font-size: var(--fs-hero); color: var(--gold); font-variant-numeric: tabular-nums; line-height: 1; }
 .energy__max { font-size: 18px; color: var(--fg-muted); font-variant-numeric: tabular-nums; }
 
-/* COMBO chip: TURN END ボタンの左に配置 (画面中央付近の存在感あり)。 */
+/* COMBO chip + TURN END: 両者の中間が画面中央に来るように配置 (ユーザ要望)。
+   COMBO は (W=110) で left: calc(50% - 145px) → 中心 = 50% - 90px。
+   TURN END は (W=152) で left: calc(50% + 35px) → 中心 = 50% + 111px。
+   2 要素の中点 = 50% + 10px ≒ 画面中央。視覚的には中央にバランスする。 */
 .battle__combo {
   position: absolute;
-  left: calc(50% - 220px);
+  left: calc(50% - 145px);
   bottom: 168px;
   z-index: var(--z-hud);
   height: 52px;
@@ -559,13 +578,22 @@ button.pile:hover { filter: brightness(1.2); }
   align-items: center;
   justify-content: center;
   gap: 2px;
+  /* Why: ユーザ要望「COMBO の数字が読みづらい→他のドット font に」。
+     ラベル (COMBO) は --font-label (Pixelify Sans) を維持、数字 (×N) は
+     --font-body (DotGothic16) に変えて視認性を上げる。 */
   font-family: var(--font-label);
   color: var(--fg-muted);
   letter-spacing: 2px;
   transition: color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 .battle__combo-k { font-size: 11px; }
-.battle__combo-v { font-size: 22px; font-variant-numeric: tabular-nums; line-height: 1; }
+.battle__combo-v {
+  font-family: var(--font-body);
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  line-height: 1;
+}
 .battle__combo.is-active {
   color: #f1c95b;
   border-color: #f1c95b;
@@ -579,7 +607,9 @@ button.pile:hover { filter: brightness(1.2); }
 /* ================= End turn ================= */
 .end-turn {
   position: absolute;
-  left: calc(50% - 76px);
+  /* Why: COMBO chip との中間が画面中央になるよう右にシフト (ユーザ要望)。
+     COMBO 中心 = 50% - 90px、TURN END 中心 = 50% + 111px、中点 ≒ 50% + 10px。 */
+  left: calc(50% + 35px);
   bottom: 168px;
   z-index: var(--z-hud);
   height: 52px;

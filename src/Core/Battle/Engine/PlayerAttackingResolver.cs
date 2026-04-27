@@ -30,6 +30,16 @@ internal static class PlayerAttackingResolver
             var ally = FindAlly(state, aid);
             if (ally is null || !ally.IsAlive) continue;
 
+            // Why: hero はカードプレイで pool に攻撃を蓄積する仕組みなので pool fire 経路。
+            // 召喚 ally は CurrentMoveId を持ち、敵と同じく per-effect 即時発射する
+            // (attack=全敵 / block=self) 仕様。pool は使わない。
+            bool isSummon = ally.DefinitionId != "hero" && ally.CurrentMoveId is not null;
+            if (isSummon)
+            {
+                state = ResolveSummonMove(state, ally, events, ref order, catalog, rng);
+                continue;
+            }
+
             bool omni = ally.GetStatus("omnistrike") > 0;
             if (omni)
             {
@@ -47,6 +57,88 @@ internal static class PlayerAttackingResolver
         state = SummonCleanup.Apply(state, events, ref order);
 
         return (state, events);
+    }
+
+    /// <summary>
+    /// 召喚 ally の CurrentMoveId に対応する Move を即時発射する。
+    /// 仕様: 敵の EnemyAttackingResolver と対称形 — attack effect は scope を無視
+    /// して全敵に着弾、block effect は self block 加算。move 終了後に NextMoveId
+    /// に遷移する。pool は経由しない (player のカードプレイ蓄積とは独立)。
+    /// </summary>
+    private static BattleState ResolveSummonMove(
+        BattleState state, CombatActor ally, List<BattleEvent> events, ref int order,
+        DataCatalog catalog, IRng rng)
+    {
+        if (!catalog.TryGetUnit(ally.DefinitionId, out var unitDef)) return state;
+        var move = unitDef.Moves.FirstOrDefault(m => m.Id == ally.CurrentMoveId);
+        if (move is null) return state;
+
+        var beforeAlive = SnapshotEnemyAliveIds(state);
+        var current = ally;
+
+        foreach (var eff in move.Effects)
+        {
+            if (eff.Action == "attack")
+            {
+                // scope を無視して全敵着弾 (敵側 EnemyAttackingResolver と同仕様)
+                var enemyIdsAtStart = state.Enemies
+                    .Where(e => e.IsAlive)
+                    .OrderBy(e => e.SlotIndex)
+                    .Select(e => e.InstanceId)
+                    .ToList();
+                foreach (var enemyId in enemyIdsAtStart)
+                {
+                    int idx = -1;
+                    for (int i = 0; i < state.Enemies.Length; i++)
+                    {
+                        if (state.Enemies[i].InstanceId == enemyId) { idx = i; break; }
+                    }
+                    if (idx < 0) continue;
+                    var currentEnemy = state.Enemies[idx];
+                    if (!currentEnemy.IsAlive) continue;
+
+                    var (updated, evs, _) = DealDamageHelper.Apply(
+                        current, currentEnemy,
+                        baseSum: eff.Amount, addCount: 1,
+                        scopeNote: "summon_attack", orderBase: order);
+                    state = state with { Enemies = state.Enemies.SetItem(idx, updated) };
+                    events.AddRange(evs);
+                    order += evs.Count;
+                }
+            }
+            else if (eff.Action == "block")
+            {
+                // self block 加算
+                var newAlly = current with { Block = current.Block.Add(eff.Amount) };
+                int idx = -1;
+                for (int i = 0; i < state.Allies.Length; i++)
+                    if (state.Allies[i].InstanceId == current.InstanceId) { idx = i; break; }
+                if (idx < 0) continue;
+                state = state with { Allies = state.Allies.SetItem(idx, newAlly) };
+                events.Add(new BattleEvent(
+                    BattleEventKind.GainBlock, Order: order,
+                    CasterInstanceId: current.InstanceId,
+                    TargetInstanceId: current.InstanceId,
+                    Amount: eff.Amount));
+                order += 1;
+                current = newAlly;
+            }
+            // 他の action は今は no-op (Phase 10.4 以降で対応検討)
+        }
+
+        // move 終了後 NextMoveId に遷移
+        int allyIdx = -1;
+        for (int i = 0; i < state.Allies.Length; i++)
+            if (state.Allies[i].InstanceId == current.InstanceId) { allyIdx = i; break; }
+        if (allyIdx >= 0)
+        {
+            var transitioned = state.Allies[allyIdx] with { CurrentMoveId = move.NextMoveId };
+            state = state with { Allies = state.Allies.SetItem(allyIdx, transitioned) };
+        }
+
+        // 新規死亡敵に対する OnEnemyDeath 発火
+        state = FireOnEnemyDeathForNewlyDead(state, beforeAlive, events, ref order, catalog, rng);
+        return state;
     }
 
     private static BattleState ResolveOmnistrike(

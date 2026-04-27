@@ -2,7 +2,7 @@
   "id": "wisp",
   "name": "ウィスプ",
   "imageId": "wisp",
-  "hp": 8,
+  "hp": 30,
   "initialMoveId": "wisp_strike",
   "lifetimeTurns": 3,
   "moves": [

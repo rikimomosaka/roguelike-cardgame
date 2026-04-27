@@ -92,19 +92,22 @@ export function Card({
     >
       <div className="card__bg" />
       <div className="card__top">
-        <div
-          className={`card__cost${costOrig !== null && costOrig !== undefined && costOrig !== cost ? ' card__cost--reduced' : ''}`}
-        >
-          {costOrig !== null && costOrig !== undefined && costOrig !== cost ? (
-            <>
-              <span className="card__cost-orig">{costOrig}</span>
-              <span className="card__cost-arrow">→</span>
+        {costOrig !== null && costOrig !== undefined && costOrig !== cost ? (
+          // Why: コンボ軽減時は通常 1 個のコスト円ではなく、現在コスト (上) と
+          // 元コスト (下) を同サイズの円で縦並び表示する。上=強調、下=取り消し線。
+          <div className="card__cost-stack">
+            <div className="card__cost card__cost--current">
               <span className="card__cost-n">{cost}</span>
-            </>
-          ) : (
+            </div>
+            <div className="card__cost card__cost--orig">
+              <span className="card__cost-n">{costOrig}</span>
+            </div>
+          </div>
+        ) : (
+          <div className="card__cost">
             <span className="card__cost-n">{cost}</span>
-          )}
-        </div>
+          </div>
+        )}
         <div className="card__name">
           {name}
           {upgraded ? <span className="card__plus">+</span> : null}

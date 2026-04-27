@@ -105,34 +105,40 @@
   transform: translateY(-1px);
 }
 
-/* Why: コンボ軽減時に「{costOrig}→{cost}」を縦並び表示する。
-   円の中に収めるため font-size を縮め、orig 側に取り消し線で軽減を強調。 */
-.card__cost--reduced {
-  width: 30px;
-  height: 30px;
-  font-size: 9px;
+/* Why: コンボ軽減時は「現在コスト (上, 強調) / 元コスト (下, 取り消し線)」の
+   2 個円を縦並び表示する。1 個の円に "1→0" を詰め込むより視認性が高い。
+   各円は通常 .card__cost と同じ 22x22 サイズを保つ。 */
+.card__cost-stack {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 2px;
+  z-index: 2;
+}
+.card__cost-stack .card__cost {
+  position: static;
+}
+.card__cost--current {
   border-color: #f1c95b;
-  box-shadow: 0 0 6px rgba(241, 201, 91, 0.7);
-}
-.card__cost--reduced .card__cost-orig {
-  color: #d99;
-  text-decoration: line-through;
-  font-size: 9px;
-  line-height: 1;
-}
-.card__cost--reduced .card__cost-arrow {
   color: #f1c95b;
-  font-size: 8px;
-  line-height: 1;
+  background: rgba(241, 201, 91, 0.15);
+  box-shadow: 0 0 8px rgba(241, 201, 91, 0.7);
 }
-.card__cost--reduced .card__cost-n {
+.card__cost--current .card__cost-n {
   color: #f1c95b;
-  font-size: 13px;
   font-weight: 700;
-  transform: none;
-  line-height: 1;
+  text-shadow: 0 0 4px rgba(241, 201, 91, 0.85);
+}
+.card__cost--orig {
+  border-color: #888;
+  background: rgba(60, 60, 60, 0.45);
+}
+.card__cost--orig .card__cost-n {
+  color: #aaa;
+  text-decoration: line-through;
+  font-size: 13px;
 }
 
 .card__name {
