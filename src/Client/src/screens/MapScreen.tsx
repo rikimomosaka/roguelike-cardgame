@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react'
 import { getCurrentRun, heartbeat, moveToNode } from '../api/runs'
-import { winBattle } from '../api/battle'
 import {
   claimGold,
   claimPotion,
@@ -21,7 +20,7 @@ import { useAccount } from '../context/AccountContext'
 import { useRelicCatalog } from '../hooks/useRelicCatalog'
 import { Button } from '../components/Button'
 import { TopBar } from '../components/TopBar'
-import { BattleOverlay } from './BattleOverlay'
+import { BattleScreen } from './BattleScreen'
 import { RewardPopup } from './RewardPopup'
 import { InGameMenuScreen } from './InGameMenuScreen'
 import { MerchantScreen } from './MerchantScreen'
@@ -370,18 +369,6 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
     }
   }
 
-  async function handleWin() {
-    if (!accountId) return
-    const resp = await winBattle(accountId, elapsedSeconds())
-    if ('outcome' in resp) {
-      onRunFinished?.(resp, snapRef.current)
-      return
-    }
-    setRewardDismissed(false)
-    setPeekMap(false)
-    setSnap(resp)
-  }
-
   async function handleClaimGold() {
     if (!accountId) return
     await claimGold(accountId)
@@ -487,6 +474,26 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
       x: 14 + (n.column / colSpan) * 72,
       y: 4 + ((MAX_ROW - n.row) / MAX_ROW) * 94,
     }
+  }
+
+  // 戦闘中はマップ UI ではなく BattleScreen をフルスクリーン表示する。
+  // BattleScreen が /finalize を呼び終えたら RunSnapshotDto (続行) または
+  // RunResultDto (ラン終了) を渡してくる。
+  if (activeBattle && accountId) {
+    return (
+      <BattleScreen
+        accountId={accountId}
+        onBattleResolved={(result) => {
+          if ('outcome' in result) {
+            onRunFinished?.(result, snapRef.current)
+          } else {
+            setSnap(result)
+            setRewardDismissed(false)
+            setPeekMap(false)
+          }
+        }}
+      />
+    )
   }
 
   return (
@@ -686,14 +693,6 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
           <div className="map-screen__debug">
             <Button onClick={onDebugDamage ?? internalDebugDamage} aria-label="DEBUG -10HP">DEBUG -10HP</Button>
           </div>
-        )}
-
-        {activeBattle && !peekMap && (
-          <BattleOverlay
-            battle={activeBattle}
-            onWin={handleWin}
-            onDebugDamage={onDebugDamage ?? internalDebugDamage}
-          />
         )}
 
         {rewardVisible && activeReward && (

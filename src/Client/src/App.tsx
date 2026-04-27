@@ -4,10 +4,8 @@ import { getAccount } from './api/accounts'
 import { ApiError } from './api/client'
 import type { RunResultDto, RunSnapshotDto } from './api/types'
 import { Button } from './components/Button'
-import { TooltipHost } from './components/Tooltip'
 import { useAccount } from './context/AccountContext'
 import { AchievementsScreen } from './screens/AchievementsScreen'
-import { BattleScreen } from './screens/BattleScreen'
 import { LoginScreen } from './screens/LoginScreen'
 import { MainMenuScreen } from './screens/MainMenuScreen'
 import { MapScreen } from './screens/MapScreen'
@@ -25,16 +23,6 @@ type Screen =
   | { kind: 'bootstrap-error'; message: string }
 
 export default function App() {
-  if (typeof window !== 'undefined' && window.location.search.includes('demo=battle')) {
-    // Task 14 暫定: BattleScreen は本番 API 接続版になったため、
-    // demo ルートはダミー accountId で render する（実際には API が 404/400 を返すので動作しない）。
-    // Task 15 でこの demo guard ごと撤廃予定。
-    return (
-      <TooltipHost>
-        <BattleScreen accountId="demo" onBattleResolved={() => {}} />
-      </TooltipHost>
-    )
-  }
   const { accountId, logout } = useAccount()
   const [screen, setScreen] = useState<Screen>({ kind: 'bootstrapping' })
 

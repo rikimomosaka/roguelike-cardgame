@@ -4,6 +4,14 @@ import { AccountProvider } from '../context/AccountContext'
 import type { BattlePlaceholderStateDto, CardInstanceDto, RewardStateDto, RunSnapshotDto } from '../api/types'
 import { MapScreen } from './MapScreen'
 
+// BattleScreen は本番 API (Catalog 等) を叩くので、MapScreen 単体テストでは
+// プレースホルダにモックして「フルスクリーン置換が起きる」ことだけ確認する。
+vi.mock('./BattleScreen', () => ({
+  BattleScreen: ({ accountId }: { accountId: string }) => (
+    <div data-testid="battle-screen-stub">battle:{accountId}</div>
+  ),
+}))
+
 function sampleSnapshot(
   overrides: Partial<RunSnapshotDto['run']> = {},
 ): RunSnapshotDto {
@@ -152,7 +160,7 @@ describe('MapScreen', () => {
     ).toBeGreaterThan(0)
   })
 
-  it('overlays BattleOverlay when run has activeBattle', () => {
+  it('renders BattleScreen full-screen when run has activeBattle', () => {
     render(
       <AccountProvider>
         <MapScreen
@@ -162,8 +170,9 @@ describe('MapScreen', () => {
         />
       </AccountProvider>,
     )
-    expect(screen.getByText('Jaw Worm')).toBeDefined()
-    expect(screen.getByText('勝利')).toBeDefined()
+    expect(screen.getByTestId('battle-screen-stub')).toBeInTheDocument()
+    // フルスクリーン置換のため、マップのノードは描画されない。
+    expect(screen.queryByTestId('map-node-0')).toBeNull()
   })
 
   it('overlays RewardPopup when run has activeReward', () => {
@@ -182,7 +191,7 @@ describe('MapScreen', () => {
     ).toBeGreaterThan(0)
   })
 
-  it('blocks node selection while battle is active', () => {
+  it('does not render the map UI while battle is active (BattleScreen replaces it)', () => {
     render(
       <AccountProvider>
         <MapScreen
@@ -192,7 +201,9 @@ describe('MapScreen', () => {
         />
       </AccountProvider>,
     )
-    expect(screen.getByTestId('map-node-1')).toHaveAttribute('data-selectable', 'false')
+    // BattleScreen が full-screen 置換するので、マップのノード自体が DOM にない。
+    expect(screen.queryByTestId('map-node-1')).toBeNull()
+    expect(screen.getByTestId('battle-screen-stub')).toBeInTheDocument()
   })
 
   it('renders MerchantScreen when snapshot has activeMerchant', () => {
