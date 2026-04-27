@@ -185,3 +185,103 @@ export type BestiaryDto = {
   allKnownPotionIds: string[]
   allKnownEnemyIds: string[]
 }
+
+// ===== Phase 10.3-MVP Battle DTOs =====
+// 注意: 旧来の `BattleStateDto` は Task 0 で `BattlePlaceholderStateDto` にリネーム済み。
+// ここでの新 `BattleStateDto` は Phase 10.3-MVP の本格バトル用。
+
+export type BattlePhase = 'PlayerInput' | 'PlayerAttacking' | 'EnemyAttacking' | 'Resolved'
+export type BattleOutcomeKind = 'Pending' | 'Victory' | 'Defeat'
+export type ActorSide = 'Ally' | 'Enemy'
+export type BattleEventKind =
+  | 'BattleStart' | 'TurnStart' | 'PlayCard'
+  | 'AttackFire' | 'DealDamage' | 'GainBlock'
+  | 'ActorDeath' | 'EndTurn' | 'BattleEnd'
+  | 'ApplyStatus' | 'RemoveStatus' | 'PoisonTick'
+  | 'Heal' | 'Draw' | 'Discard' | 'Upgrade' | 'Exhaust'
+  | 'GainEnergy' | 'Summon' | 'UsePotion'
+
+export type CombatActorDto = {
+  instanceId: string
+  definitionId: string
+  side: ActorSide
+  slotIndex: number
+  currentHp: number
+  maxHp: number
+  blockDisplay: number
+  attackSingleDisplay: number
+  attackRandomDisplay: number
+  attackAllDisplay: number
+  statuses: Record<string, number>
+  currentMoveId: string | null
+  remainingLifetimeTurns: number | null
+  associatedSummonHeldInstanceId: string | null
+}
+
+export type BattleCardInstanceDto = {
+  instanceId: string
+  cardDefinitionId: string
+  isUpgraded: boolean
+  costOverride: number | null
+}
+
+export type BattleEventDto = {
+  kind: BattleEventKind
+  order: number
+  casterInstanceId: string | null
+  targetInstanceId: string | null
+  amount: number | null
+  cardId: string | null
+  note: string | null
+}
+
+export type BattleStateDto = {
+  turn: number
+  phase: BattlePhase
+  outcome: BattleOutcomeKind
+  allies: CombatActorDto[]
+  enemies: CombatActorDto[]
+  targetAllyIndex: number | null
+  targetEnemyIndex: number | null
+  energy: number
+  energyMax: number
+  drawPile: BattleCardInstanceDto[]
+  hand: BattleCardInstanceDto[]
+  discardPile: BattleCardInstanceDto[]
+  exhaustPile: BattleCardInstanceDto[]
+  summonHeld: BattleCardInstanceDto[]
+  powerCards: BattleCardInstanceDto[]
+  comboCount: number
+  lastPlayedOrigCost: number | null
+  nextCardComboFreePass: boolean
+  ownedRelicIds: string[]
+  potions: string[]
+  encounterId: string
+}
+
+export type BattleEventStepDto = {
+  event: BattleEventDto
+  snapshotAfter: BattleStateDto
+}
+
+export type BattleActionResponseDto = {
+  state: BattleStateDto
+  steps: BattleEventStepDto[]
+}
+
+export type EnemyCatalogEntryDto = {
+  id: string
+  name: string
+  imageId: string
+  hp: number
+  initialMoveId: string
+}
+
+export type UnitCatalogEntryDto = {
+  id: string
+  name: string
+  imageId: string
+  hp: number
+  initialMoveId: string
+  lifetimeTurns: number | null
+}

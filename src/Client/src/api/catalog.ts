@@ -1,4 +1,5 @@
 import { apiRequest } from './client'
+import type { EnemyCatalogEntryDto, UnitCatalogEntryDto } from './types'
 
 export type CardCatalogEntry = {
   id: string
@@ -113,4 +114,17 @@ export function resetRelicCatalogCacheForTests(): void {
 
 export function resetEventCatalogCacheForTests(): void {
   eventCache = null
+}
+
+// ===== Phase 10.3-MVP: Enemy / Unit catalogs =====
+
+export type EnemyCatalog = Record<string, EnemyCatalogEntryDto>
+export type UnitCatalog = Record<string, UnitCatalogEntryDto>
+
+export async function fetchEnemyCatalog(): Promise<EnemyCatalog> {
+  return await apiRequest<EnemyCatalog>('GET', '/catalog/enemies', {})
+}
+
+export async function fetchUnitCatalog(): Promise<UnitCatalog> {
+  return await apiRequest<UnitCatalog>('GET', '/catalog/units', {})
 }
