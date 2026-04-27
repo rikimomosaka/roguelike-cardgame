@@ -79,12 +79,23 @@ export type BuffDemo = {
 
 export type IntentKind = 'attack' | 'defend' | 'buff' | 'heal' | 'unknown'
 
+/** Why: 攻撃チップは通常/ランダム/全体を 1 個に統合し、各数値を別色で表示する。
+ *  num/icon は単一値だが、attack 用に分解された breakdown を別フィールドで持つ。 */
+export type IntentAttackBreakdown = {
+  single?: number
+  random?: number
+  all?: number
+  hits?: number
+}
+
 export type IntentDemo = {
   kind: IntentKind
   icon: string
   num?: number
   name: string
   desc: string
+  /** kind='attack' のとき per-scope 内訳 (色分け表示用)。 */
+  attack?: IntentAttackBreakdown
 }
 
 export type SpriteKind = 'hero' | 'ally' | 'enemy' | 'elite'
@@ -195,7 +206,24 @@ function IntentChip({ intent }: { intent: IntentDemo }) {
   return (
     <div className={`intent intent--${intent.kind}`} {...tip}>
       <span className="intent__icon">{intent.icon}</span>
-      {intent.num !== undefined ? (
+      {intent.kind === 'attack' && intent.attack ? (
+        // Why: 通常/ランダム/全体を 1 chip 内で色分け表示。slash は白、各数値は
+        // 種類ごとの色 (single=現状色, random=オレンジ, all=赤)。
+        <span className="intent__nums">
+          {(() => {
+            const segs: { v: number; k: 'single' | 'random' | 'all' }[] = []
+            if (intent.attack.single && intent.attack.single > 0) segs.push({ v: intent.attack.single, k: 'single' })
+            if (intent.attack.random && intent.attack.random > 0) segs.push({ v: intent.attack.random, k: 'random' })
+            if (intent.attack.all && intent.attack.all > 0) segs.push({ v: intent.attack.all, k: 'all' })
+            return segs.map((s, i) => (
+              <span key={i}>
+                {i > 0 ? <span className="intent__slash">/</span> : null}
+                <span className={`intent__num intent__num--${s.k}`}>{s.v}</span>
+              </span>
+            ))
+          })()}
+        </span>
+      ) : intent.num !== undefined ? (
         <span className="intent__num">{intent.num}</span>
       ) : null}
     </div>
@@ -230,7 +258,10 @@ function Slot({ char, isTargeted, onClick }: SlotProps) {
       {char.intents && char.intents.length > 0 ? (
         <div className="intents">
           {char.intents.map((it, i) => (
-            <IntentChip key={i} intent={it} />
+            <span key={i} className="intents__seg">
+              {i > 0 ? <span className="intents__sep">＆</span> : null}
+              <IntentChip intent={it} />
+            </span>
           ))}
         </div>
       ) : char.intent ? (

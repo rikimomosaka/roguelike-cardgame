@@ -201,13 +201,20 @@ export type BattleEventKind =
   | 'Heal' | 'Draw' | 'Discard' | 'Upgrade' | 'Exhaust'
   | 'GainEnergy' | 'Summon' | 'UsePotion'
 
-export type IntentKindDto =
-  | 'attack' | 'defend' | 'buff' | 'debuff' | 'heal' | 'multi' | 'unknown'
-
 export type IntentDto = {
-  kind: IntentKindDto
-  amount: number | null
-  hits: number | null
+  /** 通常攻撃 (single) の予定ダメージ。 */
+  attackSingle: number | null
+  /** ランダム攻撃 (random) の予定ダメージ。 */
+  attackRandom: number | null
+  /** 全体攻撃 (all) の予定ダメージ。 */
+  attackAll: number | null
+  /** 攻撃回数 (effects 中 attack の数)。 */
+  attackHits: number | null
+  /** block 予定値。 */
+  block: number | null
+  hasBuff: boolean
+  hasDebuff: boolean
+  hasHeal: boolean
 }
 
 export type CombatActorDto = {

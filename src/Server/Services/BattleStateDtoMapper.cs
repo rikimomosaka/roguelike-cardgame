@@ -61,13 +61,33 @@ internal static class BattleStateDtoMapper
             Intent: ComputeIntent(a, data));
 
     /// <summary>
-    /// actor.CurrentMoveId + DataCatalog から「次の予定行動」を計算する。
-    /// hero (DefinitionId="hero") は手札駆動なので intent なし (null)。
-    /// 攻撃 effect の amount は strength/weak 反映済の予定値で表示する。
+    /// actor の予定行動を計算する。
+    /// - hero: pool (AttackSingle/Random/All) を読み取り、Display 値を per-scope に
+    ///   詰める。block 等は battle state で即時反映済なので予定としては出さない。
+    /// - enemy: CurrentMoveId の effects を集計。仕様により attack は全体扱い。
+    /// - summon ally: enemy と同仕様 (attack=全体)。
     /// </summary>
     private static IntentDto? ComputeIntent(CombatActor a, DataCatalog data)
     {
-        if (a.DefinitionId == "hero" || a.CurrentMoveId is null) return null;
+        // hero: pool から intent を組み立て
+        if (a.DefinitionId == "hero")
+        {
+            int strength = a.GetStatus("strength");
+            int weak = a.GetStatus("weak");
+            int single = a.AttackSingle.Display(strength, weak);
+            int random = a.AttackRandom.Display(strength, weak);
+            int all = a.AttackAll.Display(strength, weak);
+            int hits = a.AttackSingle.AddCount + a.AttackRandom.AddCount + a.AttackAll.AddCount;
+            if (single == 0 && random == 0 && all == 0) return null;
+            return new IntentDto(
+                AttackSingle: single > 0 ? single : null,
+                AttackRandom: random > 0 ? random : null,
+                AttackAll: all > 0 ? all : null,
+                AttackHits: hits > 0 ? hits : null,
+                Block: null, HasBuff: false, HasDebuff: false, HasHeal: false);
+        }
+
+        if (a.CurrentMoveId is null) return null;
 
         IReadOnlyList<MoveDefinition>? moves = null;
         if (a.Side == ActorSide.Enemy && data.Enemies.TryGetValue(a.DefinitionId, out var enemyDef))
@@ -79,11 +99,12 @@ internal static class BattleStateDtoMapper
         var move = moves.FirstOrDefault(m => m.Id == a.CurrentMoveId);
         if (move is null) return null;
 
-        // 攻撃合計と命中数を集計。strength/weak は actor 自身の status を反映。
-        int strength = a.GetStatus("strength");
-        int weak = a.GetStatus("weak");
-        int attackAmount = 0;
-        int attackHits = 0;
+        // Why: enemy / summon ally の attack は仕様で全体着弾 (EnemyAttackingResolver /
+        // ResolveSummonMove)。表示も AttackAll に統一する。
+        int strengthN = a.GetStatus("strength");
+        int weakN = a.GetStatus("weak");
+        int attackAllAmount = 0;
+        int attackHitsN = 0;
         int blockAmount = 0;
         bool hasBuff = false;
         bool hasDebuff = false;
@@ -94,36 +115,28 @@ internal static class BattleStateDtoMapper
             switch (eff.Action)
             {
                 case "attack":
-                    int adjusted = AdjustAttackAmount(eff.Amount, strength, weak);
-                    attackAmount += adjusted;
-                    attackHits += 1;
+                    attackAllAmount += AdjustAttackAmount(eff.Amount, strengthN, weakN);
+                    attackHitsN += 1;
                     break;
                 case "block":
                     blockAmount += eff.Amount;
                     break;
-                case "buff":
-                    hasBuff = true;
-                    break;
-                case "debuff":
-                    hasDebuff = true;
-                    break;
-                case "heal":
-                    hasHeal = true;
-                    break;
+                case "buff":   hasBuff = true; break;
+                case "debuff": hasDebuff = true; break;
+                case "heal":   hasHeal = true; break;
             }
         }
 
-        // 優先順位: attack あれば attack、それ以外は block / buff / debuff / heal。
-        if (attackHits > 0 && (blockAmount > 0 || hasBuff || hasDebuff || hasHeal))
-            return new IntentDto("multi", attackAmount, attackHits);
-        if (attackHits > 0)
-            return new IntentDto("attack", attackAmount, attackHits);
-        if (blockAmount > 0)
-            return new IntentDto("defend", blockAmount, null);
-        if (hasBuff) return new IntentDto("buff", null, null);
-        if (hasDebuff) return new IntentDto("debuff", null, null);
-        if (hasHeal) return new IntentDto("heal", null, null);
-        return new IntentDto("unknown", null, null);
+        if (attackHitsN == 0 && blockAmount == 0 && !hasBuff && !hasDebuff && !hasHeal)
+            return null;
+
+        return new IntentDto(
+            AttackSingle: null,
+            AttackRandom: null,
+            AttackAll: attackHitsN > 0 ? attackAllAmount : null,
+            AttackHits: attackHitsN > 0 ? attackHitsN : null,
+            Block: blockAmount > 0 ? blockAmount : null,
+            HasBuff: hasBuff, HasDebuff: hasDebuff, HasHeal: hasHeal);
     }
 
     /// <summary>

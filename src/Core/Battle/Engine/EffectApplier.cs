@@ -86,18 +86,31 @@ internal static class EffectApplier
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyBlock(
         BattleState state, CombatActor caster, CardEffect effect)
     {
-        // 10.2.A は scope=Self のみ実装（敵の block も self、プレイヤーの defend も self）
-        // scope=All / Random は 10.2.D で対応
-        // stale ref 対策: state から InstanceId で最新の actor を再取得する
-        var current = FindActor(state, caster.InstanceId) ?? caster;
-        var updated = current with { Block = current.Block.Add(effect.Amount) };
-        var next = ReplaceActor(state, caster.InstanceId, updated);
-        var ev = new BattleEvent(
-            BattleEventKind.GainBlock, Order: 0,
-            CasterInstanceId: caster.InstanceId,
-            TargetInstanceId: caster.InstanceId,
-            Amount: effect.Amount);
-        return (next, new[] { ev });
+        // Why: 防御カードを「味方単体対象 (含 hero)」でも撃てるようにするため、
+        // scope=Self 以外 (Single+Ally / All+Ally など) も ResolveTargets 経由で
+        // 受ける。stale ref 対策で各 target を InstanceId で再取得する。
+        // FakeRng は使わない (block は決定論)。
+        IReadOnlyList<CombatActor> targets = effect.Scope == EffectScope.Self
+            ? new[] { caster }
+            : ResolveTargets(state, caster, effect, new RoguelikeCardGame.Core.Random.SystemRng(0));
+        if (targets.Count == 0) return (state, Array.Empty<BattleEvent>());
+
+        var s = state;
+        var events = new List<BattleEvent>();
+        int order = 0;
+        foreach (var t in targets)
+        {
+            var current = FindActor(s, t.InstanceId);
+            if (current is null) continue;
+            var updated = current with { Block = current.Block.Add(effect.Amount) };
+            s = ReplaceActor(s, t.InstanceId, updated);
+            events.Add(new BattleEvent(
+                BattleEventKind.GainBlock, Order: order++,
+                CasterInstanceId: caster.InstanceId,
+                TargetInstanceId: t.InstanceId,
+                Amount: effect.Amount));
+        }
+        return (s, events);
     }
 
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyStatusChange(

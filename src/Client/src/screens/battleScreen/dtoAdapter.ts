@@ -142,35 +142,10 @@ export function toCharacterDemo(
       ? 'ally'
       : 'enemy'
 
-  // Why: hero (player) は CurrentMoveId 駆動でなくカードプレイで pool に
-  // 攻撃をキューする。state.AttackSingle/Random/AllDisplay が「ターン終了時に
-  // 発射される予定ダメージ」なので、各非 0 値を separate intent chip として表示。
-  let intents: IntentDemo[] | undefined
-  if (isHero) {
-    const list: IntentDemo[] = []
-    if (actor.attackSingleDisplay > 0) {
-      list.push({
-        kind: 'attack', icon: '⚔', num: actor.attackSingleDisplay,
-        name: '通常攻撃 (予定)',
-        desc: `ターン終了時に対象 1 体に ${actor.attackSingleDisplay} ダメージ。`,
-      })
-    }
-    if (actor.attackRandomDisplay > 0) {
-      list.push({
-        kind: 'attack', icon: '⚂', num: actor.attackRandomDisplay,
-        name: 'ランダム攻撃 (予定)',
-        desc: `ターン終了時にランダム敵 1 体に ${actor.attackRandomDisplay} ダメージ。`,
-      })
-    }
-    if (actor.attackAllDisplay > 0) {
-      list.push({
-        kind: 'attack', icon: '⚡', num: actor.attackAllDisplay,
-        name: '全体攻撃 (予定)',
-        desc: `ターン終了時に全敵に ${actor.attackAllDisplay} ダメージ。`,
-      })
-    }
-    if (list.length > 0) intents = list
-  }
+  // Why: 攻撃 (single/random/all) を 1 個の chip に統合、block / buff /
+  // debuff / heal は別 chip として `&` 区切りで表示する仕様。
+  // hero/enemy/summon すべて Server 計算済 IntentDto を使う統一経路。
+  const intents = actor.intent ? toIntentDemos(actor.intent) : undefined
 
   return {
     occupied: true,
@@ -181,58 +156,73 @@ export function toCharacterDemo(
     hpCur: actor.currentHp,
     hpMax: actor.maxHp,
     hpLv: hpLevel(actor.currentHp, actor.maxHp),
-    intent: actor.intent ? toIntentDemo(actor.intent) : undefined,
+    intent: undefined,
     intents,
     buffs: toBuffs(actor),
   }
 }
 
-// ---------------- toIntentDemo ----------------
+// ---------------- toIntentDemos ----------------
 
 /**
- * Server 側の IntentDto (kind="attack"|"defend"|...) を IntentDemo に変換。
- * BattleScreen の頭上チップで「次の予定行動」を表示する用途。
+ * IntentDto を chip リストに変換する。
+ * - 攻撃 (single/random/all) はまとめて 1 個の chip (attack)、内訳は attack
+ *   フィールドで保持して色分け表示。
+ * - block/buff/debuff/heal はそれぞれ独立 chip として後続。
  */
-export function toIntentDemo(intent: IntentDto): IntentDemo {
-  switch (intent.kind) {
-    case 'attack': {
-      const hits = intent.hits && intent.hits > 1 ? `×${intent.hits}` : ''
-      return {
-        kind: 'attack',
-        icon: '⚔',
-        num: intent.amount ?? undefined,
-        name: '攻撃',
-        desc: `次のターンに ${intent.amount ?? '?'} ダメージを与える${hits}。`,
-      }
+export function toIntentDemos(intent: IntentDto): IntentDemo[] {
+  const list: IntentDemo[] = []
+
+  const hasAttack =
+    (intent.attackSingle ?? 0) > 0 ||
+    (intent.attackRandom ?? 0) > 0 ||
+    (intent.attackAll ?? 0) > 0
+  if (hasAttack) {
+    const parts: string[] = []
+    const damages: string[] = []
+    if (intent.attackSingle && intent.attackSingle > 0) {
+      parts.push('通常攻撃'); damages.push(String(intent.attackSingle))
     }
-    case 'defend':
-      return {
-        kind: 'defend',
-        icon: '◆',
-        num: intent.amount ?? undefined,
-        name: '防御',
-        desc: `次のターンに ${intent.amount ?? '?'} のブロックを得る。`,
-      }
-    case 'multi': {
-      const hits = intent.hits && intent.hits > 1 ? `×${intent.hits}` : ''
-      return {
-        kind: 'attack',
-        icon: '⚡',
-        num: intent.amount ?? undefined,
-        name: '攻撃 + 補助',
-        desc: `次のターンに ${intent.amount ?? '?'} ダメージ${hits} と補助行動。`,
-      }
+    if (intent.attackRandom && intent.attackRandom > 0) {
+      parts.push('ランダム攻撃'); damages.push(String(intent.attackRandom))
     }
-    case 'buff':
-      return { kind: 'buff', icon: '✦', name: '強化', desc: '次のターンに自身を強化する。' }
-    case 'debuff':
-      return { kind: 'buff', icon: '☄', name: '弱体化', desc: '次のターンにこちらを弱体化する。' }
-    case 'heal':
-      return { kind: 'heal', icon: '✚', name: '回復', desc: '次のターンに自身を回復する。' }
-    case 'unknown':
-    default:
-      return { kind: 'unknown', icon: '?', name: '不明', desc: '次の行動は不明。' }
+    if (intent.attackAll && intent.attackAll > 0) {
+      parts.push('全体攻撃'); damages.push(String(intent.attackAll))
+    }
+    list.push({
+      kind: 'attack',
+      icon: '⚔',
+      name: parts.join('/'),
+      desc: `${parts.join('/')}\nターン終了時に${damages.join('/')}ダメージの攻撃。`,
+      attack: {
+        single: intent.attackSingle ?? undefined,
+        random: intent.attackRandom ?? undefined,
+        all: intent.attackAll ?? undefined,
+        hits: intent.attackHits ?? undefined,
+      },
+    })
   }
+
+  if (intent.block && intent.block > 0) {
+    list.push({
+      kind: 'defend',
+      icon: '🛡',
+      num: intent.block,
+      name: '防御',
+      desc: `防御\nターン終了時に${intent.block}のブロックを得る。`,
+    })
+  }
+  if (intent.hasBuff) {
+    list.push({ kind: 'buff', icon: '✦', name: '強化', desc: '強化\nターン終了時に自身を強化する。' })
+  }
+  if (intent.hasDebuff) {
+    list.push({ kind: 'buff', icon: '☄', name: '弱体化', desc: '弱体化\nターン終了時にこちらを弱体化する。' })
+  }
+  if (intent.hasHeal) {
+    list.push({ kind: 'heal', icon: '✚', name: '回復', desc: '回復\nターン終了時に自身を回復する。' })
+  }
+
+  return list
 }
 
 // ---------------- toBuffs ----------------

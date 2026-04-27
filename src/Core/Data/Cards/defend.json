@@ -7,14 +7,16 @@
   "effects": [
     {
       "action": "block",
-      "scope": "self",
+      "scope": "single",
+      "side": "ally",
       "amount": 5
     }
   ],
   "upgradedEffects": [
     {
       "action": "block",
-      "scope": "self",
+      "scope": "single",
+      "side": "ally",
       "amount": 8
     }
   ]

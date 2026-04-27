@@ -3,27 +3,36 @@
    Uses tokens from tokens.css and the shared <Card> primitive.
    ============================================================= */
 
-/* Why: BattleScreen の root ラッパー。TopBar (固定/通常フロー) とその下の
-   .battle (アスペクト比固定の stage) を縦積みする。
-   TopBar の上に stage が overlap する不具合を解消するために導入。 */
+/* Why: BattleScreen 全体の枠を MapScreen (.map-screen) と同じ規格に合わせる
+   ためのラッパー。aspect-ratio / max-width / 余白 / border は MapScreen と
+   一致させ、画面切替で枠が変動しないようにする (ユーザ要望)。 */
 .battle-screen {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-}
-.battle-screen > .battle { flex: 1 1 auto; min-height: 0; margin-top: 8px; }
-
-.battle {
-  aspect-ratio: var(--stage-aspect);
+  position: relative;
   width: 100%;
   max-width: var(--stage-max-width);
   margin: 0 auto;
+  aspect-ratio: var(--stage-aspect);
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  overflow: hidden;
+  color: var(--fg);
+  font-family: var(--font-body);
+  padding: 0;
+}
+
+.battle {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  margin: 0;
   background:
     radial-gradient(ellipse at 50% 40%, rgba(217, 97, 74, 0.22) 0%, transparent 70%),
     linear-gradient(180deg, var(--bg-2) 0%, var(--bg-3) 50%, var(--bg-2) 100%);
-  border: 1px solid var(--border-mid);
-  border-radius: var(--radius-lg);
+  border: none;
+  border-radius: 0;
   position: relative;
   overflow: visible;
   color: var(--fg);
@@ -337,14 +346,13 @@ button.pile:hover { filter: brightness(1.2); }
   max-width: 360px;
 }
 
-.battle__slot.is-targeted {
-  outline: 2px solid #f1c95b;
-  outline-offset: 4px;
-  box-shadow:
-    0 0 12px rgba(241, 201, 91, 0.55),
-    0 0 24px rgba(241, 201, 91, 0.25);
-  border-radius: 8px;
-  transform: translateY(-4px);
+/* Why: ユーザ要望「選択でサイズが変わる仕様は廃止、代わりにキャラのフチを
+   淡く光らせる」。スプライトを drop-shadow で光らせ位置/サイズは変えない。
+   将来透過 PNG を入れた際、透過されていない部分のフチが淡く光る挙動になる。 */
+.battle__slot.is-targeted .sprite {
+  filter:
+    drop-shadow(0 0 4px rgba(241, 201, 91, 0.95))
+    drop-shadow(0 0 8px rgba(241, 201, 91, 0.6));
 }
 .battle__slot.is-targeted::after {
   content: "▼";
@@ -394,7 +402,19 @@ button.pile:hover { filter: brightness(1.2); }
   font-variant-numeric: tabular-nums;
 }
 
-.intent--attack  .intent__icon, .intent--attack  .intent__num { color: var(--intent-attack); }
+/* Why: 攻撃 chip 内で 通常/ランダム/全体 を色分け、剣マークと slash は白統一。 */
+.intent--attack .intent__icon { color: #fff; }
+.intent--attack .intent__slash { color: #fff; padding: 0 2px; }
+.intent__num--single { color: var(--intent-attack); }   /* 通常: 既存の attack 色 */
+.intent__num--random { color: #ff9a4a; }                 /* ランダム: オレンジ */
+.intent__num--all    { color: #ff5a5a; }                 /* 全体: 赤 */
+.intent__nums {
+  display: inline-flex; align-items: baseline;
+  font-family: var(--font-body);
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
 .intent--defend  .intent__icon, .intent--defend  .intent__num { color: var(--intent-defend); }
 .intent--buff    .intent__icon, .intent--buff    .intent__num { color: var(--intent-buff); }
 .intent--heal    .intent__icon, .intent--heal    .intent__num { color: var(--intent-heal); }
@@ -427,19 +447,29 @@ button.pile:hover { filter: brightness(1.2); }
     -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
 
-/* Why: hero の intent は通常/ランダム/全体の 3 種を縦並び表示するため
-   stack 用コンテナを用意。位置は top のチップ枠と整合。 */
+/* Why: 攻撃/防御/補助を & 区切りで横並び表示。位置は単一 .intent (top: 4px)
+   と同じ高さに揃え、hero / 敵 / 召喚で intent ボックスの高さがズレないように
+   する (ユーザ要望「主人公だけ位置が高い」対応)。 */
 .intents {
   position: absolute;
-  top: -4px;
+  top: 4px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
   z-index: 3;
+  white-space: nowrap;
 }
 .intents .intent { position: static; transform: none; }
+.intents__seg { display: inline-flex; align-items: center; }
+.intents__sep {
+  font-family: var(--font-label);
+  color: #fff;
+  font-size: 18px;
+  padding: 0 2px;
+}
 
 /* Why: enemy/unit imageId が単一文字 (絵文字) でなく長い ID 文字列 (例
    "cultist_dark") の場合、95px だとキャラ枠を大きくはみ出す。長文字判定で
@@ -591,7 +621,8 @@ button.pile:hover { filter: brightness(1.2); }
   font-family: var(--font-body);
   font-size: 22px;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0;
+  /* Why: ユーザ要望「× と数字の間が狭すぎる」→ 字間を少し開ける。 */
+  letter-spacing: 3px;
   line-height: 1;
 }
 .battle__combo.is-active {
