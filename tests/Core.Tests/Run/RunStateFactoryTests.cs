@@ -37,8 +37,11 @@ public class RunStateFactoryTests
         Assert.Equal(80, state.MaxHp);
         Assert.Equal(99, state.Gold);
         Assert.Equal(10, state.Deck.Length);
-        Assert.Equal(5, state.Deck.Count(ci => ci.Id == "strike"));
-        Assert.Equal(5, state.Deck.Count(ci => ci.Id == "defend"));
+        Assert.Equal(2, state.Deck.Count(ci => ci.Id == "starter_block_0"));
+        Assert.Equal(2, state.Deck.Count(ci => ci.Id == "strike"));
+        Assert.Equal(2, state.Deck.Count(ci => ci.Id == "defend"));
+        Assert.Equal(2, state.Deck.Count(ci => ci.Id == "starter_strike_2"));
+        Assert.Equal(2, state.Deck.Count(ci => ci.Id == "starter_summon_3"));
         Assert.Equal(3, state.PotionSlotCount);
         Assert.Equal(3, state.Potions.Length);
         Assert.All(state.Potions, p => Assert.Equal("", p));

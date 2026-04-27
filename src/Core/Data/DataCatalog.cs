@@ -42,7 +42,8 @@ public sealed record DataCatalog(
         IEnumerable<string> characters,
         IEnumerable<string>? events = null,
         IEnumerable<string>? actStartRelicPools = null,
-        string? merchantPricesJson = null)
+        string? merchantPricesJson = null,
+        IEnumerable<string>? units = null)
     {
         var cardMap = new Dictionary<string, CardDefinition>();
         foreach (var json in cards)
@@ -137,7 +138,19 @@ public sealed record DataCatalog(
             }
         }
 
-        return new DataCatalog(cardMap, relicMap, potionMap, enemyMap, encMap, rtMap, chMap, eventMap, mp, pools);
+        Dictionary<string, UnitDefinition>? unitMap = null;
+        if (units is not null)
+        {
+            unitMap = new Dictionary<string, UnitDefinition>();
+            foreach (var json in units)
+            {
+                var def = UnitJsonLoader.Parse(json);
+                if (!unitMap.TryAdd(def.Id, def))
+                    throw new DataCatalogException($"unit ID が重複: {def.Id}");
+            }
+        }
+
+        return new DataCatalog(cardMap, relicMap, potionMap, enemyMap, encMap, rtMap, chMap, eventMap, mp, pools, unitMap);
     }
 
     public bool TryGetCard(string id, [MaybeNullWhen(false)] out CardDefinition def) => Cards.TryGetValue(id, out def);

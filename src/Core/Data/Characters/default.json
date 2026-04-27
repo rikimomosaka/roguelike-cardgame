@@ -5,7 +5,9 @@
   "startingGold": 99,
   "potionSlotCount": 3,
   "deck": [
-    "strike","strike","strike","strike","strike",
-    "defend","defend","defend","defend","defend"
+    "starter_block_0","starter_block_0",
+    "strike","strike","defend","defend",
+    "starter_strike_2","starter_strike_2",
+    "starter_summon_3","starter_summon_3"
   ]
 }

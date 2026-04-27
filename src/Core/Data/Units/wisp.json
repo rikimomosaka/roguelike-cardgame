@@ -1,0 +1,23 @@
+{
+  "id": "wisp",
+  "name": "ウィスプ",
+  "imageId": "wisp",
+  "hp": 8,
+  "initialMoveId": "wisp_strike",
+  "lifetimeTurns": 3,
+  "moves": [
+    {
+      "id": "wisp_strike",
+      "kind": "Attack",
+      "nextMoveId": "wisp_strike",
+      "effects": [
+        {
+          "action": "attack",
+          "scope": "single",
+          "side": "enemy",
+          "amount": 4
+        }
+      ]
+    }
+  ]
+}

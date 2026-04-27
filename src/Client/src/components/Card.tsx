@@ -72,16 +72,19 @@ export function Card({
     onMouseLeave?.(e)
   }
 
+  // Why: onClick 不在時に role/tabIndex 属性を JSX から外して
+  // axe/aria の誤検出 (条件式の静的解析不可) を回避する目的。
+  const interactiveProps = onClick
+    ? { onClick, role: 'button' as const, tabIndex: 0 }
+    : {}
   return (
     <div
       className={classes}
       style={style}
-      onClick={onClick}
       onMouseEnter={combinedEnter}
       onMouseMove={tip.onMouseMove}
       onMouseLeave={combinedLeave}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
+      {...interactiveProps}
     >
       <div className="card__bg" />
       <div className="card__top">

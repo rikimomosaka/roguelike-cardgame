@@ -19,6 +19,7 @@
     <EmbeddedResource Include="Data\Relics\*.json" />
     <EmbeddedResource Include="Data\Potions\*.json" />
     <EmbeddedResource Include="Data\Enemies\*.json" />
+    <EmbeddedResource Include="Data\Units\*.json" />
     <EmbeddedResource Include="Data\Events\*.json" />
     <EmbeddedResource Include="Data\merchant-prices.json" />
     <EmbeddedResource Include="Map\Config\*.json" />

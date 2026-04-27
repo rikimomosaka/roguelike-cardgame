@@ -1,0 +1,23 @@
+{
+  "id": "starter_strike_2",
+  "name": "強打",
+  "rarity": 1,
+  "cardType": "Attack",
+  "cost": 2,
+  "effects": [
+    {
+      "action": "attack",
+      "scope": "single",
+      "side": "enemy",
+      "amount": 14
+    }
+  ],
+  "upgradedEffects": [
+    {
+      "action": "attack",
+      "scope": "single",
+      "side": "enemy",
+      "amount": 18
+    }
+  ]
+}

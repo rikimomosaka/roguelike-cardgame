@@ -1,0 +1,23 @@
+{
+  "id": "starter_summon_3",
+  "name": "ウィスプ召喚",
+  "rarity": 1,
+  "cardType": "Skill",
+  "cost": 3,
+  "effects": [
+    {
+      "action": "summon",
+      "scope": "self",
+      "amount": 0,
+      "unitId": "wisp"
+    }
+  ],
+  "upgradedEffects": [
+    {
+      "action": "summon",
+      "scope": "self",
+      "amount": 0,
+      "unitId": "wisp"
+    }
+  ]
+}

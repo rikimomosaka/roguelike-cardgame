@@ -11,6 +11,7 @@ public static class EmbeddedDataLoader
     private const string RelicsPrefix = "RoguelikeCardGame.Core.Data.Relics.";
     private const string PotionsPrefix = "RoguelikeCardGame.Core.Data.Potions.";
     private const string EnemiesPrefix = "RoguelikeCardGame.Core.Data.Enemies.";
+    private const string UnitsPrefix = "RoguelikeCardGame.Core.Data.Units.";
     private const string EncountersPrefix = "RoguelikeCardGame.Core.Data.Encounters.";
     private const string RewardTablePrefix = "RoguelikeCardGame.Core.Data.RewardTable.";
     private const string CharactersPrefix = "RoguelikeCardGame.Core.Data.Characters.";
@@ -32,7 +33,8 @@ public static class EmbeddedDataLoader
             characters: ReadAllWithPrefix(asm, CharactersPrefix),
             events: ReadAllWithPrefix(asm, EventsPrefix),
             actStartRelicPools: ReadAllWithPrefix(asm, RelicsActStartPrefix),
-            merchantPricesJson: merchantPricesJson);
+            merchantPricesJson: merchantPricesJson,
+            units: ReadAllWithPrefix(asm, UnitsPrefix));
     }
 
     private static string? ReadSingle(Assembly asm, string resourceName)

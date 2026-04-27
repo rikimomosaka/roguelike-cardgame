@@ -195,14 +195,13 @@ function Potion({ potion }: { potion: PotionDemo }) {
   const cls = potion.empty
     ? 'hud-pot is-empty'
     : `hud-pot hud-pot--${potion.rarity ?? 'c'}`
+  // Why: Slot 同様、onClick 不在時に role/tabIndex 属性を JSX から外して
+  // axe/aria の誤検出 (条件式の静的解析不可) を回避する目的。
+  const interactiveProps = potion.onClick && !potion.empty
+    ? { onClick: potion.onClick, role: 'button' as const, tabIndex: 0 }
+    : {}
   return (
-    <div
-      className={cls}
-      {...tip}
-      onClick={potion.empty ? undefined : potion.onClick}
-      role={potion.onClick && !potion.empty ? 'button' : undefined}
-      tabIndex={potion.onClick && !potion.empty ? 0 : undefined}
-    >
+    <div className={cls} {...tip} {...interactiveProps}>
       {potion.icon}
     </div>
   )
@@ -243,13 +242,17 @@ function Slot({ char, isTargeted, onClick }: SlotProps) {
   const pct = Math.max(0, Math.min(100, (char.hpCur / char.hpMax) * 100))
   const hpFillStyle: CSSProperties = { width: `${pct}%` }
   const cls = `battle__slot${isTargeted ? ' is-targeted' : ''}`
+  // Why: スプレッドにすることで onClick が undefined のとき role/tabIndex 属性自体が
+  // JSX に出ない。axe/aria リンターの "role must be valid ARIA role: {expression}"
+  // 誤検出（条件式値の静的解析不可）を回避する目的。
+  const interactiveProps = onClick
+    ? { onClick, role: 'button' as const, tabIndex: 0 }
+    : {}
   return (
     <div
       className={cls}
       data-occupied="1"
-      onClick={onClick}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
+      {...interactiveProps}
     >
       {char.intent ? <IntentChip intent={char.intent} /> : null}
       <div className={`sprite sprite--${char.spriteKind}`}>{char.sprite}</div>
