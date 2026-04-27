@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Immutable;
+using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using RoguelikeCardGame.Core.Battle.State;
 using RoguelikeCardGame.Server.Abstractions;
 using RoguelikeCardGame.Server.Services;
 using RoguelikeCardGame.Server.Tests.Controllers;
@@ -68,5 +71,51 @@ internal static class BattleControllerFixtures
     {
         var store = services.GetRequiredService<BattleSessionStore>();
         Assert.False(store.TryGet(accountId, out _));
+    }
+
+    /// <summary>
+    /// 戦闘進行を直接書き換えて Resolved+Victory にする。Task 10 (Finalize) test 用。
+    /// /battle/start で session が作られた後に呼び、敵 HP=0 + Phase=Resolved + Outcome=Victory に
+    /// セットする。BattleEngine.Finalize は Phase=Resolved だけを validate するため、
+    /// Allies の HP は維持して Victory 経路を通す。
+    /// </summary>
+    public static void ForceSessionVictory(System.IServiceProvider services, string accountId)
+    {
+        var store = services.GetRequiredService<BattleSessionStore>();
+        if (!store.TryGet(accountId, out var session))
+            throw new InvalidOperationException(
+                $"ForceSessionVictory: session not found for accountId={accountId}");
+        var killedEnemies = session.State.Enemies
+            .Select(e => e with { CurrentHp = 0 })
+            .ToImmutableArray();
+        var newState = session.State with
+        {
+            Phase = BattlePhase.Resolved,
+            Outcome = BattleOutcome.Victory,
+            Enemies = killedEnemies,
+        };
+        store.Set(accountId, session with { State = newState });
+    }
+
+    /// <summary>
+    /// 戦闘進行を直接書き換えて Resolved+Defeat にする。Task 10 (Finalize) test 用。
+    /// hero HP=0 + Phase=Resolved + Outcome=Defeat にセット。
+    /// </summary>
+    public static void ForceSessionDefeat(System.IServiceProvider services, string accountId)
+    {
+        var store = services.GetRequiredService<BattleSessionStore>();
+        if (!store.TryGet(accountId, out var session))
+            throw new InvalidOperationException(
+                $"ForceSessionDefeat: session not found for accountId={accountId}");
+        var deadAllies = session.State.Allies
+            .Select(a => a with { CurrentHp = 0 })
+            .ToImmutableArray();
+        var newState = session.State with
+        {
+            Phase = BattlePhase.Resolved,
+            Outcome = BattleOutcome.Defeat,
+            Allies = deadAllies,
+        };
+        store.Set(accountId, session with { State = newState });
     }
 }

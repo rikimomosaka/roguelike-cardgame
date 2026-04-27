@@ -1,6 +1,8 @@
 using System.Linq;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using RoguelikeCardGame.Server.Dtos;
 using RoguelikeCardGame.Server.Tests.Fixtures;
@@ -13,6 +15,13 @@ public class BattleControllerTests : IClassFixture<TempDataFactory>
     private readonly TempDataFactory _factory;
 
     public BattleControllerTests(TempDataFactory factory) => _factory = factory;
+
+    // map.nodes[].kind が enum string として返るため、deserializer に
+    // JsonStringEnumConverter を渡す必要がある (DebugControllerTests と同パターン)。
+    private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new JsonStringEnumConverter() }
+    };
 
     [Fact]
     public async Task Start_when_no_active_run_returns_409()
@@ -294,6 +303,128 @@ public class BattleControllerTests : IClassFixture<TempDataFactory>
             var body = await resp.Content.ReadFromJsonAsync<BattleStateDto>();
             Assert.NotNull(body);
             Assert.Equal(0, body!.TargetEnemyIndex);
+        }
+        finally
+        {
+            client.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task Finalize_when_no_session_returns_409()
+    {
+        // start を呼ばずに finalize → BattleSessionStore に session が無いため 409。
+        var (client, _) = await BattleControllerFixtures.SetupRunWithActiveBattleAsync(_factory);
+        try
+        {
+            var resp = await client.PostAsync("/api/v1/runs/current/battle/finalize", null);
+            Assert.Equal(HttpStatusCode.Conflict, resp.StatusCode);
+        }
+        finally
+        {
+            client.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task Finalize_when_battle_not_resolved_returns_409()
+    {
+        // start するが PlayerInput phase のまま finalize → 409。
+        var (client, _) = await BattleControllerFixtures.SetupRunWithActiveBattleAsync(_factory);
+        try
+        {
+            await client.PostAsync("/api/v1/runs/current/battle/start", null);
+            var resp = await client.PostAsync("/api/v1/runs/current/battle/finalize", null);
+            Assert.Equal(HttpStatusCode.Conflict, resp.StatusCode);
+        }
+        finally
+        {
+            client.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task Finalize_Victory_creates_reward_and_clears_session()
+    {
+        // session を直接 Resolved+Victory に書き換え、Finalize で reward 生成 + session 削除を確認。
+        var (client, accountId) = await BattleControllerFixtures.SetupRunWithActiveBattleAsync(_factory);
+        try
+        {
+            await client.PostAsync("/api/v1/runs/current/battle/start", null);
+            BattleControllerFixtures.ForceSessionVictory(_factory.Services, accountId);
+
+            var resp = await client.PostAsync("/api/v1/runs/current/battle/finalize", null);
+
+            Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+            var body = await resp.Content.ReadFromJsonAsync<RunSnapshotDto>(JsonOpts);
+            Assert.NotNull(body);
+            // Victory + 通常エンカウンター → ActiveReward が設定され、ActiveBattle は null。
+            Assert.NotNull(body!.Run.ActiveReward);
+            Assert.Null(body.Run.ActiveBattle);
+            // session は削除される。
+            BattleControllerFixtures.AssertNoSession(_factory.Services, accountId);
+        }
+        finally
+        {
+            client.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task Finalize_Defeat_returns_RunResultDto_with_GameOver()
+    {
+        // session を Resolved+Defeat に書き換え、Finalize で GameOver 履歴記録 + save 削除を確認。
+        var (client, accountId) = await BattleControllerFixtures.SetupRunWithActiveBattleAsync(_factory);
+        try
+        {
+            await client.PostAsync("/api/v1/runs/current/battle/start", null);
+            BattleControllerFixtures.ForceSessionDefeat(_factory.Services, accountId);
+
+            var resp = await client.PostAsync("/api/v1/runs/current/battle/finalize", null);
+
+            Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+            var body = await resp.Content.ReadFromJsonAsync<RunResultDto>();
+            Assert.NotNull(body);
+            Assert.Equal("GameOver", body!.Outcome);
+            // session は削除される。
+            BattleControllerFixtures.AssertNoSession(_factory.Services, accountId);
+            // save も削除されるため、後続の GET /current は 204 NoContent。
+            var current = await client.GetAsync("/api/v1/runs/current");
+            Assert.Equal(HttpStatusCode.NoContent, current.StatusCode);
+        }
+        finally
+        {
+            client.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task Finalize_Victory_consumed_potion_persists_to_RunState()
+    {
+        // /battle/start で BattleState.Potions に "fire_potion" がコピーされた状態を作り、
+        // /use-potion で消費 → ForceSessionVictory で Resolved+Victory にして finalize。
+        // BattleEngine.Finalize が consumed potion を RunState.Potions に反映する経路を
+        // controller 越しに確認する (spec §10-2)。
+        var (client, accountId) = await BattleControllerFixtures.SetupRunWithPotionAsync(
+            _factory, potionId: "fire_potion");
+        try
+        {
+            await client.PostAsync("/api/v1/runs/current/battle/start", null);
+            // fire_potion は single enemy attack (slot 0)。
+            var useResp = await client.PostAsJsonAsync(
+                "/api/v1/runs/current/battle/use-potion",
+                new UsePotionRequestDto(0, 0, null));
+            Assert.Equal(HttpStatusCode.OK, useResp.StatusCode);
+
+            BattleControllerFixtures.ForceSessionVictory(_factory.Services, accountId);
+
+            var resp = await client.PostAsync("/api/v1/runs/current/battle/finalize", null);
+            Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+
+            // RunSnapshot から RunState.Potions を取得し、slot 0 が空文字に置換されていることを確認。
+            var body = await resp.Content.ReadFromJsonAsync<RunSnapshotDto>(JsonOpts);
+            Assert.NotNull(body);
+            Assert.Equal("", body!.Run.Potions[0]);
         }
         finally
         {
