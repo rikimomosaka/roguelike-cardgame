@@ -18,13 +18,13 @@ internal static class BattleControllerFixtures
     public const string AccountHeader = "X-Account-Id";
 
     /// <summary>
-    /// 既存 <see cref="TempDataFactory"/> パターンに従い、accountId / ラン / 敵タイル進入を
-    /// セットアップして HttpClient を返す。
+    /// IClassFixture から渡された <see cref="TempDataFactory"/> を使い、
+    /// accountId / ラン / 敵タイル進入をセットアップして HttpClient を返す。
+    /// fixture の所有者 (xUnit) が disposal を担うため、呼び出し側で factory を Dispose しないこと。
     /// </summary>
-    public static async Task<(TempDataFactory factory, HttpClient client, string accountId)>
-        SetupRunWithActiveBattleAsync(string accountId = "test-account")
+    public static async Task<(HttpClient client, string accountId)>
+        SetupRunWithActiveBattleAsync(TempDataFactory factory, string accountId = "test-account")
     {
-        var factory = new TempDataFactory();
         factory.ResetData();
         var client = factory.CreateClient();
 
@@ -32,7 +32,7 @@ internal static class BattleControllerFixtures
         BattleTestHelpers.WithAccount(client, accountId);
         await BattleTestHelpers.StartRunAndMoveToEnemyAsync(client);
 
-        return (factory, client, accountId);
+        return (client, accountId);
     }
 
     public static void AssertNoSession(System.IServiceProvider services, string accountId)

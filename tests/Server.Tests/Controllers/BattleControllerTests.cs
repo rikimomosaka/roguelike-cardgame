@@ -47,7 +47,7 @@ public class BattleControllerTests : IClassFixture<TempDataFactory>
     [Fact]
     public async Task Start_creates_session_and_returns_BattleStart_TurnStart_events()
     {
-        var (factory, client, accountId) = await BattleControllerFixtures.SetupRunWithActiveBattleAsync();
+        var (client, _) = await BattleControllerFixtures.SetupRunWithActiveBattleAsync(_factory);
         try
         {
             var resp = await client.PostAsync("/api/v1/runs/current/battle/start", null);
@@ -61,14 +61,13 @@ public class BattleControllerTests : IClassFixture<TempDataFactory>
         finally
         {
             client.Dispose();
-            factory.Dispose();
         }
     }
 
     [Fact]
     public async Task Start_is_idempotent_returns_same_session()
     {
-        var (factory, client, accountId) = await BattleControllerFixtures.SetupRunWithActiveBattleAsync();
+        var (client, _) = await BattleControllerFixtures.SetupRunWithActiveBattleAsync(_factory);
         try
         {
             var first = await client.PostAsync("/api/v1/runs/current/battle/start", null);
@@ -86,7 +85,6 @@ public class BattleControllerTests : IClassFixture<TempDataFactory>
         finally
         {
             client.Dispose();
-            factory.Dispose();
         }
     }
 }

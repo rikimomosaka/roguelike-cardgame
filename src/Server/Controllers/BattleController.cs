@@ -75,16 +75,20 @@ public sealed class BattleController : ControllerBase
 
         var rng = MakeBattleRng(run);
         var (state, events) = BattleEngine.Start(run, run.ActiveBattle.EncounterId, rng, _data);
-        _sessions.Set(accountId, state);
 
         // F1 (spec §6-2): 図鑑に新敵を記録。BattlePlaceholder.Start 経路で既に
         // 記録済の場合でも NoteEnemiesEncountered は集合の和なので冪等。
+        // セッション登録より前に save するのは、SaveAsync が失敗した場合に
+        // _sessions.Set を実行しないことで「冪等分岐に入って図鑑記録だけ抜ける」
+        // 状態を防ぐため。再試行で完全フローが回る。
         if (_data.TryGetEncounter(run.ActiveBattle.EncounterId, out var encounter))
         {
             var noted = BestiaryTracker.NoteEnemiesEncountered(run, encounter.EnemyIds);
             if (!ReferenceEquals(noted, run))
                 await _saves.SaveAsync(accountId, noted, ct);
         }
+
+        _sessions.Set(accountId, state);
 
         return Ok(BattleStateDtoMapper.ToActionResponse(state, events));
     }
