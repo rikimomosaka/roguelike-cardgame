@@ -137,6 +137,9 @@ type Props = {
   onBattleResolved: (result: RunSnapshotDto | RunResultDto) => void
   /** TopBar の MAP ボタン押下で BattleScreen → MapScreen へ peek 切替する。 */
   onTogglePeek?: () => void
+  /** Why: peek 中も親が live battle state を TopBar に表示できるよう、state
+   *  更新ごとに親へ通知する。null は battle 終了 (clear) を意味する。 */
+  onBattleStateChange?: (state: BattleStateDto | null) => void
 }
 
 // -------------------- Animation timing --------------------
@@ -349,6 +352,9 @@ function HandCard({ card, fan, onClick }: HandCardProps) {
         type={card.type}
         rarity={card.rarity}
         art={card.art}
+        /* Why: 実績画面 (TopBar デッキ modal) の Card 幅 112 と統一する。
+           デフォルト 104 だと「ストライク」「ウィスプ召喚」が見切れていた。 */
+        width={112}
         className={card.playable ? 'is-playable' : undefined}
         onClick={onClick}
         onMouseEnter={tip.onMouseEnter}
@@ -492,7 +498,7 @@ function EnergyOrb({ cur, max }: { cur: number; max: number }) {
 
 // -------------------- Main component --------------------
 
-export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePeek }: Props) {
+export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePeek, onBattleStateChange }: Props) {
   const [state, setState] = useState<BattleStateDto | null>(null)
   const [animating, setAnimating] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -504,6 +510,12 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
   const { catalog: cardCatalog } = useCardCatalog()
   const { catalog: enemyCatalog } = useEnemyCatalog()
   const { catalog: unitCatalog } = useUnitCatalog()
+
+  // Why: state が更新されるたび親 (MapScreen) に通知。peek 中も TopBar が live
+  // battle state (HP / potions) を表示し続けるための仕組み (ユーザ要望)。
+  useEffect(() => {
+    onBattleStateChange?.(state)
+  }, [state, onBattleStateChange])
 
   // 戦闘終了 → /finalize 呼び出し → 親に通知。
   const handleFinalize = useCallback(async () => {

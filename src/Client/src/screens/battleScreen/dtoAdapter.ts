@@ -177,11 +177,14 @@ export function toIntentDemos(intent: IntentDto): IntentDemo[] {
     (intent.attackSingle ?? 0) > 0 ||
     (intent.attackRandom ?? 0) > 0 ||
     (intent.attackAll ?? 0) > 0
+  // Why: tooltip は title (name) と body (desc) を別フィールドで描画する仕様。
+  // body 側の文頭に行動名を含めると重複表示になるので、body は本文だけを書く。
+  // 「通常攻撃」は「単体攻撃」と表記を変更 (ユーザ要望)。
   if (hasAttack) {
     const parts: string[] = []
     const damages: string[] = []
     if (intent.attackSingle && intent.attackSingle > 0) {
-      parts.push('通常攻撃'); damages.push(String(intent.attackSingle))
+      parts.push('単体攻撃'); damages.push(String(intent.attackSingle))
     }
     if (intent.attackRandom && intent.attackRandom > 0) {
       parts.push('ランダム攻撃'); damages.push(String(intent.attackRandom))
@@ -193,7 +196,7 @@ export function toIntentDemos(intent: IntentDto): IntentDemo[] {
       kind: 'attack',
       icon: '⚔',
       name: parts.join('/'),
-      desc: `${parts.join('/')}\nターン終了時に${damages.join('/')}ダメージの攻撃。`,
+      desc: `ターン終了時に${damages.join('/')}ダメージの攻撃。`,
       attack: {
         single: intent.attackSingle ?? undefined,
         random: intent.attackRandom ?? undefined,
@@ -209,17 +212,19 @@ export function toIntentDemos(intent: IntentDto): IntentDemo[] {
       icon: '🛡',
       num: intent.block,
       name: '防御',
-      desc: `防御\nターン終了時に${intent.block}のブロックを得る。`,
+      // Why: 「ターン終了時に」だと現在ターンの攻撃を防げると誤認するため、
+      // 「次のターンに」に変更 (ユーザ要望)。
+      desc: `次のターンに${intent.block}ブロックを得る。`,
     })
   }
   if (intent.hasBuff) {
-    list.push({ kind: 'buff', icon: '✦', name: '強化', desc: '強化\nターン終了時に自身を強化する。' })
+    list.push({ kind: 'buff', icon: '✦', name: '強化', desc: '次のターンに自身を強化する。' })
   }
   if (intent.hasDebuff) {
-    list.push({ kind: 'buff', icon: '☄', name: '弱体化', desc: '弱体化\nターン終了時にこちらを弱体化する。' })
+    list.push({ kind: 'buff', icon: '☄', name: '弱体化', desc: '次のターンにこちらを弱体化する。' })
   }
   if (intent.hasHeal) {
-    list.push({ kind: 'heal', icon: '✚', name: '回復', desc: '回復\nターン終了時に自身を回復する。' })
+    list.push({ kind: 'heal', icon: '✚', name: '回復', desc: '次のターンに自身を回復する。' })
   }
 
   return list

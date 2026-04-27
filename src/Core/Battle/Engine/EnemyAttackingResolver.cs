@@ -29,6 +29,22 @@ internal static class EnemyAttackingResolver
 
             var currentEnemyState = state.Enemies.First(e => e.InstanceId == enemy.InstanceId);
 
+            // Why: 敵 block は前ターンの move で積んだものを次の player turn の
+            // PlayerAttacking で消費する。自分の次の move を実行する直前に
+            // ここでリセットすることで、move を 2 回連続実行しても block が
+            // 蓄積し続けない仕様。
+            {
+                var resetBlock = currentEnemyState with { Block = BlockPool.Empty };
+                int idxR = -1;
+                for (int i = 0; i < state.Enemies.Length; i++)
+                    if (state.Enemies[i].InstanceId == currentEnemyState.InstanceId) { idxR = i; break; }
+                if (idxR >= 0)
+                {
+                    state = state with { Enemies = state.Enemies.SetItem(idxR, resetBlock) };
+                    currentEnemyState = resetBlock;
+                }
+            }
+
             foreach (var eff in move.Effects)
             {
                 if (eff.Action == "attack")

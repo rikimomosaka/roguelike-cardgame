@@ -166,6 +166,18 @@
   line-height: 1.1;
 }
 
+/* Why: カード名の文字数に応じて font-size を段階縮小し、見切れずに
+   フル表示する (ユーザ要望: 「ストライク」「ウィスプ召喚」「強打+」等の
+   多文字名を全部表示)。基準は cost 円 (28px) 控除後の利用幅 ~80px。
+   日本語は 1 文字 ~14px なので 5 文字までは 14px が限界。 */
+.card__name[data-len="6"] { font-size: 12px; letter-spacing: 0.3px; }
+.card__name[data-len="7"] { font-size: 11px; letter-spacing: 0.2px; }
+.card__name[data-len="8"] { font-size: 10px; letter-spacing: 0; }
+.card__name[data-len="9"],
+.card__name[data-len="10"],
+.card__name[data-len="11"],
+.card__name[data-len="12"] { font-size: 9px; letter-spacing: 0; }
+
 .card__plus {
   color: #7dffe8;
   font-weight: 700;

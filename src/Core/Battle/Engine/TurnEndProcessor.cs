@@ -21,10 +21,14 @@ internal static class TurnEndProcessor
     public static (BattleState, IReadOnlyList<BattleEvent>) Process(
         BattleState state, IRng rng, DataCatalog catalog)
     {
-        // Step 1-2: Block / AttackPool リセット
+        // Step 1-2: Block / AttackPool リセット (味方のみ)
+        // Why: 敵の block は EnemyAttacking で積んだものを「次のプレイヤーターン
+        // (PlayerAttacking) で player の攻撃を軽減する」目的なので、ここで一律
+        // クリアすると即時無効化されてしまう。敵 block は EnemyAttackingResolver
+        // 内で「自分の move 実行直前」にリセットする (= 次の自分のターンが来る
+        // まで保持される)。
         var allies = state.Allies.Select(ResetActor).ToImmutableArray();
-        var enemies = state.Enemies.Select(ResetActor).ToImmutableArray();
-        var s = state with { Allies = allies, Enemies = enemies };
+        var s = state with { Allies = allies };
 
         var events = new List<BattleEvent>();
         int order = 0;

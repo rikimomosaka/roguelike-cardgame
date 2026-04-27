@@ -108,7 +108,11 @@ export function Card({
             <span className="card__cost-n">{cost}</span>
           </div>
         )}
-        <div className="card__name">
+        {/* Why: カード名は枠内に収めるため文字数に応じて段階的に font-size
+            を縮小する (ユーザ要望: ストライク/ウィスプ召喚 等の見切れ回避)。
+            card.css 側の .card__name[data-len="N"] で個別 font-size 指定。
+            +1 は upgrade 時の '+' を考慮。 */}
+        <div className="card__name" data-len={name.length + (upgraded ? 1 : 0)}>
           {name}
           {upgraded ? <span className="card__plus">+</span> : null}
         </div>

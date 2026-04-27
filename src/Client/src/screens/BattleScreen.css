@@ -229,7 +229,9 @@
 }
 
 .battle__chars {
-  position: absolute; top: 12px; left: 0; right: 0;
+  /* Why: ユーザ要望「intent chip がステージ上端ギリギリに当たる」→ キャラ枠
+     全体を少し下げ、枠下端が画面中央付近 (= stage 中央) に来るように調整。 */
+  position: absolute; top: 60px; left: 0; right: 0;
   display: flex; justify-content: space-between;
   padding: 0 20px;
   z-index: 3;

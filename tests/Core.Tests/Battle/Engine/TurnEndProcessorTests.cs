@@ -39,14 +39,18 @@ public class TurnEndProcessorTests
             EncounterId: "enc_test");
     }
 
-    [Fact] public void Resets_block_on_all_actors()
+    [Fact] public void Resets_block_on_allies_only()
     {
+        // 仕様変更: TurnEndProcessor は ally の block のみリセットする。
+        // 敵 block は EnemyAttackingResolver 内で「自分の次の move 実行直前」に
+        // リセットするため、TurnEnd では保持される。
+        // (block を「次の player turn の PlayerAttacking で消費」する設計のため)
         var hero = BattleFixtures.Hero() with { Block = BlockPool.Empty.Add(5) };
         var enemy = BattleFixtures.Goblin() with { Block = BlockPool.Empty.Add(3) };
         var s = MakeState(ImmutableArray<BattleCardInstance>.Empty, hero, enemy);
         var (next, _) = TurnEndProcessor.Process(s, MakeRng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(BlockPool.Empty, next.Allies[0].Block);
-        Assert.Equal(BlockPool.Empty, next.Enemies[0].Block);
+        Assert.Equal(BlockPool.Empty.Add(3), next.Enemies[0].Block);
     }
 
     [Fact] public void Resets_attack_pools_on_all_actors()

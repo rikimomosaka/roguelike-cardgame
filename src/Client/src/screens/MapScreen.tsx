@@ -107,6 +107,14 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
   const [eventDismissed, setEventDismissed] = useState(false)
   const [restDismissed, setRestDismissed] = useState(false)
   const [peekMap, setPeekMap] = useState(false)
+  // Why: バトル中は live battle state (HP / potions) を TopBar に表示する。
+  // peek でマップへ切り替えても snap.run の戦闘前の値ではなくここに保持した
+  // 直近 battle state を使い続ける (ユーザ要望)。
+  const [livefBattleState, setLivefBattleState] = useState<import('../api/types').BattleStateDto | null>(null)
+  // Why: 戦闘中のタイマー継続用 tick。MapScreen / BattleScreen を切り替えても
+  // 親が継続して秒数をカウントすることで、TopBar の playSeconds 表示が peek
+  // 切替時にリセットされない (ユーザ要望)。
+  const [battleTicks, setBattleTicks] = useState(0)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
   const [actBanner, setActBanner] = useState<number | null>(null)
@@ -273,6 +281,17 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
   const currentNode = snap.map.nodes.find((n) => n.id === snap.run.currentNodeId)!
   const visited = new Set(snap.run.visitedNodeIds)
   const activeBattle = snap.run.activeBattle
+
+  // Why: 戦闘中の秒カウンタ。切替で親が継続するため peek でも timer が止まらない。
+  useEffect(() => {
+    if (!activeBattle) {
+      if (battleTicks !== 0) setBattleTicks(0)
+      return
+    }
+    const id = window.setInterval(() => setBattleTicks(t => t + 1), 1000)
+    return () => window.clearInterval(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBattle])
   const activeReward = snap.run.activeReward
   const activeMerchant = snap.run.activeMerchant
   const activeEvent = snap.run.activeEvent
@@ -483,12 +502,20 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
   // ボタンから peek 切替で再帰的に来る)。Server 側の戦闘 session は維持される
   // ので peek 解除で BattleScreen に戻ると getBattle で復元される。
   if (activeBattle && accountId && !peekMap) {
+    // playSeconds に battleTicks を加算した snapshot を渡し、TopBar timer が
+    // 切替で reset しないようにする (ユーザ要望)。
+    const snapWithTickedTime = {
+      ...snap,
+      run: { ...snap.run, playSeconds: snap.run.playSeconds + battleTicks },
+    }
     return (
       <BattleScreen
         accountId={accountId}
-        snapshot={snap}
+        snapshot={snapWithTickedTime}
         onTogglePeek={() => setPeekMap(true)}
+        onBattleStateChange={setLivefBattleState}
         onBattleResolved={(result) => {
+          setLivefBattleState(null)
           if ('outcome' in result) {
             onRunFinished?.(result, snapRef.current)
           } else {
@@ -501,22 +528,29 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
     )
   }
 
+  // Why: peek 中も TopBar に live battle state を表示する (ユーザ要望)。
+  // 直近受け取った livefBattleState の hero HP / potions を優先使用。
+  const heroLive = livefBattleState?.allies.find(a => a.definitionId === 'hero')
+  const liveHp = heroLive?.currentHp ?? snap.run.currentHp
+  const liveMaxHp = heroLive?.maxHp ?? snap.run.maxHp
+  const livePotions = livefBattleState?.potions ?? snap.run.potions
+  const liveRelics = livefBattleState?.ownedRelicIds ?? snap.run.relics
   return (
       <main className="map-screen">
         <TopBar
-          currentHp={snap.run.currentHp}
-          maxHp={snap.run.maxHp}
+          currentHp={liveHp}
+          maxHp={liveMaxHp}
           gold={snap.run.gold}
-          potions={snap.run.potions}
+          potions={livePotions}
           deck={snap.run.deck}
-          relics={snap.run.relics}
+          relics={liveRelics}
           onDiscardPotion={handleDiscardPotion}
           onOpenMenu={() => setMenuOpen(v => !v)}
           menuActive={menuOpen}
           onTogglePeek={activeBattle ? () => setPeekMap(v => !v) : () => {}}
           peekActive={peekMap}
           peekDisabled={!activeBattle}
-          playSeconds={snap.run.playSeconds}
+          playSeconds={snap.run.playSeconds + battleTicks}
         />
         <div className="map-screen__body" data-act={snap.run.currentAct}>
           <div className="map-screen__pattern" aria-hidden="true" />
