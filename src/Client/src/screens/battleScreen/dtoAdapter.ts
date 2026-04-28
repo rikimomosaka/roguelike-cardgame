@@ -240,7 +240,7 @@ export function toBuffs(actor: CombatActorDto): BuffDemo[] {
       icon: '◆',
       num: actor.blockDisplay,
       name: 'ブロック',
-      desc: 'このターン、ダメージを軽減する。',
+      desc: `ダメージを${actor.blockDisplay}軽減する。`,
     })
   }
   for (const [statusId, amount] of Object.entries(actor.statuses)) {

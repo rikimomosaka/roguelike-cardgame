@@ -144,10 +144,23 @@ type Props = {
 
 // -------------------- Animation timing --------------------
 
-const STEP_DELAY_MS = 220
+const STEP_DELAY_MS = 80         // 既存 fallback (汎用 event)
+const ATTACK_SLIDE_MS = 280      // 攻撃側 slot の slide-in/out 1 周
+const HIT_FLASH_MS = 320         // 被弾 slot の赤点滅
+const DEATH_BLINK_MS = 520       // 撃破時の点滅消滅
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/** Why: attack/hit/death アニメーション中の slot を className で識別するため
+ *  の transient state。複数 slot が同時に該当することはあるが、UI 的には
+ *  1 step ずつ進むので 1 種類につき 1 instanceId で足りる。 */
+type SlotAnim = {
+  attackerId?: string
+  attackerSide?: 'Ally' | 'Enemy'   // slide 方向決定用
+  hitId?: string
+  dyingIds?: ReadonlyArray<string>  // 死亡演出は複数同時もあり得るので set
 }
 
 // -------------------- Layout helpers --------------------
@@ -204,10 +217,12 @@ function StatusBuff({ buff }: { buff: BuffDemo }) {
   )
 }
 
-function IntentChip({ intent }: { intent: IntentDemo }) {
+/** 単一 intent の中身 (icon + 値群)。tooltip target としても機能する。 */
+function IntentSegment({ intent, withAmp }: { intent: IntentDemo; withAmp: boolean }) {
   const tip = useTip({ name: intent.name, desc: intent.desc })
   return (
-    <div className={`intent intent--${intent.kind}`} {...tip}>
+    <span className={`intent__seg intent__seg--${intent.kind}`} {...tip}>
+      {withAmp ? <span className="intent__amp">＆</span> : null}
       <span className="intent__icon">{intent.icon}</span>
       {intent.kind === 'attack' && intent.attack ? (
         // Why: 通常/ランダム/全体を 1 chip 内で色分け表示。slash は白、各数値は
@@ -229,6 +244,26 @@ function IntentChip({ intent }: { intent: IntentDemo }) {
       ) : intent.num !== undefined ? (
         <span className="intent__num">{intent.num}</span>
       ) : null}
+    </span>
+  )
+}
+
+/** Why: 複数 intent (攻撃 ＆ 防御 など) を 1 個の枠内に並べる (ユーザ要望)。
+ *  各 segment は独立した tooltip を持ち、間に「＆」白文字で区切る。 */
+function IntentChip({ intent }: { intent: IntentDemo }) {
+  return (
+    <div className={`intent intent--${intent.kind}`}>
+      <IntentSegment intent={intent} withAmp={false} />
+    </div>
+  )
+}
+
+function IntentChipRow({ intents }: { intents: IntentDemo[] }) {
+  return (
+    <div className="intent intent--row">
+      {intents.map((it, i) => (
+        <IntentSegment key={i} intent={it} withAmp={i > 0} />
+      ))}
     </div>
   )
 }
@@ -236,16 +271,27 @@ function IntentChip({ intent }: { intent: IntentDemo }) {
 type SlotProps = {
   char: CharacterDemo
   isTargeted?: boolean
+  /** Why: 攻撃中 / 被弾中 / 撃破中の演出クラス付与用。 */
+  attackingDir?: 'toward-enemy' | 'toward-ally'
+  isHit?: boolean
+  isDying?: boolean
   onClick?: () => void
 }
 
-function Slot({ char, isTargeted, onClick }: SlotProps) {
+function Slot({ char, isTargeted, attackingDir, isHit, isDying, onClick }: SlotProps) {
   if (!char.occupied) {
     return <div className="battle__slot" data-occupied="0" />
   }
   const pct = Math.max(0, Math.min(100, (char.hpCur / char.hpMax) * 100))
   const hpFillStyle: CSSProperties = { width: `${pct}%` }
-  const cls = `battle__slot${isTargeted ? ' is-targeted' : ''}`
+  const cls = [
+    'battle__slot',
+    isTargeted ? 'is-targeted' : '',
+    attackingDir === 'toward-enemy' ? 'is-attacking-enemy' : '',
+    attackingDir === 'toward-ally' ? 'is-attacking-ally' : '',
+    isHit ? 'is-hit' : '',
+    isDying ? 'is-dying' : '',
+  ].filter(Boolean).join(' ')
   // Why: スプレッドにすることで onClick が undefined のとき role/tabIndex 属性自体が
   // JSX に出ない。axe/aria リンターの "role must be valid ARIA role: {expression}"
   // 誤検出（条件式値の静的解析不可）を回避する目的。
@@ -259,13 +305,9 @@ function Slot({ char, isTargeted, onClick }: SlotProps) {
       {...interactiveProps}
     >
       {char.intents && char.intents.length > 0 ? (
+        // Why: 1 個の枠内に複数 intent を ＆ 区切りで並べる (ユーザ要望)。
         <div className="intents">
-          {char.intents.map((it, i) => (
-            <span key={i} className="intents__seg">
-              {i > 0 ? <span className="intents__sep">＆</span> : null}
-              <IntentChip intent={it} />
-            </span>
-          ))}
+          <IntentChipRow intents={char.intents} />
         </div>
       ) : char.intent ? (
         <IntentChip intent={char.intent} />
@@ -504,6 +546,9 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pileOpen, setPileOpen] = useState<PileKind | null>(null)
+  // Why: ターン終了時 attack アニメーションの transient state。
+  // attackerId: slide 中の slot、hitId: 赤点滅の被弾 slot、dyingIds: 撃破点滅中。
+  const [slotAnim, setSlotAnim] = useState<SlotAnim>({})
   // resolvedRef は finalize 後の二重呼び出しを抑止するためのラッチ。
   const resolvedRef = useRef(false)
 
@@ -530,14 +575,77 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
     }
   }, [accountId, onBattleResolved])
 
-  // BattleActionResponse を受け取り、各 step を 220ms 間隔で再生する。
+  // BattleActionResponse を受け取り、各 step を event 種別ごとにアニメーション
+  // 付きで再生する。
+  // - AttackFire: 攻撃側 slot を一瞬反対側へ slide (側により方向反転) させる
+  // - DealDamage: 着弾 slot を赤点滅。amount=0 (block で無効化) は flash skip
+  // - ActorDeath: 撃破 slot を点滅消滅 (アニメ終了後に state 反映 = 自然消滅)
+  // - その他 (BattleStart / TurnStart / GainBlock / etc.): 短い fallback delay
   const playSteps = useCallback(
     async (resp: BattleActionResponseDto) => {
       setAnimating(true)
+      // 撃破中の actor は alive filter で消されないように slotAnim.dyingIds に
+      // 記録し、anim 終了で state 反映するタイミングで除外する。
+      const dying: string[] = []
+
       for (const step of resp.steps) {
-        setState(step.snapshotAfter)
-        await sleep(STEP_DELAY_MS)
+        const ev = step.event
+        switch (ev.kind) {
+          case 'AttackFire': {
+            // 攻撃側 slot を side に応じて slide
+            const casterId = ev.casterInstanceId ?? undefined
+            const side = casterId
+              ? (step.snapshotAfter.allies.some(a => a.instanceId === casterId)
+                  ? 'Ally' : 'Enemy')
+              : undefined
+            setSlotAnim(prev => ({ ...prev, attackerId: casterId, attackerSide: side }))
+            await sleep(ATTACK_SLIDE_MS)
+            setSlotAnim(prev => ({ ...prev, attackerId: undefined, attackerSide: undefined }))
+            break
+          }
+          case 'DealDamage': {
+            const targetId = ev.targetInstanceId ?? undefined
+            const amount = ev.amount ?? 0
+            setState(step.snapshotAfter)
+            if (amount > 0 && targetId) {
+              setSlotAnim(prev => ({ ...prev, hitId: targetId }))
+              await sleep(HIT_FLASH_MS)
+              setSlotAnim(prev => ({ ...prev, hitId: undefined }))
+            } else {
+              await sleep(STEP_DELAY_MS)
+            }
+            break
+          }
+          case 'ActorDeath': {
+            const targetId = ev.targetInstanceId ?? undefined
+            if (targetId) {
+              dying.push(targetId)
+              setSlotAnim(prev => ({
+                ...prev,
+                dyingIds: [...(prev.dyingIds ?? []), targetId],
+              }))
+              await sleep(DEATH_BLINK_MS)
+              // 撃破アニメ終了 → state を反映 (HP=0 なので alive filter で消える)
+              setState(step.snapshotAfter)
+              setSlotAnim(prev => ({
+                ...prev,
+                dyingIds: (prev.dyingIds ?? []).filter(id => id !== targetId),
+              }))
+            } else {
+              setState(step.snapshotAfter)
+              await sleep(STEP_DELAY_MS)
+            }
+            break
+          }
+          default: {
+            setState(step.snapshotAfter)
+            await sleep(STEP_DELAY_MS)
+          }
+        }
       }
+
+      void dying  // ref to silence lint when dying is not used
+      setSlotAnim({})
       setState(resp.state)
       setAnimating(false)
 
@@ -659,8 +767,15 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
   // Why: BattleEngine は死亡した actor を state.Allies / Enemies から削除せず、
   // CurrentHp=0 のまま残す (.Where(a => a.IsAlive) で都度フィルタ)。Client 側でも
   // 表示前にフィルタして「死んだのに残り続ける」現象を回避する。
-  const aliveAllies = state.allies.filter((a) => a.currentHp > 0)
-  const aliveEnemies = state.enemies.filter((e) => e.currentHp > 0)
+  // ただし「撃破アニメーション中 (slotAnim.dyingIds に含まれる)」actor は
+  // フィルタしないでそのまま表示し、点滅消滅完了後に消える。
+  const dyingSet = new Set(slotAnim.dyingIds ?? [])
+  const aliveAllies = state.allies.filter(
+    (a) => a.currentHp > 0 || dyingSet.has(a.instanceId),
+  )
+  const aliveEnemies = state.enemies.filter(
+    (e) => e.currentHp > 0 || dyingSet.has(e.instanceId),
+  )
 
   // 4 スロット zero-pad で side ごとに描画。
   const allyDemos = aliveAllies.map((a) =>
@@ -726,11 +841,21 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
                   c.occupied && actor && !interactionsDisabled
                     ? () => void handleSetTarget('Ally', actor.slotIndex)
                     : undefined
+                // Why: ally が攻撃側の時は敵側 (右) に slide。
+                const attackingDir =
+                  actor && slotAnim.attackerId === actor.instanceId
+                    ? ('toward-enemy' as const)
+                    : undefined
+                const isHit = !!(actor && slotAnim.hitId === actor.instanceId)
+                const isDying = !!(actor && dyingSet.has(actor.instanceId))
                 return (
                   <Slot
                     key={`p-${i}`}
                     char={c}
                     isTargeted={isTargeted}
+                    attackingDir={attackingDir}
+                    isHit={isHit}
+                    isDying={isDying}
                     onClick={onClick}
                   />
                 )
@@ -746,11 +871,21 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
                   c.occupied && actor && !interactionsDisabled
                     ? () => void handleSetTarget('Enemy', actor.slotIndex)
                     : undefined
+                // Why: enemy が攻撃側の時は味方側 (左) に slide。
+                const attackingDir =
+                  actor && slotAnim.attackerId === actor.instanceId
+                    ? ('toward-ally' as const)
+                    : undefined
+                const isHit = !!(actor && slotAnim.hitId === actor.instanceId)
+                const isDying = !!(actor && dyingSet.has(actor.instanceId))
                 return (
                   <Slot
                     key={`e-${i}`}
                     char={c}
                     isTargeted={isTargeted}
+                    attackingDir={attackingDir}
+                    isHit={isHit}
+                    isDying={isDying}
                     onClick={onClick}
                   />
                 )

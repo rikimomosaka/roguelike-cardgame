@@ -356,6 +356,39 @@ button.pile:hover { filter: brightness(1.2); }
     drop-shadow(0 0 4px rgba(241, 201, 91, 0.95))
     drop-shadow(0 0 8px rgba(241, 201, 91, 0.6));
 }
+
+/* ターン終了 attack アニメーション (ユーザ要望) */
+/* 攻撃側 slot を一瞬反対側へ slide-in/out させる */
+.battle__slot.is-attacking-enemy { animation: slot-attack-enemy 280ms ease-out; }
+.battle__slot.is-attacking-ally  { animation: slot-attack-ally  280ms ease-out; }
+@keyframes slot-attack-enemy {
+  0%, 100% { transform: translateX(0); }
+  45%      { transform: translateX(48px); }
+}
+@keyframes slot-attack-ally {
+  0%, 100% { transform: translateX(0); }
+  45%      { transform: translateX(-48px); }
+}
+
+/* 被弾 slot を赤く点滅 (ダメージ表現)。amount=0 のときは Client が class を
+   付与しないので 0 ダメージは flash しない (ユーザ要望)。 */
+.battle__slot.is-hit { animation: slot-hit 320ms ease-in-out; }
+@keyframes slot-hit {
+  0%, 100% { filter: none; }
+  20%, 60% {
+    filter: brightness(1.6) saturate(2.5) drop-shadow(0 0 6px rgba(255, 60, 60, 0.95));
+  }
+}
+
+/* 撃破時の点滅消滅。アニメ終了後に React 側で alive filter から外して自然消滅。 */
+.battle__slot.is-dying { animation: slot-die 520ms ease-out forwards; }
+@keyframes slot-die {
+  0%   { opacity: 1; filter: none; }
+  20%  { opacity: 0.3; filter: brightness(1.8) saturate(0.4); }
+  40%  { opacity: 1.0; filter: brightness(1.6) saturate(0.6); }
+  60%  { opacity: 0.4; filter: brightness(1.6) saturate(0.6); }
+  100% { opacity: 0; transform: scale(0.6); filter: grayscale(1); }
+}
 .battle__slot.is-targeted::after {
   content: "▼";
   position: absolute;
@@ -405,8 +438,8 @@ button.pile:hover { filter: brightness(1.2); }
 }
 
 /* Why: 攻撃 chip 内で 通常/ランダム/全体 を色分け、剣マークと slash は白統一。 */
-.intent--attack .intent__icon { color: #fff; }
-.intent--attack .intent__slash { color: #fff; padding: 0 2px; }
+.intent__seg--attack .intent__icon { color: #fff; }
+.intent__seg--attack .intent__slash { color: #fff; padding: 0 2px; }
 .intent__num--single { color: var(--intent-attack); }   /* 通常: 既存の attack 色 */
 .intent__num--random { color: #ff9a4a; }                 /* ランダム: オレンジ */
 .intent__num--all    { color: #ff5a5a; }                 /* 全体: 赤 */
@@ -417,10 +450,37 @@ button.pile:hover { filter: brightness(1.2); }
   font-variant-numeric: tabular-nums;
 }
 
-.intent--defend  .intent__icon, .intent--defend  .intent__num { color: var(--intent-defend); }
-.intent--buff    .intent__icon, .intent--buff    .intent__num { color: var(--intent-buff); }
-.intent--heal    .intent__icon, .intent--heal    .intent__num { color: var(--intent-heal); }
-.intent--unknown .intent__icon { color: var(--intent-unknown); }
+.intent__seg {
+  display: inline-flex; align-items: center; gap: 4px;
+  cursor: help;
+}
+.intent__amp {
+  font-family: var(--font-label);
+  color: #fff;
+  font-size: 18px;
+  padding: 0 4px;
+}
+
+.intent--row { gap: 0; }
+
+/* 後方互換: 単一 intent (.intent--{kind}) の色付け */
+.intent--attack .intent__seg--attack .intent__icon { color: #fff; }
+.intent--defend  .intent__seg--defend .intent__icon,
+.intent--defend  .intent__seg--defend .intent__num { color: var(--intent-defend); }
+.intent--buff    .intent__seg--buff   .intent__icon,
+.intent--buff    .intent__seg--buff   .intent__num { color: var(--intent-buff); }
+.intent--heal    .intent__seg--heal   .intent__icon,
+.intent--heal    .intent__seg--heal   .intent__num { color: var(--intent-heal); }
+.intent--unknown .intent__seg--unknown .intent__icon { color: var(--intent-unknown); }
+
+/* IntentChipRow 内: kind 別色 (& 区切りでも個別に色付け) */
+.intent--row .intent__seg--defend .intent__icon,
+.intent--row .intent__seg--defend .intent__num { color: var(--intent-defend); }
+.intent--row .intent__seg--buff .intent__icon,
+.intent--row .intent__seg--buff .intent__num { color: var(--intent-buff); }
+.intent--row .intent__seg--heal .intent__icon,
+.intent--row .intent__seg--heal .intent__num { color: var(--intent-heal); }
+.intent--row .intent__seg--unknown .intent__icon { color: var(--intent-unknown); }
 
 /* Sprite */
 .sprite {
@@ -465,13 +525,6 @@ button.pile:hover { filter: brightness(1.2); }
   white-space: nowrap;
 }
 .intents .intent { position: static; transform: none; }
-.intents__seg { display: inline-flex; align-items: center; }
-.intents__sep {
-  font-family: var(--font-label);
-  color: #fff;
-  font-size: 18px;
-  padding: 0 2px;
-}
 
 /* Why: enemy/unit imageId が単一文字 (絵文字) でなく長い ID 文字列 (例
    "cultist_dark") の場合、95px だとキャラ枠を大きくはみ出す。長文字判定で
