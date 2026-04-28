@@ -404,6 +404,11 @@
   justify-content: start;
   list-style: none;
   margin: 0;
+  /* Why: Popup の picker variant body は flex-direction: row + align-items:
+     center で、子が縦に長いと top がはみ出して overflow:auto でも上端まで
+     スクロールできない (4 段目のカードがあると 1 段目が見えない不具合)。
+     align-self: start で上揃えに override し、上方向に自然にスクロール可能に。 */
+  align-self: start;
 }
 
 .mc-picker-item {

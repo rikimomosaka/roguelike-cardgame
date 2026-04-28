@@ -32,6 +32,10 @@ internal static class EffectApplier
             "debuff" => ApplyStatusChange(state, caster, effect, rng),
             "heal"   => ApplyHeal(state, caster, effect, rng),
             "draw"   => ApplyDraw(state, caster, effect, rng),
+            // Why: 既存 reward_*.json の draw 効果カードは "drawCards" 記法で
+            // 書かれており、potion 側 "draw" と表記揺れしていた。両方サポート
+            // することで洞察 / 叡智の奔流 / 戦術的撤退 等の効果が反映される。
+            "drawCards" => ApplyDraw(state, caster, effect, rng),
             "discard"=> ApplyDiscard(state, caster, effect, rng),
             "exhaustSelf" => ApplyExhaustSelf(state, caster),
             "retainSelf"  => (state, Array.Empty<BattleEvent>()),
