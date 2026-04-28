@@ -566,6 +566,11 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
   // render 時に actor.currentHp - overlay でプログレッシブに HP を減らす。
   // 全 event 処理後に setState(finalState) + setDamageOverlay({}) で確定。
   const [damageOverlay, setDamageOverlay] = useState<Record<string, number>>({})
+  // Why: 攻撃が block で完全相殺されても block 値は減るべき (ユーザ要望)。
+  // engine の DealDamage は post-block damage しか出さないため、Client 側で
+  // AttackFire.Amount (= totalAttack) と DealDamage.Amount (= damage) の差分を
+  // block 消費量として累積する。
+  const [blockOverlay, setBlockOverlay] = useState<Record<string, number>>({})
   // Why: 戦闘フェーズ banner (戦闘開始 / プレイヤーのターン / 敵のターン / 勝利)。
   // Map screen の ACT START と同じ 2 秒帯フォーマットで画面中央にオーバーレイ。
   // banner 表示中は他のアニメーション/入力を遅延させる (await showBanner)。
@@ -630,10 +635,12 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
         setState(resp.state)
       }
       // Why: playSteps 中は setState を呼ばず、ローカル overlay を更新して
-      // setDamageOverlay でレンダーに反映させる。これにより同一 turn 内で
-      // attacker A → attacker B と続く時、A の演出中に B の damage が
-      // 反映 (= HP が落ちる/敵が消える) する不具合を回避できる。
+      // setDamageOverlay / setBlockOverlay でレンダーに反映させる。
+      // これにより同一 turn 内で attacker A → attacker B と続く時、A の
+      // 演出中に B の damage が反映 (= HP が落ちる/敵が消える) する不具合
+      // を回避できる。block も同じ仕組みで progressive に減らす。
       const dmg: Record<string, number> = {}
+      const blk: Record<string, number> = {}
       // Why: 「敵のターン」 banner は 1 turn につき 1 回 (味方攻撃終了 → 初の
       // 敵 caster AttackFire の前) で出す。表示済フラグでガードする。
       let shownEnemyTurnBanner = false
@@ -670,15 +677,34 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
 
         if (ev.kind === 'AttackFire') {
           // この caster の連続 AttackFire / DealDamage を集約。
+          // AttackFire (totalAttack) と DealDamage (post-block damage) を
+          // ペアで読み、block 消費量 = totalAttack - damage を計算する。
           const casterId = ev.casterInstanceId ?? undefined
-          const hits: { targetId: string; amount: number }[] = []
+          const hits: { targetId: string; damage: number; blockConsumed: number }[] = []
+          let pendingFireAmount = 0
+          let pendingFireTargetId: string | undefined = undefined
           let j = i
           while (j < steps.length) {
             const e = steps[j].event
             if ((e.kind === 'AttackFire' || e.kind === 'DealDamage')
                 && e.casterInstanceId === casterId) {
-              if (e.kind === 'DealDamage' && (e.amount ?? 0) > 0 && e.targetInstanceId) {
-                hits.push({ targetId: e.targetInstanceId, amount: e.amount! })
+              if (e.kind === 'AttackFire') {
+                pendingFireAmount = e.amount ?? 0
+                pendingFireTargetId = e.targetInstanceId ?? undefined
+              } else if (e.kind === 'DealDamage' && e.targetInstanceId) {
+                const damage = e.amount ?? 0
+                // pendingFire と同 target なら pair。違う場合は fallback で
+                // damage のみ反映 (block 消費量は不明 → 0 扱い)。
+                const blockConsumed = pendingFireTargetId === e.targetInstanceId
+                  ? Math.max(0, pendingFireAmount - damage)
+                  : 0
+                hits.push({
+                  targetId: e.targetInstanceId,
+                  damage,
+                  blockConsumed,
+                })
+                pendingFireAmount = 0
+                pendingFireTargetId = undefined
               }
               j++
             } else {
@@ -691,19 +717,29 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
             ? (state.allies.some(a => a.instanceId === casterId) ? 'Ally' : 'Enemy')
             : undefined
           setSlotAnim({ attackerId: casterId, attackerSide: side })
-          // slide 中盤で damage 反映 (HP ゲージが減少、同時 flash 開始)。
+          // slide 中盤で damage / block 消費を反映 (HP / Block ゲージ減少 + flash)。
           await sleep(ATTACK_SLIDE_MS / 2)
           for (const h of hits) {
-            dmg[h.targetId] = (dmg[h.targetId] ?? 0) + h.amount
+            if (h.damage > 0) {
+              dmg[h.targetId] = (dmg[h.targetId] ?? 0) + h.damage
+            }
+            if (h.blockConsumed > 0) {
+              blk[h.targetId] = (blk[h.targetId] ?? 0) + h.blockConsumed
+            }
           }
           setDamageOverlay({ ...dmg })
-          if (hits.length > 0) {
-            const uniq = Array.from(new Set(hits.map(h => h.targetId)))
-            setSlotAnim({ attackerId: casterId, attackerSide: side, hitIds: uniq })
+          setBlockOverlay({ ...blk })
+          // Why: damage > 0 の target だけ赤 flash する。block で完全相殺
+          // (damage=0) の場合は flash しない (ユーザ仕様: ブロック値だけ減る)。
+          const flashTargets = Array.from(new Set(
+            hits.filter(h => h.damage > 0).map(h => h.targetId),
+          ))
+          if (flashTargets.length > 0) {
+            setSlotAnim({ attackerId: casterId, attackerSide: side, hitIds: flashTargets })
           }
           await sleep(ATTACK_SLIDE_MS / 2)
           setSlotAnim(prev => ({ ...prev, attackerId: undefined, attackerSide: undefined }))
-          if (hits.length > 0) {
+          if (flashTargets.length > 0) {
             await sleep(Math.max(0, HIT_FLASH_MS - ATTACK_SLIDE_MS / 2))
           }
           setSlotAnim({})
@@ -729,6 +765,7 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
       // 全 event 処理完了 → 最終 state に確定 + overlay クリア
       setSlotAnim({})
       setDamageOverlay({})
+      setBlockOverlay({})
       setState(resp.state)
 
       // Victory のみ「勝利」banner を出す (ユーザ要望、Defeat は banner なし)。
@@ -866,11 +903,17 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
   // CurrentHp=0 のまま残す (.Where(a => a.IsAlive) で都度フィルタ)。Client 側でも
   // 表示前にフィルタして「死んだのに残り続ける」現象を回避する。
   // damageOverlay は playSteps 中の累積ダメージで、表示用 HP に減算する。
+  // blockOverlay は同じく block 消費量で blockDisplay に減算する。
   // 死亡アニメーションは廃止 (ユーザ要望) のため HP=0 で即フィルタ → 自然消滅。
   const applyOverlay = (a: CombatActorDto): CombatActorDto => {
     const dmg = damageOverlay[a.instanceId] ?? 0
-    if (dmg <= 0) return a
-    return { ...a, currentHp: Math.max(0, a.currentHp - dmg) }
+    const blk = blockOverlay[a.instanceId] ?? 0
+    if (dmg <= 0 && blk <= 0) return a
+    return {
+      ...a,
+      currentHp: Math.max(0, a.currentHp - dmg),
+      blockDisplay: Math.max(0, a.blockDisplay - blk),
+    }
   }
   const allAllies = state.allies.map(applyOverlay)
   const allEnemies = state.enemies.map(applyOverlay)
@@ -916,7 +959,7 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
         peekDisabled={!onTogglePeek}
         playSeconds={snapshot.run.playSeconds}
       />
-      <div className="battle">
+      <div className="battle" data-act={snapshot.run.currentAct}>
         <div className="battle__pattern" />
         <div className="battle__content">
         {/* Stage */}

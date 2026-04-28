@@ -222,8 +222,9 @@ main.map-screen {
    マスを暗色化して誤クリックを防ぐ (ユーザ要望)。現在マス / 次に行けるマス /
    上階層の未到達マス (= row > current.row) は暗化対象外。 */
 .map-screen__node.is-dim {
-  filter: brightness(0.4) saturate(0.5);
-  opacity: 0.55;
+  /* Why: opacity を使うと背景が透けるので filter のみで暗くする。
+     brightness を強めにして暗色効果を担保 (ユーザ要望)。 */
+  filter: brightness(0.32) saturate(0.4) contrast(0.9);
 }
 
 .map-screen__node.is-reopen {
