@@ -611,6 +611,51 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
     onBattleStateChange?.(state)
   }, [state, onBattleStateChange])
 
+  // Why: state.hand が更新された瞬間に「直前 hand にいたが今いない」カードを
+  // 検出し、leavingHand に追加する。表示中は CSS .is-leaving で捨札方向に
+  // 縮小フェードし、CARD_LEAVE_MS 経過で除去 (ユーザ要望: ゾーン間移動
+  // アニメーション)。前回の hand list / demo / fan は ref で保持。
+  // 注意: hooks は条件付き呼び出し不可なので state===null 早期 return より
+  // 前で宣言する。state===null のときは body 冒頭で no-op return する。
+  useEffect(() => {
+    if (!state) return
+    const hand = state.hand
+    const prev = prevHandRef.current
+    const currentIds = new Set(hand.map(c => c.instanceId))
+    const newlyLeaving: LeavingHandEntry[] = []
+    prev.list.forEach((card, idx) => {
+      if (!currentIds.has(card.instanceId)) {
+        newlyLeaving.push({
+          card,
+          demo: prev.demos[idx],
+          fan: prev.fans[idx],
+        })
+      }
+    })
+    if (newlyLeaving.length > 0) {
+      setLeavingHand(prevList => [...prevList, ...newlyLeaving])
+      const ids = newlyLeaving.map(e => e.card.instanceId)
+      window.setTimeout(() => {
+        setLeavingHand(prevList =>
+          prevList.filter(e => !ids.includes(e.card.instanceId)),
+        )
+      }, CARD_LEAVE_MS)
+    }
+    // 次回比較用に現在の hand / demos / fans を ref に保存。demos と fans は
+    // render 内の handDemos / fan と同じ計算で生成 (cardCatalog 等は dep に
+    // 入れず最新値を読む)。
+    const newDemos = hand.map((c) =>
+      toHandCardDemo(c, cardCatalog, state.energy, state.lastPlayedOrigCost),
+    )
+    const newFans = fanLayout(newDemos.length)
+    prevHandRef.current = {
+      list: hand.slice(),
+      demos: newDemos,
+      fans: newFans,
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state?.hand])
+
   // 戦闘フェーズ banner: text を 2 秒間オーバーレイ表示してから clear。
   // Map の ACT START と同じ 2s フェード仕様 (CSS keyframes 側で 10/88/100% 遷移)。
   const showBanner = useCallback(async (text: string) => {
@@ -957,43 +1002,6 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
     toHandCardDemo(c, cardCatalog, state.energy, state.lastPlayedOrigCost),
   )
   const fan = fanLayout(handDemos.length)
-
-  // Why: hand state が更新された瞬間に「直前 hand にいたが今いない」カードを
-  // 検出し、leavingHand に追加する。表示中は CSS .is-leaving で捨札方向に
-  // 縮小フェードし、CARD_LEAVE_MS 経過で除去 (ユーザ要望: ゾーン間移動
-  // アニメーション)。前回の hand list / demo / fan は ref で保持。
-  useEffect(() => {
-    const prev = prevHandRef.current
-    const currentIds = new Set(state.hand.map(c => c.instanceId))
-    const newlyLeaving: LeavingHandEntry[] = []
-    prev.list.forEach((card, idx) => {
-      if (!currentIds.has(card.instanceId)) {
-        newlyLeaving.push({
-          card,
-          demo: prev.demos[idx],
-          fan: prev.fans[idx],
-        })
-      }
-    })
-    if (newlyLeaving.length > 0) {
-      setLeavingHand(prevList => [...prevList, ...newlyLeaving])
-      const ids = newlyLeaving.map(e => e.card.instanceId)
-      const t = window.setTimeout(() => {
-        setLeavingHand(prevList =>
-          prevList.filter(e => !ids.includes(e.card.instanceId)),
-        )
-      }, CARD_LEAVE_MS)
-      // cleanup: タイマー解除はあえて行わない (途中 unmount でも leavingHand
-      // 自体が破棄される)。
-      void t
-    }
-    prevHandRef.current = {
-      list: state.hand.slice(),
-      demos: handDemos.slice(),
-      fans: fan.slice(),
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.hand])
 
   const interactionsDisabled = animating || busy
 
