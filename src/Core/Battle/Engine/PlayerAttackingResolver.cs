@@ -123,7 +123,19 @@ internal static class PlayerAttackingResolver
                 order += 1;
                 current = newAlly;
             }
-            // 他の action は今は no-op (Phase 10.4 以降で対応検討)
+            else
+            {
+                // buff / debuff / heal / etc. は EffectApplier に委譲。
+                // EnemyAttackingResolver と対称形 (caster 視点で side 解釈)。
+                var (afterApply, applyEvents) = EffectApplier.Apply(
+                    state, current, eff, rng, catalog);
+                state = afterApply;
+                foreach (var ev in applyEvents)
+                    events.Add(ev with { Order = order++ });
+                var refreshed = state.Allies.FirstOrDefault(a => a.InstanceId == current.InstanceId);
+                if (refreshed is null) break;
+                current = refreshed;
+            }
         }
 
         // move 終了後 NextMoveId に遷移

@@ -96,7 +96,21 @@ internal static class EnemyAttackingResolver
                     order += 1;
                     currentEnemyState = newEnemy;
                 }
-                // その他の action は 10.2.B 以降で対応 (no-op)
+                else
+                {
+                    // buff / debuff / heal / draw / discard / etc. は EffectApplier に委譲。
+                    // EffectApplier.ResolveTargets は caster 視点で side を解釈するので、
+                    // 敵 move の "side: enemy" は state.Allies に正しく着弾する。
+                    var (afterApply, applyEvents) = EffectApplier.Apply(
+                        state, currentEnemyState, eff, rng, catalog);
+                    state = afterApply;
+                    foreach (var ev in applyEvents)
+                        events.Add(ev with { Order = order++ });
+                    var refreshed = state.Enemies.FirstOrDefault(
+                        e => e.InstanceId == currentEnemyState.InstanceId);
+                    if (refreshed is null) break;
+                    currentEnemyState = refreshed;
+                }
             }
 
             // NextMoveId へ遷移（InstanceId ベースで検索して IndexOf を回避）

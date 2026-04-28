@@ -182,21 +182,23 @@ internal static class EffectApplier
                 if (effect.Side is null)
                     throw new InvalidOperationException(
                         $"effect '{effect.Action}' Scope=Single requires non-null Side");
-                if (effect.Side == EffectSide.Ally)
-                    return state.TargetAllyIndex is { } ai && ai < state.Allies.Length
-                        ? new[] { state.Allies[ai] }
-                        : Array.Empty<CombatActor>();
-                else
+                {
+                    bool poolIsAllies = SideResolvesToAllies(caster, effect.Side.Value);
+                    if (poolIsAllies)
+                        return state.TargetAllyIndex is { } ai && ai < state.Allies.Length
+                            ? new[] { state.Allies[ai] }
+                            : Array.Empty<CombatActor>();
                     return state.TargetEnemyIndex is { } ei && ei < state.Enemies.Length
                         ? new[] { state.Enemies[ei] }
                         : Array.Empty<CombatActor>();
+                }
 
             case EffectScope.Random:
             {
                 if (effect.Side is null)
                     throw new InvalidOperationException(
                         $"effect '{effect.Action}' Scope=Random requires non-null Side");
-                var pool = (effect.Side == EffectSide.Ally ? state.Allies : state.Enemies)
+                var pool = ResolveSidePool(state, caster, effect.Side.Value)
                     .Where(a => a.IsAlive).ToList();
                 if (pool.Count == 0) return Array.Empty<CombatActor>();
                 int idx = rng.NextInt(0, pool.Count);
@@ -208,11 +210,31 @@ internal static class EffectApplier
                 if (effect.Side is null)
                     throw new InvalidOperationException(
                         $"effect '{effect.Action}' Scope=All requires non-null Side");
-                return (effect.Side == EffectSide.Ally ? state.Allies : state.Enemies)
+                return ResolveSidePool(state, caster, effect.Side.Value)
                     .Where(a => a.IsAlive).ToList();
             }
         }
         return Array.Empty<CombatActor>();
+    }
+
+    /// <summary>
+    /// CardEffect.Side は「行動主体からの相対視点」。caster の側に応じて
+    /// state.Allies / state.Enemies のどちらを対象 pool にするか決める。
+    /// </summary>
+    private static ImmutableArray<CombatActor> ResolveSidePool(
+        BattleState state, CombatActor caster, EffectSide side)
+    {
+        bool casterIsAlly = caster.Side == ActorSide.Ally;
+        bool sideMeansAllyPool = (casterIsAlly && side == EffectSide.Ally)
+            || (!casterIsAlly && side == EffectSide.Enemy);
+        return sideMeansAllyPool ? state.Allies : state.Enemies;
+    }
+
+    private static bool SideResolvesToAllies(CombatActor caster, EffectSide side)
+    {
+        bool casterIsAlly = caster.Side == ActorSide.Ally;
+        return (casterIsAlly && side == EffectSide.Ally)
+            || (!casterIsAlly && side == EffectSide.Enemy);
     }
 
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyHeal(
@@ -250,16 +272,35 @@ internal static class EffectApplier
     private static IReadOnlyList<CombatActor> ResolveHealTargets(
         BattleState state, CombatActor caster, CardEffect effect, IRng rng)
     {
-        return effect.Scope switch
+        // heal は ApplyHeal の入口で Scope=Self または Side=Ally を要求済み。
+        // Side=Ally は「caster の味方側」(player なら state.Allies / 敵なら state.Enemies)。
+        switch (effect.Scope)
         {
-            EffectScope.Self => new[] { caster },
-            EffectScope.Single => state.TargetAllyIndex is { } ai && ai < state.Allies.Length
-                ? new[] { state.Allies[ai] }
-                : (IReadOnlyList<CombatActor>)Array.Empty<CombatActor>(),
-            EffectScope.Random => PickRandomAlive(state.Allies, rng),
-            EffectScope.All => state.Allies.Where(a => a.IsAlive).ToList(),
-            _ => Array.Empty<CombatActor>(),
-        };
+            case EffectScope.Self:
+                return new[] { caster };
+
+            case EffectScope.Single:
+            {
+                bool poolIsAllies = SideResolvesToAllies(caster, EffectSide.Ally);
+                if (poolIsAllies)
+                    return state.TargetAllyIndex is { } ai && ai < state.Allies.Length
+                        ? new[] { state.Allies[ai] }
+                        : (IReadOnlyList<CombatActor>)Array.Empty<CombatActor>();
+                return state.TargetEnemyIndex is { } ei && ei < state.Enemies.Length
+                    ? new[] { state.Enemies[ei] }
+                    : (IReadOnlyList<CombatActor>)Array.Empty<CombatActor>();
+            }
+
+            case EffectScope.Random:
+                return PickRandomAlive(ResolveSidePool(state, caster, EffectSide.Ally), rng);
+
+            case EffectScope.All:
+                return ResolveSidePool(state, caster, EffectSide.Ally)
+                    .Where(a => a.IsAlive).ToList();
+
+            default:
+                return Array.Empty<CombatActor>();
+        }
     }
 
     private static IReadOnlyList<CombatActor> PickRandomAlive(
