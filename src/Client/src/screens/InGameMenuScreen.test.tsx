@@ -5,8 +5,11 @@ import { AccountProvider } from '../context/AccountContext'
 import type { RunResultDto } from '../api/types'
 import { InGameMenuScreen } from './InGameMenuScreen'
 
-function Wrapper({ onExitToMenu, onAbandon, onClose }: {
-  onExitToMenu: () => void; onAbandon: (result: RunResultDto | null) => void; onClose: () => void
+function Wrapper({ onExitToMenu, onAbandon, onClose, requireExitConfirm }: {
+  onExitToMenu: () => void
+  onAbandon: (result: RunResultDto | null) => void
+  onClose: () => void
+  requireExitConfirm?: boolean
 }) {
   const ref = useRef(performance.now())
   return (
@@ -16,6 +19,7 @@ function Wrapper({ onExitToMenu, onAbandon, onClose }: {
         onExitToMenu={onExitToMenu}
         onAbandon={onAbandon}
         elapsedSecondsRef={ref}
+        requireExitConfirm={requireExitConfirm}
       />
     </AccountProvider>
   )
@@ -79,5 +83,69 @@ describe('InGameMenuScreen', () => {
     render(<Wrapper onExitToMenu={() => {}} onAbandon={() => {}} onClose={() => {}} />)
     fireEvent.keyDown(window, { key: 'x' })
     expect(screen.getByText(/本当にこのランを放棄/)).toBeInTheDocument()
+  })
+
+  it('requireExitConfirm=true のとき メニューに戻る で警告 confirm を出す', () => {
+    const onExit = vi.fn()
+    render(
+      <Wrapper
+        onExitToMenu={onExit}
+        onAbandon={() => {}}
+        onClose={() => {}}
+        requireExitConfirm
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'メニューに戻る' }))
+    expect(screen.getByText(/戦闘進行は/)).toBeInTheDocument()
+    expect(onExit).not.toHaveBeenCalled()
+  })
+
+  it('requireExitConfirm: confirm-exit でキャンセルすると main に戻る', () => {
+    render(
+      <Wrapper
+        onExitToMenu={() => {}}
+        onAbandon={() => {}}
+        onClose={() => {}}
+        requireExitConfirm
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'メニューに戻る' }))
+    fireEvent.click(screen.getByRole('button', { name: 'キャンセル' }))
+    // main に戻ると「あきらめる」ボタンが再度見える
+    expect(screen.getByRole('button', { name: 'あきらめる' })).toBeInTheDocument()
+  })
+
+  it('requireExitConfirm: confirm-exit の OK で heartbeat + onExitToMenu', async () => {
+    const onExit = vi.fn()
+    render(
+      <Wrapper
+        onExitToMenu={onExit}
+        onAbandon={() => {}}
+        onClose={() => {}}
+        requireExitConfirm
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'メニューに戻る' }))
+    fireEvent.click(screen.getByRole('button', { name: 'タイトルへ戻る' }))
+    await waitFor(() => {
+      const urls = fetchMock.mock.calls.map((c) => c[0] as string)
+      expect(urls.some((u) => u.includes('/runs/current/heartbeat'))).toBe(true)
+    })
+    await waitFor(() => expect(onExit).toHaveBeenCalled())
+  })
+
+  it('requireExitConfirm: Q ホットキーも confirm-exit に分岐する', () => {
+    const onExit = vi.fn()
+    render(
+      <Wrapper
+        onExitToMenu={onExit}
+        onAbandon={() => {}}
+        onClose={() => {}}
+        requireExitConfirm
+      />
+    )
+    fireEvent.keyDown(window, { key: 'q' })
+    expect(screen.getByText(/戦闘進行は/)).toBeInTheDocument()
+    expect(onExit).not.toHaveBeenCalled()
   })
 })

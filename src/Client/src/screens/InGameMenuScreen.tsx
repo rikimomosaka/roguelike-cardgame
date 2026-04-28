@@ -11,11 +11,13 @@ type Props = {
   onExitToMenu: () => void
   onAbandon: (result: RunResultDto | null) => void
   elapsedSecondsRef: RefObject<number>
+  /** 戦闘中等で「メニューに戻る」を押した時に確認ダイアログを挟むか */
+  requireExitConfirm?: boolean
 }
 
-type Mode = 'main' | 'settings' | 'confirm-abandon'
+type Mode = 'main' | 'settings' | 'confirm-abandon' | 'confirm-exit'
 
-export function InGameMenuScreen({ onClose, onExitToMenu, onAbandon, elapsedSecondsRef }: Props) {
+export function InGameMenuScreen({ onClose, onExitToMenu, onAbandon, elapsedSecondsRef, requireExitConfirm }: Props) {
   const { accountId } = useAccount()
   const [mode, setMode] = useState<Mode>('main')
   const [busy, setBusy] = useState(false)
@@ -67,7 +69,8 @@ export function InGameMenuScreen({ onClose, onExitToMenu, onAbandon, elapsedSeco
       } else if (key === 'q') {
         if (busy) return
         e.preventDefault()
-        void exit()
+        if (requireExitConfirm) setMode('confirm-exit')
+        else void exit()
       } else if (key === 'x') {
         e.preventDefault()
         setMode('confirm-abandon')
@@ -76,7 +79,7 @@ export function InGameMenuScreen({ onClose, onExitToMenu, onAbandon, elapsedSeco
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, busy, accountId])
+  }, [mode, busy, accountId, requireExitConfirm])
 
   if (mode === 'settings') {
     return (
@@ -90,6 +93,44 @@ export function InGameMenuScreen({ onClose, onExitToMenu, onAbandon, elapsedSeco
         <div className="im-settings-wrap">
           <SettingsScreen onBack={() => setMode('main')} embedded />
         </div>
+      </Popup>
+    )
+  }
+
+  if (mode === 'confirm-exit') {
+    return (
+      <Popup
+        open
+        variant="confirm"
+        title="メニューに戻る"
+        width={420}
+        closeOnEsc={false}
+        footer={
+          <div className="im-confirm-foot">
+            <button
+              type="button"
+              className="im-confirm-btn im-confirm-btn--cancel"
+              onClick={() => setMode('main')}
+              disabled={busy}
+            >
+              キャンセル
+            </button>
+            <button
+              type="button"
+              className="im-confirm-btn im-confirm-btn--danger"
+              onClick={() => void exit()}
+              disabled={busy}
+            >
+              タイトルへ戻る
+            </button>
+          </div>
+        }
+      >
+        <p className="im-confirm-body">
+          戦闘進行は <em>失われます</em>。<br />
+          次回ログイン時、このマスを最初から踏み直すことになります。<br />
+          それでもタイトルに戻りますか？
+        </p>
       </Popup>
     )
   }
@@ -180,7 +221,10 @@ export function InGameMenuScreen({ onClose, onExitToMenu, onAbandon, elapsedSeco
           <button
             type="button"
             className="im-item im-item--save"
-            onClick={() => void exit()}
+            onClick={() => {
+              if (requireExitConfirm) setMode('confirm-exit')
+              else void exit()
+            }}
             disabled={busy}
             aria-label="メニューに戻る"
           >
