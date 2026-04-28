@@ -218,6 +218,14 @@ main.map-screen {
   border-color: var(--border-dark);
 }
 
+/* Why: 通り過ぎたマス + 現在階層 (同階層の別ルート含む) + 下階層の選択不可な
+   マスを暗色化して誤クリックを防ぐ (ユーザ要望)。現在マス / 次に行けるマス /
+   上階層の未到達マス (= row > current.row) は暗化対象外。 */
+.map-screen__node.is-dim {
+  filter: brightness(0.4) saturate(0.5);
+  opacity: 0.55;
+}
+
 .map-screen__node.is-reopen {
   cursor: pointer;
 }

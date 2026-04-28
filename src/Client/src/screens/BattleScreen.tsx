@@ -147,22 +147,22 @@ type Props = {
 const STEP_DELAY_MS = 80         // 既存 fallback (汎用 event)
 const ATTACK_SLIDE_MS = 280      // 攻撃側 slot の slide-in/out 1 周
 const HIT_FLASH_MS = 320         // 被弾 slot の赤点滅
-const DEATH_BLINK_MS = 520       // 撃破時の点滅消滅
+// Why: 死亡アニメーションは廃止 (ユーザ要望)。HP=0 で alive filter から外れて
+// 自然消滅するため、後追い blink は入れない。
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-/** Why: attack/hit/death アニメーション中の slot を className で識別するため
+/** Why: attack/hit アニメーション中の slot を className で識別するため
  *  の transient state。
  *  - attackerId: 攻撃中の slot (1 つ、slide 中)
  *  - hitIds: 同じ攻撃 burst で被弾した slot 群 (全体攻撃で複数同時 flash)
- *  - dyingIds: 撃破点滅中の slot 群 */
+ *  死亡演出はユーザ要望で廃止 (HP=0 即フィルタで自然消滅)。 */
 type SlotAnim = {
   attackerId?: string
   attackerSide?: 'Ally' | 'Enemy'
   hitIds?: ReadonlyArray<string>
-  dyingIds?: ReadonlyArray<string>
 }
 
 // -------------------- Layout helpers --------------------
@@ -284,14 +284,13 @@ function IntentChipRow({ intents }: { intents: IntentDemo[] }) {
 type SlotProps = {
   char: CharacterDemo
   isTargeted?: boolean
-  /** Why: 攻撃中 / 被弾中 / 撃破中の演出クラス付与用。 */
+  /** Why: 攻撃中 / 被弾中の演出クラス付与用 (死亡演出は廃止)。 */
   attackingDir?: 'toward-enemy' | 'toward-ally'
   isHit?: boolean
-  isDying?: boolean
   onClick?: () => void
 }
 
-function Slot({ char, isTargeted, attackingDir, isHit, isDying, onClick }: SlotProps) {
+function Slot({ char, isTargeted, attackingDir, isHit, onClick }: SlotProps) {
   if (!char.occupied) {
     return <div className="battle__slot" data-occupied="0" />
   }
@@ -303,7 +302,6 @@ function Slot({ char, isTargeted, attackingDir, isHit, isDying, onClick }: SlotP
     attackingDir === 'toward-enemy' ? 'is-attacking-enemy' : '',
     attackingDir === 'toward-ally' ? 'is-attacking-ally' : '',
     isHit ? 'is-hit' : '',
-    isDying ? 'is-dying' : '',
   ].filter(Boolean).join(' ')
   // Why: スプレッドにすることで onClick が undefined のとき role/tabIndex 属性自体が
   // JSX に出ない。axe/aria リンターの "role must be valid ARIA role: {expression}"
@@ -568,6 +566,10 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
   // render 時に actor.currentHp - overlay でプログレッシブに HP を減らす。
   // 全 event 処理後に setState(finalState) + setDamageOverlay({}) で確定。
   const [damageOverlay, setDamageOverlay] = useState<Record<string, number>>({})
+  // Why: 戦闘フェーズ banner (戦闘開始 / プレイヤーのターン / 敵のターン / 勝利)。
+  // Map screen の ACT START と同じ 2 秒帯フォーマットで画面中央にオーバーレイ。
+  // banner 表示中は他のアニメーション/入力を遅延させる (await showBanner)。
+  const [phaseBanner, setPhaseBanner] = useState<string | null>(null)
   // resolvedRef は finalize 後の二重呼び出しを抑止するためのラッチ。
   const resolvedRef = useRef(false)
 
@@ -580,6 +582,14 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
   useEffect(() => {
     onBattleStateChange?.(state)
   }, [state, onBattleStateChange])
+
+  // 戦闘フェーズ banner: text を 2 秒間オーバーレイ表示してから clear。
+  // Map の ACT START と同じ 2s フェード仕様 (CSS keyframes 側で 10/88/100% 遷移)。
+  const showBanner = useCallback(async (text: string) => {
+    setPhaseBanner(text)
+    await sleep(2000)
+    setPhaseBanner(null)
+  }, [])
 
   // 戦闘終了 → /finalize 呼び出し → 親に通知。
   const handleFinalize = useCallback(async () => {
@@ -616,11 +626,39 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
       // attacker A → attacker B と続く時、A の演出中に B の damage が
       // 反映 (= HP が落ちる/敵が消える) する不具合を回避できる。
       const dmg: Record<string, number> = {}
+      // Why: 「敵のターン」 banner は 1 turn につき 1 回 (味方攻撃終了 → 初の
+      // 敵 caster AttackFire の前) で出す。表示済フラグでガードする。
+      let shownEnemyTurnBanner = false
 
       let i = 0
       while (i < steps.length) {
         const step = steps[i]
         const ev = step.event
+
+        // 「戦闘開始」「プレイヤーのターン」 banner: BattleStart / TurnStart
+        // event をそのまま trigger にする (engine が emit するタイミング)。
+        if (ev.kind === 'BattleStart') {
+          await showBanner('戦闘開始')
+          i++
+          continue
+        }
+        if (ev.kind === 'TurnStart') {
+          await showBanner('プレイヤーのターン')
+          i++
+          continue
+        }
+
+        // 「敵のターン」 banner: 最初の敵 caster の AttackFire 直前に出す。
+        // 攻撃 burst を始める前に判定し、敵側ならまず banner を流す。
+        if (ev.kind === 'AttackFire' && !shownEnemyTurnBanner) {
+          const isEnemyCaster = ev.casterInstanceId
+            ? step.snapshotAfter.enemies.some(e => e.instanceId === ev.casterInstanceId)
+            : false
+          if (isEnemyCaster) {
+            await showBanner('敵のターン')
+            shownEnemyTurnBanner = true
+          }
+        }
 
         if (ev.kind === 'AttackFire') {
           // この caster の連続 AttackFire / DealDamage を集約。
@@ -666,18 +704,9 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
         }
 
         if (ev.kind === 'ActorDeath') {
-          const targetId = ev.targetInstanceId ?? undefined
-          if (targetId) {
-            setSlotAnim(prev => ({
-              ...prev,
-              dyingIds: [...(prev.dyingIds ?? []), targetId],
-            }))
-            await sleep(DEATH_BLINK_MS)
-            setSlotAnim(prev => ({
-              ...prev,
-              dyingIds: (prev.dyingIds ?? []).filter(id => id !== targetId),
-            }))
-          }
+          // Why: ユーザ要望で死亡アニメーションは廃止 (HP=0 で消えるのが
+          // 優先される現状のレンダーに対し、後追い演出だと一瞬復活したように
+          // 見える)。event は consume するだけで delay も入れない。
           i++
           continue
         }
@@ -693,13 +722,18 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
       setSlotAnim({})
       setDamageOverlay({})
       setState(resp.state)
+
+      // Victory のみ「勝利」banner を出す (ユーザ要望、Defeat は banner なし)。
+      if (resp.state.outcome === 'Victory') {
+        await showBanner('勝利')
+      }
       setAnimating(false)
 
       if (resp.state.outcome === 'Victory' || resp.state.outcome === 'Defeat') {
         await handleFinalize()
       }
     },
-    [handleFinalize, state],
+    [handleFinalize, state, showBanner],
   )
 
   // 初期化: GET /battle → 既存ならそれを表示、なければ POST /start。
@@ -823,10 +857,8 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
   // Why: BattleEngine は死亡した actor を state.Allies / Enemies から削除せず、
   // CurrentHp=0 のまま残す (.Where(a => a.IsAlive) で都度フィルタ)。Client 側でも
   // 表示前にフィルタして「死んだのに残り続ける」現象を回避する。
-  // ただし「撃破アニメーション中 (slotAnim.dyingIds に含まれる)」actor は
-  // フィルタしないでそのまま表示し、点滅消滅完了後に消える。
   // damageOverlay は playSteps 中の累積ダメージで、表示用 HP に減算する。
-  const dyingSet = new Set(slotAnim.dyingIds ?? [])
+  // 死亡アニメーションは廃止 (ユーザ要望) のため HP=0 で即フィルタ → 自然消滅。
   const applyOverlay = (a: CombatActorDto): CombatActorDto => {
     const dmg = damageOverlay[a.instanceId] ?? 0
     if (dmg <= 0) return a
@@ -834,12 +866,8 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
   }
   const allAllies = state.allies.map(applyOverlay)
   const allEnemies = state.enemies.map(applyOverlay)
-  const aliveAllies = allAllies.filter(
-    (a) => a.currentHp > 0 || dyingSet.has(a.instanceId),
-  )
-  const aliveEnemies = allEnemies.filter(
-    (e) => e.currentHp > 0 || dyingSet.has(e.instanceId),
-  )
+  const aliveAllies = allAllies.filter((a) => a.currentHp > 0)
+  const aliveEnemies = allEnemies.filter((e) => e.currentHp > 0)
 
   // 4 スロット zero-pad で side ごとに描画。
   const allyDemos = aliveAllies.map((a) =>
@@ -911,7 +939,6 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
                     ? ('toward-enemy' as const)
                     : undefined
                 const isHit = !!(actor && (slotAnim.hitIds ?? []).includes(actor.instanceId))
-                const isDying = !!(actor && dyingSet.has(actor.instanceId))
                 return (
                   <Slot
                     key={`p-${i}`}
@@ -919,7 +946,6 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
                     isTargeted={isTargeted}
                     attackingDir={attackingDir}
                     isHit={isHit}
-                    isDying={isDying}
                     onClick={onClick}
                   />
                 )
@@ -941,7 +967,6 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
                     ? ('toward-ally' as const)
                     : undefined
                 const isHit = !!(actor && (slotAnim.hitIds ?? []).includes(actor.instanceId))
-                const isDying = !!(actor && dyingSet.has(actor.instanceId))
                 return (
                   <Slot
                     key={`e-${i}`}
@@ -949,7 +974,6 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
                     isTargeted={isTargeted}
                     attackingDir={attackingDir}
                     isHit={isHit}
-                    isDying={isDying}
                     onClick={onClick}
                   />
                 )
@@ -1040,6 +1064,20 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
           onClose={() => setPileOpen(null)}
         />
       ) : null}
+      {/* Why: 戦闘フェーズ banner。Map の ACT START と同じ 2 秒帯を画面中央に
+          オーバーレイ。表示中は他の input/anim が await でブロックされている。
+          phaseBanner の key に text を使うことで、連続表示時にアニメーションが
+          再起動するようにする (同じ要素を残すと再アニメが走らない)。 */}
+      {phaseBanner !== null && (
+        <div
+          key={phaseBanner}
+          className="battle-screen__phase-banner"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="battle-screen__phase-banner-text">{phaseBanner}</span>
+        </div>
+      )}
     </div>
   )
 }

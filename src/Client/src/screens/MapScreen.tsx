@@ -597,38 +597,36 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
                   const nextEdge = !startEntryActive
                     && n.id === snap.run.currentNodeId
                     && currentNode.outgoingNodeIds.includes(toId)
-                  // Visited (history) edges use a clearly distinct, brighter
-                  // color so the player can read where they came from at a
-                  // glance. Next-edge stays gold-toned to match the next-tile
-                  // pulse glow.
+                  // Why: 過去の道は青、次に行ける道は黄色、その他はデフォルト色
+                  // (ユーザ要望)。点線は廃止して色だけで状態を表現する。
                   const stroke = visitedEdge
                     ? '#3ec6ff'
                     : nextEdge
-                      ? '#5a3812'
+                      ? '#f1c95b'
                       : '#2a1c0e'
                   const opacity = visitedEdge ? 1 : nextEdge ? 1 : 0.95
-                  const strokeWidth = nextEdge ? 0.5 : 0.45
-                  const dash = visitedEdge
-                    ? undefined
-                    : nextEdge
-                      ? '1.2 1'
-                      : undefined
+                  // Why: vector-effect="non-scaling-stroke" を付けて、SVG が
+                  // preserveAspectRatio="none" で歪められても線の太さが
+                  // screen px 基準で一定になる。これにより縦道と斜道が
+                  // 同じ太さに見える (ユーザ要望)。strokeWidth は viewBox
+                  // 単位ではなく px 直接値として扱われる。
                   return (
                     <g key={`${n.id}-${toId}`}>
                       <line
                         x1={a.x} y1={a.y} x2={b.x} y2={b.y}
                         stroke="#ffffff"
                         strokeOpacity={0.9}
-                        strokeWidth={strokeWidth + 0.35}
+                        strokeWidth={4}
                         strokeLinecap="round"
+                        vectorEffect="non-scaling-stroke"
                       />
                       <line
                         x1={a.x} y1={a.y} x2={b.x} y2={b.y}
                         stroke={stroke}
                         strokeOpacity={opacity}
-                        strokeWidth={strokeWidth}
+                        strokeWidth={2.5}
                         strokeLinecap="round"
-                        strokeDasharray={dash}
+                        vectorEffect="non-scaling-stroke"
                       />
                     </g>
                   )
@@ -654,12 +652,21 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
                     ? 'is-next'
                     : 'is-far'
 
+              // Why: 通り過ぎたマス / 現在階層と同列または下にあって選択不可な
+              // マスは暗色化して誤クリックを防ぐ (ユーザ要望)。現在マス + 次に
+              // 行けるマス + 上 (= 未到達 row > current.row) の未選択マスは
+              // 暗くしない。
+              const isDim =
+                !isCurrent && !selectable && !reopen && !startEntry &&
+                (isVisited || n.row <= currentNode.row)
+
               const classes = [
                 'map-screen__node',
                 stateClass,
                 kindClassFor(n.kind, resolvedKind),
                 reopen ? 'is-reopen' : '',
                 startEntry ? 'is-pulse' : '',
+                isDim ? 'is-dim' : '',
               ].filter(Boolean).join(' ')
 
               const label = (isCurrent || selectable) ? nodeLabelFor(n.kind, resolvedKind) : null

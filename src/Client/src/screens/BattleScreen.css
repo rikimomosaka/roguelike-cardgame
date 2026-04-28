@@ -258,6 +258,47 @@
 
 .battle__slot[data-occupied="0"] { visibility: hidden; }
 
+/* Why: 戦闘フェーズ banner (戦闘開始 / プレイヤーのターン / 敵のターン / 勝利)。
+   Map の .map-screen__act-banner と同形式 (2s フェード、画面中央オーバーレイ)。 */
+.battle-screen__phase-banner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 80;
+  padding: 22px 0;
+  text-align: center;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(10, 6, 4, 0.88) 18%,
+    rgba(10, 6, 4, 0.88) 82%,
+    transparent 100%
+  );
+  border-top: 1px solid rgba(201, 152, 90, 0.4);
+  border-bottom: 1px solid rgba(201, 152, 90, 0.4);
+  pointer-events: none;
+  animation: battle-screen-phase-banner-fade 2s ease-out forwards;
+}
+.battle-screen__phase-banner-text {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 42px;
+  letter-spacing: 14px;
+  color: var(--gold-soft);
+  text-shadow:
+    0 0 24px rgba(255, 213, 79, 0.6),
+    0 0 12px rgba(255, 213, 79, 0.4),
+    0 2px 0 #000;
+}
+@keyframes battle-screen-phase-banner-fade {
+  0%   { opacity: 0; transform: translateY(-50%) scale(0.94); }
+  10%  { opacity: 1; transform: translateY(-50%) scale(1); }
+  88%  { opacity: 1; transform: translateY(-50%) scale(1); }
+  100% { opacity: 0; transform: translateY(-50%) scale(1.02); }
+}
+
 /* Pile modal: 山札/捨札/除外 をクリックで開くカードリストポップアップ。 */
 .pile-modal-backdrop {
   position: fixed;
@@ -380,15 +421,7 @@ button.pile:hover { filter: brightness(1.2); }
   }
 }
 
-/* 撃破時の点滅消滅。アニメ終了後に React 側で alive filter から外して自然消滅。 */
-.battle__slot.is-dying { animation: slot-die 520ms ease-out forwards; }
-@keyframes slot-die {
-  0%   { opacity: 1; filter: none; }
-  20%  { opacity: 0.3; filter: brightness(1.8) saturate(0.4); }
-  40%  { opacity: 1.0; filter: brightness(1.6) saturate(0.6); }
-  60%  { opacity: 0.4; filter: brightness(1.6) saturate(0.6); }
-  100% { opacity: 0; transform: scale(0.6); filter: grayscale(1); }
-}
+/* 死亡演出はユーザ要望により廃止 (HP=0 で alive filter から外れて自然消滅)。 */
 .battle__slot.is-targeted::after {
   content: "▼";
   position: absolute;
