@@ -154,13 +154,15 @@ function sleep(ms: number): Promise<void> {
 }
 
 /** Why: attack/hit/death アニメーション中の slot を className で識別するため
- *  の transient state。複数 slot が同時に該当することはあるが、UI 的には
- *  1 step ずつ進むので 1 種類につき 1 instanceId で足りる。 */
+ *  の transient state。
+ *  - attackerId: 攻撃中の slot (1 つ、slide 中)
+ *  - hitIds: 同じ攻撃 burst で被弾した slot 群 (全体攻撃で複数同時 flash)
+ *  - dyingIds: 撃破点滅中の slot 群 */
 type SlotAnim = {
   attackerId?: string
-  attackerSide?: 'Ally' | 'Enemy'   // slide 方向決定用
-  hitId?: string
-  dyingIds?: ReadonlyArray<string>  // 死亡演出は複数同時もあり得るので set
+  attackerSide?: 'Ally' | 'Enemy'
+  hitIds?: ReadonlyArray<string>
+  dyingIds?: ReadonlyArray<string>
 }
 
 // -------------------- Layout helpers --------------------
@@ -575,76 +577,94 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
     }
   }, [accountId, onBattleResolved])
 
-  // BattleActionResponse を受け取り、各 step を event 種別ごとにアニメーション
-  // 付きで再生する。
-  // - AttackFire: 攻撃側 slot を一瞬反対側へ slide (側により方向反転) させる
-  // - DealDamage: 着弾 slot を赤点滅。amount=0 (block で無効化) は flash skip
-  // - ActorDeath: 撃破 slot を点滅消滅 (アニメ終了後に state 反映 = 自然消滅)
-  // - その他 (BattleStart / TurnStart / GainBlock / etc.): 短い fallback delay
+  // BattleActionResponse を再生する。
+  // 設計 (ユーザ要望):
+  //  - 同じ caster の連続 AttackFire / DealDamage を 1 個の "attack burst"
+  //    として束ねる (engine は per-target に AttackFire+DealDamage ペアを
+  //    emit するため、全体攻撃 / 複数 effects で連続する)。
+  //  - burst あたり: slide アニメ 1 回 → 全被弾 slot 同時 flash → 進行
+  //  - ActorDeath / GainBlock / その他: 個別に処理 (短い delay)
   const playSteps = useCallback(
     async (resp: BattleActionResponseDto) => {
       setAnimating(true)
-      // 撃破中の actor は alive filter で消されないように slotAnim.dyingIds に
-      // 記録し、anim 終了で state 反映するタイミングで除外する。
-      const dying: string[] = []
-
-      for (const step of resp.steps) {
+      const steps = resp.steps
+      let i = 0
+      while (i < steps.length) {
+        const step = steps[i]
         const ev = step.event
-        switch (ev.kind) {
-          case 'AttackFire': {
-            // 攻撃側 slot を side に応じて slide
-            const casterId = ev.casterInstanceId ?? undefined
-            const side = casterId
-              ? (step.snapshotAfter.allies.some(a => a.instanceId === casterId)
-                  ? 'Ally' : 'Enemy')
-              : undefined
-            setSlotAnim(prev => ({ ...prev, attackerId: casterId, attackerSide: side }))
-            await sleep(ATTACK_SLIDE_MS)
-            setSlotAnim(prev => ({ ...prev, attackerId: undefined, attackerSide: undefined }))
-            break
+
+        if (ev.kind === 'AttackFire') {
+          // この caster の連続 AttackFire / DealDamage を集約。
+          const casterId = ev.casterInstanceId ?? undefined
+          const hitTargets: string[] = []
+          let lastSnapshot = step.snapshotAfter
+          let j = i
+          while (j < steps.length) {
+            const e = steps[j].event
+            if ((e.kind === 'AttackFire' || e.kind === 'DealDamage')
+                && e.casterInstanceId === casterId) {
+              if (e.kind === 'DealDamage' && (e.amount ?? 0) > 0 && e.targetInstanceId) {
+                hitTargets.push(e.targetInstanceId)
+              }
+              lastSnapshot = steps[j].snapshotAfter
+              j++
+            } else {
+              break
+            }
           }
-          case 'DealDamage': {
-            const targetId = ev.targetInstanceId ?? undefined
-            const amount = ev.amount ?? 0
+
+          // slide 方向は caster side で決定。
+          const side = casterId
+            ? (lastSnapshot.allies.some(a => a.instanceId === casterId)
+                ? 'Ally' : 'Enemy')
+            : undefined
+          setSlotAnim({ attackerId: casterId, attackerSide: side })
+          // slide の中盤で被弾を反映 (state を進めて HP 減少 + 同時 flash)。
+          await sleep(ATTACK_SLIDE_MS / 2)
+          setState(lastSnapshot)
+          if (hitTargets.length > 0) {
+            // 重複除去 (同 target に複数 effects がある場合)
+            const uniq = Array.from(new Set(hitTargets))
+            setSlotAnim({ attackerId: casterId, attackerSide: side, hitIds: uniq })
+          }
+          await sleep(ATTACK_SLIDE_MS / 2)
+          // slide 終了 → flash だけ残してさらに HIT_FLASH_MS - slide/2 待つ
+          setSlotAnim(prev => ({ ...prev, attackerId: undefined, attackerSide: undefined }))
+          if (hitTargets.length > 0) {
+            await sleep(Math.max(0, HIT_FLASH_MS - ATTACK_SLIDE_MS / 2))
+          }
+          setSlotAnim({})
+          i = j
+          continue
+        }
+
+        if (ev.kind === 'ActorDeath') {
+          const targetId = ev.targetInstanceId ?? undefined
+          if (targetId) {
+            setSlotAnim(prev => ({
+              ...prev,
+              dyingIds: [...(prev.dyingIds ?? []), targetId],
+            }))
+            await sleep(DEATH_BLINK_MS)
             setState(step.snapshotAfter)
-            if (amount > 0 && targetId) {
-              setSlotAnim(prev => ({ ...prev, hitId: targetId }))
-              await sleep(HIT_FLASH_MS)
-              setSlotAnim(prev => ({ ...prev, hitId: undefined }))
-            } else {
-              await sleep(STEP_DELAY_MS)
-            }
-            break
-          }
-          case 'ActorDeath': {
-            const targetId = ev.targetInstanceId ?? undefined
-            if (targetId) {
-              dying.push(targetId)
-              setSlotAnim(prev => ({
-                ...prev,
-                dyingIds: [...(prev.dyingIds ?? []), targetId],
-              }))
-              await sleep(DEATH_BLINK_MS)
-              // 撃破アニメ終了 → state を反映 (HP=0 なので alive filter で消える)
-              setState(step.snapshotAfter)
-              setSlotAnim(prev => ({
-                ...prev,
-                dyingIds: (prev.dyingIds ?? []).filter(id => id !== targetId),
-              }))
-            } else {
-              setState(step.snapshotAfter)
-              await sleep(STEP_DELAY_MS)
-            }
-            break
-          }
-          default: {
+            setSlotAnim(prev => ({
+              ...prev,
+              dyingIds: (prev.dyingIds ?? []).filter(id => id !== targetId),
+            }))
+          } else {
             setState(step.snapshotAfter)
             await sleep(STEP_DELAY_MS)
           }
+          i++
+          continue
         }
+
+        // その他 (BattleStart / TurnStart / GainBlock / Draw / etc.)
+        setState(step.snapshotAfter)
+        await sleep(STEP_DELAY_MS)
+        i++
       }
 
-      void dying  // ref to silence lint when dying is not used
       setSlotAnim({})
       setState(resp.state)
       setAnimating(false)
@@ -846,7 +866,7 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
                   actor && slotAnim.attackerId === actor.instanceId
                     ? ('toward-enemy' as const)
                     : undefined
-                const isHit = !!(actor && slotAnim.hitId === actor.instanceId)
+                const isHit = !!(actor && (slotAnim.hitIds ?? []).includes(actor.instanceId))
                 const isDying = !!(actor && dyingSet.has(actor.instanceId))
                 return (
                   <Slot
@@ -876,7 +896,7 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
                   actor && slotAnim.attackerId === actor.instanceId
                     ? ('toward-ally' as const)
                     : undefined
-                const isHit = !!(actor && slotAnim.hitId === actor.instanceId)
+                const isHit = !!(actor && (slotAnim.hitIds ?? []).includes(actor.instanceId))
                 const isDying = !!(actor && dyingSet.has(actor.instanceId))
                 return (
                   <Slot
