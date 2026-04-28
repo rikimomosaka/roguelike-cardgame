@@ -509,22 +509,38 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
       run: { ...snap.run, playSeconds: snap.run.playSeconds + battleTicks },
     }
     return (
-      <BattleScreen
-        accountId={accountId}
-        snapshot={snapWithTickedTime}
-        onTogglePeek={() => setPeekMap(true)}
-        onBattleStateChange={setLivefBattleState}
-        onBattleResolved={(result) => {
-          setLivefBattleState(null)
-          if ('outcome' in result) {
-            onRunFinished?.(result, snapRef.current)
-          } else {
-            setSnap(result)
-            setRewardDismissed(false)
-            setPeekMap(false)
-          }
-        }}
-      />
+      <>
+        <BattleScreen
+          accountId={accountId}
+          snapshot={snapWithTickedTime}
+          onTogglePeek={() => setPeekMap(true)}
+          onBattleStateChange={setLivefBattleState}
+          onBattleResolved={(result) => {
+            setLivefBattleState(null)
+            if ('outcome' in result) {
+              onRunFinished?.(result, snapRef.current)
+            } else {
+              setSnap(result)
+              setRewardDismissed(false)
+              setPeekMap(false)
+            }
+          }}
+          menuOpen={menuOpen}
+          onOpenMenu={() => setMenuOpen(v => !v)}
+        />
+        {menuOpen && (
+          <InGameMenuScreen
+            onClose={() => setMenuOpen(false)}
+            onExitToMenu={onExitToMenu}
+            onAbandon={(result) => {
+              setMenuOpen(false)
+              setPendingFinish({ kind: 'abandon', result })
+            }}
+            elapsedSecondsRef={mountedAt}
+            requireExitConfirm
+          />
+        )}
+      </>
     )
   }
 
@@ -763,6 +779,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
               setPendingFinish({ kind: 'abandon', result })
             }}
             elapsedSecondsRef={mountedAt}
+            // 戦闘外 (マップ表示) では確認ダイアログ不要
           />
         )}
 
