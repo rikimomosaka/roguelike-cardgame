@@ -950,25 +950,6 @@ export function BattleScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountId])
 
-  // Why: TopBar の menu ボタンと同じく ESC でメニュー開閉。menu 開いている
-  // 間は ESC を Popup 側 (mode==='main' のときの closeOnEsc=true) に任せ、
-  // ここでは何もしない。確認サブ Popup (closeOnEsc=false) 中は ESC 無効。
-  useEffect(() => {
-    if (menuOpen) return
-    if (!onOpenMenu) return
-    const handler = (e: KeyboardEvent) => {
-      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return
-      const tag = (e.target as HTMLElement | null)?.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        onOpenMenu()
-      }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [menuOpen, onOpenMenu])
-
   async function withBusy<T>(fn: () => Promise<T>): Promise<T | null> {
     if (animating || busy) return null
     setBusy(true)

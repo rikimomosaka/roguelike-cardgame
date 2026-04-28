@@ -130,6 +130,8 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
   const snapRef = useRef<RunSnapshotDto>(snap)
   useEffect(() => { snapRef.current = snap }, [snap])
 
+  const toggleMenu = useCallback(() => setMenuOpen(v => !v), [])
+
   useEffect(() => {
     const stage = stageRef.current
     if (!stage) return
@@ -221,13 +223,24 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
     }
   }, [accountId])
 
+  // Why: ESC で in-game menu を開閉。menu 開いている間は Popup 側
+  // (mode==='main' のときの closeOnEsc=true) に任せ、ここでは何もしない。
+  // 確認サブ Popup (closeOnEsc=false) 中は ESC 無効。
+  // INPUT/TEXTAREA/SELECT focus 中や modifier キー併用時は捕まえない。
   useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setMenuOpen((v) => !v)
+    if (menuOpen) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return
+      const tag = (e.target as HTMLElement | null)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        toggleMenu()
+      }
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [])
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [menuOpen, toggleMenu])
 
   useEffect(() => {
     if (!shopMessage) return
@@ -495,6 +508,23 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
     }
   }
 
+  // Why: 戦闘中 (activeBattle && !peekMap) は確認ダイアログを挟み、戦闘外 (peek
+  // 中 / 戦闘なし) は即タイトルに戻す。両分岐で同じ menuNode を render することで
+  // onAbandon / onClose の closures が一箇所に集約され、二重メンテナンスを防ぐ。
+  const requireExitConfirm = !!activeBattle && !peekMap
+  const menuNode = menuOpen ? (
+    <InGameMenuScreen
+      onClose={() => setMenuOpen(false)}
+      onExitToMenu={onExitToMenu}
+      onAbandon={(result) => {
+        setMenuOpen(false)
+        setPendingFinish({ kind: 'abandon', result })
+      }}
+      elapsedSecondsRef={mountedAt}
+      requireExitConfirm={requireExitConfirm}
+    />
+  ) : null
+
   // 戦闘中はマップ UI ではなく BattleScreen をフルスクリーン表示する。
   // BattleScreen が /finalize を呼び終えたら RunSnapshotDto (続行) または
   // RunResultDto (ラン終了) を渡してくる。
@@ -526,20 +556,9 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
             }
           }}
           menuOpen={menuOpen}
-          onOpenMenu={() => setMenuOpen(v => !v)}
+          onOpenMenu={toggleMenu}
         />
-        {menuOpen && (
-          <InGameMenuScreen
-            onClose={() => setMenuOpen(false)}
-            onExitToMenu={onExitToMenu}
-            onAbandon={(result) => {
-              setMenuOpen(false)
-              setPendingFinish({ kind: 'abandon', result })
-            }}
-            elapsedSecondsRef={mountedAt}
-            requireExitConfirm
-          />
-        )}
+        {menuNode}
       </>
     )
   }
@@ -561,7 +580,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
           deck={snap.run.deck}
           relics={liveRelics}
           onDiscardPotion={handleDiscardPotion}
-          onOpenMenu={() => setMenuOpen(v => !v)}
+          onOpenMenu={toggleMenu}
           menuActive={menuOpen}
           onTogglePeek={activeBattle ? () => setPeekMap(v => !v) : () => {}}
           peekActive={peekMap}
@@ -770,18 +789,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
           />
         )}
 
-        {menuOpen && (
-          <InGameMenuScreen
-            onClose={() => setMenuOpen(false)}
-            onExitToMenu={onExitToMenu}
-            onAbandon={(result) => {
-              setMenuOpen(false)
-              setPendingFinish({ kind: 'abandon', result })
-            }}
-            elapsedSecondsRef={mountedAt}
-            // 戦闘外 (マップ表示) では確認ダイアログ不要
-          />
-        )}
+        {menuNode}
 
         {merchantVisible && activeMerchant && (
           <MerchantScreen
