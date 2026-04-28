@@ -41,47 +41,33 @@
   color: var(--fg);
   font-family: var(--font-body);
 }
+/* Why: 背景画像の上に直接 UI が乗る構成にするため、暗化 gradient と
+   ドット模様 (.battle__pattern) と内枠線 (.battle::before) を除去 (ユーザ要望)。 */
 .battle[data-act="1"] {
   background:
-    linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.55) 100%),
     url('/backgrounds/battle/battle_forest.png') center / cover no-repeat,
     var(--bg-3);
 }
 .battle[data-act="2"] {
   background:
-    linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.55) 100%),
     url('/backgrounds/battle/battle_cave.png') center / cover no-repeat,
     var(--bg-3);
 }
 .battle[data-act="3"] {
   background:
-    linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.5) 100%),
     url('/backgrounds/battle/battle_hell.png') center / cover no-repeat,
     var(--bg-3);
 }
 
 .battle__pattern {
-  position: absolute; inset: 0;
-  opacity: 0.35;
-  background:
-    radial-gradient(circle at 25% 25%, rgba(201, 152, 90, 0.4) 1px, transparent 1.5px) 0 0/24px 24px,
-    radial-gradient(circle at 75% 75%, rgba(201, 152, 90, 0.2) 1px, transparent 1.5px) 0 0/24px 24px;
-  mask: radial-gradient(ellipse at 50% 50%, black 25%, transparent 90%);
-  -webkit-mask: radial-gradient(ellipse at 50% 50%, black 25%, transparent 90%);
-  pointer-events: none;
-}
-
-.battle::before {
-  content: "";
-  position: absolute; inset: 16px;
-  border: 1px solid var(--border-mid);
-  border-radius: var(--radius-sm);
-  pointer-events: none;
-  z-index: 1;
+  /* Why: 元のドット模様装飾は背景画像があれば不要 (ユーザ要望)。 */
+  display: none;
 }
 
 .battle__content {
-  position: absolute; inset: 32px;
+  /* Why: 暗化グラデーションと外枠線を除去したのに合わせ、内側 inset
+     (32px の余白) も無くして背景画像を端まで活かす (ユーザ要望)。 */
+  position: absolute; inset: 0;
   display: flex; flex-direction: column;
   z-index: var(--z-stage);
   gap: 10px;
@@ -239,22 +225,20 @@
   flex: 1;
   position: relative;
   min-height: 0;
-  background: radial-gradient(
-    ellipse at 50% 45%,
-    rgba(10, 6, 4, 0.3) 0%,
-    rgba(10, 6, 4, 0.6) 80%
-  );
-  border: 1px solid var(--border-dark);
-  border-radius: var(--radius-md);
-  overflow: hidden;
+  /* Why: 背景画像が直接見えるよう、stage 内の暗化グラデーション・枠線・
+     角丸を除去 (ユーザ要望)。 */
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
 }
 
 .battle__chars {
-  /* Why: 背景画像の地面ラインにキャラの足元を合わせるため、上 anchor から
-     下 anchor に変更し、TURN END/捨札 (bottom: 30px) より上 + ハンド領域
-     (~150px) より上にスペースを確保 (ユーザ要望)。 */
+  /* Why: 背景画像の地面ラインにキャラの足元を合わせるため、bottom anchor。
+     ユーザ要望でさらに下げる: 200px → 110px (手札カード上端付近)。
+     手札領域 (約 150px 高) と重ならない位置で背景の地面ライン付近に揃える。 */
   position: absolute;
-  bottom: 200px;
+  bottom: 110px;
   left: 0;
   right: 0;
   display: flex;
@@ -700,13 +684,13 @@ button.pile:hover { filter: brightness(1.2); }
 .energy__cur { font-size: var(--fs-hero); color: var(--gold); font-variant-numeric: tabular-nums; line-height: 1; }
 .energy__max { font-size: 18px; color: var(--fg-muted); font-variant-numeric: tabular-nums; }
 
-/* COMBO chip: 画面中央上部に再配置 (ユーザ要望)。stage 上部に固定し、
-   キャラ枠と被らない位置にする。 */
+/* COMBO chip: 手札のすぐ上、除外 pile と同じ垂直位置に配置 (ユーザ要望)。
+   .pile--exhaust は bottom: 168px なので同じ bottom を指定する。 */
 .battle__combo {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  top: 12px;
+  bottom: 168px;
   z-index: var(--z-hud);
   height: 52px;
   width: 110px;
@@ -890,6 +874,51 @@ button.pile:hover { filter: brightness(1.2); }
     translate(var(--fan-x, 0), var(--fan-y, 0))
     rotate(var(--fan-r, 0deg));
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+  /* Why: hand に新規 mount されたカードは fade-in (山札からドローされて
+     来た感じ)。既存カードは React が DOM 維持するので再生されない
+     (key に instanceId を使って stable identity 確保)。 */
+  animation: card-enter 240ms ease-out;
+}
+
+/* Why: hand から手放されたカード (play / discard / exhaust / turn end discard) の
+   exit アニメーション。捨札 (右下) 方向に縮小フェードする。leavingHand 経由で
+   一定時間 DOM に留めてから自然に削除される。 */
+.hand > .card.is-leaving {
+  pointer-events: none;
+  animation: card-leave 260ms ease-in forwards;
+}
+
+@keyframes card-enter {
+  0% {
+    opacity: 0;
+    transform:
+      translate(calc(var(--fan-x, 0px) - 80px), calc(var(--fan-y, 0px) - 60px))
+      rotate(calc(var(--fan-r, 0deg) - 15deg))
+      scale(0.55);
+  }
+  100% {
+    opacity: 1;
+    transform:
+      translate(var(--fan-x, 0), var(--fan-y, 0))
+      rotate(var(--fan-r, 0deg));
+  }
+}
+
+@keyframes card-leave {
+  0% {
+    opacity: 1;
+    transform:
+      translate(var(--fan-x, 0), var(--fan-y, 0))
+      rotate(var(--fan-r, 0deg));
+  }
+  100% {
+    opacity: 0;
+    /* 捨札方向 (右下) に飛んでいくよう x +220px / y +60px、縮小 0.5 */
+    transform:
+      translate(calc(var(--fan-x, 0px) + 220px), calc(var(--fan-y, 0px) + 60px))
+      rotate(calc(var(--fan-r, 0deg) + 25deg))
+      scale(0.5);
+  }
 }
 
 .hand > .card.is-playable {

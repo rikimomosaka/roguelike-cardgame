@@ -31,6 +31,7 @@ import {
 import type {
   ActorSide,
   BattleActionResponseDto,
+  BattleCardInstanceDto,
   BattleStateDto,
   CombatActorDto,
   RunResultDto,
@@ -147,6 +148,7 @@ type Props = {
 const STEP_DELAY_MS = 80         // 既存 fallback (汎用 event)
 const ATTACK_SLIDE_MS = 280      // 攻撃側 slot の slide-in/out 1 周
 const HIT_FLASH_MS = 320         // 被弾 slot の赤点滅
+const CARD_LEAVE_MS = 260        // 手札カード exit (捨札方向に縮小フェード)
 // Why: 死亡アニメーションは廃止 (ユーザ要望)。HP=0 で alive filter から外れて
 // 自然消滅するため、後追い blink は入れない。
 
@@ -352,9 +354,13 @@ type HandCardProps = {
   card: HandCardDemo
   fan: { x: number; y: number; r: number }
   onClick?: () => void
+  /** Why: 直前まで hand にいたが手放されたカード (play / discard / exhaust /
+   *  turn end discard 等) の exit アニメーション中の表示用。CSS で
+   *  .is-leaving class が付き、捨札方向に縮小フェードする。 */
+  leaving?: boolean
 }
 
-function HandCard({ card, fan, onClick }: HandCardProps) {
+function HandCard({ card, fan, onClick, leaving }: HandCardProps) {
   const tip = useTip({
     name: card.name,
     rarity: card.rarity,
@@ -408,8 +414,11 @@ function HandCard({ card, fan, onClick }: HandCardProps) {
         /* Why: 実績画面 (TopBar デッキ modal) の Card 幅 112 と統一する。
            デフォルト 104 だと「ストライク」「ウィスプ召喚」が見切れていた。 */
         width={112}
-        className={card.playable ? 'is-playable' : undefined}
-        onClick={onClick}
+        className={[
+          card.playable ? 'is-playable' : '',
+          leaving ? 'is-leaving' : '',
+        ].filter(Boolean).join(' ') || undefined}
+        onClick={leaving ? undefined : onClick}
         onMouseEnter={tip.onMouseEnter}
         onMouseLeave={tip.onMouseLeave}
       />
@@ -577,6 +586,20 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
   const [phaseBanner, setPhaseBanner] = useState<string | null>(null)
   // resolvedRef は finalize 後の二重呼び出しを抑止するためのラッチ。
   const resolvedRef = useRef(false)
+  // Why: hand から消えたカードを exit アニメーション中だけ残しておくバッファ。
+  // 表示中はクリック不可 (onClick 無効)、CSS で .is-leaving が捨札方向へ
+  // 縮小フェードする。タイマーで自動削除。
+  type LeavingHandEntry = {
+    card: BattleCardInstanceDto
+    demo: HandCardDemo
+    fan: { x: number; y: number; r: number }
+  }
+  const [leavingHand, setLeavingHand] = useState<LeavingHandEntry[]>([])
+  const prevHandRef = useRef<{ list: BattleCardInstanceDto[]; demos: HandCardDemo[]; fans: { x: number; y: number; r: number }[] }>({
+    list: [],
+    demos: [],
+    fans: [],
+  })
 
   const { catalog: cardCatalog } = useCardCatalog()
   const { catalog: enemyCatalog } = useEnemyCatalog()
@@ -935,6 +958,43 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
   )
   const fan = fanLayout(handDemos.length)
 
+  // Why: hand state が更新された瞬間に「直前 hand にいたが今いない」カードを
+  // 検出し、leavingHand に追加する。表示中は CSS .is-leaving で捨札方向に
+  // 縮小フェードし、CARD_LEAVE_MS 経過で除去 (ユーザ要望: ゾーン間移動
+  // アニメーション)。前回の hand list / demo / fan は ref で保持。
+  useEffect(() => {
+    const prev = prevHandRef.current
+    const currentIds = new Set(state.hand.map(c => c.instanceId))
+    const newlyLeaving: LeavingHandEntry[] = []
+    prev.list.forEach((card, idx) => {
+      if (!currentIds.has(card.instanceId)) {
+        newlyLeaving.push({
+          card,
+          demo: prev.demos[idx],
+          fan: prev.fans[idx],
+        })
+      }
+    })
+    if (newlyLeaving.length > 0) {
+      setLeavingHand(prevList => [...prevList, ...newlyLeaving])
+      const ids = newlyLeaving.map(e => e.card.instanceId)
+      const t = window.setTimeout(() => {
+        setLeavingHand(prevList =>
+          prevList.filter(e => !ids.includes(e.card.instanceId)),
+        )
+      }, CARD_LEAVE_MS)
+      // cleanup: タイマー解除はあえて行わない (途中 unmount でも leavingHand
+      // 自体が破棄される)。
+      void t
+    }
+    prevHandRef.current = {
+      list: state.hand.slice(),
+      demos: handDemos.slice(),
+      fans: fan.slice(),
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.hand])
+
   const interactionsDisabled = animating || busy
 
   return (
@@ -1082,12 +1142,15 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
             TURN END
           </button>
 
-          {/* Hand (fanned) */}
+          {/* Hand (fanned).
+              Why: key を instanceId にすることで React が DOM を 1:1 で追跡し、
+              新規カードのみ entry CSS animation が走り、再 mount 不要なカードは
+              アニメ再生されない (急に再描画されない)。 */}
           <div className="hand-wrap">
             <div className="hand">
               {handDemos.map((c, i) => (
                 <HandCard
-                  key={i}
+                  key={state.hand[i]?.instanceId ?? `idx-${i}`}
                   card={c}
                   fan={fan[i]}
                   onClick={
@@ -1095,6 +1158,16 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
                       ? undefined
                       : () => void handlePlayCard(i)
                   }
+                />
+              ))}
+              {/* leaving cards: 直前の hand には居たが今 hand にいないカード。
+                  exit アニメ完了後に leavingHand から削除される。 */}
+              {leavingHand.map((lh) => (
+                <HandCard
+                  key={`leaving-${lh.card.instanceId}`}
+                  card={lh.demo}
+                  fan={lh.fan}
+                  leaving
                 />
               ))}
             </div>
