@@ -146,6 +146,10 @@ type Props = {
   /** Why: peek 中も親が live battle state を TopBar に表示できるよう、state
    *  更新ごとに親へ通知する。null は battle 終了 (clear) を意味する。 */
   onBattleStateChange?: (state: BattleStateDto | null) => void
+  /** TopBar メニューボタン / ESC でゲーム内メニューを開閉する。
+   *  state は MapScreen が保持する (戦闘中 abandon/exit のフローを共有するため)。 */
+  menuOpen?: boolean
+  onOpenMenu?: () => void
 }
 
 // -------------------- Animation timing --------------------
@@ -592,7 +596,15 @@ function EnergyOrb({ cur, max }: { cur: number; max: number }) {
 
 // -------------------- Main component --------------------
 
-export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePeek, onBattleStateChange }: Props) {
+export function BattleScreen({
+  accountId,
+  snapshot,
+  onBattleResolved,
+  onTogglePeek,
+  onBattleStateChange,
+  menuOpen,
+  onOpenMenu,
+}: Props) {
   const [state, setState] = useState<BattleStateDto | null>(null)
   const [animating, setAnimating] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -1064,6 +1076,24 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
   )
   const fan = fanLayout(handDemos.length)
 
+  // Why: TopBar の menu ボタンと同じく ESC でメニュー開閉。menu 開いている
+  // 間は Popup (closeOnEsc=true) 側に処理を委譲し、ここでは何もしない。
+  useEffect(() => {
+    if (menuOpen) return
+    if (!onOpenMenu) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return
+      const tag = (e.target as HTMLElement | null)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onOpenMenu()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [menuOpen, onOpenMenu])
+
   const interactionsDisabled = animating || busy
 
   return (
@@ -1082,7 +1112,8 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
         relics={state.ownedRelicIds}
         onDiscardPotion={() => { /* battle 中は discard 不可 */ }}
         onUsePotion={(i) => void handleUsePotion(i)}
-        onOpenMenu={() => { /* battle 中の menu は後続フェーズで対応 */ }}
+        onOpenMenu={onOpenMenu ?? (() => {})}
+        menuActive={menuOpen ?? false}
         onTogglePeek={onTogglePeek}
         peekActive={false}
         peekDisabled={!onTogglePeek}
