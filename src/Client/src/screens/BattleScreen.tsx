@@ -784,9 +784,38 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
           const side = casterId && state
             ? (state.allies.some(a => a.instanceId === casterId) ? 'Ally' : 'Enemy')
             : undefined
+
+          // Why: 内部で蓄積された攻撃回数 (intent.attackHits) 分だけ slide
+          // アニメを連続再生する (ユーザ要望: ｼｭｼｭｼｭと連続で動くイメージ)。
+          // ダメージ自体は engine が 1 個の DealDamage に集約しているので、
+          // damage 反映と flash は最終 slide のタイミングでまとめて実行する。
+          // attackHits 不明 (null) や 0 の場合は 1 回だけ slide。
+          const casterActor = casterId && state
+            ? (state.allies.find(a => a.instanceId === casterId)
+                ?? state.enemies.find(e => e.instanceId === casterId))
+            : undefined
+          const slideCount = Math.max(1, casterActor?.intent?.attackHits ?? 1)
+          const PER_HIT_MS = slideCount > 1 ? 200 : ATTACK_SLIDE_MS
+          const GAP_MS = 60
+
+          // Why: damage > 0 の target だけ赤 flash する。block で完全相殺
+          // (damage=0) の場合は flash しない (ユーザ仕様: ブロック値だけ減る)。
+          const flashTargets = Array.from(new Set(
+            hits.filter(h => h.damage > 0).map(h => h.targetId),
+          ))
+
+          // 前段の slide (damage 反映なし)
+          for (let s = 0; s < slideCount - 1; s++) {
+            setSlotAnim({ attackerId: casterId, attackerSide: side })
+            await sleep(PER_HIT_MS)
+            // CSS animation を再トリガするため一度 class を外す
+            setSlotAnim({})
+            await sleep(GAP_MS)
+          }
+
+          // 最終 slide: 中盤で damage/block 反映 + flash 開始
           setSlotAnim({ attackerId: casterId, attackerSide: side })
-          // slide 中盤で damage / block 消費を反映 (HP / Block ゲージ減少 + flash)。
-          await sleep(ATTACK_SLIDE_MS / 2)
+          await sleep(PER_HIT_MS / 2)
           for (const h of hits) {
             if (h.damage > 0) {
               dmg[h.targetId] = (dmg[h.targetId] ?? 0) + h.damage
@@ -797,18 +826,13 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
           }
           setDamageOverlay({ ...dmg })
           setBlockOverlay({ ...blk })
-          // Why: damage > 0 の target だけ赤 flash する。block で完全相殺
-          // (damage=0) の場合は flash しない (ユーザ仕様: ブロック値だけ減る)。
-          const flashTargets = Array.from(new Set(
-            hits.filter(h => h.damage > 0).map(h => h.targetId),
-          ))
           if (flashTargets.length > 0) {
             setSlotAnim({ attackerId: casterId, attackerSide: side, hitIds: flashTargets })
           }
-          await sleep(ATTACK_SLIDE_MS / 2)
+          await sleep(PER_HIT_MS / 2)
           setSlotAnim(prev => ({ ...prev, attackerId: undefined, attackerSide: undefined }))
           if (flashTargets.length > 0) {
-            await sleep(Math.max(0, HIT_FLASH_MS - ATTACK_SLIDE_MS / 2))
+            await sleep(Math.max(0, HIT_FLASH_MS - PER_HIT_MS / 2))
           }
           setSlotAnim({})
           i = j

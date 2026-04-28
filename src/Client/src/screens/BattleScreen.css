@@ -234,11 +234,10 @@
 }
 
 .battle__chars {
-  /* Why: 背景画像の地面ラインにキャラの足元を合わせるため、bottom anchor。
-     ユーザ要望でさらに下げる: 200px → 110px (手札カード上端付近)。
-     手札領域 (約 150px 高) と重ならない位置で背景の地面ライン付近に揃える。 */
+  /* Why: 200px と 110px の中間 (155px) に再調整 (ユーザ要望)。
+     背景画像の地面ライン付近にキャラの足元を合わせる。 */
   position: absolute;
-  bottom: 110px;
+  bottom: 155px;
   left: 0;
   right: 0;
   display: flex;
@@ -913,11 +912,12 @@ button.pile:hover { filter: brightness(1.2); }
   }
   100% {
     opacity: 0;
-    /* 捨札方向 (右下) に飛んでいくよう x +220px / y +60px、縮小 0.5 */
+    /* 捨札方向に飛ばす。下方向が強すぎるとの指摘で水平寄りに調整
+       (旧 x +220 / y +60 → 新 x +320 / y +10、ユーザ要望)。 */
     transform:
-      translate(calc(var(--fan-x, 0px) + 220px), calc(var(--fan-y, 0px) + 60px))
-      rotate(calc(var(--fan-r, 0deg) + 25deg))
-      scale(0.5);
+      translate(calc(var(--fan-x, 0px) + 320px), calc(var(--fan-y, 0px) + 10px))
+      rotate(calc(var(--fan-r, 0deg) + 18deg))
+      scale(0.55);
   }
 }
 
