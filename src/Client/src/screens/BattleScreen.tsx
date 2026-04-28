@@ -790,11 +790,16 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
           // ダメージ自体は engine が 1 個の DealDamage に集約しているので、
           // damage 反映と flash は最終 slide のタイミングでまとめて実行する。
           // attackHits 不明 (null) や 0 の場合は 1 回だけ slide。
+          // 上限を MAX_SLIDES に cap: 一部の敵 (six_ghost.divider 等) は move
+          // 内に 6+ の attack effect を持つが、そのまま再生すると視覚的に
+          // 過剰なので 5 段までに制限する。
+          const MAX_SLIDES = 5
           const casterActor = casterId && state
             ? (state.allies.find(a => a.instanceId === casterId)
                 ?? state.enemies.find(e => e.instanceId === casterId))
             : undefined
-          const slideCount = Math.max(1, casterActor?.intent?.attackHits ?? 1)
+          const rawSlideCount = Math.max(1, casterActor?.intent?.attackHits ?? 1)
+          const slideCount = Math.min(MAX_SLIDES, rawSlideCount)
           const PER_HIT_MS = slideCount > 1 ? 200 : ATTACK_SLIDE_MS
           const GAP_MS = 60
 
