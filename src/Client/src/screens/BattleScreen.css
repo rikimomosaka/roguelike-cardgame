@@ -550,6 +550,30 @@ button.pile:hover { filter: brightness(1.2); }
     -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
 
+/* Why: 立ち絵 image 描画。--tier-height で高さ (1〜10 段階) を制御し、
+   <img> の縦横比は維持して幅 auto。複数キャラの足元を sprite-shadow と
+   揃えるため top でなく bottom anchor で配置する。
+   sprite-shadow は top: 190px (= slot bottom 70px) に固定済なので、
+   img の bottom もそこに合わせる: bottom: 70px。 */
+.sprite.sprite--image {
+  top: auto;
+  bottom: 70px;
+  width: auto;
+  height: auto;
+  text-shadow: none;
+  background: transparent;
+}
+.sprite--image img {
+  display: block;
+  height: var(--tier-height, 148px);
+  width: auto;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.55));
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 /* Why: 攻撃/防御/補助を & 区切りで横並び表示。位置は単一 .intent (top: 4px)
    と同じ高さに揃え、hero / 敵 / 召喚で intent ボックスの高さがズレないように
    する (ユーザ要望「主人公だけ位置が高い」対応)。 */

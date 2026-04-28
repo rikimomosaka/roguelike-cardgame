@@ -107,6 +107,11 @@ export type CharacterDemo = {
   desc: string
   sprite: string
   spriteKind: SpriteKind
+  /** PNG 等の立ち絵 URL。指定時は text sprite ではなく <img> で描画する。 */
+  image?: string
+  /** キャラのサイズ段階 (1 〜 10)。1 = スライム級の小型、5 = 標準、10 = 巨大ボス級。
+   *  立ち絵 image 表示時は heightTier に応じて高さが決定される (縦横比は維持)。 */
+  heightTier?: number
   hpCur: number
   hpMax: number
   hpLv: HpLv
@@ -182,6 +187,17 @@ function fanLayout(count: number): { x: number; y: number; r: number }[] {
     const y = Math.abs(offset) * 6
     return { x, y, r: rot }
   })
+}
+
+/**
+ * Why: キャラ立ち絵の高さ段階 (1〜10) → px 換算。
+ * tier 1 = スライム級小型 (60px), tier 5 = 標準 (160px),
+ * tier 10 = 巨大ボス級 (260px)。線形に約 22px ずつ増加。
+ * 縦横比は <img> 自身が維持するので width は auto。
+ */
+function heightForTier(tier: number): number {
+  const clamped = Math.max(1, Math.min(10, Math.round(tier)))
+  return 38 + clamped * 22  // 1→60, 5→148, 10→258
 }
 
 function padSlots(chars: CharacterDemo[], n: number): CharacterDemo[] {
@@ -325,11 +341,27 @@ function Slot({ char, isTargeted, attackingDir, isHit, onClick }: SlotProps) {
       ) : char.intent ? (
         <IntentChip intent={char.intent} />
       ) : null}
-      <div
-        className={`sprite sprite--${char.spriteKind}${char.sprite.length > 2 ? ' sprite--text' : ''}`}
-      >
-        {char.sprite}
-      </div>
+      {/* Why: image があれば <img> 描画、無ければ text sprite (旧 fallback)。
+          --tier-height CSS 変数で高さを段階制御 (1〜10)。縦横比は <img> 自体が
+          維持し、width: auto。立ち絵下端を sprite-shadow と揃える。 */}
+      {char.image ? (
+        <div
+          className={`sprite sprite--image sprite--${char.spriteKind}`}
+          style={
+            char.heightTier !== undefined
+              ? ({ '--tier-height': `${heightForTier(char.heightTier)}px` } as CSSProperties)
+              : undefined
+          }
+        >
+          <img src={char.image} alt={char.name} draggable={false} />
+        </div>
+      ) : (
+        <div
+          className={`sprite sprite--${char.spriteKind}${char.sprite.length > 2 ? ' sprite--text' : ''}`}
+        >
+          {char.sprite}
+        </div>
+      )}
       <div className="sprite-shadow" />
       <div className="status-hp">
         <div className="status-hp__track" data-lv={char.hpLv}>

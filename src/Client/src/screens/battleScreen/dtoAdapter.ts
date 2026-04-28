@@ -147,12 +147,20 @@ export function toCharacterDemo(
   // hero/enemy/summon すべて Server 計算済 IntentDto を使う統一経路。
   const intents = actor.intent ? toIntentDemos(actor.intent) : undefined
 
+  // Why: hero は立ち絵 (player_stand.png, 高さ tier 5) を表示。他キャラは
+  // 後続フェーズで個別画像を割り当てるまで text sprite で fallback。
+  // tier は 1 (slime 級) 〜 10 (巨大ボス級) で、CSS 側で px 高さに変換される。
+  const image = isHero ? '/characters/player_stand.png' : undefined
+  const heightTier = isHero ? 5 : undefined
+
   return {
     occupied: true,
     name,
     desc,
     sprite,
     spriteKind,
+    image,
+    heightTier,
     hpCur: actor.currentHp,
     hpMax: actor.maxHp,
     hpLv: hpLevel(actor.currentHp, actor.maxHp),
