@@ -219,12 +219,16 @@ function StatusBuff({ buff }: { buff: BuffDemo }) {
   )
 }
 
-/** 単一 intent の中身 (icon + 値群)。tooltip target としても機能する。 */
-function IntentSegment({ intent, withAmp }: { intent: IntentDemo; withAmp: boolean }) {
-  const tip = useTip({ name: intent.name, desc: intent.desc })
+/** 単一 intent の中身 (icon + 値群)。tooltip 用 props は外から渡される。 */
+function IntentSegment({
+  intent,
+  tipProps,
+}: {
+  intent: IntentDemo
+  tipProps: ReturnType<typeof useTooltipTarget>
+}) {
   return (
-    <span className={`intent__seg intent__seg--${intent.kind}`} {...tip}>
-      {withAmp ? <span className="intent__amp">＆</span> : null}
+    <span className={`intent__seg intent__seg--${intent.kind}`} {...tipProps}>
       <span className="intent__icon">{intent.icon}</span>
       {intent.kind === 'attack' && intent.attack ? (
         // Why: 通常/ランダム/全体を 1 chip 内で色分け表示。slash は白、各数値は
@@ -250,21 +254,28 @@ function IntentSegment({ intent, withAmp }: { intent: IntentDemo; withAmp: boole
   )
 }
 
-/** Why: 複数 intent (攻撃 ＆ 防御 など) を 1 個の枠内に並べる (ユーザ要望)。
- *  各 segment は独立した tooltip を持ち、間に「＆」白文字で区切る。 */
 function IntentChip({ intent }: { intent: IntentDemo }) {
+  const tip = useTip({ name: intent.name, desc: intent.desc })
   return (
     <div className={`intent intent--${intent.kind}`}>
-      <IntentSegment intent={intent} withAmp={false} />
+      <IntentSegment intent={intent} tipProps={tip} />
     </div>
   )
 }
 
+/** Why: 複数 intent (攻撃 + 防御 など) を 1 枠内に並べる。
+ *  - 「＆」区切りなしで連続表示 (ユーザ要望)
+ *  - hover でどの segment に当てても全 intent の name/desc を統合した
+ *    tooltip を表示 (片方だけでなく両方の説明を見たい、というユーザ要望) */
 function IntentChipRow({ intents }: { intents: IntentDemo[] }) {
+  // 統合 tooltip: 全 intent の name と desc を改行で連結
+  const mergedName = intents.map(i => i.name).join(' / ')
+  const mergedDesc = intents.map(i => `■ ${i.name}\n${i.desc}`).join('\n\n')
+  const tip = useTip({ name: mergedName, desc: mergedDesc })
   return (
-    <div className="intent intent--row">
+    <div className={`intent intent--row${intents.length > 1 ? ' intent--multi' : ''}`}>
       {intents.map((it, i) => (
-        <IntentSegment key={i} intent={it} withAmp={i > 0} />
+        <IntentSegment key={i} intent={it} tipProps={tip} />
       ))}
     </div>
   )
@@ -551,6 +562,12 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
   // Why: ターン終了時 attack アニメーションの transient state。
   // attackerId: slide 中の slot、hitId: 赤点滅の被弾 slot、dyingIds: 撃破点滅中。
   const [slotAnim, setSlotAnim] = useState<SlotAnim>({})
+  // Why: MVP 仕様で step.snapshotAfter は全 step が「最終 state」と同一なため、
+  // burst 終了時に setState を呼ぶと一気に最終 HP / dead に飛んでしまう。
+  // playSteps 中は setState せず、ここに instanceId → 累積 damage を蓄積し、
+  // render 時に actor.currentHp - overlay でプログレッシブに HP を減らす。
+  // 全 event 処理後に setState(finalState) + setDamageOverlay({}) で確定。
+  const [damageOverlay, setDamageOverlay] = useState<Record<string, number>>({})
   // resolvedRef は finalize 後の二重呼び出しを抑止するためのラッチ。
   const resolvedRef = useRef(false)
 
@@ -583,11 +600,23 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
   //    として束ねる (engine は per-target に AttackFire+DealDamage ペアを
   //    emit するため、全体攻撃 / 複数 effects で連続する)。
   //  - burst あたり: slide アニメ 1 回 → 全被弾 slot 同時 flash → 進行
-  //  - ActorDeath / GainBlock / その他: 個別に処理 (短い delay)
+  //  - HP 表示は damageOverlay (instanceId → 累積 damage) で progressive に
+  //    減らす。playSteps 中は setState を呼ばず最後にまとめて確定するため、
+  //    後続 attacker の最終 state が前 attacker の演出に染み出さない。
+  //  - ActorDeath: 撃破点滅 → dyingIds から削除。HP=0 は damageOverlay に
+  //    反映済 + state 未確定なので alive filter のため killedIds を別管理する。
+  //  - その他 event (BattleStart / TurnStart / GainBlock / Draw / etc.):
+  //    短い fallback delay。HP に影響しないので state 未確定でも見た目は同等。
   const playSteps = useCallback(
     async (resp: BattleActionResponseDto) => {
       setAnimating(true)
       const steps = resp.steps
+      // Why: playSteps 中は setState を呼ばず、ローカル overlay を更新して
+      // setDamageOverlay でレンダーに反映させる。これにより同一 turn 内で
+      // attacker A → attacker B と続く時、A の演出中に B の damage が
+      // 反映 (= HP が落ちる/敵が消える) する不具合を回避できる。
+      const dmg: Record<string, number> = {}
+
       let i = 0
       while (i < steps.length) {
         const step = steps[i]
@@ -596,41 +625,39 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
         if (ev.kind === 'AttackFire') {
           // この caster の連続 AttackFire / DealDamage を集約。
           const casterId = ev.casterInstanceId ?? undefined
-          const hitTargets: string[] = []
-          let lastSnapshot = step.snapshotAfter
+          const hits: { targetId: string; amount: number }[] = []
           let j = i
           while (j < steps.length) {
             const e = steps[j].event
             if ((e.kind === 'AttackFire' || e.kind === 'DealDamage')
                 && e.casterInstanceId === casterId) {
               if (e.kind === 'DealDamage' && (e.amount ?? 0) > 0 && e.targetInstanceId) {
-                hitTargets.push(e.targetInstanceId)
+                hits.push({ targetId: e.targetInstanceId, amount: e.amount! })
               }
-              lastSnapshot = steps[j].snapshotAfter
               j++
             } else {
               break
             }
           }
 
-          // slide 方向は caster side で決定。
-          const side = casterId
-            ? (lastSnapshot.allies.some(a => a.instanceId === casterId)
-                ? 'Ally' : 'Enemy')
+          // slide 方向は caster side で決定 (現在の state ベースで判定)。
+          const side = casterId && state
+            ? (state.allies.some(a => a.instanceId === casterId) ? 'Ally' : 'Enemy')
             : undefined
           setSlotAnim({ attackerId: casterId, attackerSide: side })
-          // slide の中盤で被弾を反映 (state を進めて HP 減少 + 同時 flash)。
+          // slide 中盤で damage 反映 (HP ゲージが減少、同時 flash 開始)。
           await sleep(ATTACK_SLIDE_MS / 2)
-          setState(lastSnapshot)
-          if (hitTargets.length > 0) {
-            // 重複除去 (同 target に複数 effects がある場合)
-            const uniq = Array.from(new Set(hitTargets))
+          for (const h of hits) {
+            dmg[h.targetId] = (dmg[h.targetId] ?? 0) + h.amount
+          }
+          setDamageOverlay({ ...dmg })
+          if (hits.length > 0) {
+            const uniq = Array.from(new Set(hits.map(h => h.targetId)))
             setSlotAnim({ attackerId: casterId, attackerSide: side, hitIds: uniq })
           }
           await sleep(ATTACK_SLIDE_MS / 2)
-          // slide 終了 → flash だけ残してさらに HIT_FLASH_MS - slide/2 待つ
           setSlotAnim(prev => ({ ...prev, attackerId: undefined, attackerSide: undefined }))
-          if (hitTargets.length > 0) {
+          if (hits.length > 0) {
             await sleep(Math.max(0, HIT_FLASH_MS - ATTACK_SLIDE_MS / 2))
           }
           setSlotAnim({})
@@ -646,26 +673,25 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
               dyingIds: [...(prev.dyingIds ?? []), targetId],
             }))
             await sleep(DEATH_BLINK_MS)
-            setState(step.snapshotAfter)
             setSlotAnim(prev => ({
               ...prev,
               dyingIds: (prev.dyingIds ?? []).filter(id => id !== targetId),
             }))
-          } else {
-            setState(step.snapshotAfter)
-            await sleep(STEP_DELAY_MS)
           }
           i++
           continue
         }
 
         // その他 (BattleStart / TurnStart / GainBlock / Draw / etc.)
-        setState(step.snapshotAfter)
+        // HP 以外のフィールドは playSteps 終了時に state 確定で反映するため、
+        // ここでは見た目を変えずに短い delay のみ取る。
         await sleep(STEP_DELAY_MS)
         i++
       }
 
+      // 全 event 処理完了 → 最終 state に確定 + overlay クリア
       setSlotAnim({})
+      setDamageOverlay({})
       setState(resp.state)
       setAnimating(false)
 
@@ -673,7 +699,7 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
         await handleFinalize()
       }
     },
-    [handleFinalize],
+    [handleFinalize, state],
   )
 
   // 初期化: GET /battle → 既存ならそれを表示、なければ POST /start。
@@ -771,9 +797,19 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
   }
 
   // データソース変換
-  const heroActor = state.allies.find(
+  const heroActorRaw = state.allies.find(
     (a) => a.definitionId === 'hero',
   ) as CombatActorDto | undefined
+  // damageOverlay 反映: TopBar/HUD の HP 表示も progressive に減らす。
+  const heroActor = heroActorRaw
+    ? {
+        ...heroActorRaw,
+        currentHp: Math.max(
+          0,
+          heroActorRaw.currentHp - (damageOverlay[heroActorRaw.instanceId] ?? 0),
+        ),
+      }
+    : undefined
   const heroHp = heroActor
     ? {
         cur: heroActor.currentHp,
@@ -789,11 +825,19 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
   // 表示前にフィルタして「死んだのに残り続ける」現象を回避する。
   // ただし「撃破アニメーション中 (slotAnim.dyingIds に含まれる)」actor は
   // フィルタしないでそのまま表示し、点滅消滅完了後に消える。
+  // damageOverlay は playSteps 中の累積ダメージで、表示用 HP に減算する。
   const dyingSet = new Set(slotAnim.dyingIds ?? [])
-  const aliveAllies = state.allies.filter(
+  const applyOverlay = (a: CombatActorDto): CombatActorDto => {
+    const dmg = damageOverlay[a.instanceId] ?? 0
+    if (dmg <= 0) return a
+    return { ...a, currentHp: Math.max(0, a.currentHp - dmg) }
+  }
+  const allAllies = state.allies.map(applyOverlay)
+  const allEnemies = state.enemies.map(applyOverlay)
+  const aliveAllies = allAllies.filter(
     (a) => a.currentHp > 0 || dyingSet.has(a.instanceId),
   )
-  const aliveEnemies = state.enemies.filter(
+  const aliveEnemies = allEnemies.filter(
     (e) => e.currentHp > 0 || dyingSet.has(e.instanceId),
   )
 

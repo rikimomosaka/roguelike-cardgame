@@ -454,14 +454,13 @@ button.pile:hover { filter: brightness(1.2); }
   display: inline-flex; align-items: center; gap: 4px;
   cursor: help;
 }
-.intent__amp {
-  font-family: var(--font-label);
-  color: #fff;
-  font-size: 18px;
-  padding: 0 4px;
-}
 
-.intent--row { gap: 0; }
+/* Why: 複数 intent を & なしで連続表示する。隣接 segment 間に少しだけ余白。 */
+.intent--row { gap: 8px; }
+.intent--row.intent--multi {
+  /* 多数 segment 入りの枠は若干広めの padding で読みやすく */
+  padding: 4px 14px;
+}
 
 /* 後方互換: 単一 intent (.intent--{kind}) の色付け */
 .intent--attack .intent__seg--attack .intent__icon { color: #fff; }
