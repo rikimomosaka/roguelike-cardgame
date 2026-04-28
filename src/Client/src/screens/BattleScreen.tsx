@@ -621,6 +621,14 @@ export function BattleScreen({ accountId, snapshot, onBattleResolved, onTogglePe
     async (resp: BattleActionResponseDto) => {
       setAnimating(true)
       const steps = resp.steps
+      // Why: 初回 (state===null) の場合、setState せずに banner を流すと
+      // loading 画面 (state===null gate) が後ろに残って banner が見えない。
+      // 初回は最初に resp.state を設定して battle UI を出してから演出に入る。
+      // 初回 response (battle start) に DealDamage は含まれないため、
+      // setState(resp.state) しても progressive HP は問題にならない。
+      if (state === null) {
+        setState(resp.state)
+      }
       // Why: playSteps 中は setState を呼ばず、ローカル overlay を更新して
       // setDamageOverlay でレンダーに反映させる。これにより同一 turn 内で
       // attacker A → attacker B と続く時、A の演出中に B の damage が

@@ -597,34 +597,32 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
                   const nextEdge = !startEntryActive
                     && n.id === snap.run.currentNodeId
                     && currentNode.outgoingNodeIds.includes(toId)
-                  // Why: 過去の道は青、次に行ける道は黄色、その他はデフォルト色
-                  // (ユーザ要望)。点線は廃止して色だけで状態を表現する。
+                  // Why: 過去の道は青、次に行ける道は黄色、それ以外は白。
+                  // 全ての道を黒で縁取り (ユーザ要望)。
                   const stroke = visitedEdge
                     ? '#3ec6ff'
                     : nextEdge
                       ? '#f1c95b'
-                      : '#2a1c0e'
-                  const opacity = visitedEdge ? 1 : nextEdge ? 1 : 0.95
-                  // Why: vector-effect="non-scaling-stroke" を付けて、SVG が
-                  // preserveAspectRatio="none" で歪められても線の太さが
-                  // screen px 基準で一定になる。これにより縦道と斜道が
-                  // 同じ太さに見える (ユーザ要望)。strokeWidth は viewBox
-                  // 単位ではなく px 直接値として扱われる。
+                      : '#ffffff'
+                  // Why: 旧太さ (viewBox 単位 0.45) は斜道で十分太かったが、
+                  // vector-effect="non-scaling-stroke" 化で px 換算したら
+                  // 細すぎたため、斜道相当の見た目に合わせて太く。
+                  // outer (黒縁) は inner (色) より太く描画して縁取り効果を出す。
                   return (
                     <g key={`${n.id}-${toId}`}>
                       <line
                         x1={a.x} y1={a.y} x2={b.x} y2={b.y}
-                        stroke="#ffffff"
-                        strokeOpacity={0.9}
-                        strokeWidth={4}
+                        stroke="#000000"
+                        strokeOpacity={0.85}
+                        strokeWidth={9}
                         strokeLinecap="round"
                         vectorEffect="non-scaling-stroke"
                       />
                       <line
                         x1={a.x} y1={a.y} x2={b.x} y2={b.y}
                         stroke={stroke}
-                        strokeOpacity={opacity}
-                        strokeWidth={2.5}
+                        strokeOpacity={1}
+                        strokeWidth={6}
                         strokeLinecap="round"
                         vectorEffect="non-scaling-stroke"
                       />
