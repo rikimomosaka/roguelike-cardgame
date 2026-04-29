@@ -91,4 +91,42 @@ public class CatalogControllerTests : IClassFixture<TempDataFactory>
         var body = await res.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal(JsonValueKind.Object, body.ValueKind);
     }
+
+    [Fact]
+    public async Task GetEnemies_returns_heightTier()
+    {
+        var client = _factory.CreateClient();
+        var resp = await client.GetAsync("/api/v1/catalog/enemies");
+        resp.EnsureSuccessStatusCode();
+        var body = await resp.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(body);
+        // dire_wolf は spec で tier 6
+        var wolf = doc.RootElement.GetProperty("dire_wolf");
+        Assert.Equal(6, wolf.GetProperty("heightTier").GetInt32());
+    }
+
+    [Fact]
+    public async Task GetUnits_returns_heightTier()
+    {
+        var client = _factory.CreateClient();
+        var resp = await client.GetAsync("/api/v1/catalog/units");
+        resp.EnsureSuccessStatusCode();
+        var body = await resp.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(body);
+        var wisp = doc.RootElement.GetProperty("wisp");
+        Assert.Equal(3, wisp.GetProperty("heightTier").GetInt32());
+    }
+
+    [Fact]
+    public async Task GetCharacters_returns_default_with_heightTier()
+    {
+        var client = _factory.CreateClient();
+        var resp = await client.GetAsync("/api/v1/catalog/characters");
+        resp.EnsureSuccessStatusCode();
+        var body = await resp.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(body);
+        var def = doc.RootElement.GetProperty("default");
+        Assert.Equal("default", def.GetProperty("id").GetString());
+        Assert.Equal(5, def.GetProperty("heightTier").GetInt32());
+    }
 }

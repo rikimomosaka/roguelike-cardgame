@@ -41,7 +41,8 @@ public sealed class CatalogController : ControllerBase
         string Name,
         string ImageId,
         int Hp,
-        string InitialMoveId);
+        string InitialMoveId,
+        int HeightTier);
 
     public sealed record UnitCatalogEntryDto(
         string Id,
@@ -49,7 +50,16 @@ public sealed class CatalogController : ControllerBase
         string ImageId,
         int Hp,
         string InitialMoveId,
-        int? LifetimeTurns);
+        int? LifetimeTurns,
+        int HeightTier);
+
+    public sealed record CharacterCatalogEntryDto(
+        string Id,
+        string Name,
+        int MaxHp,
+        int StartingGold,
+        int PotionSlotCount,
+        int HeightTier);
 
     [HttpGet("cards")]
     public IActionResult GetCards()
@@ -95,7 +105,7 @@ public sealed class CatalogController : ControllerBase
         foreach (var (id, def) in _data.Enemies)
         {
             result[id] = new EnemyCatalogEntryDto(
-                def.Id, def.Name, def.ImageId, def.Hp, def.InitialMoveId);
+                def.Id, def.Name, def.ImageId, def.Hp, def.InitialMoveId, def.HeightTier);
         }
         return Ok(result);
     }
@@ -108,7 +118,19 @@ public sealed class CatalogController : ControllerBase
         foreach (var (id, def) in _data.Units)
         {
             result[id] = new UnitCatalogEntryDto(
-                def.Id, def.Name, def.ImageId, def.Hp, def.InitialMoveId, def.LifetimeTurns);
+                def.Id, def.Name, def.ImageId, def.Hp, def.InitialMoveId, def.LifetimeTurns, def.HeightTier);
+        }
+        return Ok(result);
+    }
+
+    [HttpGet("characters")]
+    public IActionResult GetCharacters()
+    {
+        var result = new Dictionary<string, CharacterCatalogEntryDto>(_data.Characters.Count);
+        foreach (var (id, def) in _data.Characters)
+        {
+            result[id] = new CharacterCatalogEntryDto(
+                def.Id, def.Name, def.MaxHp, def.StartingGold, def.PotionSlotCount, def.HeightTier);
         }
         return Ok(result);
     }
