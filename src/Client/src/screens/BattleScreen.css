@@ -618,8 +618,12 @@ button.pile:hover { filter: brightness(1.2); }
   overflow: hidden;
 }
 
+/* Why: 影の中心 (top + height/2 = 185 + 5 = 190px) を sprite 下端
+   (slot.top + 190px = bottom: 70px from slot bottom of 260px) と一致させる。
+   旧 top: 190 では影の上端と sprite 下端が重なるため、足が影の上に
+   浮いて見えていた。 */
 .sprite-shadow {
-  position: absolute; top: 190px; left: 50%;
+  position: absolute; top: 185px; left: 50%;
   transform: translateX(-50%);
   width: 78px; height: 10px;
   border-radius: 50%;
