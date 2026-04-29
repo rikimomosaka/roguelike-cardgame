@@ -1,5 +1,9 @@
 import { apiRequest } from './client'
-import type { EnemyCatalogEntryDto, UnitCatalogEntryDto } from './types'
+import type {
+  CharacterCatalogEntryDto,
+  EnemyCatalogEntryDto,
+  UnitCatalogEntryDto,
+} from './types'
 
 export type CardCatalogEntry = {
   id: string
@@ -128,4 +132,10 @@ export async function fetchEnemyCatalog(): Promise<EnemyCatalog> {
 
 export async function fetchUnitCatalog(): Promise<UnitCatalog> {
   return await apiRequest<UnitCatalog>('GET', '/catalog/units', {})
+}
+
+export type CharacterCatalog = Record<string, CharacterCatalogEntryDto>
+
+export async function fetchCharacterCatalog(): Promise<CharacterCatalog> {
+  return await apiRequest<CharacterCatalog>('GET', '/catalog/characters', {})
 }

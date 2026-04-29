@@ -292,6 +292,7 @@ export type EnemyCatalogEntryDto = {
   imageId: string
   hp: number
   initialMoveId: string
+  heightTier: number
 }
 
 export type UnitCatalogEntryDto = {
@@ -301,4 +302,14 @@ export type UnitCatalogEntryDto = {
   hp: number
   initialMoveId: string
   lifetimeTurns: number | null
+  heightTier: number
+}
+
+export type CharacterCatalogEntryDto = {
+  id: string
+  name: string
+  maxHp: number
+  startingGold: number
+  potionSlotCount: number
+  heightTier: number
 }
