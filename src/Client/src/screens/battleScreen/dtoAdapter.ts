@@ -74,8 +74,14 @@ function cardTypeFromString(s: string | undefined): CardType {
 
 const HERO_DEFINITION_ID = 'hero'
 
+// Why: BattleState.actor.definitionId for the hero is the sentinel 'hero',
+// but the playable-character catalog is keyed by CharacterDefinition.Id
+// (currently only 'default'). This hardcoded mapping unblocks heightTier
+// data flow for the single-character era. TODO: thread RunSnapshotDto.run.
+// characterId through when a second playable character lands.
+const HERO_CHARACTER_ID = 'default'
+
 const HERO_FALLBACK = {
-  name: '主人公',
   imageId: '☗',
   description: 'プレイヤー本体。HP 0 で敗北。',
 }
@@ -131,7 +137,7 @@ export function toCharacterDemo(
     ? catalogs.units?.[actor.definitionId]
     : undefined
   const characterDef = isHero
-    ? catalogs.characters?.[actor.definitionId]
+    ? catalogs.characters?.[HERO_CHARACTER_ID]
     : undefined
 
   const name = isHero

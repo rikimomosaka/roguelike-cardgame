@@ -48,7 +48,7 @@ function summonActor(definitionId: string): CombatActorDto {
 const characterCatalog: CharacterCatalog = {
   default: {
     id: 'default', name: '見習い冒険者',
-    maxHp: 80, startingGold: 99, potionSlotCount: 3, heightTier: 5,
+    maxHp: 80, startingGold: 99, potionSlotCount: 3, heightTier: 7,
   },
 }
 
@@ -67,19 +67,20 @@ const unitCatalog: UnitCatalog = {
 }
 
 describe('toCharacterDemo', () => {
-  it('hero name uses accountId', () => {
+  it('hero name uses accountId (not catalog name)', () => {
     const demo = toCharacterDemo(heroActor(), {
       enemies: enemyCatalog, units: unitCatalog, characters: characterCatalog,
     }, 'alice')
     expect(demo.name).toBe('alice')
+    expect(demo.name).not.toBe('見習い冒険者')   // catalog name must NOT win
     expect(demo.spriteKind).toBe('hero')
   })
 
-  it('hero heightTier comes from character catalog (default=5)', () => {
+  it('hero heightTier comes from character catalog (looked up by default)', () => {
     const demo = toCharacterDemo(heroActor(), {
       enemies: enemyCatalog, units: unitCatalog, characters: characterCatalog,
     }, 'alice')
-    expect(demo.heightTier).toBe(5)
+    expect(demo.heightTier).toBe(7)
   })
 
   it('hero falls back to heightTier=5 if character catalog is null', () => {
