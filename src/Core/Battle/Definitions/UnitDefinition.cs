@@ -14,5 +14,6 @@ public sealed record UnitDefinition(
     int Hp,
     string InitialMoveId,
     IReadOnlyList<MoveDefinition> Moves,
-    int? LifetimeTurns = null)
-    : CombatActorDefinition(Id, Name, ImageId, Hp, InitialMoveId, Moves);
+    int? LifetimeTurns = null,
+    int HeightTier = 5)
+    : CombatActorDefinition(Id, Name, ImageId, Hp, HeightTier, InitialMoveId, Moves);

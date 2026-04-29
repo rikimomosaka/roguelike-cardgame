@@ -13,5 +13,6 @@ public sealed record EnemyDefinition(
     int Hp,
     EnemyPool Pool,
     string InitialMoveId,
-    IReadOnlyList<MoveDefinition> Moves)
-    : CombatActorDefinition(Id, Name, ImageId, Hp, InitialMoveId, Moves);
+    IReadOnlyList<MoveDefinition> Moves,
+    int HeightTier = 5)
+    : CombatActorDefinition(Id, Name, ImageId, Hp, HeightTier, InitialMoveId, Moves);

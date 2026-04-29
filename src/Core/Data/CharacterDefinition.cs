@@ -9,4 +9,5 @@ public sealed record CharacterDefinition(
     int MaxHp,
     int StartingGold,
     int PotionSlotCount,
-    IReadOnlyList<string> Deck);
+    IReadOnlyList<string> Deck,
+    int HeightTier = 5);
