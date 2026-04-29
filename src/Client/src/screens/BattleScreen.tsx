@@ -382,7 +382,7 @@ function Slot({ char, isTargeted, attackingDir, isHit, onClick }: SlotProps) {
           </span>
         </div>
       </div>
-      <div className="status-name">{char.name}</div>
+      <div className="status-name" title={char.name}>{char.name}</div>
       {char.buffs.length > 0 ? (
         <div className="status-buffs">
           {char.buffs.map((b, i) => (
