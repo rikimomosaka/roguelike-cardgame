@@ -15,6 +15,7 @@ import type {
 } from '../../api/types'
 import type {
   CardCatalog,
+  CharacterCatalog,
   EnemyCatalog,
   RelicCatalog,
   UnitCatalog,
@@ -114,11 +115,13 @@ export function toRelicDemo(relicId: string, catalog: RelicCatalog | null): Reli
 type CharacterCatalogs = {
   enemies: EnemyCatalog | null
   units: UnitCatalog | null
+  characters: CharacterCatalog | null
 }
 
 export function toCharacterDemo(
   actor: CombatActorDto,
   catalogs: CharacterCatalogs,
+  accountId: string,
 ): CharacterDemo {
   const isHero = actor.definitionId === HERO_DEFINITION_ID
   const enemyDef = !isHero && actor.side === 'Enemy'
@@ -127,9 +130,12 @@ export function toCharacterDemo(
   const unitDef = !isHero && actor.side === 'Ally'
     ? catalogs.units?.[actor.definitionId]
     : undefined
+  const characterDef = isHero
+    ? catalogs.characters?.[actor.definitionId]
+    : undefined
 
   const name = isHero
-    ? HERO_FALLBACK.name
+    ? accountId
     : enemyDef?.name ?? unitDef?.name ?? actor.definitionId
   const sprite = isHero
     ? HERO_FALLBACK.imageId
@@ -147,11 +153,13 @@ export function toCharacterDemo(
   // hero/enemy/summon すべて Server 計算済 IntentDto を使う統一経路。
   const intents = actor.intent ? toIntentDemos(actor.intent) : undefined
 
-  // Why: hero は立ち絵 (player_stand.png, 高さ tier 5) を表示。他キャラは
-  // 後続フェーズで個別画像を割り当てるまで text sprite で fallback。
-  // tier は 1 (slime 級) 〜 10 (巨大ボス級) で、CSS 側で px 高さに変換される。
+  // Why: 立ち絵 PNG は hero のみ既存配置 (player_stand.png)。enemy / summon は
+  // 実アセットが配置されたら image を流し込むため、現状 undefined。
+  // heightTier はカタログ (catalog 取得失敗時 5) から引く。
   const image = isHero ? '/characters/player_stand.png' : undefined
-  const heightTier = isHero ? 5 : undefined
+  const heightTier = isHero
+    ? characterDef?.heightTier ?? 5
+    : enemyDef?.heightTier ?? unitDef?.heightTier ?? 5
 
   return {
     occupied: true,

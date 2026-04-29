@@ -38,6 +38,7 @@ import type {
   RunSnapshotDto,
 } from '../api/types'
 import { useCardCatalog } from '../hooks/useCardCatalog'
+import { useCharacterCatalog } from '../hooks/useCharacterCatalog'
 import { useEnemyCatalog } from '../hooks/useEnemyCatalog'
 import { useUnitCatalog } from '../hooks/useUnitCatalog'
 import { TopBar } from '../components/TopBar'
@@ -648,6 +649,7 @@ export function BattleScreen({
   const { catalog: cardCatalog } = useCardCatalog()
   const { catalog: enemyCatalog } = useEnemyCatalog()
   const { catalog: unitCatalog } = useUnitCatalog()
+  const { catalog: characterCatalog } = useCharacterCatalog()
 
   // Why: state が更新されるたび親 (MapScreen) に通知。peek 中も TopBar が live
   // battle state (HP / potions) を表示し続けるための仕組み (ユーザ要望)。
@@ -1063,10 +1065,10 @@ export function BattleScreen({
 
   // 4 スロット zero-pad で side ごとに描画。
   const allyDemos = aliveAllies.map((a) =>
-    toCharacterDemo(a, { enemies: enemyCatalog, units: unitCatalog }),
+    toCharacterDemo(a, { enemies: enemyCatalog, units: unitCatalog, characters: characterCatalog }, accountId),
   )
   const enemyDemos = aliveEnemies.map((e) =>
-    toCharacterDemo(e, { enemies: enemyCatalog, units: unitCatalog }),
+    toCharacterDemo(e, { enemies: enemyCatalog, units: unitCatalog, characters: characterCatalog }, accountId),
   )
   const playerSlots = padSlots(allyDemos, 4)
   const enemySlots = padSlots(enemyDemos, 4)
