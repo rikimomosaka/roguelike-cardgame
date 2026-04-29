@@ -34,7 +34,7 @@ public class CharacterJsonLoaderTests
         {"id":"c","name":"c","maxHp":50,"startingGold":0,"potionSlotCount":3,
          "deck":["strike"],"heightTier":0}
         """;
-        Assert.ThrowsAny<System.Exception>(() => CharacterJsonLoader.Parse(json));
+        Assert.Throws<CharacterJsonException>(() => CharacterJsonLoader.Parse(json));
     }
 
     [Fact]
@@ -44,6 +44,16 @@ public class CharacterJsonLoaderTests
         {"id":"c","name":"c","maxHp":50,"startingGold":0,"potionSlotCount":3,
          "deck":["strike"],"heightTier":11}
         """;
-        Assert.ThrowsAny<System.Exception>(() => CharacterJsonLoader.Parse(json));
+        Assert.Throws<CharacterJsonException>(() => CharacterJsonLoader.Parse(json));
+    }
+
+    [Fact]
+    public void Parse_heightTier_non_number_throws_character()
+    {
+        var json = """
+        {"id":"c","name":"c","maxHp":50,"startingGold":0,"potionSlotCount":3,
+         "deck":["strike"],"heightTier":"x"}
+        """;
+        Assert.Throws<CharacterJsonException>(() => CharacterJsonLoader.Parse(json));
     }
 }

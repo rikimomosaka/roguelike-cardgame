@@ -172,4 +172,18 @@ public class EnemyJsonLoaderTests
         """;
         Assert.Throws<EnemyJsonException>(() => EnemyJsonLoader.Parse(json));
     }
+
+    [Fact]
+    public void Parse_heightTier_non_number_throws()
+    {
+        var json = """
+        {
+          "id": "test", "name": "テスト", "imageId": "img", "hp": 10,
+          "act": 1, "tier": "Weak", "initialMoveId": "m", "heightTier": "x",
+          "moves": [{"id":"m","kind":"Attack","nextMoveId":"m",
+            "effects":[{"action":"attack","scope":"all","side":"enemy","amount":1}]}]
+        }
+        """;
+        Assert.Throws<EnemyJsonException>(() => EnemyJsonLoader.Parse(json));
+    }
 }

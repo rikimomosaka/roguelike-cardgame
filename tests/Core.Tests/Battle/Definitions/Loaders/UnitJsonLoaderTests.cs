@@ -119,4 +119,15 @@ public class UnitJsonLoaderTests
         """;
         Assert.Throws<UnitJsonException>(() => UnitJsonLoader.Parse(json));
     }
+
+    [Fact]
+    public void Parse_heightTier_non_number_throws_unit()
+    {
+        var json = """
+        {"id":"u","name":"u","imageId":"u","hp":10,"initialMoveId":"m","heightTier":"x",
+         "moves":[{"id":"m","kind":"Attack","nextMoveId":"m",
+           "effects":[{"action":"attack","scope":"all","side":"enemy","amount":1}]}]}
+        """;
+        Assert.Throws<UnitJsonException>(() => UnitJsonLoader.Parse(json));
+    }
 }
