@@ -4,6 +4,7 @@
   "imageId": "cave_bat_a",
   "hp": 12,
   "act": 1,
+  "heightTier": 2,
   "tier": "Weak",
   "initialMoveId": "bite",
   "moves": [

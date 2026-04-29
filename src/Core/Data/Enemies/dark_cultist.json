@@ -4,6 +4,7 @@
   "imageId": "cultist_dark",
   "hp": 16,
   "act": 1,
+  "heightTier": 5,
   "tier": "Weak",
   "initialMoveId": "incantation",
   "moves": [

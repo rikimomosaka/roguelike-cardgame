@@ -4,6 +4,7 @@
   "imageId": "ogre",
   "hp": 48,
   "act": 1,
+  "heightTier": 7,
   "tier": "Strong",
   "initialMoveId": "club_smash",
   "moves": [

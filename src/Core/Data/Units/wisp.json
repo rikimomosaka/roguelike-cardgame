@@ -3,6 +3,7 @@
   "name": "ウィスプ",
   "imageId": "wisp",
   "hp": 30,
+  "heightTier": 3,
   "initialMoveId": "wisp_strike",
   "lifetimeTurns": 3,
   "moves": [

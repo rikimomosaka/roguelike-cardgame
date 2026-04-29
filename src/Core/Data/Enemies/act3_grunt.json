@@ -4,6 +4,7 @@
   "imageId": "act3_grunt",
   "hp": 44,
   "act": 3,
+  "heightTier": 4,
   "tier": "Weak",
   "initialMoveId": "pierce",
   "moves": [

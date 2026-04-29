@@ -4,6 +4,7 @@
   "imageId": "slime_green_s",
   "hp": 10,
   "act": 1,
+  "heightTier": 1,
   "tier": "Weak",
   "initialMoveId": "tackle",
   "moves": [

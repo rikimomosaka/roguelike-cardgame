@@ -4,6 +4,7 @@
   "imageId": "iron_golem_b",
   "hp": 74,
   "act": 1,
+  "heightTier": 8,
   "tier": "Elite",
   "initialMoveId": "hammer_swing",
   "moves": [

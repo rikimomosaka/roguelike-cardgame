@@ -4,6 +4,7 @@
   "imageId": "mushroom_b",
   "hp": 36,
   "act": 1,
+  "heightTier": 3,
   "tier": "Strong",
   "initialMoveId": "chomp",
   "moves": [

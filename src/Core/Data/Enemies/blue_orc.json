@@ -4,6 +4,7 @@
   "imageId": "orc_blue",
   "hp": 38,
   "act": 1,
+  "heightTier": 6,
   "tier": "Strong",
   "initialMoveId": "slash",
   "moves": [

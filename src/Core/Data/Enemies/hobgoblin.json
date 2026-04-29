@@ -4,6 +4,7 @@
   "imageId": "hobgoblin",
   "hp": 84,
   "act": 1,
+  "heightTier": 6,
   "tier": "Elite",
   "initialMoveId": "bellow",
   "moves": [

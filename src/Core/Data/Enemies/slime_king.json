@@ -4,6 +4,7 @@
   "imageId": "slime_king",
   "hp": 140,
   "act": 1,
+  "heightTier": 10,
   "tier": "Boss",
   "initialMoveId": "roar",
   "moves": [

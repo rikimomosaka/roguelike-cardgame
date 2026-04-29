@@ -4,6 +4,7 @@
   "imageId": "mushroom_a",
   "hp": 32,
   "act": 1,
+  "heightTier": 3,
   "tier": "Strong",
   "initialMoveId": "spore_cloud",
   "moves": [

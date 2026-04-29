@@ -4,6 +4,7 @@
   "imageId": "goblin_c",
   "hp": 36,
   "act": 1,
+  "heightTier": 3,
   "tier": "Strong",
   "initialMoveId": "throw_knife",
   "moves": [

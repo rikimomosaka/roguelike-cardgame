@@ -4,6 +4,7 @@
   "imageId": "act3_brute",
   "hp": 81,
   "act": 3,
+  "heightTier": 7,
   "tier": "Strong",
   "initialMoveId": "crush",
   "moves": [

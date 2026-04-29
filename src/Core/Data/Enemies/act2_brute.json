@@ -4,6 +4,7 @@
   "imageId": "act2_brute",
   "hp": 55,
   "act": 2,
+  "heightTier": 7,
   "tier": "Strong",
   "initialMoveId": "smash",
   "moves": [

@@ -4,6 +4,7 @@
   "imageId": "orc_red",
   "hp": 42,
   "act": 1,
+  "heightTier": 6,
   "tier": "Strong",
   "initialMoveId": "smash",
   "moves": [

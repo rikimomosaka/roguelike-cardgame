@@ -4,6 +4,7 @@
   "imageId": "iron_golem_a",
   "hp": 62,
   "act": 1,
+  "heightTier": 8,
   "tier": "Elite",
   "initialMoveId": "iron_fist",
   "moves": [

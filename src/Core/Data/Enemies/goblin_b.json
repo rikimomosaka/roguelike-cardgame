@@ -4,6 +4,7 @@
   "imageId": "goblin_b",
   "hp": 34,
   "act": 1,
+  "heightTier": 3,
   "tier": "Strong",
   "initialMoveId": "slice",
   "moves": [

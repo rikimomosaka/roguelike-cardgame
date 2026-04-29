@@ -4,6 +4,7 @@
   "imageId": "guardian_golem",
   "hp": 160,
   "act": 1,
+  "heightTier": 9,
   "tier": "Boss",
   "initialMoveId": "defensive_mode",
   "moves": [

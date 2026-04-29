@@ -4,6 +4,7 @@
   "imageId": "jaw_worm",
   "hp": 42,
   "act": 1,
+  "heightTier": 4,
   "tier": "Weak",
   "initialMoveId": "chomp",
   "moves": [

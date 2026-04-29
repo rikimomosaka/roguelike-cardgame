@@ -4,6 +4,7 @@
   "imageId": "act2_grunt",
   "hp": 30,
   "act": 2,
+  "heightTier": 4,
   "tier": "Weak",
   "initialMoveId": "slash",
   "moves": [

@@ -4,6 +4,7 @@
   "imageId": "louse_red",
   "hp": 13,
   "act": 1,
+  "heightTier": 1,
   "tier": "Weak",
   "initialMoveId": "bite",
   "moves": [

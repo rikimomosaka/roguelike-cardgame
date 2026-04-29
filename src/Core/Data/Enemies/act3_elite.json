@@ -4,6 +4,7 @@
   "imageId": "act3_elite",
   "hp": 135,
   "act": 3,
+  "heightTier": 8,
   "tier": "Elite",
   "initialMoveId": "execute",
   "moves": [

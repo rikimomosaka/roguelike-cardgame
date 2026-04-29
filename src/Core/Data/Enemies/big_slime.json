@@ -4,6 +4,7 @@
   "imageId": "slime_big",
   "hp": 46,
   "act": 1,
+  "heightTier": 3,
   "tier": "Strong",
   "initialMoveId": "body_slam",
   "moves": [

@@ -4,6 +4,7 @@
   "imageId": "act2_boss",
   "hp": 220,
   "act": 2,
+  "heightTier": 10,
   "tier": "Boss",
   "initialMoveId": "charge",
   "moves": [

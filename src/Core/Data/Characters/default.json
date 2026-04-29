@@ -4,6 +4,7 @@
   "maxHp": 80,
   "startingGold": 99,
   "potionSlotCount": 3,
+  "heightTier": 5,
   "deck": [
     "starter_block_0","starter_block_0",
     "strike","strike","defend","defend",

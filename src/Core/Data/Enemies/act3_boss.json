@@ -4,6 +4,7 @@
   "imageId": "act3_boss",
   "hp": 340,
   "act": 3,
+  "heightTier": 10,
   "tier": "Boss",
   "initialMoveId": "wrath",
   "moves": [
