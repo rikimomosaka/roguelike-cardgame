@@ -346,6 +346,34 @@ type SlotProps = {
 }
 
 function Slot({ char, isTargeted, attackingDir, isHit, onClick }: SlotProps) {
+  // Why: 影の横幅は描画後の sprite 横幅と同じにしたい。silhouette は決定論的
+  //  (tier-height × 0.55) で同期計算できる。画像は naturalWidth/Height が
+  //  load 後にしか取れないので onLoad で aspect を State に保持し、それ以降
+  //  の render で width = tier-height × aspect を渡す。影の高さは固定 (CSS)。
+  const [imageAspect, setImageAspect] = useState<number | null>(null)
+  useEffect(() => {
+    setImageAspect(null) // 画像が切り替わったら再計測
+  }, [char.image])
+  const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget
+    if (img.naturalHeight > 0) {
+      setImageAspect(img.naturalWidth / img.naturalHeight)
+    }
+  }
+  const shadowWidth: number | null = (() => {
+    if (char.heightTier === undefined) return null // text fallback: CSS default
+    const h = heightForTier(char.heightTier)
+    if (char.image) {
+      return imageAspect !== null && Number.isFinite(imageAspect)
+        ? h * imageAspect
+        : null
+    }
+    // silhouette: 既存の width: calc(--tier-height * 0.55) と同じ
+    return h * 0.55
+  })()
+  const shadowStyle: CSSProperties | undefined =
+    shadowWidth !== null ? { width: `${Math.round(shadowWidth)}px` } : undefined
+
   if (!char.occupied) {
     return <div className="battle__slot" data-occupied="0" />
   }
@@ -390,7 +418,12 @@ function Slot({ char, isTargeted, attackingDir, isHit, onClick }: SlotProps) {
               : undefined
           }
         >
-          <img src={char.image} alt={char.name} draggable={false} />
+          <img
+            src={char.image}
+            alt={char.name}
+            draggable={false}
+            onLoad={handleImageLoad}
+          />
         </div>
       ) : char.heightTier !== undefined ? (
         <div
@@ -405,7 +438,7 @@ function Slot({ char, isTargeted, attackingDir, isHit, onClick }: SlotProps) {
           {char.sprite}
         </div>
       )}
-      <div className="sprite-shadow" />
+      <div className="sprite-shadow" style={shadowStyle} />
       <div className="status-hp">
         <div className="status-hp__track" data-lv={char.hpLv}>
           <div className="status-hp__fill" style={hpFillStyle} />

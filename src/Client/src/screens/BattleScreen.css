@@ -621,13 +621,17 @@ button.pile:hover { filter: brightness(1.2); }
 /* Why: 影の中心 (top + height/2 = 185 + 5 = 190px) を sprite 下端
    (slot.top + 190px = bottom: 70px from slot bottom of 260px) と一致させる。
    旧 top: 190 では影の上端と sprite 下端が重なるため、足が影の上に
-   浮いて見えていた。 */
+   浮いて見えていた。
+   width はインライン style で動的設定 (Slot コンポーネントが画像 aspect /
+   silhouette 比から計算)。インライン未指定時は 78px (text fallback 用)。
+   height は固定 10px (横幅のみリサイズし縦は変えない仕様)。
+   濃度: 旧 0.55 → 0.85 (ユーザ要望でわかりやすく濃く)。 */
 .sprite-shadow {
   position: absolute; top: 185px; left: 50%;
   transform: translateX(-50%);
   width: 78px; height: 10px;
   border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.55) 0%, transparent 70%);
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.85) 0%, transparent 75%);
   pointer-events: none;
 }
 
