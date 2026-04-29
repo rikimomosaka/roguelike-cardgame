@@ -346,9 +346,9 @@ function Slot({ char, isTargeted, attackingDir, isHit, onClick }: SlotProps) {
       ) : char.intent ? (
         <IntentChip intent={char.intent} />
       ) : null}
-      {/* Why: image があれば <img> 描画、無ければ text sprite (旧 fallback)。
-          --tier-height CSS 変数で高さを段階制御 (1〜10)。縦横比は <img> 自体が
-          維持し、width: auto。立ち絵下端を sprite-shadow と揃える。 */}
+      {/* Why: image があれば <img>、無くても heightTier があればシルエット
+          placeholder（実アセット届くまでの仮置き）、両方無ければ text sprite。
+          --tier-height CSS 変数で高さを段階制御 (1〜10)。 */}
       {char.image ? (
         <div
           className={`sprite sprite--image sprite--${char.spriteKind}`}
@@ -360,6 +360,12 @@ function Slot({ char, isTargeted, attackingDir, isHit, onClick }: SlotProps) {
         >
           <img src={char.image} alt={char.name} draggable={false} />
         </div>
+      ) : char.heightTier !== undefined ? (
+        <div
+          className={`sprite sprite--silhouette sprite--${char.spriteKind}`}
+          style={{ '--tier-height': `${heightForTier(char.heightTier)}px` } as CSSProperties}
+          aria-label={`${char.name} (placeholder)`}
+        />
       ) : (
         <div
           className={`sprite sprite--${char.spriteKind}${char.sprite.length > 2 ? ' sprite--text' : ''}`}
@@ -376,6 +382,7 @@ function Slot({ char, isTargeted, attackingDir, isHit, onClick }: SlotProps) {
           </span>
         </div>
       </div>
+      <div className="status-name">{char.name}</div>
       {char.buffs.length > 0 ? (
         <div className="status-buffs">
           {char.buffs.map((b, i) => (

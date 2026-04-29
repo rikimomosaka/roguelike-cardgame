@@ -961,3 +961,44 @@ button.pile:hover { filter: brightness(1.2); }
   box-shadow: 0 0 22px rgba(255, 213, 79, 0.55), 0 10px 18px rgba(0, 0, 0, 0.55);
   filter: brightness(1.08);
 }
+
+/* Silhouette placeholder: 実アセット未配置時の仮置き矩形 */
+.sprite--silhouette {
+  height: var(--tier-height, 148px);
+  /* Why: 人型寄りの縦長シルエット (高さ × 0.55)。tier=10 でも幅は ~143px に収まる。 */
+  width: calc(var(--tier-height, 148px) * 0.55);
+  border-radius: 12px 12px 8px 8px / 16px 16px 8px 8px;
+  border: 1px solid;
+}
+.sprite--silhouette.sprite--enemy {
+  background: rgba(220, 80, 80, 0.45);
+  border-color: rgba(220, 80, 80, 0.85);
+}
+.sprite--silhouette.sprite--ally {
+  background: rgba(80, 180, 100, 0.45);
+  border-color: rgba(80, 180, 100, 0.85);
+}
+.sprite--silhouette.sprite--hero {
+  background: rgba(100, 140, 220, 0.45);
+  border-color: rgba(100, 140, 220, 0.85);
+}
+.sprite--silhouette.sprite--elite {
+  background: rgba(220, 140, 80, 0.45);
+  border-color: rgba(220, 140, 80, 0.85);
+}
+
+/* Character name display below HP gauge */
+.status-name {
+  margin-top: 2px;
+  font-size: 12px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  /* Why: 長い名前 (account ID 例: rikimomosaka@gmail.com) は省略表示。 */
+  max-width: 12ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-left: auto;
+  margin-right: auto;
+}
