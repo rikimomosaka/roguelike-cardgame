@@ -431,19 +431,30 @@ button.pile:hover { filter: brightness(1.2); }
 }
 
 /* 死亡演出はユーザ要望により廃止 (HP=0 で alive filter から外れて自然消滅)。 */
+/* Why: 選択状態の三角形は味方=青 / 敵=赤 で識別性アップ。サイズも 14→24px に拡大。
+   キャラのフチ発光 (.is-targeted .sprite drop-shadow) は既存の金色のままで触らない。 */
 .battle__slot.is-targeted::after {
   content: "▼";
   position: absolute;
-  top: -16px;
+  top: -28px;
   left: 50%;
   transform: translateX(-50%);
-  color: #f1c95b;
-  font-size: 14px;
-  text-shadow: 0 0 6px rgba(241, 201, 91, 0.7);
+  font-size: 24px;
+  text-shadow: 0 0 8px currentColor, 0 0 4px currentColor;
   pointer-events: none;
+  /* color は side セレクタで上書き (下記) */
+  color: #f1c95b;  /* fallback */
 }
+.battle__side--player .battle__slot.is-targeted::after { color: #4fa8ff; }
+.battle__side--enemy  .battle__slot.is-targeted::after { color: #ff5a5a; }
 
 /* COMBO HUD chip */
+.hud-combo {
+  background: rgba(10, 6, 4, 0.85);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-dark);
+}
 .hud-combo .hud-v {
   color: #d8d8d8;
   transition: color 0.18s ease, text-shadow 0.18s ease;
@@ -455,11 +466,11 @@ button.pile:hover { filter: brightness(1.2); }
 }
 
 /* Intent chip */
-/* Why: intent (攻撃予定) は tier 10 天井 (slot top -68px) の上に固定配置。
-   キャラの heightTier に関わらず全 enemy slot で intent が同じ画面 Y に揃う。
-   tier 10 envelope の上端を超えないよう -100px (~30px breathing room)。 */
+/* Why: intent (攻撃予定) は選択三角形 (top: -28px) のすぐ上に固定配置。
+   選択状態の有無に関わらず同じ Y、全 enemy slot で水平に揃う。tier 10 天井
+   (slot top -68px) 内に収まらないが、tier 10 で多少重なる程度は許容。 */
 .intent {
-  position: absolute; top: -100px; left: 50%;
+  position: absolute; top: -50px; left: 50%;
   transform: translateX(-50%);
   display: flex; align-items: center; gap: 6px;
   padding: 4px 12px;
@@ -476,6 +487,20 @@ button.pile:hover { filter: brightness(1.2); }
 }
 
 .intent__icon { font-size: 22px; }
+.intent__icon--img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  vertical-align: middle;
+  image-rendering: pixelated;
+}
+.status-buff__icon-img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  vertical-align: middle;
+  image-rendering: pixelated;
+}
 .intent__num {
   font-family: var(--font-body);
   font-size: 20px;
@@ -593,7 +618,7 @@ button.pile:hover { filter: brightness(1.2); }
    する (ユーザ要望「主人公だけ位置が高い」対応)。 */
 .intents {
   position: absolute;
-  top: -100px;
+  top: -50px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -688,6 +713,7 @@ button.pile:hover { filter: brightness(1.2); }
   display: inline-flex; align-items: center; gap: 3px;
   padding: 2px 7px;
   border: 1px solid var(--border-dark);
+  background: rgba(10, 6, 4, 0.85);
   border-radius: var(--radius-sm);
   font-family: var(--font-label);
   font-size: 15px;
@@ -812,9 +838,11 @@ button.pile:hover { filter: brightness(1.2); }
 .pile {
   position: absolute;
   z-index: 4;
+  /* Why: 旧 layered gradient は透過度が高く文字が読みにくかった。
+     opaque base + 控えめ縞模様で可読性アップ。 */
   background:
-    repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.2) 0 2px, transparent 2px 4px),
-    linear-gradient(180deg, var(--bg-3) 0%, var(--bg-1) 100%);
+    repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.25) 0 2px, transparent 2px 4px),
+    linear-gradient(180deg, rgba(20, 14, 10, 0.95) 0%, rgba(10, 6, 4, 0.95) 100%);
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-md);
   display: flex; align-items: center; justify-content: center;

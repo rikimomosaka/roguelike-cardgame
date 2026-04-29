@@ -234,9 +234,15 @@ function useTip(c: TooltipContent | null) {
 
 function StatusBuff({ buff }: { buff: BuffDemo }) {
   const tip = useTip({ name: buff.name, desc: buff.desc })
+  const isImageIcon = buff.icon.startsWith('/')
   return (
     <span className={`status-buff status-buff--${buff.kind}`} {...tip}>
-      {buff.icon}
+      {isImageIcon ? (
+        <img className="status-buff__icon-img" src={buff.icon}
+             alt="" draggable={false} />
+      ) : (
+        buff.icon
+      )}
       <span className="status-buff__num">{buff.num}</span>
     </span>
   )
@@ -282,9 +288,15 @@ function IntentSegment({
   intent: IntentDemo
   tipProps: ReturnType<typeof useTooltipTarget>
 }) {
+  const isImageIcon = intent.icon.startsWith('/')
   return (
     <span className={`intent__seg intent__seg--${intent.kind}`} {...tipProps}>
-      <span className="intent__icon">{intent.icon}</span>
+      {isImageIcon ? (
+        <img className="intent__icon intent__icon--img" src={intent.icon}
+             alt="" draggable={false} />
+      ) : (
+        <span className="intent__icon">{intent.icon}</span>
+      )}
       {intent.kind === 'attack' && intent.attack ? (
         // Why: 通常/ランダム/全体を 1 chip 内で色分け表示。slash は白、各数値は
         // 種類ごとの色 (single=現状色, random=オレンジ, all=赤)。
@@ -323,9 +335,10 @@ function IntentChip({ intent }: { intent: IntentDemo }) {
  *  - hover でどの segment に当てても全 intent の name/desc を統合した
  *    tooltip を表示 (片方だけでなく両方の説明を見たい、というユーザ要望) */
 function IntentChipRow({ intents }: { intents: IntentDemo[] }) {
-  // 統合 tooltip: 全 intent の name と desc を改行で連結
-  const mergedName = intents.map(i => i.name).join(' / ')
-  const mergedDesc = intents.map(i => `■ ${i.name}\n${i.desc}`).join('\n\n')
+  // Why: tooltip 重複削除。タイトルは ＆ 区切り、本文は intent ごとに ■ + desc
+  // のみ (■ の後の name 重複を廃止)、複数 intent は改行で並べる。
+  const mergedName = intents.map(i => i.name).join(' ＆ ')
+  const mergedDesc = intents.map(i => `■ ${i.desc}`).join('\n')
   const tip = useTip({ name: mergedName, desc: mergedDesc })
   return (
     <div className={`intent intent--row${intents.length > 1 ? ' intent--multi' : ''}`}>

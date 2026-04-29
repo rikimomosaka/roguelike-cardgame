@@ -214,9 +214,18 @@ export function toIntentDemos(intent: IntentDto): IntentDemo[] {
     if (intent.attackAll && intent.attackAll > 0) {
       parts.push('全体攻撃'); damages.push(String(intent.attackAll))
     }
+    // Why: 攻撃 chip の icon は最も影響が大きい scope を選ぶ:
+    // attackAll > attackSingle > attackRandom (ランダムは専用アイコン未配置のため
+    // text fallback)。
+    let attackIcon = '⚔'
+    if (intent.attackAll && intent.attackAll > 0) {
+      attackIcon = '/icons/ui/attack_all.png'
+    } else if (intent.attackSingle && intent.attackSingle > 0) {
+      attackIcon = '/icons/ui/attack.png'
+    }
     list.push({
       kind: 'attack',
-      icon: '⚔',
+      icon: attackIcon,
       name: parts.join('/'),
       desc: `ターン終了時に${damages.join('/')}ダメージの攻撃。`,
       attack: {
@@ -231,7 +240,7 @@ export function toIntentDemos(intent: IntentDto): IntentDemo[] {
   if (intent.block && intent.block > 0) {
     list.push({
       kind: 'defend',
-      icon: '🛡',
+      icon: '/icons/ui/block.png',
       num: intent.block,
       name: '防御',
       // Why: 「ターン終了時に」だと現在ターンの攻撃を防げると誤認するため、
@@ -259,7 +268,7 @@ export function toBuffs(actor: CombatActorDto): BuffDemo[] {
   if (actor.blockDisplay > 0) {
     buffs.push({
       kind: 'block',
-      icon: '◆',
+      icon: '/icons/ui/block.png',
       num: actor.blockDisplay,
       name: 'ブロック',
       desc: `ダメージを${actor.blockDisplay}軽減する。`,
@@ -267,7 +276,7 @@ export function toBuffs(actor: CombatActorDto): BuffDemo[] {
   }
   for (const [statusId, amount] of Object.entries(actor.statuses)) {
     if (amount <= 0) continue
-    const meta = statusMeta(statusId)
+    const meta = statusMeta(statusId, amount)
     buffs.push({
       kind: meta.kind,
       icon: meta.icon,
@@ -279,7 +288,7 @@ export function toBuffs(actor: CombatActorDto): BuffDemo[] {
   return buffs
 }
 
-function statusMeta(id: string): {
+function statusMeta(id: string, amount: number): {
   kind: BuffDemo['kind']
   icon: string
   name: string
@@ -287,17 +296,23 @@ function statusMeta(id: string): {
 } {
   switch (id) {
     case 'strength':
-      return { kind: 'buff', icon: '✦', name: '力', desc: '与えるダメージが +N 増加する。' }
+      return { kind: 'buff', icon: '✦', name: '筋力',
+               desc: `与えるダメージが${amount}増加する。` }
     case 'dexterity':
-      return { kind: 'buff', icon: '◇', name: '敏捷', desc: 'ブロック値が +N 増加する。' }
+      return { kind: 'buff', icon: '◇', name: '敏捷',
+               desc: `ブロック値が${amount}増加する。` }
     case 'vulnerable':
-      return { kind: 'debuff', icon: '☠', name: '脆弱', desc: '受けるダメージが 1.5 倍。N ターン残存。' }
+      return { kind: 'debuff', icon: '☠', name: '脆弱',
+               desc: `受けるダメージが 1.5 倍。${amount}ターン残存。` }
     case 'weak':
-      return { kind: 'debuff', icon: '☄', name: '脱力', desc: '与えるダメージが 0.75 倍。N ターン残存。' }
+      return { kind: 'debuff', icon: '☄', name: '脱力',
+               desc: `与えるダメージが 0.75 倍。${amount}ターン残存。` }
     case 'poison':
-      return { kind: 'debuff', icon: '☠', name: '毒', desc: 'ターン開始時に N ダメージ。スタック数が 1 減る。' }
+      return { kind: 'debuff', icon: '/icons/ui/poison.png', name: '毒',
+               desc: `ターン開始時に${amount}ダメージ。スタック数が 1 減る。` }
     case 'omnistrike':
-      return { kind: 'buff', icon: '✷', name: '全体攻撃', desc: '攻撃が全敵に当たる。N ターン残存。' }
+      return { kind: 'buff', icon: '/icons/ui/attack_all.png', name: '全体攻撃',
+               desc: `攻撃が全敵に当たる。${amount}ターン残存。` }
     default:
       return { kind: 'buff', icon: '?', name: id, desc: '' }
   }
