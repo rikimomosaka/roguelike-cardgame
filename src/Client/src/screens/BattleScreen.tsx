@@ -13,7 +13,7 @@
 // 中間型 (RelicDemo / CharacterDemo / HandCardDemo / BuffDemo / IntentDemo /
 // HpLv) は dtoAdapter から参照できるよう export している。
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { Card } from '../components/Card'
 import type { CardRarity, CardType } from '../components/Card'
@@ -242,6 +242,38 @@ function StatusBuff({ buff }: { buff: BuffDemo }) {
   )
 }
 
+/** Why: HP バー幅 (100px) に収まるよう、長い名前は font-size を縮める。
+ *  max-width: 12ch でのトランケート (...) は Japanese full-width に弱く
+ *  「ケーブ・…」のように短い名前まで切れていたため廃止。 */
+function StatusName({ name }: { name: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [fontSize, setFontSize] = useState(12)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    // Measure scrollWidth at baseline; if overflow, scale down proportionally.
+    el.style.fontSize = '12px'
+    const sw = el.scrollWidth
+    const containerWidth = 100  // matches HP bar / slot width
+    if (sw > containerWidth) {
+      const next = Math.max(7, Math.floor(12 * containerWidth / sw))
+      setFontSize(next)
+    } else {
+      setFontSize(12)
+    }
+  }, [name])
+  return (
+    <div
+      ref={ref}
+      className="status-name"
+      style={{ fontSize: `${fontSize}px` }}
+      title={name}
+    >
+      {name}
+    </div>
+  )
+}
+
 /** 単一 intent の中身 (icon + 値群)。tooltip 用 props は外から渡される。 */
 function IntentSegment({
   intent,
@@ -382,7 +414,7 @@ function Slot({ char, isTargeted, attackingDir, isHit, onClick }: SlotProps) {
           </span>
         </div>
       </div>
-      <div className="status-name" title={char.name}>{char.name}</div>
+      <StatusName name={char.name} />
       {char.buffs.length > 0 ? (
         <div className="status-buffs">
           {char.buffs.map((b, i) => (

@@ -455,8 +455,11 @@ button.pile:hover { filter: brightness(1.2); }
 }
 
 /* Intent chip */
+/* Why: intent (攻撃予定) は tier 10 天井 (slot top -68px) の上に固定配置。
+   キャラの heightTier に関わらず全 enemy slot で intent が同じ画面 Y に揃う。
+   tier 10 envelope の上端を超えないよう -100px (~30px breathing room)。 */
 .intent {
-  position: absolute; top: 4px; left: 50%;
+  position: absolute; top: -100px; left: 50%;
   transform: translateX(-50%);
   display: flex; align-items: center; gap: 6px;
   padding: 4px 12px;
@@ -563,6 +566,17 @@ button.pile:hover { filter: brightness(1.2); }
   text-shadow: none;
   background: transparent;
 }
+
+/* Why: silhouette は image と同じく接地アンカー (sprite-shadow at top: 190px =
+   slot bottom 70px)。サイズが小さくても tier 1 スライムが「浮いて」見える
+   バグを修正。tier 10 (258px) では top が slot top の上にはみ出すが、
+   親 (.battle__slot) は overflow: visible のままで OK。 */
+.sprite.sprite--silhouette {
+  top: auto;
+  bottom: 70px;
+  height: var(--tier-height, 148px);
+  text-shadow: none;
+}
 .sprite--image img {
   display: block;
   height: var(--tier-height, 148px);
@@ -579,7 +593,7 @@ button.pile:hover { filter: brightness(1.2); }
    する (ユーザ要望「主人公だけ位置が高い」対応)。 */
 .intents {
   position: absolute;
-  top: 4px;
+  top: -100px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -993,16 +1007,12 @@ button.pile:hover { filter: brightness(1.2); }
   left: 0;
   right: 0;
   top: 222px;
-  font-size: 12px;
+  width: 100px;
+  /* Why: font-size は <StatusName> コンポーネントが計測してインライン style で
+     上書き。HP バー幅 (100px) に収まらない長名は 7..12px 範囲で動的縮小。 */
   text-align: center;
   color: rgba(255, 255, 255, 0.85);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
-  /* Why: 長い名前 (account ID 例: rikimomosaka@gmail.com) は省略表示。
-     title 属性でフルネームをホバー復元。 */
-  max-width: 12ch;
-  margin-left: auto;
-  margin-right: auto;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.1;
 }
