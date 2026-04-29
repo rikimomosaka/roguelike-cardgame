@@ -461,13 +461,14 @@ function Slot({ char, isTargeted, attackingDir, isHit, onClick }: SlotProps) {
         </div>
       </div>
       <StatusName name={char.name} />
-      {char.buffs.length > 0 ? (
-        <div className="status-buffs">
-          {char.buffs.map((b, i) => (
-            <StatusBuff key={i} buff={b} />
-          ))}
-        </div>
-      ) : null}
+      {/* Why: バフ/デバフ/ブロック値が現れてもキャラ位置が動かないよう、常に
+          status-buffs 行を確保。空配列ならエンプティ row として min-height だけ
+          残す (CSS 側で 24px 確保)。 */}
+      <div className="status-buffs">
+        {char.buffs.map((b, i) => (
+          <StatusBuff key={i} buff={b} />
+        ))}
+      </div>
     </div>
   )
 }
@@ -1271,7 +1272,7 @@ export function BattleScreen({
             onClick={() => setPileOpen('draw')}
             aria-label={`山札 (${state.drawPile.length}枚) を表示`}
           >
-            <span className="pile__sym">❖</span>
+            <img className="pile__sym pile__sym--img" src="/icons/ui/pile_draw.png" alt="" draggable={false} />
             <span className="pile__lbl">山札</span>
             <span className="pile__num">{state.drawPile.length}</span>
           </button>
@@ -1281,7 +1282,7 @@ export function BattleScreen({
             onClick={() => setPileOpen('exhaust')}
             aria-label={`除外 (${state.exhaustPile.length}枚) を表示`}
           >
-            <span className="pile__sym">✦</span>
+            <img className="pile__sym pile__sym--img" src="/icons/ui/pile_exhaust.png" alt="" draggable={false} />
             <span className="pile__lbl">除外</span>
             <span className="pile__num">{state.exhaustPile.length}</span>
           </button>
@@ -1291,7 +1292,7 @@ export function BattleScreen({
             onClick={() => setPileOpen('discard')}
             aria-label={`捨札 (${state.discardPile.length}枚) を表示`}
           >
-            <span className="pile__sym">✕</span>
+            <img className="pile__sym pile__sym--img" src="/icons/ui/pile_discard.png" alt="" draggable={false} />
             <span className="pile__lbl">捨札</span>
             <span className="pile__num">{state.discardPile.length}</span>
           </button>

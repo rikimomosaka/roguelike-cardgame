@@ -214,14 +214,15 @@ export function toIntentDemos(intent: IntentDto): IntentDemo[] {
     if (intent.attackAll && intent.attackAll > 0) {
       parts.push('全体攻撃'); damages.push(String(intent.attackAll))
     }
-    // Why: 攻撃 chip の icon は最も影響が大きい scope を選ぶ:
-    // attackAll > attackSingle > attackRandom (ランダムは専用アイコン未配置のため
-    // text fallback)。
+    // 攻撃 chip の icon は最も影響が大きい scope を優先:
+    // attackAll > attackSingle > attackRandom
     let attackIcon = '⚔'
     if (intent.attackAll && intent.attackAll > 0) {
       attackIcon = '/icons/ui/attack_all.png'
     } else if (intent.attackSingle && intent.attackSingle > 0) {
       attackIcon = '/icons/ui/attack.png'
+    } else if (intent.attackRandom && intent.attackRandom > 0) {
+      attackIcon = '/icons/ui/attack_random.png'
     }
     list.push({
       kind: 'attack',
@@ -249,13 +250,16 @@ export function toIntentDemos(intent: IntentDto): IntentDemo[] {
     })
   }
   if (intent.hasBuff) {
-    list.push({ kind: 'buff', icon: '✦', name: '強化', desc: '次のターンに自身を強化する。' })
+    list.push({ kind: 'buff', icon: '/icons/ui/intent_buff.png',
+                name: '強化', desc: '次のターンに自身を強化する。' })
   }
   if (intent.hasDebuff) {
-    list.push({ kind: 'buff', icon: '☄', name: '弱体化', desc: '次のターンにこちらを弱体化する。' })
+    list.push({ kind: 'buff', icon: '/icons/ui/intent_debuff.png',
+                name: '弱体化', desc: '次のターンにこちらを弱体化する。' })
   }
   if (intent.hasHeal) {
-    list.push({ kind: 'heal', icon: '✚', name: '回復', desc: '次のターンに自身を回復する。' })
+    list.push({ kind: 'heal', icon: '/icons/ui/intent_heal.png',
+                name: '回復', desc: '次のターンに自身を回復する。' })
   }
 
   return list
@@ -268,7 +272,7 @@ export function toBuffs(actor: CombatActorDto): BuffDemo[] {
   if (actor.blockDisplay > 0) {
     buffs.push({
       kind: 'block',
-      icon: '/icons/ui/block.png',
+      icon: '/icons/ui/block_value.png',
       num: actor.blockDisplay,
       name: 'ブロック',
       desc: `ダメージを${actor.blockDisplay}軽減する。`,
@@ -296,16 +300,16 @@ function statusMeta(id: string, amount: number): {
 } {
   switch (id) {
     case 'strength':
-      return { kind: 'buff', icon: '✦', name: '筋力',
+      return { kind: 'buff', icon: '/icons/ui/strength.png', name: '筋力',
                desc: `与えるダメージが${amount}増加する。` }
     case 'dexterity':
-      return { kind: 'buff', icon: '◇', name: '敏捷',
+      return { kind: 'buff', icon: '/icons/ui/dexterity.png', name: '敏捷',
                desc: `ブロック値が${amount}増加する。` }
     case 'vulnerable':
-      return { kind: 'debuff', icon: '☠', name: '脆弱',
+      return { kind: 'debuff', icon: '/icons/ui/vulnerable.png', name: '脆弱',
                desc: `受けるダメージが 1.5 倍。${amount}ターン残存。` }
     case 'weak':
-      return { kind: 'debuff', icon: '☄', name: '脱力',
+      return { kind: 'debuff', icon: '/icons/ui/weak.png', name: '脱力',
                desc: `与えるダメージが 0.75 倍。${amount}ターン残存。` }
     case 'poison':
       return { kind: 'debuff', icon: '/icons/ui/poison.png', name: '毒',

@@ -436,7 +436,9 @@ button.pile:hover { filter: brightness(1.2); }
 .battle__slot.is-targeted::after {
   content: "▼";
   position: absolute;
-  top: -28px;
+  /* Why: 三角形は intent (top: -50px) のさらに上に配置。intent はそのまま、
+     三角形が消えても intent の高さは固定。ユーザ要望: 入れ替えイメージ。 */
+  top: -80px;
   left: 50%;
   transform: translateX(-50%);
   font-size: 24px;
@@ -450,10 +452,12 @@ button.pile:hover { filter: brightness(1.2); }
 
 /* COMBO HUD chip */
 .hud-combo {
-  background: rgba(10, 6, 4, 0.85);
+  /* Why: end-turn ボタンと同じ gradient で統一感。 */
+  background: linear-gradient(180deg, rgba(168, 85, 42, 0.35) 0%, rgba(90, 42, 20, 0.55) 100%);
   padding: 4px 10px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-dark);
+  border-radius: var(--radius-md);
+  border: 2px solid var(--fg-muted);
+  box-shadow: 0 0 10px rgba(255, 213, 79, 0.3);
 }
 .hud-combo .hud-v {
   color: #d8d8d8;
@@ -707,6 +711,8 @@ button.pile:hover { filter: brightness(1.2); }
   display: flex; gap: 4px; flex-wrap: wrap; justify-content: center;
   padding: 0 2px;
   box-sizing: border-box;
+  /* Why: バフが無い時も 1 行スペースを確保し、出現で他の要素が動かないようにする。 */
+  min-height: 24px;
 }
 
 .status-buff {
@@ -838,16 +844,14 @@ button.pile:hover { filter: brightness(1.2); }
 .pile {
   position: absolute;
   z-index: 4;
-  /* Why: 旧 layered gradient は透過度が高く文字が読みにくかった。
-     opaque base + 控えめ縞模様で可読性アップ。 */
-  background:
-    repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.25) 0 2px, transparent 2px 4px),
-    linear-gradient(180deg, rgba(20, 14, 10, 0.95) 0%, rgba(10, 6, 4, 0.95) 100%);
-  border: 1px solid var(--border-mid);
+  /* Why: end-turn ボタンと同じ gradient + border で統一感アップ。 */
+  background: linear-gradient(180deg, rgba(168, 85, 42, 0.35) 0%, rgba(90, 42, 20, 0.55) 100%);
+  border: 2px solid var(--fg-muted);
   border-radius: var(--radius-md);
   display: flex; align-items: center; justify-content: center;
   cursor: pointer;
   transition: border-color 0.12s ease, box-shadow 0.12s ease;
+  box-shadow: 0 0 10px rgba(255, 213, 79, 0.3);
 }
 
 .pile:hover {
@@ -863,11 +867,11 @@ button.pile:hover { filter: brightness(1.2); }
 
 .pile--draw .pile__sym,
 .pile--discard .pile__sym {
-  font-family: var(--font-label);
+  font-family: var(--font-body);
   font-size: 24px;
-  color: var(--fg-muted);
+  color: #d8d8d8;
   line-height: 1;
-  text-shadow: 0 0 4px rgba(201, 152, 90, 0.4), 0 1px 0 #000;
+  text-shadow: 0 1px 0 #000;
 }
 
 .pile--draw .pile__lbl,
@@ -875,7 +879,7 @@ button.pile:hover { filter: brightness(1.2); }
   font-family: var(--font-body);
   font-size: 13px;
   letter-spacing: 2px;
-  color: var(--border-light);
+  color: #d8d8d8;
   line-height: 1;
 }
 
@@ -883,7 +887,7 @@ button.pile:hover { filter: brightness(1.2); }
 .pile--discard .pile__num {
   font-family: var(--font-body);
   font-size: 19px;
-  color: var(--fg);
+  color: #d8d8d8;
   font-variant-numeric: tabular-nums;
   line-height: 1;
   text-shadow: 0 1px 0 #000;
@@ -895,23 +899,23 @@ button.pile:hover { filter: brightness(1.2); }
 }
 
 .pile--exhaust .pile__sym {
-  font-family: var(--font-label);
+  font-family: var(--font-body);
   font-size: 18px;
-  color: var(--fg-muted);
-  text-shadow: 0 0 4px rgba(201, 152, 90, 0.4), 0 1px 0 #000;
+  color: #d8d8d8;
+  text-shadow: 0 1px 0 #000;
 }
 
 .pile--exhaust .pile__lbl {
   font-family: var(--font-body);
   font-size: 12px;
   letter-spacing: 2px;
-  color: var(--border-light);
+  color: #d8d8d8;
 }
 
 .pile--exhaust .pile__num {
   font-family: var(--font-body);
   font-size: 16px;
-  color: var(--fg);
+  color: #d8d8d8;
   font-variant-numeric: tabular-nums;
   text-shadow: 0 1px 0 #000;
 }
@@ -919,6 +923,19 @@ button.pile:hover { filter: brightness(1.2); }
 .pile--draw    { left: 28px;  bottom: 30px; }
 .pile--discard { right: 28px; bottom: 30px; }
 .pile--exhaust { right: 28px; bottom: 168px; }
+
+/* Pile アイコン画像化 (24px tall, 縦横比維持) */
+.pile__sym--img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.pile--exhaust .pile__sym--img {
+  width: 20px;
+  height: 20px;
+}
 
 /* ================= Hand (fanned) ================= */
 .hand-wrap {
