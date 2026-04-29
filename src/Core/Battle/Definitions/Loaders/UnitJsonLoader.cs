@@ -45,7 +45,9 @@ public static class UnitJsonLoader
                 if (root.TryGetProperty("lifetimeTurns", out var ltEl) && ltEl.ValueKind == JsonValueKind.Number)
                     lifetime = ltEl.GetInt32();
 
-                return new UnitDefinition(id, name, imageId, hp, initialMoveId, moves, lifetime);
+                var heightTier = ParseOptionalIntInRange(root, "heightTier", 5, 1, 10, id);
+
+                return new UnitDefinition(id, name, imageId, hp, initialMoveId, moves, lifetime, HeightTier: heightTier);
             }
             catch (UnitJsonException) { throw; }
             catch (Exception ex)
@@ -94,5 +96,26 @@ public static class UnitJsonLoader
             throw new UnitJsonException($"必須フィールド \"{key}\" (number) がありません。{ctx}");
         }
         return v.GetInt32();
+    }
+
+    private static int ParseOptionalIntInRange(
+        JsonElement el, string key, int defaultValue, int min, int max, string? id)
+    {
+        if (!el.TryGetProperty(key, out var v) || v.ValueKind == JsonValueKind.Null)
+            return defaultValue;
+        if (v.ValueKind != JsonValueKind.Number)
+        {
+            var ctx = id is null ? "" : $" (unit id={id})";
+            throw new UnitJsonException(
+                $"\"{key}\" は数値である必要があります。{ctx}");
+        }
+        int n = v.GetInt32();
+        if (n < min || n > max)
+        {
+            var ctx = id is null ? "" : $" (unit id={id})";
+            throw new UnitJsonException(
+                $"\"{key}\" の値 {n} は {min}..{max} の範囲外です。{ctx}");
+        }
+        return n;
     }
 }

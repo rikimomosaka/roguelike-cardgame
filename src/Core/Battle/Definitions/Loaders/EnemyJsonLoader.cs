@@ -47,8 +47,10 @@ public static class EnemyJsonLoader
                     throw new EnemyJsonException(
                         $"initialMoveId \"{initialMoveId}\" が moves に存在しません (enemy id={id})。");
 
+                var heightTier = ParseOptionalIntInRange(root, "heightTier", 5, 1, 10, id);
+
                 return new EnemyDefinition(id, name, imageId, hp,
-                    new EnemyPool(act, tier), initialMoveId, moves);
+                    new EnemyPool(act, tier), initialMoveId, moves, heightTier);
             }
             catch (EnemyJsonException) { throw; }
             catch (Exception ex)
@@ -106,5 +108,26 @@ public static class EnemyJsonLoader
             throw new EnemyJsonException($"必須フィールド \"{key}\" (number) がありません。{ctx}");
         }
         return v.GetInt32();
+    }
+
+    private static int ParseOptionalIntInRange(
+        JsonElement el, string key, int defaultValue, int min, int max, string? id)
+    {
+        if (!el.TryGetProperty(key, out var v) || v.ValueKind == JsonValueKind.Null)
+            return defaultValue;
+        if (v.ValueKind != JsonValueKind.Number)
+        {
+            var ctx = id is null ? "" : $" (enemy id={id})";
+            throw new EnemyJsonException(
+                $"\"{key}\" は数値である必要があります。{ctx}");
+        }
+        int n = v.GetInt32();
+        if (n < min || n > max)
+        {
+            var ctx = id is null ? "" : $" (enemy id={id})";
+            throw new EnemyJsonException(
+                $"\"{key}\" の値 {n} は {min}..{max} の範囲外です。{ctx}");
+        }
+        return n;
     }
 }

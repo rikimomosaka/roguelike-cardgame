@@ -114,4 +114,62 @@ public class EnemyJsonLoaderTests
         }
         """));
     }
+
+    [Fact]
+    public void Parse_heightTier_missing_defaults_to_5()
+    {
+        var json = """
+        {
+          "id": "test", "name": "テスト", "imageId": "img", "hp": 10,
+          "act": 1, "tier": "Weak", "initialMoveId": "m",
+          "moves": [{"id":"m","kind":"Attack","nextMoveId":"m",
+            "effects":[{"action":"attack","scope":"all","side":"enemy","amount":1}]}]
+        }
+        """;
+        var def = EnemyJsonLoader.Parse(json);
+        Assert.Equal(5, def.HeightTier);
+    }
+
+    [Fact]
+    public void Parse_heightTier_value_is_preserved()
+    {
+        var json = """
+        {
+          "id": "test", "name": "テスト", "imageId": "img", "hp": 10,
+          "act": 1, "tier": "Weak", "initialMoveId": "m", "heightTier": 7,
+          "moves": [{"id":"m","kind":"Attack","nextMoveId":"m",
+            "effects":[{"action":"attack","scope":"all","side":"enemy","amount":1}]}]
+        }
+        """;
+        var def = EnemyJsonLoader.Parse(json);
+        Assert.Equal(7, def.HeightTier);
+    }
+
+    [Fact]
+    public void Parse_heightTier_below_range_throws()
+    {
+        var json = """
+        {
+          "id": "test", "name": "テスト", "imageId": "img", "hp": 10,
+          "act": 1, "tier": "Weak", "initialMoveId": "m", "heightTier": 0,
+          "moves": [{"id":"m","kind":"Attack","nextMoveId":"m",
+            "effects":[{"action":"attack","scope":"all","side":"enemy","amount":1}]}]
+        }
+        """;
+        Assert.Throws<EnemyJsonException>(() => EnemyJsonLoader.Parse(json));
+    }
+
+    [Fact]
+    public void Parse_heightTier_above_range_throws()
+    {
+        var json = """
+        {
+          "id": "test", "name": "テスト", "imageId": "img", "hp": 10,
+          "act": 1, "tier": "Weak", "initialMoveId": "m", "heightTier": 11,
+          "moves": [{"id":"m","kind":"Attack","nextMoveId":"m",
+            "effects":[{"action":"attack","scope":"all","side":"enemy","amount":1}]}]
+        }
+        """;
+        Assert.Throws<EnemyJsonException>(() => EnemyJsonLoader.Parse(json));
+    }
 }

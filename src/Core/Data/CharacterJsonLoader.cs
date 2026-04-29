@@ -34,7 +34,24 @@ public static class CharacterJsonLoader
             if (slots < 0) throw new CharacterJsonException($"potionSlotCount must be >= 0 (id={id})");
             if (deck.Count == 0) throw new CharacterJsonException($"deck must not be empty (id={id})");
 
-            return new CharacterDefinition(id, name, maxHp, gold, slots, deck);
+            var heightTier = ParseOptionalIntInRange(r, "heightTier", 5, 1, 10, id);
+
+            return new CharacterDefinition(id, name, maxHp, gold, slots, deck, HeightTier: heightTier);
         }
+    }
+
+    private static int ParseOptionalIntInRange(
+        JsonElement el, string key, int defaultValue, int min, int max, string? id)
+    {
+        if (!el.TryGetProperty(key, out var v) || v.ValueKind == JsonValueKind.Null)
+            return defaultValue;
+        if (v.ValueKind != JsonValueKind.Number)
+            throw new CharacterJsonException(
+                $"\"{key}\" は数値である必要があります (character id={id})。");
+        int n = v.GetInt32();
+        if (n < min || n > max)
+            throw new CharacterJsonException(
+                $"\"{key}\" の値 {n} は {min}..{max} の範囲外です (character id={id})。");
+        return n;
     }
 }

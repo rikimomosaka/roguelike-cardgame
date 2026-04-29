@@ -73,4 +73,50 @@ public class UnitJsonLoaderTests
         }
         """));
     }
+
+    [Fact]
+    public void Parse_heightTier_missing_defaults_to_5_unit()
+    {
+        var json = """
+        {"id":"u","name":"u","imageId":"u","hp":10,"initialMoveId":"m",
+         "moves":[{"id":"m","kind":"Attack","nextMoveId":"m",
+           "effects":[{"action":"attack","scope":"all","side":"enemy","amount":1}]}]}
+        """;
+        var def = UnitJsonLoader.Parse(json);
+        Assert.Equal(5, def.HeightTier);
+    }
+
+    [Fact]
+    public void Parse_heightTier_value_is_preserved_unit()
+    {
+        var json = """
+        {"id":"u","name":"u","imageId":"u","hp":10,"initialMoveId":"m","heightTier":3,
+         "moves":[{"id":"m","kind":"Attack","nextMoveId":"m",
+           "effects":[{"action":"attack","scope":"all","side":"enemy","amount":1}]}]}
+        """;
+        var def = UnitJsonLoader.Parse(json);
+        Assert.Equal(3, def.HeightTier);
+    }
+
+    [Fact]
+    public void Parse_heightTier_below_range_throws_unit()
+    {
+        var json = """
+        {"id":"u","name":"u","imageId":"u","hp":10,"initialMoveId":"m","heightTier":0,
+         "moves":[{"id":"m","kind":"Attack","nextMoveId":"m",
+           "effects":[{"action":"attack","scope":"all","side":"enemy","amount":1}]}]}
+        """;
+        Assert.Throws<UnitJsonException>(() => UnitJsonLoader.Parse(json));
+    }
+
+    [Fact]
+    public void Parse_heightTier_above_range_throws_unit()
+    {
+        var json = """
+        {"id":"u","name":"u","imageId":"u","hp":10,"initialMoveId":"m","heightTier":11,
+         "moves":[{"id":"m","kind":"Attack","nextMoveId":"m",
+           "effects":[{"action":"attack","scope":"all","side":"enemy","amount":1}]}]}
+        """;
+        Assert.Throws<UnitJsonException>(() => UnitJsonLoader.Parse(json));
+    }
 }
