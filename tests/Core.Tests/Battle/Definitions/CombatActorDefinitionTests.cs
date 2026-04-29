@@ -12,7 +12,7 @@ public class CombatActorDefinitionTests
     private sealed record TestActor(
         string Id, string Name, string ImageId, int Hp,
         string InitialMoveId, IReadOnlyList<MoveDefinition> Moves)
-        : CombatActorDefinition(Id, Name, ImageId, Hp, InitialMoveId, Moves);
+        : CombatActorDefinition(Id, Name, ImageId, Hp, 5, InitialMoveId, Moves);
 
     [Fact]
     public void Derived_record_inherits_fields()
