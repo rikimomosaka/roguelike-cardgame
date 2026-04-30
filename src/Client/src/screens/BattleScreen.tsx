@@ -910,8 +910,21 @@ export function BattleScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state?.hand])
 
-  // Why: 山札補充の検出は playSteps 内の setState 直前で行う (この useEffect
-  //  経路は時々 fire しないため移動)。prevPilesRef は今は使わない。
+  // Why: 山札補充 (discard を全部消化 = discard が 0 になる) を検出してアニメを
+  //  発火する。条件は単純化: prev > 0 && current === 0。カードが discard から
+  //  抜けるのは reshuffle のみなので一意に判定可能。useRef で前回値を保持し、
+  //  毎回の state コミット後 (= setState が反映された直後の useEffect 実行時)
+  //  に判定するので pile refs は新 state を反映済み = 確実に有効。
+  const prevDiscardLenRef = useRef<number>(0)
+  useEffect(() => {
+    if (!state) return
+    const prev = prevDiscardLenRef.current
+    const cur = state.discardPile.length
+    if (prev > 0 && cur === 0) {
+      triggerReshuffleAnim(prev)
+    }
+    prevDiscardLenRef.current = cur
+  }, [state?.discardPile.length])
 
   function triggerReshuffleAnim(count: number) {
     const drawEl = drawPileRef.current
@@ -1142,20 +1155,6 @@ export function BattleScreen({
         // ここでは見た目を変えずに短い delay のみ取る。
         await sleep(STEP_DELAY_MS)
         i++
-      }
-
-      // Why: 山札補充 (discard 全消化 → draw 増加) を「state を確定する直前」に
-      //  検出してアニメ起動する (useEffect 経由は state 反映タイミングが遅れて
-      //  時々 fire しないため)。state は useCallback の closure でこの呼び出し
-      //  時点での old を見ている。
-      if (state) {
-        const oldD = state.discardPile.length
-        const oldDraw = state.drawPile.length
-        const newD = resp.state.discardPile.length
-        const newDraw = resp.state.drawPile.length
-        if (oldD > 0 && newD === 0 && newDraw > oldDraw) {
-          triggerReshuffleAnim(oldD)
-        }
       }
 
       // 全 event 処理完了 → 最終 state に確定 + overlay クリア
@@ -1615,36 +1614,6 @@ export function BattleScreen({
                 />
               ))}
             </div>
-            {/* Why: 多段階 play アニメ用の overlay (.hand の外に置くことで
-                .hand > .card セレクタの animation/transition を継承しない)。
-                state.hand から消えても LeavingHand とは別ルートで表示し続け、
-                centering → holding (server + playSteps) → leaving の 3 段で
-                CSS transition を切り替える。 */}
-            {playingCard && (
-              <div
-                className="playing-card"
-                data-play-stage={playingCard.stage}
-                style={{
-                  '--start-x': `${playingCard.startX}px`,
-                  '--start-y': `${playingCard.startY}px`,
-                  '--start-rot': `${playingCard.startRot}deg`,
-                  '--center-x': `${playingCard.centerX}px`,
-                  '--center-y': `${playingCard.centerY}px`,
-                  '--dest-x': `${playingCard.destX}px`,
-                  '--dest-y': `${playingCard.destY}px`,
-                } as CSSProperties}
-              >
-                <Card
-                  name={playingCard.entry.demo.name}
-                  cost={playingCard.entry.demo.cost}
-                  costOrig={playingCard.entry.demo.costOrig}
-                  type={playingCard.entry.demo.type}
-                  rarity={playingCard.entry.demo.rarity}
-                  art={playingCard.entry.demo.art}
-                  width={112}
-                />
-              </div>
-            )}
           </div>
         </div>
 
@@ -1674,6 +1643,37 @@ export function BattleScreen({
           aria-live="polite"
         >
           <span className="battle-screen__phase-banner-text">{phaseBanner}</span>
+        </div>
+      )}
+      {/* Why: 多段階 play アニメ用の overlay。.battle-screen 直下に置くことで
+          祖先要素の transform/will-change で containing block が作られて
+          position: fixed が viewport 基準にならないリスクを排除する。
+          state.hand から消えても LeavingHand とは別ルートで表示し続け、
+          centering → holding (server + playSteps) → leaving の 3 段で
+          top/left + transform を切り替えるアニメーション。 */}
+      {playingCard && (
+        <div
+          className="playing-card"
+          data-play-stage={playingCard.stage}
+          style={{
+            '--start-x': `${playingCard.startX}px`,
+            '--start-y': `${playingCard.startY}px`,
+            '--start-rot': `${playingCard.startRot}deg`,
+            '--center-x': `${playingCard.centerX}px`,
+            '--center-y': `${playingCard.centerY}px`,
+            '--dest-x': `${playingCard.destX}px`,
+            '--dest-y': `${playingCard.destY}px`,
+          } as CSSProperties}
+        >
+          <Card
+            name={playingCard.entry.demo.name}
+            cost={playingCard.entry.demo.cost}
+            costOrig={playingCard.entry.demo.costOrig}
+            type={playingCard.entry.demo.type}
+            rarity={playingCard.entry.demo.rarity}
+            art={playingCard.entry.demo.art}
+            width={112}
+          />
         </div>
       )}
       {/* Why: 山札補充 (discard → draw) の弧アーチ演出。fixed overlay で

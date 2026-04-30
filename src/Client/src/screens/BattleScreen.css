@@ -1119,33 +1119,38 @@ button.pile:hover { filter: brightness(1.2); }
    delta が合わずに中央じゃない位置で拡大表示されるバグの原因だった)。
    position: fixed で viewport 基準、transform は translate(start/center/dest)
    + translate(-50%, -50%) で要素中心を座標に合わせる。pivot 議論なし。 */
+/* Why: top/left で位置決め + transform: translate(-50%, -50%) で要素中心を
+   座標に合わせる。前バージョンの transform-only (translate(start) translate(-50%))
+   は親に containing block が作られた場合に viewport 基準にならず、結果的に
+   playing-card が hand area / discard area 周辺に出てしまうバグがあった。
+   top/left なら position: fixed の viewport 基準が確実。 */
 .playing-card {
   position: fixed;
-  top: 0;
-  left: 0;
+  top: var(--start-y, 50%);
+  left: var(--start-x, 50%);
   pointer-events: none;
   z-index: 200;
-  /* idle: hand card の visual center に元の rotation で配置 */
   transform:
-    translate(var(--start-x, 0px), var(--start-y, 0px))
     translate(-50%, -50%)
     rotate(var(--start-rot, 0deg))
     scale(1);
-  transition: transform 200ms ease-out, opacity 200ms ease-out;
-  will-change: transform, opacity;
+  transition: top 200ms ease-out, left 200ms ease-out, transform 200ms ease-out, opacity 200ms ease-out;
+  will-change: top, left, transform, opacity;
 }
 .playing-card[data-play-stage="centering"],
 .playing-card[data-play-stage="holding"] {
+  top: var(--center-y, 50%);
+  left: var(--center-x, 50%);
   transform:
-    translate(var(--center-x, 0px), var(--center-y, 0px))
     translate(-50%, -50%)
     rotate(0deg)
     scale(1.6);
 }
 .playing-card[data-play-stage="leaving"] {
-  transition: transform 280ms ease-in, opacity 280ms ease-in;
+  transition: top 280ms ease-in, left 280ms ease-in, transform 280ms ease-in, opacity 280ms ease-in;
+  top: var(--dest-y, 50%);
+  left: var(--dest-x, 50%);
   transform:
-    translate(var(--dest-x, 0px), var(--dest-y, 0px))
     translate(-50%, -50%)
     rotate(0deg)
     scale(0.4);
