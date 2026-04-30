@@ -824,9 +824,12 @@ export function BattleScreen({
 
   // Why: 山札補充 (discard → draw 全消化) の弧アーチ演出用。
   //  prev.discardPile.length > 0 && current === 0 && draw 増加 → トリガ。
-  //  各 sprite は捨札中心 → 山札中心へ 400ms かけて飛ぶ (中間で +Y -80px)。
+  //  各 sprite は捨札中心 → 山札中心へ 700ms かけて飛ぶ (中間で +Y -80px)。
+  //  card には pre.discardPile スナップショットを保持し、各 sprite を
+  //  実際の <Card> (face-up) として描画する。
   type ReshuffleEntry = {
     id: number
+    card: BattleCardInstanceDto
     fromX: number
     fromY: number
     toX: number
@@ -910,23 +913,11 @@ export function BattleScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state?.hand])
 
-  // Why: 山札補充 (discard を全部消化 = discard が 0 になる) を検出してアニメを
-  //  発火する。条件は単純化: prev > 0 && current === 0。カードが discard から
-  //  抜けるのは reshuffle のみなので一意に判定可能。useRef で前回値を保持し、
-  //  毎回の state コミット後 (= setState が反映された直後の useEffect 実行時)
-  //  に判定するので pile refs は新 state を反映済み = 確実に有効。
-  const prevDiscardLenRef = useRef<number>(0)
-  useEffect(() => {
-    if (!state) return
-    const prev = prevDiscardLenRef.current
-    const cur = state.discardPile.length
-    if (prev > 0 && cur === 0) {
-      triggerReshuffleAnim(prev)
-    }
-    prevDiscardLenRef.current = cur
-  }, [state?.discardPile.length])
-
-  function triggerReshuffleAnim(count: number) {
+  // Why: 山札補充は playSteps 内で「部分ドロー → reshuffle 演出 → 残りドロー」
+  //  の 3 段階表示を組み立てるため、setState 後 useEffect 検出ではなく
+  //  playSteps から直接 triggerReshuffleAnim を呼ぶ方式に変更。
+  function triggerReshuffleAnim(cards: BattleCardInstanceDto[]) {
+    if (cards.length === 0) return
     const drawEl = drawPileRef.current
     const discEl = discardPileRef.current
     if (!drawEl || !discEl) return
@@ -950,25 +941,23 @@ export function BattleScreen({
     const toX = (toScreenX - appLeft) / appScaleX
     const toY = (toScreenY - appTop) / appScaleY
     const base = Date.now()
-    const entries: ReshuffleEntry[] = []
     // Why: stagger 60→110ms / sprite 700ms (CSS と一致)。1 枚 1 枚が
     //  視認できる速度に減速 (ユーザ要望)。
     const stagger = 110
     const duration = 700
-    for (let i = 0; i < count; i++) {
-      entries.push({
-        id: base + i,
-        fromX,
-        fromY,
-        toX,
-        toY,
-        delay: i * stagger,
-      })
-    }
+    const entries: ReshuffleEntry[] = cards.map((card, i) => ({
+      id: base + i,
+      card,
+      fromX,
+      fromY,
+      toX,
+      toY,
+      delay: i * stagger,
+    }))
     setReshuffleEntries(entries)
     window.setTimeout(() => {
       setReshuffleEntries([])
-    }, count * stagger + duration + 50)
+    }, cards.length * stagger + duration + 50)
   }
 
   // 戦闘フェーズ banner: text を 2 秒間オーバーレイ表示してから clear。
@@ -1172,6 +1161,43 @@ export function BattleScreen({
         // ここでは見た目を変えずに短い delay のみ取る。
         await sleep(STEP_DELAY_MS)
         i++
+      }
+
+      // Why: 山札補充 (discard → draw) を playSteps の最終 setState の直前に
+      //  3 段表示 (pre-reshuffle 部分ドロー → reshuffle anim → post-reshuffle
+      //  残りドロー) として演出する。state は useCallback closure で前 turn の
+      //  old state なので、resp.state と差分比較できる。
+      //  pre.drawPile.length 枚は engine の DrawHelper が先に消化してから
+      //  reshuffle するため、その分は「先にドローした」と見せる。
+      if (state) {
+        const oldHandIds = new Set(state.hand.map(c => c.instanceId))
+        const newlyDrawn = resp.state.hand.filter(c => !oldHandIds.has(c.instanceId))
+        const preDrawIds = new Set(state.drawPile.map(c => c.instanceId))
+        const preReshuffleDrawn = newlyDrawn.filter(c => preDrawIds.has(c.instanceId))
+        const postReshuffleDrawn = newlyDrawn.filter(c => !preDrawIds.has(c.instanceId))
+        // reshuffle が起きた = pre.discard が消えて draw に補充された
+        const reshuffleHappened =
+          state.discardPile.length > 0
+          && resp.state.discardPile.length < state.discardPile.length
+          && postReshuffleDrawn.length + resp.state.drawPile.length > 0
+        if (reshuffleHappened) {
+          // Phase 1: 先に引けた pre.drawPile 由来のカードを hand に反映
+          //   (drawPile を 0 にして「全て引き切った」状態を見せる)
+          const hand1 = state.hand.concat(preReshuffleDrawn)
+          setState({
+            ...state,
+            hand: hand1,
+            drawPile: [],
+            // discardPile は pre のまま (reshuffle 演出の起点)
+          })
+          await sleep(220)
+          // Phase 2: reshuffle 演出 (sprite が 1 枚ずつ弧で飛ぶ)
+          const reshuffleCards = state.discardPile
+          triggerReshuffleAnim(reshuffleCards)
+          const reshuffleMs = reshuffleCards.length * 110 + 700
+          await sleep(reshuffleMs)
+          // Phase 3 は既存の最終 setState(resp.state) でそのまま反映される。
+        }
       }
 
       // 全 event 処理完了 → 最終 state に確定 + overlay クリア
@@ -1716,23 +1742,43 @@ export function BattleScreen({
         </div>
       )}
       {/* Why: 山札補充 (discard → draw) の弧アーチ演出。fixed overlay で
-          捨札中心 → 山札中心へ 60ms stagger で順次飛ばす。各 sprite は
-          400ms で中間 +Y -80px の弧を描く。 */}
+          捨札中心 → 山札中心へ 110ms stagger で順次飛ばす。各 sprite は
+          700ms で中間 +Y -80px の弧を描く。
+          sprite は実際の <Card> (face-up) を表示し、hand と同じ視覚で
+          「どのカードが reshuffle されたか」を見せる。 */}
       {reshuffleEntries.length > 0 && (
         <div className="reshuffle-overlay">
-          {reshuffleEntries.map((e) => (
-            <div
-              key={e.id}
-              className="reshuffle-sprite"
-              style={{
-                '--rs-from-x': `${e.fromX}px`,
-                '--rs-from-y': `${e.fromY}px`,
-                '--rs-to-x': `${e.toX}px`,
-                '--rs-to-y': `${e.toY}px`,
-                '--rs-delay': `${e.delay}ms`,
-              } as CSSProperties}
-            />
-          ))}
+          {reshuffleEntries.map((e) => {
+            const demo = toHandCardDemo(
+              e.card,
+              cardCatalog,
+              state?.energy ?? 0,
+              state?.lastPlayedOrigCost ?? null,
+            )
+            return (
+              <div
+                key={e.id}
+                className="reshuffle-sprite"
+                style={{
+                  '--rs-from-x': `${e.fromX}px`,
+                  '--rs-from-y': `${e.fromY}px`,
+                  '--rs-to-x': `${e.toX}px`,
+                  '--rs-to-y': `${e.toY}px`,
+                  '--rs-delay': `${e.delay}ms`,
+                } as CSSProperties}
+              >
+                <Card
+                  name={demo.name}
+                  cost={demo.cost}
+                  costOrig={demo.costOrig}
+                  type={demo.type}
+                  rarity={demo.rarity}
+                  art={demo.art}
+                  width={112}
+                />
+              </div>
+            )
+          })}
         </div>
       )}
     </div>

@@ -1176,17 +1176,12 @@ button.pile:hover { filter: brightness(1.2); }
   /* Why: 親 .reshuffle-overlay は inset:0 で .app-stage 全域。子は left:0; top:0
      基準で translate を当てて、(rs-from-x/y, rs-to-x/y) に位置決めする。
      margin で sprite 中心を座標に合わせる (112×156 = 実寸カードサイズの半分:
-     -56, -78)。Card.css の aspect-ratio 1/1.4 と一致 (112 × 1.4 = 156.8)。 */
+     -56, -78)。Card.css の aspect-ratio 1/1.4 と一致 (112 × 1.4 = 156.8)。
+     bg/border/shadow は子 <Card> が自前で描画するためここでは指定しない。 */
   top: 0;
   left: 0;
   margin-left: -56px;
   margin-top: -78px;
-  width: 112px;
-  height: 156px;
-  background: linear-gradient(180deg, #c2935a 0%, #6b4828 100%);
-  border: 3px solid #2a1808;
-  border-radius: 6px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
   animation-name: reshuffle-arc;
   /* Why: 旧 400ms は速すぎて視認しづらかった (ユーザ要望)。700ms に拡大、
      stagger も 60ms → 110ms に広げて 1 枚 1 枚を見える流れに。 */
