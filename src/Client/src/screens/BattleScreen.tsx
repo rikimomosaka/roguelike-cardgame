@@ -512,9 +512,12 @@ type HandCardProps = {
   leaveDy?: number
   /** 親が DOM 要素を識別 (rect 計測) するための callback。 */
   onCardElement?: (el: HTMLDivElement | null) => void
+  /** Why: 同じカードが <PlayingCard> overlay で表示されている間は手札側を
+   *  非表示にする (visibility: hidden で fan layout 維持)。重複表示防止。 */
+  hidden?: boolean
 }
 
-function HandCard({ card, fan, onClick, leaving, leaveDx, leaveDy, onCardElement }: HandCardProps) {
+function HandCard({ card, fan, onClick, leaving, leaveDx, leaveDy, onCardElement, hidden }: HandCardProps) {
   const tip = useTip({
     name: card.name,
     rarity: card.rarity,
@@ -589,6 +592,7 @@ function HandCard({ card, fan, onClick, leaving, leaveDx, leaveDy, onCardElement
         className={[
           card.playable ? 'is-playable' : '',
           leaving ? 'is-leaving' : '',
+          hidden ? 'is-playing-hidden' : '',
         ].filter(Boolean).join(' ') || undefined}
         onClick={leaving ? undefined : onClick}
         onMouseEnter={tip.onMouseEnter}
@@ -799,11 +803,22 @@ export function BattleScreen({
   // Why: 多段階 play アニメ (centering → holding → leaving) の transient state。
   //  state.hand から消えても LeavingHand とは別ルートで管理し、Stage 1/2/3 を
   //  順に切り替える。leavingHand 検出側からは playingId で除外する。
+  // Why: 多段階 play アニメは絶対画面座標で表現する (前バージョンは fan-x +
+  //  fan-r 回転 pivot 50%/140% に依存して transform interpolation が歪み、
+  //  カード位置によって最終座標がズレるバグが発生していた)。startX/Y は
+  //  hand card の visual center、centerX/Y は viewport 中央、destX/Y は
+  //  destination pile の visual center。playing-card は position: fixed で
+  //  全て screen coords に直接配置 → 数学が単純で fan layout の影響を受けない。
   type PlayingCardState = {
     entry: LeavingHandEntry
     stage: 'idle' | 'centering' | 'holding' | 'leaving'
-    centerDx: number
-    centerDy: number
+    startX: number
+    startY: number
+    startRot: number
+    centerX: number
+    centerY: number
+    destX: number
+    destY: number
   }
   const [playingCard, setPlayingCard] = useState<PlayingCardState | null>(null)
 
@@ -819,10 +834,6 @@ export function BattleScreen({
     delay: number
   }
   const [reshuffleEntries, setReshuffleEntries] = useState<ReshuffleEntry[]>([])
-  const prevPilesRef = useRef<{ discard: number; draw: number }>({
-    discard: 0,
-    draw: 0,
-  })
 
   const { catalog: cardCatalog } = useCardCatalog()
   const { catalog: enemyCatalog } = useEnemyCatalog()
@@ -899,22 +910,8 @@ export function BattleScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state?.hand])
 
-  // Why: 山札補充 (discard → draw) の検出。
-  //  prev.discard > 0 && current.discard === 0 && current.draw > prev.draw を
-  //  満たすとき、補充されたカード枚数 (prev.discard) ぶんの弧 sprite を出す。
-  //  triggerReshuffleAnim は ref を読むだけなので useEffect deps に入れない。
-  useEffect(() => {
-    if (!state) return
-    const prevD = prevPilesRef.current.discard
-    const prevDraw = prevPilesRef.current.draw
-    const curD = state.discardPile.length
-    const curDraw = state.drawPile.length
-    if (prevD > 0 && curD === 0 && curDraw > prevDraw) {
-      triggerReshuffleAnim(prevD)
-    }
-    prevPilesRef.current = { discard: curD, draw: curDraw }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state?.discardPile.length, state?.drawPile.length])
+  // Why: 山札補充の検出は playSteps 内の setState 直前で行う (この useEffect
+  //  経路は時々 fire しないため移動)。prevPilesRef は今は使わない。
 
   function triggerReshuffleAnim(count: number) {
     const drawEl = drawPileRef.current
@@ -1147,6 +1144,20 @@ export function BattleScreen({
         i++
       }
 
+      // Why: 山札補充 (discard 全消化 → draw 増加) を「state を確定する直前」に
+      //  検出してアニメ起動する (useEffect 経由は state 反映タイミングが遅れて
+      //  時々 fire しないため)。state は useCallback の closure でこの呼び出し
+      //  時点での old を見ている。
+      if (state) {
+        const oldD = state.discardPile.length
+        const oldDraw = state.drawPile.length
+        const newD = resp.state.discardPile.length
+        const newDraw = resp.state.drawPile.length
+        if (oldD > 0 && newD === 0 && newDraw > oldDraw) {
+          triggerReshuffleAnim(oldD)
+        }
+      }
+
       // 全 event 処理完了 → 最終 state に確定 + overlay クリア
       setSlotAnim({})
       setDamageOverlay({})
@@ -1247,40 +1258,50 @@ export function BattleScreen({
       return
     }
     const cardRect = cardEl.getBoundingClientRect()
-    const cardCx = cardRect.left + cardRect.width / 2
-    const cardCy = cardRect.top + cardRect.height / 2
+    const startX = cardRect.left + cardRect.width / 2
+    const startY = cardRect.top + cardRect.height / 2
 
-    const winCx = window.innerWidth / 2
-    const winCy = window.innerHeight / 2
-    const centerDx = winCx - cardCx
-    const centerDy = winCy - cardCy
+    const centerX = window.innerWidth / 2
+    const centerY = window.innerHeight / 2
 
     const dest = destinationFor(card)
     const destEl = dest === 'exhaust' ? exhaustPileRef.current : discardPileRef.current
-    let destDx = 0
-    let destDy = 0
+    let destX = centerX
+    let destY = centerY
     if (destEl) {
       const r = destEl.getBoundingClientRect()
-      destDx = (r.left + r.width / 2) - cardCx
-      destDy = (r.top + r.height / 2) - cardCy
+      destX = r.left + r.width / 2
+      destY = r.top + r.height / 2
     }
 
+    // 既存 leavingHand 経路 (turn-end discard 等) との互換のため LeavingHandEntry
+    // にも destDx/destDy (相対 delta) を保持する。playing-card 自身の
+    // transform は startX/startY (絶対座標) を直接使う。
     const entry: LeavingHandEntry = {
       card,
       demo,
       fan: fanEntry,
-      destDx,
-      destDy,
+      destDx: destX - startX,
+      destDy: destY - startY,
       destination: dest,
     }
 
-    // Stage 0: idle (hand card と同じ位置 / fan-r 回転で mount)。
-    // Why: いきなり data-play-stage="centering" で mount すると、ブラウザは
-    // 初期スタイルとして centering のスタイルを適用するだけで transition が
-    // 発火しない (要素が「最初から中央 1.6 倍だった」扱いになる)。 idle で
-    // mount → 2 RAF 待って初期フレームを commit させてから centering に
-    // flip することで、transform interpolation が確実に走る。
-    setPlayingCard({ entry, stage: 'idle', centerDx, centerDy })
+    // Stage 0: idle (hand card の visual center に絶対座標で配置 + fan-r 回転)。
+    // Why: いきなり data-play-stage="centering" で mount すると初期スタイルが
+    // centering のスタイルだけになって transition 発火せず瞬間移動。idle で
+    // mount → 2 RAF 待って初期フレーム commit → centering に flip で
+    // transform interpolation が確実に走る。
+    setPlayingCard({
+      entry,
+      stage: 'idle',
+      startX,
+      startY,
+      startRot: fanEntry.r,
+      centerX,
+      centerY,
+      destX,
+      destY,
+    })
     await new Promise<void>((resolve) => {
       requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
     })
@@ -1558,6 +1579,10 @@ export function BattleScreen({
               {handDemos.map((c, i) => {
                 const inst = state.hand[i]
                 const id = inst?.instanceId ?? `idx-${i}`
+                const isPlaying =
+                  !!inst &&
+                  !!playingCard &&
+                  playingCard.entry.card.instanceId === inst.instanceId
                 return (
                   <HandCard
                     key={id}
@@ -1573,6 +1598,7 @@ export function BattleScreen({
                       if (el) handCardRefs.current.set(inst.instanceId, el)
                       else handCardRefs.current.delete(inst.instanceId)
                     }}
+                    hidden={isPlaying}
                   />
                 )
               })}
@@ -1599,13 +1625,13 @@ export function BattleScreen({
                 className="playing-card"
                 data-play-stage={playingCard.stage}
                 style={{
-                  '--fan-x': `${playingCard.entry.fan.x}px`,
-                  '--fan-y': `${playingCard.entry.fan.y}px`,
-                  '--fan-r': `${playingCard.entry.fan.r}deg`,
-                  '--play-cx': `${playingCard.centerDx}px`,
-                  '--play-cy': `${playingCard.centerDy}px`,
-                  '--play-dx': `${playingCard.entry.destDx}px`,
-                  '--play-dy': `${playingCard.entry.destDy}px`,
+                  '--start-x': `${playingCard.startX}px`,
+                  '--start-y': `${playingCard.startY}px`,
+                  '--start-rot': `${playingCard.startRot}deg`,
+                  '--center-x': `${playingCard.centerX}px`,
+                  '--center-y': `${playingCard.centerY}px`,
+                  '--dest-x': `${playingCard.destX}px`,
+                  '--dest-y': `${playingCard.destY}px`,
                 } as CSSProperties}
               >
                 <Card

@@ -744,12 +744,13 @@ button.pile:hover { filter: brightness(1.2); }
    アイコン中央に数字を大きく重ねる (バフ/デバフは右下、ブロックは中央)。 */
 .status-block {
   position: absolute;
-  /* Why: HP バー (left: 0, width: 100) の右端にアイコン右端を揃える。
-     アイコン幅 32 → left: 68 で右端が 100 で揃う。
-     旧 left: 86 はアイコン中央が 100 だったため、右半分が HP バーから
-     はみ出して隣の敵 HP に干渉していた。 */
+  /* Why: ユーザ要望で HP バー (left: 0, width: 100) の左端側に配置。
+     アイコン幅 32 → left: -8 でアイコン左端が slot 左端より少しはみ出す
+     (右側にあった時に icon edge が HP bar 右端に重なってモタつく感じが
+     あったため、左に倒した上でさらに数 px 左ずらして HP バー領域に
+     アイコンが食い込みすぎないようにする)。 */
   top: 192px;
-  left: 68px;
+  left: -8px;
   width: 32px;
   height: 32px;
   z-index: 3;
@@ -1113,48 +1114,47 @@ button.pile:hover { filter: brightness(1.2); }
    transform に対して適用 (ホールド中は値固定で停止)。
    .hand と同じ基準点 (.hand-wrap 内 left:360px bottom:0) に配置するため
    left:360px bottom:0 を再現する (ハードコード値同期)。 */
-.hand-wrap .playing-card {
-  position: absolute;
-  left: 306px; /* hand-base 360 - 54 (card half) */
-  bottom: 0;
+/* Why: 全 stage で screen 絶対座標を使う (前バージョンの fan-relative + 50%/140%
+   pivot は fan-r != 0 のカードで visual center が pivot 周辺にズレ、play-cx
+   delta が合わずに中央じゃない位置で拡大表示されるバグの原因だった)。
+   position: fixed で viewport 基準、transform は translate(start/center/dest)
+   + translate(-50%, -50%) で要素中心を座標に合わせる。pivot 議論なし。 */
+.playing-card {
+  position: fixed;
+  top: 0;
+  left: 0;
   pointer-events: none;
-  /* Why: hand card と同じ pivot (扇形の根元、カード下方 90% offset) で
-     回転させないと、fan-r != 0 のカードが hand card と異なる screen 位置
-     で描画され、play-cx の delta が合わなくなって中央じゃない位置で
-     拡大表示されてしまう。 */
-  transform-origin: 50% 140%;
   z-index: 200;
-  /* idle (= 初期状態) は hand card と同じ transform。明示的に scale(1) を
-     入れることで centering の scale(1.6) との function list を揃え、
-     transform interpolation を滑らかにする。 */
+  /* idle: hand card の visual center に元の rotation で配置 */
   transform:
-    translate(var(--fan-x, 0), var(--fan-y, 0))
-    rotate(var(--fan-r, 0deg))
+    translate(var(--start-x, 0px), var(--start-y, 0px))
+    translate(-50%, -50%)
+    rotate(var(--start-rot, 0deg))
     scale(1);
   transition: transform 200ms ease-out, opacity 200ms ease-out;
   will-change: transform, opacity;
 }
-.hand-wrap .playing-card[data-play-stage="centering"],
-.hand-wrap .playing-card[data-play-stage="holding"] {
+.playing-card[data-play-stage="centering"],
+.playing-card[data-play-stage="holding"] {
   transform:
-    translate(
-      calc(var(--fan-x, 0px) + var(--play-cx, 0px)),
-      calc(var(--fan-y, 0px) + var(--play-cy, 0px))
-    )
+    translate(var(--center-x, 0px), var(--center-y, 0px))
+    translate(-50%, -50%)
     rotate(0deg)
     scale(1.6);
 }
-.hand-wrap .playing-card[data-play-stage="leaving"] {
+.playing-card[data-play-stage="leaving"] {
   transition: transform 280ms ease-in, opacity 280ms ease-in;
   transform:
-    translate(
-      calc(var(--fan-x, 0px) + var(--play-dx, 0px)),
-      calc(var(--fan-y, 0px) + var(--play-dy, 0px))
-    )
+    translate(var(--dest-x, 0px), var(--dest-y, 0px))
+    translate(-50%, -50%)
     rotate(0deg)
     scale(0.4);
   opacity: 0;
 }
+
+/* hand 内で再生中のカードは visibility: hidden で fan layout を維持しつつ
+   非表示。<PlayingCard> overlay と二重表示にしない。 */
+.hand > .card.is-playing-hidden { visibility: hidden; }
 
 /* ================= Reshuffle (discard → draw) アーチ =================
    Why: 中心起点で位置を表すため margin-left/-top で半サイズだけずらし、
