@@ -141,10 +141,14 @@ public class TurnStartProcessorTickTests
 
     [Fact] public void Vulnerable_decrements_by_one_per_turn()
     {
+        // Why: 旧仕様では TurnStart で全 actor 一括 countdown だったが、新仕様では
+        // SideStatusCountdown.ApplyForSide を BattleEngine.EndTurn が「ターンを
+        // 終えた側」に対してだけ呼ぶ形に分離。countdown のロジック自体は
+        // SideStatusCountdown を直接呼んで検証する。
         var hero = BattleFixtures.Hero();
         var goblin = BattleFixtures.WithVulnerable(BattleFixtures.Goblin(), 3);
         var s = State(hero, goblin);
-        var (next, _) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
+        var (next, _) = SideStatusCountdown.ApplyForSide(s, ActorSide.Enemy, 0);
         Assert.Equal(2, next.Enemies[0].GetStatus("vulnerable"));
     }
 
@@ -153,7 +157,7 @@ public class TurnStartProcessorTickTests
         var hero = BattleFixtures.Hero();
         var goblin = BattleFixtures.WithVulnerable(BattleFixtures.Goblin(), 1);
         var s = State(hero, goblin);
-        var (next, evs) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
+        var (next, evs) = SideStatusCountdown.ApplyForSide(s, ActorSide.Enemy, 0);
         Assert.False(next.Enemies[0].Statuses.ContainsKey("vulnerable"));
         Assert.Contains(evs, e => e.Kind == BattleEventKind.RemoveStatus
                                   && e.Note == "vulnerable"
@@ -164,7 +168,7 @@ public class TurnStartProcessorTickTests
     {
         var hero = BattleFixtures.WithStrength(BattleFixtures.Hero(), 5);
         var s = State(hero, BattleFixtures.Goblin());
-        var (next, _) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
+        var (next, _) = SideStatusCountdown.ApplyForSide(s, ActorSide.Ally, 0);
         Assert.Equal(5, next.Allies[0].GetStatus("strength"));
     }
 
@@ -172,17 +176,27 @@ public class TurnStartProcessorTickTests
     {
         var hero = BattleFixtures.WithDexterity(BattleFixtures.Hero(), 4);
         var s = State(hero, BattleFixtures.Goblin());
-        var (next, _) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
+        var (next, _) = SideStatusCountdown.ApplyForSide(s, ActorSide.Ally, 0);
         Assert.Equal(4, next.Allies[0].GetStatus("dexterity"));
     }
 
-    [Fact] public void Poison_decrements_after_damage()
+    [Fact] public void Poison_damage_at_turn_start_does_not_decrement_stack()
     {
-        // 毒 3 ターン → ダメージ 3、その後 countdown で 2 に
+        // 新仕様: 毒ダメージは TurnStart で発生するが、countdown は分離されたので
+        // poison の stack は TurnStart 直後はまだ減っていない。
         var hero = BattleFixtures.WithPoison(BattleFixtures.Hero(70), 3);
         var s = State(hero, BattleFixtures.Goblin());
         var (next, _) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(70 - 3, next.Allies[0].CurrentHp);
+        Assert.Equal(3, next.Allies[0].GetStatus("poison"));
+    }
+
+    [Fact] public void Poison_stack_decrements_via_side_countdown()
+    {
+        // Side countdown で poison stack が 1 減ることを単体検証。
+        var hero = BattleFixtures.WithPoison(BattleFixtures.Hero(70), 3);
+        var s = State(hero, BattleFixtures.Goblin());
+        var (next, _) = SideStatusCountdown.ApplyForSide(s, ActorSide.Ally, 0);
         Assert.Equal(2, next.Allies[0].GetStatus("poison"));
     }
 
@@ -197,9 +211,25 @@ public class TurnStartProcessorTickTests
                 .Add("omnistrike", 3),
         };
         var s = State(hero, goblin);
-        var (next, _) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
+        var (next, _) = SideStatusCountdown.ApplyForSide(s, ActorSide.Enemy, 0);
         Assert.Equal(1, next.Enemies[0].GetStatus("vulnerable"));
         Assert.False(next.Enemies[0].Statuses.ContainsKey("weak")); // 1 → 0 で削除
         Assert.Equal(2, next.Enemies[0].GetStatus("omnistrike"));
+    }
+
+    [Fact] public void ApplyForSide_only_affects_specified_side()
+    {
+        // Ally 側を countdown しても Enemy 側の status は触らない、と verce versa。
+        var hero = BattleFixtures.WithVulnerable(BattleFixtures.Hero(), 2);
+        var goblin = BattleFixtures.WithVulnerable(BattleFixtures.Goblin(), 2);
+        var s = State(hero, goblin);
+
+        var (afterAlly, _) = SideStatusCountdown.ApplyForSide(s, ActorSide.Ally, 0);
+        Assert.Equal(1, afterAlly.Allies[0].GetStatus("vulnerable"));    // 減った
+        Assert.Equal(2, afterAlly.Enemies[0].GetStatus("vulnerable"));   // 据え置き
+
+        var (afterEnemy, _) = SideStatusCountdown.ApplyForSide(s, ActorSide.Enemy, 0);
+        Assert.Equal(2, afterEnemy.Allies[0].GetStatus("vulnerable"));   // 据え置き
+        Assert.Equal(1, afterEnemy.Enemies[0].GetStatus("vulnerable"));  // 減った
     }
 }

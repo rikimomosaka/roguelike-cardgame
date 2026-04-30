@@ -35,6 +35,17 @@ public static partial class BattleEngine
             return ResolveOutcome(s, RoguelikeCardGame.Core.Battle.State.BattleOutcome.Victory, events, ref order);
         }
 
+        // 2.5. 味方側 status countdown (= player turn の終わり)。
+        //  weak/vulnerable/poison 等の Decrement 系 status を 1 減らす。
+        //  ここで countdown するのは「ターンを終えた側」だけ — 敵が後続の
+        //  EnemyAttacking で player に新規 debuff を付与しても、その debuff は
+        //  player の次のターンで活きるようになる (旧仕様は TurnStart で全
+        //  actor 一斉 countdown だったため即削除されてバグになっていた)。
+        var (afterAllyCd, evsAllyCd) = SideStatusCountdown.ApplyForSide(s, ActorSide.Ally, order);
+        s = afterAllyCd;
+        order += evsAllyCd.Count;
+        events.AddRange(evsAllyCd);
+
         // 3. EnemyAttacking
         s = s with { Phase = BattlePhase.EnemyAttacking };
         var (afterEA, evsEA) = EnemyAttackingResolver.Resolve(s, rng, catalog);
@@ -47,6 +58,16 @@ public static partial class BattleEngine
         {
             return ResolveOutcome(s, RoguelikeCardGame.Core.Battle.State.BattleOutcome.Defeat, events, ref order);
         }
+
+        // 4.5. 敵側 status countdown (= enemy turn の終わり)。
+        //  player が PlayerAttacking で敵に付与した weak/vulnerable は、敵が
+        //  EnemyAttacking で実際に弱体化された後に countdown される (vulnerable=2
+        //  ならこの enemy turn で 1 回弱体化を受けて、countdown で 1 → 次の enemy
+        //  turn でもう 1 回弱体化を受けて、countdown で 0、合計 2 ターン分)。
+        var (afterEnemyCd, evsEnemyCd) = SideStatusCountdown.ApplyForSide(s, ActorSide.Enemy, order);
+        s = afterEnemyCd;
+        order += evsEnemyCd.Count;
+        events.AddRange(evsEnemyCd);
 
         // 5. ターン終了処理
         var (afterEnd, evsEnd) = TurnEndProcessor.Process(s, rng, catalog);

@@ -54,8 +54,9 @@ internal static class TurnStartProcessor
             return (s, events);
         }
 
-        // Step 4: status countdown（Allies → Enemies、SlotIndex 順）
-        s = ApplyStatusCountdown(s, events, ref order);
+        // Step 4: status countdown は廃止。新仕様では BattleEngine.EndTurn 内で
+        //  「ターンを終えた側」の actor だけを SideStatusCountdown で減算する
+        //  (weak/vulnerable 等が enemy 側付与で即削除されるバグ対応)。
 
         // Step 5: Lifetime tick（10.2.D）
         s = ApplyLifetimeTick(s, events, ref order);
@@ -123,47 +124,10 @@ internal static class TurnStartProcessor
         return s;
     }
 
-    private static BattleState ApplyStatusCountdown(BattleState state, List<BattleEvent> events, ref int order)
-    {
-        // Allies と Enemies の InstanceId スナップショットを採る（SlotIndex 順）
-        var actorIds = state.Allies.OrderBy(a => a.SlotIndex).Select(a => a.InstanceId)
-            .Concat(state.Enemies.OrderBy(e => e.SlotIndex).Select(e => e.InstanceId))
-            .ToList();
-
-        var s = state;
-        foreach (var aid in actorIds)
-        {
-            CombatActor? actor = FindActor(s, aid);
-            if (actor is null) continue;
-
-            // status キー一覧のスナップショットを取り、順次 -1
-            foreach (var id in actor.Statuses.Keys.ToList())
-            {
-                var def = StatusDefinition.Get(id);
-                if (def.TickDirection != StatusTickDirection.Decrement)
-                    continue;
-
-                // 同 actor 内で複数 status を更新するため再 fetch（InstanceId 検索）
-                actor = FindActor(s, aid)!;
-                int newAmount = actor.GetStatus(id) - 1;
-                ImmutableDictionary<string, int> newStatuses;
-                if (newAmount <= 0)
-                {
-                    newStatuses = actor.Statuses.Remove(id);
-                    events.Add(new BattleEvent(
-                        BattleEventKind.RemoveStatus, Order: order++,
-                        TargetInstanceId: aid, Note: id));
-                }
-                else
-                {
-                    newStatuses = actor.Statuses.SetItem(id, newAmount);
-                    // countdown では ApplyStatus event は発火しない（spec §5-2）
-                }
-                s = ReplaceActor(s, aid, actor with { Statuses = newStatuses });
-            }
-        }
-        return s;
-    }
+    // ApplyStatusCountdown は SideStatusCountdown.ApplyForSide に移動 (新仕様)。
+    // BattleEngine.EndTurn が PlayerAttacking 直後に Ally 側、EnemyAttacking 直後に
+    // Enemy 側の countdown を呼ぶ形に変更したため、ここでの全 actor 一括 countdown は
+    // 削除した。
 
     private static BattleState ApplyLifetimeTick(
         BattleState state, List<BattleEvent> events, ref int order)

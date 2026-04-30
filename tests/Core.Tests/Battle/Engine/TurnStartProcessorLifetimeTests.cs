@@ -68,16 +68,18 @@ public class TurnStartProcessorLifetimeTests
             && e.Note == "lifetime");
     }
 
-    [Fact] public void Lifetime_tick_after_status_countdown()
+    [Fact] public void Lifetime_ticks_independently_of_status_countdown()
     {
-        // weak と lifetime を併用、weak countdown と lifetime tick の順序を確認
+        // 新仕様: status countdown は TurnStart から外したため、TurnStart で
+        // weak は減らない。Lifetime のみ独立して -1 する。
         var hero = BattleFixtures.Hero();
         var summon = BattleFixtures.SummonActor("s1", "minion", 1, hp: 10, lifetime: 2);
         summon = summon with { Statuses = ImmutableDictionary<string, int>.Empty.Add("weak", 1) };
         var s = MakeState(hero, summon);
         var (next, _) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
         var summonNext = next.Allies.Single(a => a.InstanceId == "s1");
-        Assert.Equal(1, summonNext.RemainingLifetimeTurns);   // 2 → 1
-        Assert.False(summonNext.Statuses.ContainsKey("weak")); // 1 → 0 → removed
+        Assert.Equal(1, summonNext.RemainingLifetimeTurns);   // 2 → 1 (lifetime は TurnStart で減る)
+        Assert.True(summonNext.Statuses.ContainsKey("weak")); // weak は据え置き (countdown は TurnEnd 移行)
+        Assert.Equal(1, summonNext.GetStatus("weak"));
     }
 }
