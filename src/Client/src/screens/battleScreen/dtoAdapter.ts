@@ -178,6 +178,7 @@ export function toCharacterDemo(
     hpCur: actor.currentHp,
     hpMax: actor.maxHp,
     hpLv: hpLevel(actor.currentHp, actor.maxHp),
+    blockValue: actor.blockDisplay,
     intent: undefined,
     intents,
     buffs: toBuffs(actor),
@@ -269,15 +270,8 @@ export function toIntentDemos(intent: IntentDto): IntentDemo[] {
 
 export function toBuffs(actor: CombatActorDto): BuffDemo[] {
   const buffs: BuffDemo[] = []
-  if (actor.blockDisplay > 0) {
-    buffs.push({
-      kind: 'block',
-      icon: '/icons/ui/block_value.png',
-      num: actor.blockDisplay,
-      name: 'ブロック',
-      desc: `ダメージを${actor.blockDisplay}軽減する。`,
-    })
-  }
+  // Why: ブロック値 (block) は HP バー右端に専用 UI で表示するため
+  // (ユーザ要望)、buffs から分離。CharacterDemo.blockValue 経由で別出し。
   for (const [statusId, amount] of Object.entries(actor.statuses)) {
     if (amount <= 0) continue
     const meta = statusMeta(statusId, amount)

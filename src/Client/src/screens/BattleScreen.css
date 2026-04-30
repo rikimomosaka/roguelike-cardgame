@@ -733,6 +733,56 @@ button.pile:hover { filter: brightness(1.2); }
   letter-spacing: 0.3px;
   z-index: 2;
 }
+/* Why: ブロック値 1 以上のとき HP 数字を青に (ユーザ要望、ブロック付与状態の可視化)。 */
+.status-hp[data-has-block="true"] .status-hp__num {
+  color: #4fa8ff;
+  text-shadow: 0 0 3px #000, 0 0 6px rgba(79, 168, 255, 0.4);
+}
+
+/* ================= Block (HP バー右端) =================
+   Why: バフ/デバフとは別場所 (HP バー右端) に専用 UI で表示。
+   アイコン中央に数字を大きく重ねる (バフ/デバフは右下、ブロックは中央)。 */
+.status-block {
+  position: absolute;
+  /* HP バーの中心 (slot top:198 + 10 = 208) を基準に icon を縦中央寄せ。
+     横は slot 右端 (100px) を icon 中央に来るよう left: 86 (= 100 - 14)。 */
+  top: 192px;
+  left: 86px;
+  width: 32px;
+  height: 32px;
+  z-index: 3;
+  cursor: help;
+}
+.status-block__icon-img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter:
+    drop-shadow(1px 0 0 #000)
+    drop-shadow(-1px 0 0 #000)
+    drop-shadow(0 1px 0 #000)
+    drop-shadow(0 -1px 0 #000);
+}
+.status-block__num {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-body);
+  font-size: 18px;
+  color: white;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-shadow:
+    -1px -1px 0 #000,
+     1px -1px 0 #000,
+    -1px  1px 0 #000,
+     1px  1px 0 #000;
+  pointer-events: none;
+  z-index: 1;
+}
 
 .status-buffs {
   position: absolute; top: 240px; left: 0; right: 0;

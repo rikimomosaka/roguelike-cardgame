@@ -116,6 +116,9 @@ export type CharacterDemo = {
   hpCur: number
   hpMax: number
   hpLv: HpLv
+  /** Why: ブロック値は buff/debuff とは別に HP バー右端で表示する。
+   *  0 のときは UI を出さない。 */
+  blockValue: number
   /** 単一の intent (敵の次行動)。intents が無いときの後方互換。 */
   intent?: IntentDemo
   /** 複数チップ表示 (hero の通常/ランダム/全体予定攻撃を分けて表示する用)。 */
@@ -217,6 +220,7 @@ function padSlots(chars: CharacterDemo[], n: number): CharacterDemo[] {
       hpCur: 0,
       hpMax: 0,
       hpLv: '0',
+      blockValue: 0,
       buffs: [],
     })
   }
@@ -245,6 +249,20 @@ function StatusBuff({ buff }: { buff: BuffDemo }) {
       )}
       <span className="status-buff__num">{buff.num}</span>
     </span>
+  )
+}
+
+/** Why: ブロック値を HP バー右端で表示する専用コンポーネント。
+ *  buff/debuff と異なり、数字はアイコン中央に大きめに重ねる仕様 (ユーザ要望)。 */
+function StatusBlock({ value }: { value: number }) {
+  const tip = useTip({ name: 'ブロック', desc: `ダメージを${value}軽減する。` })
+  return (
+    <div className="status-block" {...tip}>
+      <img className="status-block__icon-img"
+           src="/icons/ui/block_value.png"
+           alt="" draggable={false} />
+      <span className="status-block__num">{value}</span>
+    </div>
   )
 }
 
@@ -452,7 +470,10 @@ function Slot({ char, isTargeted, attackingDir, isHit, onClick }: SlotProps) {
         </div>
       )}
       <div className="sprite-shadow" style={shadowStyle} />
-      <div className="status-hp">
+      <div
+        className="status-hp"
+        data-has-block={char.blockValue > 0 ? 'true' : undefined}
+      >
         <div className="status-hp__track" data-lv={char.hpLv}>
           <div className="status-hp__fill" style={hpFillStyle} />
           <span className="status-hp__num">
@@ -460,6 +481,7 @@ function Slot({ char, isTargeted, attackingDir, isHit, onClick }: SlotProps) {
           </span>
         </div>
       </div>
+      {char.blockValue > 0 && <StatusBlock value={char.blockValue} />}
       <StatusName name={char.name} />
       {/* Why: バフ/デバフ/ブロック値が現れてもキャラ位置が動かないよう、常に
           status-buffs 行を確保。空配列ならエンプティ row として min-height だけ

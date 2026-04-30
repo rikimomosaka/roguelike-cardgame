@@ -16,6 +16,10 @@
   color: var(--fg);
   font-family: var(--font-body);
   flex-shrink: 0;
+  /* Why: 下方のバトル画面で hover scale 等が起きると border-bottom (1px) の
+     サブピクセル再ラスタライズで境界線がブレるので、TopBar を独立 GPU
+     合成レイヤに固定する。 */
+  transform: translateZ(0);
 }
 
 .topbar__group {
