@@ -242,6 +242,9 @@
   right: 0;
   display: flex;
   justify-content: space-between;
+  /* Why: 味方側と敵側を必ず同じ底辺で揃えるため flex-end を明示。
+     stretch 既定だと side の暗黙高さが微妙にズレることがある。 */
+  align-items: flex-end;
   padding: 0 20px;
   z-index: 3;
   pointer-events: none;
@@ -252,6 +255,8 @@
   align-items: flex-end;
   gap: 6px;
   width: 418px;
+  /* Why: slot height: 260 と一致させて側の暗黙高さの差異を排除。 */
+  height: 260px;
   justify-content: center;
   pointer-events: auto;
 }
@@ -373,9 +378,12 @@
 }
 .pile-modal__item { display: block; }
 
-/* pile ボタン化: button タグでも見た目は既存 .pile を保つ。 */
+/* pile ボタン化: button タグでも見た目は既存 .pile を保つ。
+   Why: 旧 background: transparent は .pile の gradient を打ち消していた
+   (button のブラウザ既定 bg を消す目的だったが、cascade で .pile の
+   gradient を上書きしていた)。background 行を削除して .pile 側の
+   gradient (linear-gradient ...) をそのまま活かす。 */
 button.pile {
-  background: transparent;
   cursor: pointer;
   font-family: inherit;
 }
@@ -436,13 +444,18 @@ button.pile:hover { filter: brightness(1.2); }
 .battle__slot.is-targeted::after {
   content: "▼";
   position: absolute;
-  /* Why: 三角形は intent (top: -50px) のさらに上に配置。intent はそのまま、
-     三角形が消えても intent の高さは固定。ユーザ要望: 入れ替えイメージ。 */
-  top: -80px;
+  /* Why: intent (top: -50, 高さ ~28 → 下端 -22) より十分上に離す。
+     -110px で intent との間に ~30px の余白。 */
+  top: -110px;
   left: 50%;
   transform: translateX(-50%);
   font-size: 24px;
-  text-shadow: 0 0 8px currentColor, 0 0 4px currentColor;
+  /* Why: 三角形のフチに、選択キャラの sprite と同じ金色 drop-shadow を
+     重ねて目立たせる (ユーザ要望)。currentColor (青/赤) の edge も少し残す。 */
+  text-shadow: 0 0 4px currentColor;
+  filter:
+    drop-shadow(0 0 4px rgba(241, 201, 91, 0.95))
+    drop-shadow(0 0 8px rgba(241, 201, 91, 0.6));
   pointer-events: none;
   /* color は side セレクタで上書き (下記) */
   color: #f1c95b;  /* fallback */
@@ -773,9 +786,11 @@ button.pile:hover { filter: brightness(1.2); }
   width: 110px;
   box-sizing: border-box;
   padding: 4px 10px;
-  background: rgba(20, 12, 6, 0.55);
-  border: 2px solid #6a4a2a;
+  /* Why: ユーザ要望で end-turn ボタンと同じ gradient + 同じ border / glow。 */
+  background: linear-gradient(180deg, rgba(168, 85, 42, 0.35) 0%, rgba(90, 42, 20, 0.55) 100%);
+  border: 2px solid var(--fg-muted);
   border-radius: var(--radius-md);
+  box-shadow: 0 0 10px rgba(255, 213, 79, 0.3);
   display: flex;
   flex-direction: column;
   align-items: center;
