@@ -304,3 +304,20 @@
   color: var(--gold-soft);
   letter-spacing: 2px;
 }
+
+/* Why: 強化確認 popup で「強化前 → 強化後」のカードを並べて見せる。
+   Card 2 枚 + 矢印を中央寄せの flex で配置。 */
+.rs-confirm-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px 8px 4px;
+}
+
+.rs-confirm-arrow {
+  font-size: 28px;
+  font-weight: bold;
+  color: var(--gold-soft);
+  text-shadow: 0 0 8px rgba(255, 200, 80, 0.6);
+}

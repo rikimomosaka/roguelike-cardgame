@@ -77,12 +77,18 @@ export function TooltipHost({ children }: { children: ReactNode }) {
 export function useTooltipTarget(content: TooltipContent | null) {
   const ctx = useContext(TooltipContext)
   const showingRef = useRef(false)
+  // Why: hover 中に content が動的に変わった (例: 右クリック長押しで強化版に
+  //  切替) ときも tooltip を更新するため、最後のカーソル位置を ref に保持。
+  const lastPosRef = useRef<Position>({ x: 0, y: 0 })
   // content が null になったら（例: 商品が売切に変化した瞬間）、
   // 現在マウスが乗っていてもツールチップを消す。
   useEffect(() => {
     if (!content && showingRef.current) {
       ctx?.hide()
       showingRef.current = false
+    } else if (content && showingRef.current && ctx) {
+      // hover 中に content が変わった: 最新内容で再表示。
+      ctx.show(content, lastPosRef.current)
     }
   }, [ctx, content])
   useEffect(() => {
@@ -97,12 +103,16 @@ export function useTooltipTarget(content: TooltipContent | null) {
     () => ({
       onMouseEnter: (e: MouseEvent) => {
         if (!ctx || !content) return
-        ctx.show(content, { x: e.clientX, y: e.clientY })
+        const pos = { x: e.clientX, y: e.clientY }
+        lastPosRef.current = pos
+        ctx.show(content, pos)
         showingRef.current = true
       },
       onMouseMove: (e: MouseEvent) => {
         if (!ctx || !content) return
-        ctx.move({ x: e.clientX, y: e.clientY })
+        const pos = { x: e.clientX, y: e.clientY }
+        lastPosRef.current = pos
+        ctx.move(pos)
       },
       onMouseLeave: () => {
         ctx?.hide()

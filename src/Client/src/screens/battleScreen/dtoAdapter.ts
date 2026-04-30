@@ -370,6 +370,10 @@ export function toHandCardDemo(
     // Why: PileModal と同じく Card 側に upgraded を渡して "+" を専用 span で
     //  描画する (CSS class card__plus による色分け維持)。ユーザ要望: 手札にも +。
     upgraded: card.isUpgraded,
+    // Why: 右クリック長押しトグル用に通常 / 強化両方のテキストを保持。
+    //  Card 側の useTooltipTarget が effectiveUpgraded に応じて切替える。
+    description: def?.description ?? '',
+    upgradedDescription: def?.upgradedDescription ?? null,
     cost: reducedCost ?? 'X',
     // Why: 軽減発生時のみ表示用に元コストを露出。Card が "{orig}→{cost}" を描画する。
     costOrig: willCombo && baseCost !== null && baseCost !== undefined ? baseCost : null,

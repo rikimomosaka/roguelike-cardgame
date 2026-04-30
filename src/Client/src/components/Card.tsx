@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, MouseEventHandler, ReactNode } from 'react'
 import { useTooltipTarget } from './Tooltip'
 import type { TooltipContent } from './Tooltip'
@@ -60,11 +60,32 @@ export function Card({
   // Why: 'unit' は内部 enum 値だが UI では「召喚カード」を表す概念で「SUMMON」表示。
   const typeLabel = type === 'unit' ? 'SUMMON' : type.toUpperCase()
 
-  const activeDesc = upgraded && upgradedDescription ? upgradedDescription : description
+  // Why: 右クリック長押し中は upgraded ⇄ unupgraded を反転表示する
+  //  (ユーザ要望: 全領域・全リスト共通で +/非+ を比較可能にする)。
+  //  upgradedDescription が無いカードでは反転しても意味が無いので無効化。
+  const [previewToggle, setPreviewToggle] = useState(false)
+  const canPreviewToggle = !!upgradedDescription
+  const effectiveUpgraded = canPreviewToggle && previewToggle ? !upgraded : upgraded
+  // window 全体で mouseup を拾って、カード外で離した場合もトグル解除。
+  useEffect(() => {
+    if (!previewToggle) return
+    const onUp = (e: globalThis.MouseEvent) => {
+      if (e.button === 2) setPreviewToggle(false)
+    }
+    const onBlur = () => setPreviewToggle(false)
+    window.addEventListener('mouseup', onUp)
+    window.addEventListener('blur', onBlur)
+    return () => {
+      window.removeEventListener('mouseup', onUp)
+      window.removeEventListener('blur', onBlur)
+    }
+  }, [previewToggle])
+
+  const activeDesc = effectiveUpgraded && upgradedDescription ? upgradedDescription : description
   const tooltipContent = useMemo<TooltipContent | null>(() => {
     if (!activeDesc) return null
-    return { name: upgraded ? `${name}+` : name, rarity, desc: activeDesc }
-  }, [activeDesc, name, rarity, upgraded])
+    return { name: effectiveUpgraded ? `${name}+` : name, rarity, desc: activeDesc }
+  }, [activeDesc, name, rarity, effectiveUpgraded])
   const tip = useTooltipTarget(tooltipContent)
 
   const combinedEnter: MouseEventHandler<HTMLDivElement> = (e) => {
@@ -74,6 +95,12 @@ export function Card({
   const combinedLeave: MouseEventHandler<HTMLDivElement> = (e) => {
     tip.onMouseLeave()
     onMouseLeave?.(e)
+  }
+  const handleContextMenu: MouseEventHandler<HTMLDivElement> = (e) => {
+    e.preventDefault()
+  }
+  const handleMouseDown: MouseEventHandler<HTMLDivElement> = (e) => {
+    if (e.button === 2 && canPreviewToggle) setPreviewToggle(true)
   }
 
   // Why: onClick 不在時に role/tabIndex 属性を JSX から外して
@@ -88,6 +115,8 @@ export function Card({
       onMouseEnter={combinedEnter}
       onMouseMove={tip.onMouseMove}
       onMouseLeave={combinedLeave}
+      onMouseDown={handleMouseDown}
+      onContextMenu={handleContextMenu}
       {...interactiveProps}
     >
       <div className="card__bg" />
@@ -112,9 +141,9 @@ export function Card({
             を縮小する (ユーザ要望: ストライク/ウィスプ召喚 等の見切れ回避)。
             card.css 側の .card__name[data-len="N"] で個別 font-size 指定。
             +1 は upgrade 時の '+' を考慮。 */}
-        <div className="card__name" data-len={name.length + (upgraded ? 1 : 0)}>
+        <div className="card__name" data-len={name.length + (effectiveUpgraded ? 1 : 0)}>
           {name}
-          {upgraded ? <span className="card__plus">+</span> : null}
+          {effectiveUpgraded ? <span className="card__plus">+</span> : null}
         </div>
       </div>
       <div className="card__illust">{art ?? 'ILLUST'}</div>

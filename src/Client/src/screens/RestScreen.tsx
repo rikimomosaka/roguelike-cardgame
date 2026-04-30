@@ -79,41 +79,70 @@ export function RestScreen({ deck, completed, onHeal, onUpgrade, onClose }: Prop
             </ul>
           )}
         </Popup>
-        {confirming && (
-          <Popup
-            open
-            variant="confirm"
-            title="強化しますか?"
-            width={420}
-            footer={
-              <>
-                <Button
-                  variant="secondary"
-                  onClick={() => setConfirming(null)}
-                  aria-label="Cancel upgrade"
-                >
-                  いいえ
-                </Button>
-                <Button
-                  variant="primary"
-                  onClick={async () => {
-                    const idx = confirming.index
-                    setConfirming(null)
-                    await onUpgrade(idx)
-                    setMode('choose')
-                  }}
-                  aria-label="Confirm upgrade"
-                >
-                  はい
-                </Button>
-              </>
-            }
-          >
-            <p className="rs-confirm-text">
-              <strong>{confirming.name}</strong> を強化します。
-            </p>
-          </Popup>
-        )}
+        {confirming && (() => {
+          const target = deck[confirming.index]
+          const disp = target ? cardDisplay(target.id, catalog, confirming.name) : null
+          return (
+            <Popup
+              open
+              variant="confirm"
+              title="強化しますか?"
+              width={520}
+              footer={
+                <>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setConfirming(null)}
+                    aria-label="Cancel upgrade"
+                  >
+                    いいえ
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={async () => {
+                      const idx = confirming.index
+                      setConfirming(null)
+                      await onUpgrade(idx)
+                      setMode('choose')
+                    }}
+                    aria-label="Confirm upgrade"
+                  >
+                    はい
+                  </Button>
+                </>
+              }
+            >
+              {disp ? (
+                <div className="rs-confirm-preview">
+                  <Card
+                    name={disp.name}
+                    cost={disp.cost}
+                    type={disp.type}
+                    rarity={disp.rarity}
+                    description={disp.description}
+                    upgradedDescription={disp.upgradedDescription}
+                    upgraded={false}
+                    width={128}
+                  />
+                  <span className="rs-confirm-arrow" aria-hidden="true">→</span>
+                  <Card
+                    name={disp.name}
+                    cost={disp.cost}
+                    type={disp.type}
+                    rarity={disp.rarity}
+                    description={disp.description}
+                    upgradedDescription={disp.upgradedDescription}
+                    upgraded={true}
+                    width={128}
+                  />
+                </div>
+              ) : null}
+              <p className="rs-confirm-text">
+                <strong>{confirming.name}</strong> を強化します。
+              </p>
+            </Popup>
+          )
+        })()}
       </>
     )
   }

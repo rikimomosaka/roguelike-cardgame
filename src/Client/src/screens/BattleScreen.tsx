@@ -138,6 +138,10 @@ export type HandCardDemo = {
   desc: string
   /** 強化済みフラグ。Card 側で "+" を描画。 */
   upgraded?: boolean
+  /** 通常版テキスト。右クリック長押しで強化版と切替表示するため両方保持。 */
+  description?: string
+  /** 強化版テキスト (未定義カードでは null/undefined)。 */
+  upgradedDescription?: string | null
 }
 
 // -------------------- Props --------------------
@@ -520,18 +524,12 @@ type HandCardProps = {
 }
 
 function HandCard({ card, fan, onClick, leaving, leaveDx, leaveDy, onCardElement, hidden }: HandCardProps) {
-  const tip = useTip({
-    name: card.name,
-    rarity: card.rarity,
-    desc: card.desc,
-  })
-
   // We need the rendered `.card` element to be a direct child of
   // `.hand` (CSS selector `.hand > .card` keys off this). Card.tsx
-  // does not expose a ref or onMouseMove. We use a sibling probe
-  // <span> (via ref-callback) to capture the previous DOM sibling —
-  // which is the `.card` root — and imperatively apply CSS vars plus a
-  // mousemove listener on it.
+  // does not expose a ref. We use a sibling probe <span> (via
+  // ref-callback) to capture the previous DOM sibling — which is the
+  // `.card` root — and imperatively apply CSS vars (fan-x/y/r,
+  // leave-dx/dy) on it.
   const [cardEl, setCardEl] = useState<HTMLDivElement | null>(null)
 
   const probeRefCb = useCallback((probe: HTMLSpanElement | null) => {
@@ -570,15 +568,6 @@ function HandCard({ card, fan, onClick, leaving, leaveDx, leaveDy, onCardElement
     return () => onCardElement(null)
   }, [cardEl, onCardElement])
 
-  useEffect(() => {
-    if (!cardEl) return
-    const handler = (e: globalThis.MouseEvent) => {
-      tip.onMouseMove({ clientX: e.clientX, clientY: e.clientY } as unknown as React.MouseEvent)
-    }
-    cardEl.addEventListener('mousemove', handler)
-    return () => cardEl.removeEventListener('mousemove', handler)
-  }, [cardEl, tip])
-
   return (
     <>
       <Card
@@ -589,6 +578,11 @@ function HandCard({ card, fan, onClick, leaving, leaveDx, leaveDy, onCardElement
         rarity={card.rarity}
         art={card.art}
         upgraded={card.upgraded}
+        /* Why: tooltip / 右クリック長押しの +/- 切替を Card 内蔵で扱うため、
+           description / upgradedDescription を渡す。HandCardDemo.desc は
+           upgrade 状態に応じて事前解決済だが、両方持って Card に判定を委ねる。 */
+        description={card.description ?? card.desc}
+        upgradedDescription={card.upgradedDescription}
         /* Why: 実績画面 (TopBar デッキ modal) の Card 幅 112 と統一する。
            デフォルト 104 だと「ストライク」「ウィスプ召喚」が見切れていた。 */
         width={112}
@@ -598,8 +592,6 @@ function HandCard({ card, fan, onClick, leaving, leaveDx, leaveDy, onCardElement
           hidden ? 'is-playing-hidden' : '',
         ].filter(Boolean).join(' ') || undefined}
         onClick={leaving ? undefined : onClick}
-        onMouseEnter={tip.onMouseEnter}
-        onMouseLeave={tip.onMouseLeave}
       />
       <span ref={probeRefCb} aria-hidden="true" className="hand__probe" />
     </>
@@ -1247,47 +1239,63 @@ export function BattleScreen({
           const newlyDrawnIds = new Set(newlyDrawn.map(c => c.instanceId))
           const survivingHand = resp.state.hand.filter(c => !newlyDrawnIds.has(c.instanceId))
 
-          // Why: 1 枚ドローを「飛ばす + 着地で hand に commit」のヘルパに集約。
-          //  draw flight が終わったタイミングで hand state を更新するため、
-          //  card-enter は flight 後に走る (sprite が手札位置に到達した直後)。
-          const drawOne = async (
-            card: BattleCardInstanceDto,
-            handAfter: BattleCardInstanceDto[],
-            drawPileAfter: BattleCardInstanceDto[],
+          // Why: 「ドロー開始前の手札」を先に commit して、前ターンの手札が
+          //  ドローと混ざって表示されるのを防ぐ (ユーザ要望: 手札全捨てが
+          //  完了してからドロー開始)。EndTurn では survivingHand=[] になる。
+          const reshuffleCards = reshuffleHappened
+            ? [...resp.state.drawPile, ...postReshuffleDrawn]
+            : null
+          setState({
+            ...resp.state,
+            hand: survivingHand,
+            drawPile: state.drawPile,
+            ...(reshuffleCards ? { discardPile: reshuffleCards } : { discardPile: resp.state.discardPile }),
+          })
+          await sleep(80)
+
+          // Why: ドロー演出は parallel に進む (前 sprite が着地する前に次 sprite が
+          //  発射される)。1 枚ごとの flight 時間 (DRAW_FLIGHT_MS) は据え置きで、
+          //  trigger 間隔 (DRAW_PARALLEL_STAGGER_MS) を短くすることで合計時間を圧縮。
+          //  各 commit は flight 完了タイミング (= trigger 時刻 + FLIGHT) で setTimeout
+          //  経由に確定。Promise.all で全コミット完了を待つ。
+          const DRAW_PARALLEL_STAGGER_MS = 90
+          const FLIGHT = DRAW_FLIGHT_MS
+
+          const runStaggered = (
+            cards: BattleCardInstanceDto[],
+            handAfters: BattleCardInstanceDto[][],
+            drawPileAfters: BattleCardInstanceDto[][],
             discardPileAfter: BattleCardInstanceDto[] | null,
           ) => {
-            const targetIndex = handAfter.length - 1
-            triggerDrawAnim(card, targetIndex, handAfter.length)
-            await sleep(DRAW_FLIGHT_MS)
-            setState({
-              ...resp.state,
-              hand: handAfter,
-              drawPile: drawPileAfter,
-              ...(discardPileAfter !== null ? { discardPile: discardPileAfter } : {}),
+            if (cards.length === 0) return Promise.resolve()
+            return new Promise<void>((resolveAll) => {
+              let remaining = cards.length
+              cards.forEach((card, i) => {
+                window.setTimeout(() => {
+                  triggerDrawAnim(card, handAfters[i].length - 1, handAfters[i].length)
+                  window.setTimeout(() => {
+                    setState({
+                      ...resp.state,
+                      hand: handAfters[i],
+                      drawPile: drawPileAfters[i],
+                      ...(discardPileAfter !== null ? { discardPile: discardPileAfter } : {}),
+                    })
+                    remaining -= 1
+                    if (remaining === 0) resolveAll()
+                  }, FLIGHT)
+                }, i * DRAW_PARALLEL_STAGGER_MS)
+              })
             })
           }
 
-          if (reshuffleHappened) {
-            const reshuffleCards = [...resp.state.drawPile, ...postReshuffleDrawn]
-
-            // Phase 1: pre-reshuffle 分を 1 枚ずつ flight + commit。
-            //  discardPile は reshuffleCards (リシャッフル対象一式) 固定で表示。
-            for (let i = 1; i <= preReshuffleDrawn.length; i++) {
-              await drawOne(
-                preReshuffleDrawn[i - 1],
-                [...survivingHand, ...preReshuffleDrawn.slice(0, i)],
-                state.drawPile.slice(i),
-                reshuffleCards,
-              )
-            }
-            if (preReshuffleDrawn.length === 0) {
-              setState({
-                ...resp.state,
-                hand: survivingHand,
-                drawPile: [],
-                discardPile: reshuffleCards,
-              })
-            }
+          if (reshuffleHappened && reshuffleCards) {
+            // Phase 1: pre-reshuffle 分を parallel stagger で flight + commit。
+            //  discardPile は reshuffleCards (リシャッフル対象一式) 固定。
+            const phase1HandAfters = preReshuffleDrawn.map((_, i) =>
+              [...survivingHand, ...preReshuffleDrawn.slice(0, i + 1)])
+            const phase1DrawAfters = preReshuffleDrawn.map((_, i) =>
+              state.drawPile.slice(i + 1))
+            await runStaggered(preReshuffleDrawn, phase1HandAfters, phase1DrawAfters, reshuffleCards)
 
             // Phase 2: reshuffle 演出 (sprite が 1 枚ずつ弧で飛ぶ)
             await sleep(220)
@@ -1295,25 +1303,18 @@ export function BattleScreen({
             const reshuffleMs = reshuffleCards.length * 110 + 700
             await sleep(reshuffleMs)
 
-            // Phase 3: post-reshuffle 分を 1 枚ずつ flight + commit。
-            for (let i = 1; i <= postReshuffleDrawn.length; i++) {
-              await drawOne(
-                postReshuffleDrawn[i - 1],
-                [...survivingHand, ...preReshuffleDrawn, ...postReshuffleDrawn.slice(0, i)],
-                reshuffleCards.slice(0, reshuffleCards.length - i),
-                null,
-              )
-            }
+            // Phase 3: post-reshuffle 分を parallel stagger で flight + commit。
+            const phase3HandAfters = postReshuffleDrawn.map((_, i) =>
+              [...survivingHand, ...preReshuffleDrawn, ...postReshuffleDrawn.slice(0, i + 1)])
+            const phase3DrawAfters = postReshuffleDrawn.map((_, i) =>
+              reshuffleCards.slice(0, reshuffleCards.length - (i + 1)))
+            await runStaggered(postReshuffleDrawn, phase3HandAfters, phase3DrawAfters, null)
           } else {
-            // reshuffle なし: 1 枚ずつ flight + commit。
-            for (let i = 1; i <= newlyDrawn.length; i++) {
-              await drawOne(
-                newlyDrawn[i - 1],
-                [...survivingHand, ...newlyDrawn.slice(0, i)],
-                state.drawPile.slice(i),
-                null,
-              )
-            }
+            // reshuffle なし: parallel stagger で flight + commit。
+            const handAfters = newlyDrawn.map((_, i) =>
+              [...survivingHand, ...newlyDrawn.slice(0, i + 1)])
+            const drawAfters = newlyDrawn.map((_, i) => state.drawPile.slice(i + 1))
+            await runStaggered(newlyDrawn, handAfters, drawAfters, null)
           }
         }
       }
