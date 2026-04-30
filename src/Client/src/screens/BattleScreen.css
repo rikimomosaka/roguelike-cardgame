@@ -439,19 +439,18 @@ button.pile:hover { filter: brightness(1.2); }
 }
 
 /* 死亡演出はユーザ要望により廃止 (HP=0 で alive filter から外れて自然消滅)。 */
-/* Why: 選択状態の三角形は味方=青 / 敵=赤 で識別性アップ。サイズも 14→24px に拡大。
-   キャラのフチ発光 (.is-targeted .sprite drop-shadow) は既存の金色のままで触らない。 */
-.battle__slot.is-targeted::after {
+/* Why: 三角形は常に DOM render しておき opacity だけ切替。content/filter の
+   出現/消滅で stacking context が動的に作られると周辺要素のサブピクセル
+   再ラスタライズが起きて画面ブレの原因になるため、is-targeted の有無に
+   関わらず ::after の box は常に存在させる。 */
+.battle__slot::after {
   content: "▼";
   position: absolute;
-  /* Why: intent (top: -50, 高さ ~28 → 下端 -22) より十分上に離す。
-     -110px で intent との間に ~30px の余白。 */
   top: -110px;
   left: 50%;
   transform: translateX(-50%);
   font-size: 24px;
-  /* Why: 白フチを 1px 4 方向で実装 (ユーザ要望)。さらに外側に金色 glow
-     (filter: drop-shadow) を重ねる。currentColor (青/赤) は文字の塗り。 */
+  /* 黒 outline で背景に対するコントラスト確保 (ユーザ要望)。 */
   text-shadow:
     -1px -1px 0 white,
      1px -1px 0 white,
@@ -461,9 +460,11 @@ button.pile:hover { filter: brightness(1.2); }
     drop-shadow(0 0 4px rgba(241, 201, 91, 0.95))
     drop-shadow(0 0 8px rgba(241, 201, 91, 0.6));
   pointer-events: none;
-  /* color は side セレクタで上書き (下記) */
-  color: #f1c95b;  /* fallback */
+  color: #f1c95b;
+  opacity: 0;
+  transition: opacity 0.15s ease;
 }
+.battle__slot.is-targeted::after { opacity: 1; }
 .battle__side--player .battle__slot.is-targeted::after { color: #4fa8ff; }
 .battle__side--enemy  .battle__slot.is-targeted::after { color: #ff5a5a; }
 
@@ -502,11 +503,12 @@ button.pile:hover { filter: brightness(1.2); }
   white-space: nowrap;
   z-index: 2;
   cursor: help;
+  /* Why: outline 色は白 → 黒 (ユーザ要望)。 */
   text-shadow:
-    -1px -1px 0 white,
-     1px -1px 0 white,
-    -1px  1px 0 white,
-     1px  1px 0 white;
+    -1px -1px 0 #000,
+     1px -1px 0 #000,
+    -1px  1px 0 #000,
+     1px  1px 0 #000;
 }
 
 .intent__icon { font-size: 22px; }
@@ -516,12 +518,12 @@ button.pile:hover { filter: brightness(1.2); }
   object-fit: contain;
   vertical-align: middle;
   image-rendering: pixelated;
-  /* Why: ボックス撤廃で背景に直接乗るので、画像にも白 outline を 1px 4 方向で。 */
+  /* Why: 画像にも黒 outline を 1px 4 方向で (ユーザ要望: 白 → 黒)。 */
   filter:
-    drop-shadow(1px 0 0 white)
-    drop-shadow(-1px 0 0 white)
-    drop-shadow(0 1px 0 white)
-    drop-shadow(0 -1px 0 white);
+    drop-shadow(1px 0 0 #000)
+    drop-shadow(-1px 0 0 #000)
+    drop-shadow(0 1px 0 #000)
+    drop-shadow(0 -1px 0 #000);
 }
 .status-buff__icon-img {
   width: 16px;
@@ -581,6 +583,10 @@ button.pile:hover { filter: brightness(1.2); }
 .sprite {
   position: absolute; top: 40px; left: 50%;
   transform: translateX(-50%);
+  /* Why: is-targeted で filter (drop-shadow) が付く/外れることによる
+     stacking context の動的作成 → 周辺要素のサブピクセル再ラスタライズ
+     による画面ブレを防ぐため、事前に GPU 合成レイヤを確保。 */
+  will-change: filter, transform;
   width: 100px; height: 151px;
   display: flex; align-items: center; justify-content: center;
   font-family: var(--font-label);
@@ -730,36 +736,63 @@ button.pile:hover { filter: brightness(1.2); }
 
 .status-buffs {
   position: absolute; top: 240px; left: 0; right: 0;
-  display: flex; gap: 4px; flex-wrap: wrap; justify-content: center;
+  display: flex; gap: 3px; flex-wrap: wrap; justify-content: center;
   padding: 0 2px;
   box-sizing: border-box;
-  /* Why: バフが無い時も 1 行スペースを確保し、出現で他の要素が動かないようにする。 */
-  min-height: 24px;
+  /* Why: バフ無い時も 1 行スペース確保 (= 1 buff icon 高さ)。 */
+  min-height: 30px;
 }
 
+/* Why: ユーザ要望で枠を撤廃し、山札/捨札/除外と同じ「アイコン本体 + 右下に
+   重ねた数字」形式に統一。各 buff/debuff/block は正方形 1 アイコン。 */
 .status-buff {
-  display: inline-flex; align-items: center; gap: 3px;
-  padding: 2px 7px;
-  border: 1px solid var(--border-dark);
-  background: rgba(10, 6, 4, 0.85);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-label);
-  font-size: 15px;
-  letter-spacing: 0.5px;
-  color: var(--fg-muted);
+  position: relative;
+  display: inline-block;
+  width: 30px;
+  height: 30px;
+  background: none;
+  border: none;
+  padding: 0;
   cursor: help;
-  text-shadow: 0 1px 0 #000;
+  /* text-icon (fallback '?' 等) を中央配置するため */
+  font-family: var(--font-label);
+  font-size: 22px;
+  line-height: 30px;
+  text-align: center;
+  color: var(--fg);
+}
+
+.status-buff__icon-img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  display: block;
+  /* 黒 outline で背景に対するコントラスト確保 */
+  filter:
+    drop-shadow(1px 0 0 #000)
+    drop-shadow(-1px 0 0 #000)
+    drop-shadow(0 1px 0 #000)
+    drop-shadow(0 -1px 0 #000);
 }
 
 .status-buff__num {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
   font-family: var(--font-body);
-  font-size: 16px;
+  font-size: 13px;
+  color: white;
   font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-shadow:
+    -1px -1px 0 #000,
+     1px -1px 0 #000,
+    -1px  1px 0 #000,
+     1px  1px 0 #000;
+  pointer-events: none;
+  z-index: 1;
 }
-
-.status-buff--block  { color: var(--state-block); border-color: #4a6a8a; }
-.status-buff--buff   { color: var(--gold); border-color: #8a6a2a; }
-.status-buff--debuff { color: var(--state-danger-soft); border-color: #6a3a3a; }
 
 /* ================= Energy orb ================= */
 .energy {
@@ -841,7 +874,8 @@ button.pile:hover { filter: brightness(1.2); }
   left: auto;
   bottom: 30px;
   z-index: var(--z-hud);
-  height: 52px;
+  /* Why: エナジー (64) / 山札・捨札・除外 (64) と高さを統一 (ユーザ要望)。 */
+  height: 64px;
   width: 152px;
   box-sizing: border-box;
   padding: 0 14px;
@@ -870,8 +904,9 @@ button.pile:hover { filter: brightness(1.2); }
 .pile {
   position: absolute;
   z-index: 4;
-  width: 88px;
-  height: 88px;
+  /* Why: エナジー (64) / end-turn (64) と高さ統一 (ユーザ要望)。 */
+  width: 64px;
+  height: 64px;
   background: none;
   border: none;
   border-radius: 0;
@@ -880,6 +915,9 @@ button.pile:hover { filter: brightness(1.2); }
   display: block;
   cursor: pointer;
   transition: transform 0.12s ease;
+  /* Why: hover scale で発生するサブピクセル再ラスタライズによる近隣要素の
+     ブレを防ぐため、GPU 合成レイヤを事前確保する。 */
+  will-change: transform;
 }
 
 .pile:hover {
@@ -889,10 +927,10 @@ button.pile:hover { filter: brightness(1.2); }
 /* ラベル (山札/捨札/除外) は非表示 */
 .pile__lbl { display: none; }
 
-/* アイコンを大きく + 白 outline で背景に対するコントラスト確保 */
+/* アイコンを 64×64 + 白 outline で背景に対するコントラスト確保 */
 .pile__sym--img {
-  width: 88px;
-  height: 88px;
+  width: 64px;
+  height: 64px;
   object-fit: contain;
   image-rendering: pixelated;
   filter:
@@ -902,18 +940,18 @@ button.pile:hover { filter: brightness(1.2); }
     drop-shadow(0 -1px 0 white);
 }
 
-/* 数字をアイコン右下クォドラントに重ねる */
+/* 数字をアイコン右下クォドラントに重ねる (64 / 2 = 32 area) */
 .pile .pile__num {
   position: absolute;
-  right: 2px;
-  bottom: 2px;
-  width: 44px;  /* 88 / 2 = アイコン右下 1/4 領域 */
-  height: 44px;
+  right: 1px;
+  bottom: 1px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: flex-end;
   justify-content: flex-end;
   font-family: var(--font-body);
-  font-size: 28px;
+  font-size: 22px;
   color: white;
   font-variant-numeric: tabular-nums;
   line-height: 1;
@@ -929,7 +967,8 @@ button.pile:hover { filter: brightness(1.2); }
 
 .pile--draw    { left: 28px;  bottom: 30px; }
 .pile--discard { right: 28px; bottom: 30px; }
-.pile--exhaust { right: 28px; bottom: 130px; }
+/* Why: discard 上部 (= 30 + 64 = 94) との余白を 30px 確保 → bottom: 124。 */
+.pile--exhaust { right: 28px; bottom: 124px; }
 
 /* ================= Hand (fanned) ================= */
 .hand-wrap {
@@ -958,6 +997,9 @@ button.pile:hover { filter: brightness(1.2); }
     translate(var(--fan-x, 0), var(--fan-y, 0))
     rotate(var(--fan-r, 0deg));
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+  /* Why: hover scale / filter で発生する近隣要素のサブピクセル再ラスタライズ
+     を防ぐため、GPU 合成レイヤを事前確保 (ユーザ要望: 拡大時のブレ修正)。 */
+  will-change: transform, filter;
   /* Why: hand に新規 mount されたカードは fade-in (山札からドローされて
      来た感じ)。既存カードは React が DOM 維持するので再生されない
      (key に instanceId を使って stable identity 確保)。 */
