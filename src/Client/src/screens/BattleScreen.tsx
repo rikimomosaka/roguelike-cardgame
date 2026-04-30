@@ -1173,7 +1173,6 @@ export function BattleScreen({
         const oldHandIds = new Set(state.hand.map(c => c.instanceId))
         const newlyDrawn = resp.state.hand.filter(c => !oldHandIds.has(c.instanceId))
         const preDrawIds = new Set(state.drawPile.map(c => c.instanceId))
-        const preReshuffleDrawn = newlyDrawn.filter(c => preDrawIds.has(c.instanceId))
         const postReshuffleDrawn = newlyDrawn.filter(c => !preDrawIds.has(c.instanceId))
         // reshuffle が起きた = pre.discard が消えて draw に補充された
         const reshuffleHappened =
@@ -1181,18 +1180,25 @@ export function BattleScreen({
           && resp.state.discardPile.length < state.discardPile.length
           && postReshuffleDrawn.length + resp.state.drawPile.length > 0
         if (reshuffleHappened) {
-          // Phase 1: 先に引けた pre.drawPile 由来のカードを hand に反映
-          //   (drawPile を 0 にして「全て引き切った」状態を見せる)
-          const hand1 = state.hand.concat(preReshuffleDrawn)
+          // Phase 1: リシャッフル直前の状態を見せる。
+          //   - hand = resp.state.hand から postReshuffleDrawn を除いたもの
+          //     (= リシャッフル時点で手元にあるカード = 残存 hand + preReshuffleDrawn)。
+          //     EndTurn では engine 側で古い手札を discard 済みなので残存=0 → preReshuffleDrawn のみ。
+          //     カードプレイで reshuffle が起きるレアケースでは生き残った手札も含む。
+          //   - drawPile は 0 (引き切った)。
+          //   - discardPile はリシャッフル対象カード一式 = resp.state.drawPile + postReshuffleDrawn
+          //     (old discardPile + 古い手札 + プレイ消費カード等が全部入る)。
+          const postIds = new Set(postReshuffleDrawn.map(c => c.instanceId))
+          const intermediateHand = resp.state.hand.filter(c => !postIds.has(c.instanceId))
+          const reshuffleCards = [...resp.state.drawPile, ...postReshuffleDrawn]
           setState({
-            ...state,
-            hand: hand1,
+            ...resp.state,
+            hand: intermediateHand,
             drawPile: [],
-            // discardPile は pre のまま (reshuffle 演出の起点)
+            discardPile: reshuffleCards,
           })
           await sleep(220)
           // Phase 2: reshuffle 演出 (sprite が 1 枚ずつ弧で飛ぶ)
-          const reshuffleCards = state.discardPile
           triggerReshuffleAnim(reshuffleCards)
           const reshuffleMs = reshuffleCards.length * 110 + 700
           await sleep(reshuffleMs)
