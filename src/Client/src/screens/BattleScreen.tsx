@@ -503,9 +503,14 @@ type HandCardProps = {
    *  turn end discard 等) の exit アニメーション中の表示用。CSS で
    *  .is-leaving class が付き、捨札方向に縮小フェードする。 */
   leaving?: boolean
+  /** leaving 時の行先方向 (px)。card-leave keyframe が --leave-dx/--leave-dy を読む。 */
+  leaveDx?: number
+  leaveDy?: number
+  /** 親が DOM 要素を識別 (rect 計測) するための callback。 */
+  onCardElement?: (el: HTMLDivElement | null) => void
 }
 
-function HandCard({ card, fan, onClick, leaving }: HandCardProps) {
+function HandCard({ card, fan, onClick, leaving, leaveDx, leaveDy, onCardElement }: HandCardProps) {
   const tip = useTip({
     name: card.name,
     rarity: card.rarity,
@@ -537,6 +542,24 @@ function HandCard({ card, fan, onClick, leaving }: HandCardProps) {
     cardEl.style.setProperty('--fan-y', `${fan.y}px`)
     cardEl.style.setProperty('--fan-r', `${fan.r}deg`)
   }, [cardEl, fan.x, fan.y, fan.r])
+
+  // Why: leaving 時の行先 dx/dy は keyframe で参照される CSS 変数として注入。
+  //  static keyframe (旧 +320/+10 hardcode) を動的にしてゾーン間移動の終点を
+  //  実 pile 中心に合わせる (B 要件)。
+  useEffect(() => {
+    if (!cardEl) return
+    if (leaving) {
+      cardEl.style.setProperty('--leave-dx', `${leaveDx ?? 320}px`)
+      cardEl.style.setProperty('--leave-dy', `${leaveDy ?? 10}px`)
+    }
+  }, [cardEl, leaving, leaveDx, leaveDy])
+
+  // 親 (BattleScreen) に DOM 要素を通知して rect 計測ができるようにする。
+  useEffect(() => {
+    if (!onCardElement) return
+    onCardElement(cardEl)
+    return () => onCardElement(null)
+  }, [cardEl, onCardElement])
 
   useEffect(() => {
     if (!cardEl) return
@@ -742,16 +765,59 @@ export function BattleScreen({
   // Why: hand から消えたカードを exit アニメーション中だけ残しておくバッファ。
   // 表示中はクリック不可 (onClick 無効)、CSS で .is-leaving が捨札方向へ
   // 縮小フェードする。タイマーで自動削除。
+  // destDx/destDy は検出時に計測した「カード中心 → 行先パイル中心」の差分。
+  // .is-leaving の keyframe が --leave-dx / --leave-dy として読む。
   type LeavingHandEntry = {
     card: BattleCardInstanceDto
     demo: HandCardDemo
     fan: { x: number; y: number; r: number }
+    destDx: number
+    destDy: number
+    destination: 'discard' | 'exhaust'
   }
   const [leavingHand, setLeavingHand] = useState<LeavingHandEntry[]>([])
   const prevHandRef = useRef<{ list: BattleCardInstanceDto[]; demos: HandCardDemo[]; fans: { x: number; y: number; r: number }[] }>({
     list: [],
     demos: [],
     fans: [],
+  })
+
+  // Why: 多段階 play アニメ + パイル位置計測用の DOM ref。
+  //  - handCardRefs: instanceId → カード要素 (rect 計測でゾーン間移動の dx/dy を出す)
+  //  - drawPileRef / discardPileRef / exhaustPileRef: 行先パイル中心の計測用
+  //  - handWrapRef: パイル位置不明時の fallback (画面下中央)
+  const handCardRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+  const drawPileRef = useRef<HTMLButtonElement | null>(null)
+  const discardPileRef = useRef<HTMLButtonElement | null>(null)
+  const exhaustPileRef = useRef<HTMLButtonElement | null>(null)
+  const handWrapRef = useRef<HTMLDivElement | null>(null)
+
+  // Why: 多段階 play アニメ (centering → holding → leaving) の transient state。
+  //  state.hand から消えても LeavingHand とは別ルートで管理し、Stage 1/2/3 を
+  //  順に切り替える。leavingHand 検出側からは playingId で除外する。
+  type PlayingCardState = {
+    entry: LeavingHandEntry
+    stage: 'centering' | 'holding' | 'leaving'
+    centerDx: number
+    centerDy: number
+  }
+  const [playingCard, setPlayingCard] = useState<PlayingCardState | null>(null)
+
+  // Why: 山札補充 (discard → draw 全消化) の弧アーチ演出用。
+  //  prev.discardPile.length > 0 && current === 0 && draw 増加 → トリガ。
+  //  各 sprite は捨札中心 → 山札中心へ 400ms かけて飛ぶ (中間で +Y -80px)。
+  type ReshuffleEntry = {
+    id: number
+    fromX: number
+    fromY: number
+    toX: number
+    toY: number
+    delay: number
+  }
+  const [reshuffleEntries, setReshuffleEntries] = useState<ReshuffleEntry[]>([])
+  const prevPilesRef = useRef<{ discard: number; draw: number }>({
+    discard: 0,
+    draw: 0,
   })
 
   const { catalog: cardCatalog } = useCardCatalog()
@@ -777,14 +843,33 @@ export function BattleScreen({
     const prev = prevHandRef.current
     const currentIds = new Set(hand.map(c => c.instanceId))
     const newlyLeaving: LeavingHandEntry[] = []
+    // Why: ゾーン間移動の終点は捨札パイル中心 (B 要件)。要素 rect が取れる場合は
+    // それを使い、取れない場合は手札 wrap 中央を fallback にする。
+    const playingId = playingCard?.entry.card.instanceId
+    const handRect = handWrapRef.current?.getBoundingClientRect() ?? null
+    const fallbackHandCx = handRect ? handRect.left + handRect.width / 2 : window.innerWidth / 2
+    const fallbackHandCy = handRect ? handRect.top + handRect.height / 2 : window.innerHeight - 100
+    const discardRect = discardPileRef.current?.getBoundingClientRect() ?? null
+    const discardCx = discardRect ? discardRect.left + discardRect.width / 2 : 0
+    const discardCy = discardRect ? discardRect.top + discardRect.height / 2 : 0
     prev.list.forEach((card, idx) => {
-      if (!currentIds.has(card.instanceId)) {
-        newlyLeaving.push({
-          card,
-          demo: prev.demos[idx],
-          fan: prev.fans[idx],
-        })
-      }
+      if (currentIds.has(card.instanceId)) return
+      // playingCard が引き取るカードは leavingHand から除外 (二重アニメ防止)。
+      if (card.instanceId === playingId) return
+      const cardEl = handCardRefs.current.get(card.instanceId)
+      const r = cardEl?.getBoundingClientRect()
+      const cardCx = r ? r.left + r.width / 2 : fallbackHandCx
+      const cardCy = r ? r.top + r.height / 2 : fallbackHandCy
+      const destDx = discardCx - cardCx
+      const destDy = discardCy - cardCy
+      newlyLeaving.push({
+        card,
+        demo: prev.demos[idx],
+        fan: prev.fans[idx],
+        destDx,
+        destDy,
+        destination: 'discard',
+      })
     })
     if (newlyLeaving.length > 0) {
       setLeavingHand(prevList => [...prevList, ...newlyLeaving])
@@ -809,6 +894,51 @@ export function BattleScreen({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state?.hand])
+
+  // Why: 山札補充 (discard → draw) の検出。
+  //  prev.discard > 0 && current.discard === 0 && current.draw > prev.draw を
+  //  満たすとき、補充されたカード枚数 (prev.discard) ぶんの弧 sprite を出す。
+  //  triggerReshuffleAnim は ref を読むだけなので useEffect deps に入れない。
+  useEffect(() => {
+    if (!state) return
+    const prevD = prevPilesRef.current.discard
+    const prevDraw = prevPilesRef.current.draw
+    const curD = state.discardPile.length
+    const curDraw = state.drawPile.length
+    if (prevD > 0 && curD === 0 && curDraw > prevDraw) {
+      triggerReshuffleAnim(prevD)
+    }
+    prevPilesRef.current = { discard: curD, draw: curDraw }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state?.discardPile.length, state?.drawPile.length])
+
+  function triggerReshuffleAnim(count: number) {
+    const drawEl = drawPileRef.current
+    const discEl = discardPileRef.current
+    if (!drawEl || !discEl) return
+    const dr = drawEl.getBoundingClientRect()
+    const er = discEl.getBoundingClientRect()
+    const fromX = er.left + er.width / 2
+    const fromY = er.top + er.height / 2
+    const toX = dr.left + dr.width / 2
+    const toY = dr.top + dr.height / 2
+    const base = Date.now()
+    const entries: ReshuffleEntry[] = []
+    for (let i = 0; i < count; i++) {
+      entries.push({
+        id: base + i,
+        fromX,
+        fromY,
+        toX,
+        toY,
+        delay: i * 60,
+      })
+    }
+    setReshuffleEntries(entries)
+    window.setTimeout(() => {
+      setReshuffleEntries([])
+    }, count * 60 + 450)
+  }
 
   // 戦闘フェーズ banner: text を 2 秒間オーバーレイ表示してから clear。
   // Map の ACT START と同じ 2s フェード仕様 (CSS keyframes 側で 10/88/100% 遷移)。
@@ -1074,6 +1204,13 @@ export function BattleScreen({
     }
   }
 
+  // Why: 行先パイルを判定する。catalog にカード effects が無いため、現在の
+  //  データセットには exhaustSelf を持つカードが無い前提で常に 'discard'。
+  //  TODO: catalog に effects が公開されたら exhaustSelf を見て分岐。
+  function destinationFor(_card: BattleCardInstanceDto): 'discard' | 'exhaust' {
+    return 'discard'
+  }
+
   async function handlePlayCard(handIndex: number) {
     // Why: コスト不足 / 範囲外の hand クリックでサーバー 400 が頻発するのは UX
     // 上ノイズなので、Client 側で事前にプレイ可否を判定して握り潰す。Server は
@@ -1093,8 +1230,61 @@ export function BattleScreen({
       orig === state.lastPlayedOrigCost + 1
     const payCost = Math.max(0, baseCost - (willCombo ? 1 : 0))
     if (state && payCost > state.energy) return
+
+    // 多段階 play アニメ用に DOM 位置を計測する。
+    // demo / fan は現フレームで生成された値を ref から拾う (render との 1:1)。
+    const demo = prevHandRef.current.demos[handIndex]
+    const fanEntry = prevHandRef.current.fans[handIndex]
+    const cardEl = handCardRefs.current.get(card.instanceId)
+    if (!cardEl || !demo || !fanEntry) {
+      // Fallback: 計測不能 → アニメ無しで従来動作。
+      const resp = await withBusy(() => playCard(accountId, { handIndex }))
+      if (resp) await playSteps(resp)
+      return
+    }
+    const cardRect = cardEl.getBoundingClientRect()
+    const cardCx = cardRect.left + cardRect.width / 2
+    const cardCy = cardRect.top + cardRect.height / 2
+
+    const winCx = window.innerWidth / 2
+    const winCy = window.innerHeight / 2
+    const centerDx = winCx - cardCx
+    const centerDy = winCy - cardCy
+
+    const dest = destinationFor(card)
+    const destEl = dest === 'exhaust' ? exhaustPileRef.current : discardPileRef.current
+    let destDx = 0
+    let destDy = 0
+    if (destEl) {
+      const r = destEl.getBoundingClientRect()
+      destDx = (r.left + r.width / 2) - cardCx
+      destDy = (r.top + r.height / 2) - cardCy
+    }
+
+    const entry: LeavingHandEntry = {
+      card,
+      demo,
+      fan: fanEntry,
+      destDx,
+      destDy,
+      destination: dest,
+    }
+
+    // Stage 1: centering (200ms)
+    setPlayingCard({ entry, stage: 'centering', centerDx, centerDy })
+    await sleep(200)
+    // Stage 2: holding (server 呼び出し + playSteps の演出をホールド)
+    setPlayingCard(p => (p ? { ...p, stage: 'holding' } : null))
     const resp = await withBusy(() => playCard(accountId, { handIndex }))
-    if (resp) await playSteps(resp)
+    if (!resp) {
+      setPlayingCard(null)
+      return
+    }
+    await playSteps(resp)
+    // Stage 3: leaving (280ms 縮小フェード → パイル中心へ)
+    setPlayingCard(p => (p ? { ...p, stage: 'leaving' } : null))
+    await sleep(280)
+    setPlayingCard(null)
   }
 
   async function handleEndTurn() {
@@ -1289,6 +1479,7 @@ export function BattleScreen({
 
           {/* Piles (clickable to open modal) */}
           <button
+            ref={drawPileRef}
             type="button"
             className="pile pile--draw"
             onClick={() => setPileOpen('draw')}
@@ -1299,6 +1490,7 @@ export function BattleScreen({
             <span className="pile__num">{state.drawPile.length}</span>
           </button>
           <button
+            ref={exhaustPileRef}
             type="button"
             className="pile pile--exhaust"
             onClick={() => setPileOpen('exhaust')}
@@ -1309,6 +1501,7 @@ export function BattleScreen({
             <span className="pile__num">{state.exhaustPile.length}</span>
           </button>
           <button
+            ref={discardPileRef}
             type="button"
             className="pile pile--discard"
             onClick={() => setPileOpen('discard')}
@@ -1338,20 +1531,29 @@ export function BattleScreen({
               Why: key を instanceId にすることで React が DOM を 1:1 で追跡し、
               新規カードのみ entry CSS animation が走り、再 mount 不要なカードは
               アニメ再生されない (急に再描画されない)。 */}
-          <div className="hand-wrap">
+          <div className="hand-wrap" ref={handWrapRef}>
             <div className="hand">
-              {handDemos.map((c, i) => (
-                <HandCard
-                  key={state.hand[i]?.instanceId ?? `idx-${i}`}
-                  card={c}
-                  fan={fan[i]}
-                  onClick={
-                    interactionsDisabled
-                      ? undefined
-                      : () => void handlePlayCard(i)
-                  }
-                />
-              ))}
+              {handDemos.map((c, i) => {
+                const inst = state.hand[i]
+                const id = inst?.instanceId ?? `idx-${i}`
+                return (
+                  <HandCard
+                    key={id}
+                    card={c}
+                    fan={fan[i]}
+                    onClick={
+                      interactionsDisabled
+                        ? undefined
+                        : () => void handlePlayCard(i)
+                    }
+                    onCardElement={(el) => {
+                      if (!inst) return
+                      if (el) handCardRefs.current.set(inst.instanceId, el)
+                      else handCardRefs.current.delete(inst.instanceId)
+                    }}
+                  />
+                )
+              })}
               {/* leaving cards: 直前の hand には居たが今 hand にいないカード。
                   exit アニメ完了後に leavingHand から削除される。 */}
               {leavingHand.map((lh) => (
@@ -1360,9 +1562,41 @@ export function BattleScreen({
                   card={lh.demo}
                   fan={lh.fan}
                   leaving
+                  leaveDx={lh.destDx}
+                  leaveDy={lh.destDy}
                 />
               ))}
             </div>
+            {/* Why: 多段階 play アニメ用の overlay (.hand の外に置くことで
+                .hand > .card セレクタの animation/transition を継承しない)。
+                state.hand から消えても LeavingHand とは別ルートで表示し続け、
+                centering → holding (server + playSteps) → leaving の 3 段で
+                CSS transition を切り替える。 */}
+            {playingCard && (
+              <div
+                className="playing-card"
+                data-play-stage={playingCard.stage}
+                style={{
+                  '--fan-x': `${playingCard.entry.fan.x}px`,
+                  '--fan-y': `${playingCard.entry.fan.y}px`,
+                  '--fan-r': `${playingCard.entry.fan.r}deg`,
+                  '--play-cx': `${playingCard.centerDx}px`,
+                  '--play-cy': `${playingCard.centerDy}px`,
+                  '--play-dx': `${playingCard.entry.destDx}px`,
+                  '--play-dy': `${playingCard.entry.destDy}px`,
+                } as CSSProperties}
+              >
+                <Card
+                  name={playingCard.entry.demo.name}
+                  cost={playingCard.entry.demo.cost}
+                  costOrig={playingCard.entry.demo.costOrig}
+                  type={playingCard.entry.demo.type}
+                  rarity={playingCard.entry.demo.rarity}
+                  art={playingCard.entry.demo.art}
+                  width={112}
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -1392,6 +1626,26 @@ export function BattleScreen({
           aria-live="polite"
         >
           <span className="battle-screen__phase-banner-text">{phaseBanner}</span>
+        </div>
+      )}
+      {/* Why: 山札補充 (discard → draw) の弧アーチ演出。fixed overlay で
+          捨札中心 → 山札中心へ 60ms stagger で順次飛ばす。各 sprite は
+          400ms で中間 +Y -80px の弧を描く。 */}
+      {reshuffleEntries.length > 0 && (
+        <div className="reshuffle-overlay">
+          {reshuffleEntries.map((e) => (
+            <div
+              key={e.id}
+              className="reshuffle-sprite"
+              style={{
+                '--rs-from-x': `${e.fromX}px`,
+                '--rs-from-y': `${e.fromY}px`,
+                '--rs-to-x': `${e.toX}px`,
+                '--rs-to-y': `${e.toY}px`,
+                '--rs-delay': `${e.delay}ms`,
+              } as CSSProperties}
+            />
+          ))}
         </div>
       )}
     </div>

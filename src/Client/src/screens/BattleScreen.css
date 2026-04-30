@@ -1080,6 +1080,8 @@ button.pile:hover { filter: brightness(1.2); }
   }
 }
 
+/* Why: 終点はインライン style の --leave-dx / --leave-dy で指定 (B 要件)。
+   旧 hardcode (+320px / +10px) は値が無いときの fallback として残す。 */
 @keyframes card-leave {
   0% {
     opacity: 1;
@@ -1089,12 +1091,104 @@ button.pile:hover { filter: brightness(1.2); }
   }
   100% {
     opacity: 0;
-    /* 捨札方向に飛ばす。下方向が強すぎるとの指摘で水平寄りに調整
-       (旧 x +220 / y +60 → 新 x +320 / y +10、ユーザ要望)。 */
     transform:
-      translate(calc(var(--fan-x, 0px) + 320px), calc(var(--fan-y, 0px) + 10px))
+      translate(
+        calc(var(--fan-x, 0px) + var(--leave-dx, 320px)),
+        calc(var(--fan-y, 0px) + var(--leave-dy, 10px))
+      )
       rotate(calc(var(--fan-r, 0deg) + 18deg))
-      scale(0.55);
+      scale(0.4);
+  }
+}
+
+/* ================= Playing card overlay (3 段アニメ) =================
+   Why: クリック後 200ms で画面中央 + 1.6× にズーム → server / playSteps を
+   ホールド → 280ms で行先パイル中心 + 0.4× フェードアウト。
+   stage は data-play-stage で切替、3 段とも transition を keyframe ではなく
+   transform に対して適用 (ホールド中は値固定で停止)。
+   .hand と同じ基準点 (.hand-wrap 内 left:360px bottom:0) に配置するため
+   left:360px bottom:0 を再現する (ハードコード値同期)。 */
+.hand-wrap .playing-card {
+  position: absolute;
+  left: 306px; /* hand-base 360 - 54 (card half) */
+  bottom: 0;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+  z-index: 200;
+  transform:
+    translate(var(--fan-x, 0), var(--fan-y, 0))
+    rotate(var(--fan-r, 0deg));
+  will-change: transform, opacity;
+}
+.hand-wrap .playing-card[data-play-stage="centering"] {
+  transition: transform 200ms ease-out;
+  transform:
+    translate(
+      calc(var(--fan-x, 0px) + var(--play-cx, 0px)),
+      calc(var(--fan-y, 0px) + var(--play-cy, 0px))
+    )
+    scale(1.6);
+}
+.hand-wrap .playing-card[data-play-stage="holding"] {
+  transform:
+    translate(
+      calc(var(--fan-x, 0px) + var(--play-cx, 0px)),
+      calc(var(--fan-y, 0px) + var(--play-cy, 0px))
+    )
+    scale(1.6);
+}
+.hand-wrap .playing-card[data-play-stage="leaving"] {
+  transition: transform 280ms ease-in, opacity 280ms ease-in;
+  transform:
+    translate(
+      calc(var(--fan-x, 0px) + var(--play-dx, 0px)),
+      calc(var(--fan-y, 0px) + var(--play-dy, 0px))
+    )
+    scale(0.4);
+  opacity: 0;
+}
+
+/* ================= Reshuffle (discard → draw) アーチ =================
+   Why: 中心起点で位置を表すため margin-left/-top で半サイズだけずらし、
+   transform: translate(x, y) で sprite の中心を希望座標に合わせる。
+   400ms 中間で +Y -80px の弧を描いてフェードアウト。 */
+.reshuffle-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+}
+.reshuffle-sprite {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin-left: -15px;
+  margin-top: -21px;
+  width: 30px;
+  height: 42px;
+  background: linear-gradient(180deg, #c2935a 0%, #6b4828 100%);
+  border: 2px solid #2a1808;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  animation: reshuffle-arc 400ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation-delay: var(--rs-delay, 0ms);
+  opacity: 0;
+}
+@keyframes reshuffle-arc {
+  0% {
+    opacity: 1;
+    transform: translate(var(--rs-from-x), var(--rs-from-y));
+  }
+  50% {
+    opacity: 1;
+    transform: translate(
+      calc((var(--rs-from-x) + var(--rs-to-x)) / 2),
+      calc((var(--rs-from-y) + var(--rs-to-y)) / 2 - 80px)
+    );
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--rs-to-x), var(--rs-to-y));
   }
 }
 
