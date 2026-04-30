@@ -497,7 +497,7 @@ button.pile:hover { filter: brightness(1.2); }
   transform: translateX(-50%);
   display: flex; align-items: center; gap: 6px;
   font-family: var(--font-label);
-  font-size: 18px;
+  font-size: 22px;
   letter-spacing: 1.5px;
   color: var(--fg);
   white-space: nowrap;
@@ -511,10 +511,10 @@ button.pile:hover { filter: brightness(1.2); }
      1px  1px 0 #000;
 }
 
-.intent__icon { font-size: 22px; }
+.intent__icon { font-size: 28px; }
 .intent__icon--img {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
   vertical-align: middle;
   image-rendering: pixelated;
@@ -534,7 +534,7 @@ button.pile:hover { filter: brightness(1.2); }
 }
 .intent__num {
   font-family: var(--font-body);
-  font-size: 20px;
+  font-size: 26px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -547,7 +547,7 @@ button.pile:hover { filter: brightness(1.2); }
 .intent__nums {
   display: inline-flex; align-items: baseline;
   font-family: var(--font-body);
-  font-size: 20px;
+  font-size: 26px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -736,7 +736,7 @@ button.pile:hover { filter: brightness(1.2); }
 /* Why: ブロック値 1 以上のとき HP 数字を青に (ユーザ要望、ブロック付与状態の可視化)。 */
 .status-hp[data-has-block="true"] .status-hp__num {
   color: #4fa8ff;
-  text-shadow: 0 0 3px #000, 0 0 6px rgba(79, 168, 255, 0.4);
+  text-shadow: 0 0 3px #000, var(--text-shadow-pixel), 0 0 6px rgba(79, 168, 255, 0.4);
 }
 
 /* ================= Block (HP バー右端) =================
@@ -744,10 +744,12 @@ button.pile:hover { filter: brightness(1.2); }
    アイコン中央に数字を大きく重ねる (バフ/デバフは右下、ブロックは中央)。 */
 .status-block {
   position: absolute;
-  /* HP バーの中心 (slot top:198 + 10 = 208) を基準に icon を縦中央寄せ。
-     横は slot 右端 (100px) を icon 中央に来るよう left: 86 (= 100 - 14)。 */
+  /* Why: HP バー (left: 0, width: 100) の右端にアイコン右端を揃える。
+     アイコン幅 32 → left: 68 で右端が 100 で揃う。
+     旧 left: 86 はアイコン中央が 100 だったため、右半分が HP バーから
+     はみ出して隣の敵 HP に干渉していた。 */
   top: 192px;
-  left: 86px;
+  left: 68px;
   width: 32px;
   height: 32px;
   z-index: 3;
@@ -785,9 +787,12 @@ button.pile:hover { filter: brightness(1.2); }
 }
 
 .status-buffs {
+  /* Why: HP バー (left: 0, width: 100) と同じ左端に揃え、左から並べる
+     (ユーザ要望)。slot 内に収まるよう right: 0 維持で flex-wrap で
+     はみ出さない。 */
   position: absolute; top: 240px; left: 0; right: 0;
-  display: flex; gap: 3px; flex-wrap: wrap; justify-content: center;
-  padding: 0 2px;
+  display: flex; gap: 3px; flex-wrap: wrap; justify-content: flex-start;
+  padding: 0;
   box-sizing: border-box;
   /* Why: バフ無い時も 1 行スペース確保 (= 1 buff icon 高さ)。 */
   min-height: 30px;
@@ -1113,28 +1118,30 @@ button.pile:hover { filter: brightness(1.2); }
   left: 306px; /* hand-base 360 - 54 (card half) */
   bottom: 0;
   pointer-events: none;
-  transform-origin: 50% 50%;
+  /* Why: hand card と同じ pivot (扇形の根元、カード下方 90% offset) で
+     回転させないと、fan-r != 0 のカードが hand card と異なる screen 位置
+     で描画され、play-cx の delta が合わなくなって中央じゃない位置で
+     拡大表示されてしまう。 */
+  transform-origin: 50% 140%;
   z-index: 200;
+  /* idle (= 初期状態) は hand card と同じ transform。明示的に scale(1) を
+     入れることで centering の scale(1.6) との function list を揃え、
+     transform interpolation を滑らかにする。 */
   transform:
     translate(var(--fan-x, 0), var(--fan-y, 0))
-    rotate(var(--fan-r, 0deg));
+    rotate(var(--fan-r, 0deg))
+    scale(1);
+  transition: transform 200ms ease-out, opacity 200ms ease-out;
   will-change: transform, opacity;
 }
-.hand-wrap .playing-card[data-play-stage="centering"] {
-  transition: transform 200ms ease-out;
-  transform:
-    translate(
-      calc(var(--fan-x, 0px) + var(--play-cx, 0px)),
-      calc(var(--fan-y, 0px) + var(--play-cy, 0px))
-    )
-    scale(1.6);
-}
+.hand-wrap .playing-card[data-play-stage="centering"],
 .hand-wrap .playing-card[data-play-stage="holding"] {
   transform:
     translate(
       calc(var(--fan-x, 0px) + var(--play-cx, 0px)),
       calc(var(--fan-y, 0px) + var(--play-cy, 0px))
     )
+    rotate(0deg)
     scale(1.6);
 }
 .hand-wrap .playing-card[data-play-stage="leaving"] {
@@ -1144,6 +1151,7 @@ button.pile:hover { filter: brightness(1.2); }
       calc(var(--fan-x, 0px) + var(--play-dx, 0px)),
       calc(var(--fan-y, 0px) + var(--play-dy, 0px))
     )
+    rotate(0deg)
     scale(0.4);
   opacity: 0;
 }
@@ -1160,17 +1168,25 @@ button.pile:hover { filter: brightness(1.2); }
 }
 .reshuffle-sprite {
   position: absolute;
+  /* Why: 親 .reshuffle-overlay は inset:0 で viewport 全域。子は left:0; top:0
+     基準で translate を当てて、画面座標 (rs-from-x/y, rs-to-x/y) に位置決めする。
+     margin で sprite 中心を座標に合わせる (32×44 の半分: -16, -22)。 */
   top: 0;
   left: 0;
-  margin-left: -15px;
-  margin-top: -21px;
-  width: 30px;
-  height: 42px;
+  margin-left: -16px;
+  margin-top: -22px;
+  width: 32px;
+  height: 44px;
   background: linear-gradient(180deg, #c2935a 0%, #6b4828 100%);
   border: 2px solid #2a1808;
   border-radius: 4px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-  animation: reshuffle-arc 400ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55);
+  animation-name: reshuffle-arc;
+  animation-duration: 400ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  /* both で 0% スタイルを delay 中も適用 (delay 中に 100% の opacity:0 を
+     先取りしない)。 */
+  animation-fill-mode: both;
   animation-delay: var(--rs-delay, 0ms);
   opacity: 0;
 }

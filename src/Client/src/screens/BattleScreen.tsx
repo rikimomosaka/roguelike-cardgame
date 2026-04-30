@@ -370,13 +370,17 @@ function IntentChipRow({ intents }: { intents: IntentDemo[] }) {
 type SlotProps = {
   char: CharacterDemo
   isTargeted?: boolean
+  /** Why: 同サイドの occupied slot が 1 だけ (= 選択肢が無い) のとき、
+   *  ターゲティング三角形 + sprite glow を描かない。内部の isTargeted
+   *  state は維持して、視覚だけ抑制する (ユーザ要望)。 */
+  showTargetVisual?: boolean
   /** Why: 攻撃中 / 被弾中の演出クラス付与用 (死亡演出は廃止)。 */
   attackingDir?: 'toward-enemy' | 'toward-ally'
   isHit?: boolean
   onClick?: () => void
 }
 
-function Slot({ char, isTargeted, attackingDir, isHit, onClick }: SlotProps) {
+function Slot({ char, isTargeted, showTargetVisual, attackingDir, isHit, onClick }: SlotProps) {
   // Why: 影の横幅は描画後の sprite 横幅と同じにしたい。silhouette は決定論的
   //  (tier-height × 0.55) で同期計算できる。画像は naturalWidth/Height が
   //  load 後にしか取れないので onLoad で aspect を State に保持し、それ以降
@@ -412,7 +416,7 @@ function Slot({ char, isTargeted, attackingDir, isHit, onClick }: SlotProps) {
   const hpFillStyle: CSSProperties = { width: `${pct}%` }
   const cls = [
     'battle__slot',
-    isTargeted ? 'is-targeted' : '',
+    isTargeted && (showTargetVisual ?? true) ? 'is-targeted' : '',
     attackingDir === 'toward-enemy' ? 'is-attacking-enemy' : '',
     attackingDir === 'toward-ally' ? 'is-attacking-ally' : '',
     isHit ? 'is-hit' : '',
@@ -797,7 +801,7 @@ export function BattleScreen({
   //  順に切り替える。leavingHand 検出側からは playingId で除外する。
   type PlayingCardState = {
     entry: LeavingHandEntry
-    stage: 'centering' | 'holding' | 'leaving'
+    stage: 'idle' | 'centering' | 'holding' | 'leaving'
     centerDx: number
     centerDy: number
   }
@@ -1270,8 +1274,19 @@ export function BattleScreen({
       destination: dest,
     }
 
+    // Stage 0: idle (hand card と同じ位置 / fan-r 回転で mount)。
+    // Why: いきなり data-play-stage="centering" で mount すると、ブラウザは
+    // 初期スタイルとして centering のスタイルを適用するだけで transition が
+    // 発火しない (要素が「最初から中央 1.6 倍だった」扱いになる)。 idle で
+    // mount → 2 RAF 待って初期フレームを commit させてから centering に
+    // flip することで、transform interpolation が確実に走る。
+    setPlayingCard({ entry, stage: 'idle', centerDx, centerDy })
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+    })
+
     // Stage 1: centering (200ms)
-    setPlayingCard({ entry, stage: 'centering', centerDx, centerDy })
+    setPlayingCard(p => (p ? { ...p, stage: 'centering' } : null))
     await sleep(200)
     // Stage 2: holding (server 呼び出し + playSteps の演出をホールド)
     setPlayingCard(p => (p ? { ...p, stage: 'holding' } : null))
@@ -1371,6 +1386,11 @@ export function BattleScreen({
   const playerSlots = padSlots(allyDemos, 4)
   const enemySlots = padSlots(enemyDemos, 4)
 
+  // Why: 片側に occupied slot が 1 つしか無い場合、選択肢が無いので
+  // ターゲティング三角形 + sprite glow は描かない (ユーザ要望)。
+  const playerOccupiedCount = playerSlots.filter(c => c.occupied).length
+  const enemyOccupiedCount = enemySlots.filter(c => c.occupied).length
+
   const handDemos = state.hand.map((c) =>
     toHandCardDemo(c, cardCatalog, state.energy, state.lastPlayedOrigCost),
   )
@@ -1437,6 +1457,7 @@ export function BattleScreen({
                     key={`p-${i}`}
                     char={c}
                     isTargeted={isTargeted}
+                    showTargetVisual={playerOccupiedCount > 1}
                     attackingDir={attackingDir}
                     isHit={isHit}
                     onClick={onClick}
@@ -1465,6 +1486,7 @@ export function BattleScreen({
                     key={`e-${i}`}
                     char={c}
                     isTargeted={isTargeted}
+                    showTargetVisual={enemyOccupiedCount > 1}
                     attackingDir={attackingDir}
                     isHit={isHit}
                     onClick={onClick}
