@@ -951,6 +951,10 @@ export function BattleScreen({
     const toY = (toScreenY - appTop) / appScaleY
     const base = Date.now()
     const entries: ReshuffleEntry[] = []
+    // Why: stagger 60→110ms / sprite 700ms (CSS と一致)。1 枚 1 枚が
+    //  視認できる速度に減速 (ユーザ要望)。
+    const stagger = 110
+    const duration = 700
     for (let i = 0; i < count; i++) {
       entries.push({
         id: base + i,
@@ -958,13 +962,13 @@ export function BattleScreen({
         fromY,
         toX,
         toY,
-        delay: i * 60,
+        delay: i * stagger,
       })
     }
     setReshuffleEntries(entries)
     window.setTimeout(() => {
       setReshuffleEntries([])
-    }, count * 60 + 450)
+    }, count * stagger + duration + 50)
   }
 
   // 戦闘フェーズ banner: text を 2 秒間オーバーレイ表示してから clear。
