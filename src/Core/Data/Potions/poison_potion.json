@@ -2,5 +2,5 @@
   "id": "poison_potion",
   "name": "ポイズンポーション",
   "rarity": 2,
-  "effects": [{ "action": "debuff", "scope": "self", "name": "poison", "amount": 6, "battleOnly": true }]
+  "effects": [{ "action": "debuff", "scope": "single", "side": "enemy", "name": "poison", "amount": 6, "battleOnly": true }]
 }

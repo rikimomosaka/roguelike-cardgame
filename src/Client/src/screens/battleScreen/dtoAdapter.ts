@@ -205,15 +205,16 @@ export function toIntentDemos(intent: IntentDto): IntentDemo[] {
   // 「通常攻撃」は「単体攻撃」と表記を変更 (ユーザ要望)。
   if (hasAttack) {
     const parts: string[] = []
+    const kinds: string[] = []
     const damages: string[] = []
     if (intent.attackSingle && intent.attackSingle > 0) {
-      parts.push('単体攻撃'); damages.push(String(intent.attackSingle))
+      parts.push('単体攻撃'); kinds.push('単体'); damages.push(String(intent.attackSingle))
     }
     if (intent.attackRandom && intent.attackRandom > 0) {
-      parts.push('ランダム攻撃'); damages.push(String(intent.attackRandom))
+      parts.push('ランダム攻撃'); kinds.push('ランダム'); damages.push(String(intent.attackRandom))
     }
     if (intent.attackAll && intent.attackAll > 0) {
-      parts.push('全体攻撃'); damages.push(String(intent.attackAll))
+      parts.push('全体攻撃'); kinds.push('全体'); damages.push(String(intent.attackAll))
     }
     // 攻撃 chip の icon は最も影響が大きい scope を優先:
     // attackAll > attackSingle > attackRandom
@@ -225,11 +226,20 @@ export function toIntentDemos(intent: IntentDto): IntentDemo[] {
     } else if (intent.attackRandom && intent.attackRandom > 0) {
       attackIcon = '/icons/ui/attack_random.png'
     }
+    // Why: 攻撃説明は連続攻撃回数を含めた "n連続合計Xダメージで○○攻撃" 形式。
+    //  hits >= 2 のときのみ "n連続合計" 接頭。1 hit は素直に "Xダメージで○○攻撃"。
+    //  複数 scope (single/random/all) が混在する場合は "/" 区切りで列挙。
+    const hits = intent.attackHits ?? 0
+    const dmgStr = damages.join('/')
+    const kindStr = kinds.join('/')
+    const desc = hits >= 2
+      ? `ターン終了時に${hits}連続合計${dmgStr}ダメージで${kindStr}攻撃。`
+      : `ターン終了時に${dmgStr}ダメージで${kindStr}攻撃。`
     list.push({
       kind: 'attack',
       icon: attackIcon,
       name: parts.join('/'),
-      desc: `ターン終了時に${damages.join('/')}ダメージの攻撃。`,
+      desc,
       attack: {
         single: intent.attackSingle ?? undefined,
         random: intent.attackRandom ?? undefined,
@@ -357,6 +367,9 @@ export function toHandCardDemo(
     reducedCost !== null && reducedCost !== undefined && reducedCost <= energy
   return {
     name: def?.displayName ?? def?.name ?? card.cardDefinitionId,
+    // Why: PileModal と同じく Card 側に upgraded を渡して "+" を専用 span で
+    //  描画する (CSS class card__plus による色分け維持)。ユーザ要望: 手札にも +。
+    upgraded: card.isUpgraded,
     cost: reducedCost ?? 'X',
     // Why: 軽減発生時のみ表示用に元コストを露出。Card が "{orig}→{cost}" を描画する。
     costOrig: willCombo && baseCost !== null && baseCost !== undefined ? baseCost : null,

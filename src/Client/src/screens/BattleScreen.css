@@ -1211,6 +1211,44 @@ button.pile:hover { filter: brightness(1.2); }
   }
 }
 
+/* Why: 1 枚ドロー演出。山札アイコン中心 (--draw-from-x/y) から手札の予定
+   fan 位置 (--draw-to-x/y) へ 260ms で飛ぶ。終端で fan rot を反映。
+   reshuffle と同じく fixed overlay 内 absolute 配置 + 中心起点 margin オフセット。 */
+.draw-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+}
+.draw-sprite {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin-left: -56px;
+  margin-top: -78px;
+  animation: draw-fly 260ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  opacity: 0;
+}
+@keyframes draw-fly {
+  0% {
+    opacity: 0;
+    transform:
+      translate(var(--draw-from-x), var(--draw-from-y))
+      rotate(0deg)
+      scale(0.55);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform:
+      translate(var(--draw-to-x), var(--draw-to-y))
+      rotate(var(--draw-rot, 0deg))
+      scale(1);
+  }
+}
+
 .hand > .card.is-playable {
   border-color: var(--gold-soft);
   box-shadow:

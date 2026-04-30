@@ -136,6 +136,8 @@ export type HandCardDemo = {
   art?: ReactNode
   playable?: boolean
   desc: string
+  /** 強化済みフラグ。Card 側で "+" を描画。 */
+  upgraded?: boolean
 }
 
 // -------------------- Props --------------------
@@ -586,6 +588,7 @@ function HandCard({ card, fan, onClick, leaving, leaveDx, leaveDy, onCardElement
         type={card.type}
         rarity={card.rarity}
         art={card.art}
+        upgraded={card.upgraded}
         /* Why: 実績画面 (TopBar デッキ modal) の Card 幅 112 と統一する。
            デフォルト 104 だと「ストライク」「ウィスプ召喚」が見切れていた。 */
         width={112}
@@ -838,6 +841,20 @@ export function BattleScreen({
   }
   const [reshuffleEntries, setReshuffleEntries] = useState<ReshuffleEntry[]>([])
 
+  // Why: 1 枚ドローの飛行演出用。山札アイコン中心 → 手札の予定 fan 位置へ
+  //  カード sprite を飛ばす。playSteps の stagger ループで 1 枚ずつトリガし、
+  //  flight 終了タイミングで実 hand state にコミット (Card は通常通り mount)。
+  type DrawAnimEntry = {
+    id: number
+    card: BattleCardInstanceDto
+    fromX: number
+    fromY: number
+    toX: number
+    toY: number
+    rot: number
+  }
+  const [drawAnimEntries, setDrawAnimEntries] = useState<DrawAnimEntry[]>([])
+
   const { catalog: cardCatalog } = useCardCatalog()
   const { catalog: enemyCatalog } = useEnemyCatalog()
   const { catalog: unitCatalog } = useUnitCatalog()
@@ -958,6 +975,39 @@ export function BattleScreen({
     window.setTimeout(() => {
       setReshuffleEntries([])
     }, cards.length * stagger + duration + 50)
+  }
+
+  // Why: 1 枚を山札アイコン → 手札の予定 fan 位置へ飛ばす。返り値は flight 時間 (ms)。
+  //  - playSteps の stagger ループで「triggerDrawAnim → sleep(flight) → setState (hand に追加)」を 1 サイクル。
+  //  - 目標は `.hand-wrap` 中心 + fanLayout(newHandSize)[targetIndex]。
+  //  - reshuffle と同じく .app-stage の transform を考慮した local 座標で渡す。
+  const DRAW_FLIGHT_MS = 260
+  function triggerDrawAnim(card: BattleCardInstanceDto, targetIndex: number, newHandSize: number) {
+    const drawEl = drawPileRef.current
+    const handEl = handWrapRef.current
+    if (!drawEl || !handEl) return
+    const dr = drawEl.getBoundingClientRect()
+    const hr = handEl.getBoundingClientRect()
+    const appStageEl = document.querySelector('.app-stage') as HTMLElement | null
+    const appRect = appStageEl?.getBoundingClientRect()
+    const appScaleX = appRect ? appRect.width / 1280 : 1
+    const appScaleY = appRect ? appRect.height / 720 : 1
+    const appLeft = appRect ? appRect.left : 0
+    const appTop = appRect ? appRect.top : 0
+    const fromX = (dr.left + dr.width / 2 - appLeft) / appScaleX
+    const fromY = (dr.top + dr.height / 2 - appTop) / appScaleY
+    const handCx = (hr.left + hr.width / 2 - appLeft) / appScaleX
+    const handCy = (hr.top + hr.height / 2 - appTop) / appScaleY
+    const targetFan = fanLayout(newHandSize)[targetIndex] ?? { x: 0, y: 0, r: 0 }
+    const toX = handCx + targetFan.x
+    const toY = handCy + targetFan.y
+    const id = Date.now() + Math.random()
+    setDrawAnimEntries(prev => [...prev, {
+      id, card, fromX, fromY, toX, toY, rot: targetFan.r,
+    }])
+    window.setTimeout(() => {
+      setDrawAnimEntries(prev => prev.filter(e => e.id !== id))
+    }, DRAW_FLIGHT_MS + 30)
   }
 
   // 戦闘フェーズ banner: text を 2 秒間オーバーレイ表示してから clear。
@@ -1164,13 +1214,14 @@ export function BattleScreen({
       }
 
       // Why: 山札補充 + 複数枚ドローを 1 枚ずつ進行させる。
-      //  - reshuffle あり: pre-reshuffle 部分ドロー (1枚ずつ) → reshuffle anim →
-      //    post-reshuffle 残りドロー (1枚ずつ) の 3 段。
-      //  - reshuffle なしで複数枚ドロー: ただ 1 枚ずつ stagger。
+      //  - reshuffle あり: pre-reshuffle 部分ドロー (1枚ずつ flight) → reshuffle anim →
+      //    post-reshuffle 残りドロー (1枚ずつ flight) の 3 段。
+      //  - reshuffle なしで複数枚ドロー: 1 枚ずつ flight。
+      //  各ドローは triggerDrawAnim で山札アイコン → 予定 fan 位置へカード sprite を
+      //  飛ばし、flight 完了で setState して実 hand に追加する。
       //  staging 中は resp.state を baseline にするので HP/energy/status は
       //  最終値で表示される。damageOverlay 等の累積を二重適用しないよう、
       //  staging 開始前にオーバレイをクリアする。
-      const DRAW_STAGGER_MS = 80
       if (state) {
         const oldHandIds = new Set(state.hand.map(c => c.instanceId))
         const newlyDrawn = resp.state.hand.filter(c => !oldHandIds.has(c.instanceId))
@@ -1183,7 +1234,7 @@ export function BattleScreen({
           && resp.state.discardPile.length < state.discardPile.length
           && postReshuffleDrawn.length + resp.state.drawPile.length > 0
 
-        const shouldStage = reshuffleHappened || newlyDrawn.length > 1
+        const shouldStage = reshuffleHappened || newlyDrawn.length >= 1
         if (shouldStage) {
           // Why: HP overlay 等は events ループで累積済み。staging 用 setState は
           //  resp.state ベースなので、ここでクリアして二重適用を避ける。
@@ -1196,19 +1247,38 @@ export function BattleScreen({
           const newlyDrawnIds = new Set(newlyDrawn.map(c => c.instanceId))
           const survivingHand = resp.state.hand.filter(c => !newlyDrawnIds.has(c.instanceId))
 
+          // Why: 1 枚ドローを「飛ばす + 着地で hand に commit」のヘルパに集約。
+          //  draw flight が終わったタイミングで hand state を更新するため、
+          //  card-enter は flight 後に走る (sprite が手札位置に到達した直後)。
+          const drawOne = async (
+            card: BattleCardInstanceDto,
+            handAfter: BattleCardInstanceDto[],
+            drawPileAfter: BattleCardInstanceDto[],
+            discardPileAfter: BattleCardInstanceDto[] | null,
+          ) => {
+            const targetIndex = handAfter.length - 1
+            triggerDrawAnim(card, targetIndex, handAfter.length)
+            await sleep(DRAW_FLIGHT_MS)
+            setState({
+              ...resp.state,
+              hand: handAfter,
+              drawPile: drawPileAfter,
+              ...(discardPileAfter !== null ? { discardPile: discardPileAfter } : {}),
+            })
+          }
+
           if (reshuffleHappened) {
             const reshuffleCards = [...resp.state.drawPile, ...postReshuffleDrawn]
 
-            // Phase 1: pre-reshuffle 分を 1 枚ずつ手札に追加。drawPile は減って
-            //  最終 0 になる。discardPile は reshuffleCards (リシャッフル対象一式)。
+            // Phase 1: pre-reshuffle 分を 1 枚ずつ flight + commit。
+            //  discardPile は reshuffleCards (リシャッフル対象一式) 固定で表示。
             for (let i = 1; i <= preReshuffleDrawn.length; i++) {
-              setState({
-                ...resp.state,
-                hand: [...survivingHand, ...preReshuffleDrawn.slice(0, i)],
-                drawPile: state.drawPile.slice(i),
-                discardPile: reshuffleCards,
-              })
-              await sleep(DRAW_STAGGER_MS)
+              await drawOne(
+                preReshuffleDrawn[i - 1],
+                [...survivingHand, ...preReshuffleDrawn.slice(0, i)],
+                state.drawPile.slice(i),
+                reshuffleCards,
+              )
             }
             if (preReshuffleDrawn.length === 0) {
               setState({
@@ -1225,25 +1295,24 @@ export function BattleScreen({
             const reshuffleMs = reshuffleCards.length * 110 + 700
             await sleep(reshuffleMs)
 
-            // Phase 3: post-reshuffle 分を 1 枚ずつ手札に追加。drawPile は
-            //  reshuffleCards から徐々に減って最終 resp.state.drawPile になる。
+            // Phase 3: post-reshuffle 分を 1 枚ずつ flight + commit。
             for (let i = 1; i <= postReshuffleDrawn.length; i++) {
-              setState({
-                ...resp.state,
-                hand: [...survivingHand, ...preReshuffleDrawn, ...postReshuffleDrawn.slice(0, i)],
-                drawPile: reshuffleCards.slice(0, reshuffleCards.length - i),
-              })
-              await sleep(DRAW_STAGGER_MS)
+              await drawOne(
+                postReshuffleDrawn[i - 1],
+                [...survivingHand, ...preReshuffleDrawn, ...postReshuffleDrawn.slice(0, i)],
+                reshuffleCards.slice(0, reshuffleCards.length - i),
+                null,
+              )
             }
           } else {
-            // reshuffle なし: 単純に newlyDrawn を 1 枚ずつ追加。
+            // reshuffle なし: 1 枚ずつ flight + commit。
             for (let i = 1; i <= newlyDrawn.length; i++) {
-              setState({
-                ...resp.state,
-                hand: [...survivingHand, ...newlyDrawn.slice(0, i)],
-                drawPile: state.drawPile.slice(i),
-              })
-              await sleep(DRAW_STAGGER_MS)
+              await drawOne(
+                newlyDrawn[i - 1],
+                [...survivingHand, ...newlyDrawn.slice(0, i)],
+                state.drawPile.slice(i),
+                null,
+              )
             }
           }
         }
@@ -1786,6 +1855,7 @@ export function BattleScreen({
             type={playingCard.entry.demo.type}
             rarity={playingCard.entry.demo.rarity}
             art={playingCard.entry.demo.art}
+            upgraded={playingCard.entry.demo.upgraded}
             width={112}
           />
         </div>
@@ -1823,6 +1893,45 @@ export function BattleScreen({
                   type={demo.type}
                   rarity={demo.rarity}
                   art={demo.art}
+                  upgraded={demo.upgraded}
+                  width={112}
+                />
+              </div>
+            )
+          })}
+        </div>
+      )}
+      {/* Why: 1 枚ドロー演出。山札アイコン中心 → 手札の予定 fan 位置へ
+          DRAW_FLIGHT_MS で飛ぶ。reshuffle と同じ fixed overlay 構造。 */}
+      {drawAnimEntries.length > 0 && (
+        <div className="draw-overlay">
+          {drawAnimEntries.map((e) => {
+            const demo = toHandCardDemo(
+              e.card,
+              cardCatalog,
+              state?.energy ?? 0,
+              state?.lastPlayedOrigCost ?? null,
+            )
+            return (
+              <div
+                key={e.id}
+                className="draw-sprite"
+                style={{
+                  '--draw-from-x': `${e.fromX}px`,
+                  '--draw-from-y': `${e.fromY}px`,
+                  '--draw-to-x': `${e.toX}px`,
+                  '--draw-to-y': `${e.toY}px`,
+                  '--draw-rot': `${e.rot}deg`,
+                } as CSSProperties}
+              >
+                <Card
+                  name={demo.name}
+                  cost={demo.cost}
+                  costOrig={demo.costOrig}
+                  type={demo.type}
+                  rarity={demo.rarity}
+                  art={demo.art}
+                  upgraded={demo.upgraded}
                   width={112}
                 />
               </div>
