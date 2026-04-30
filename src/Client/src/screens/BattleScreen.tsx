@@ -932,10 +932,23 @@ export function BattleScreen({
     if (!drawEl || !discEl) return
     const dr = drawEl.getBoundingClientRect()
     const er = discEl.getBoundingClientRect()
-    const fromX = er.left + er.width / 2
-    const fromY = er.top + er.height / 2
-    const toX = dr.left + dr.width / 2
-    const toY = dr.top + dr.height / 2
+    // Why: handlePlayCard と同じく .app-stage scale を考慮した local 座標へ変換。
+    //  reshuffle sprite は position: fixed で .app-stage 内 containing block に
+    //  寄り添うため、screen 座標をそのまま渡すと sprite が画面外に飛んでいた。
+    const appStageEl = document.querySelector('.app-stage') as HTMLElement | null
+    const appRect = appStageEl?.getBoundingClientRect()
+    const appScaleX = appRect ? appRect.width / 1280 : 1
+    const appScaleY = appRect ? appRect.height / 720 : 1
+    const appLeft = appRect ? appRect.left : 0
+    const appTop = appRect ? appRect.top : 0
+    const fromScreenX = er.left + er.width / 2
+    const fromScreenY = er.top + er.height / 2
+    const toScreenX = dr.left + dr.width / 2
+    const toScreenY = dr.top + dr.height / 2
+    const fromX = (fromScreenX - appLeft) / appScaleX
+    const fromY = (fromScreenY - appTop) / appScaleY
+    const toX = (toScreenX - appLeft) / appScaleX
+    const toY = (toScreenY - appTop) / appScaleY
     const base = Date.now()
     const entries: ReshuffleEntry[] = []
     for (let i = 0; i < count; i++) {
@@ -1256,12 +1269,33 @@ export function BattleScreen({
       if (resp) await playSteps(resp)
       return
     }
-    const cardRect = cardEl.getBoundingClientRect()
-    const startX = cardRect.left + cardRect.width / 2
-    const startY = cardRect.top + cardRect.height / 2
+    // Why: .app-stage が transform: scale() を持つため position: fixed の
+    //  containing block は viewport ではなく .app-stage (1280×720 unscaled
+    //  ローカル空間)。getBoundingClientRect は screen 座標を返すので、
+    //  そのまま fixed 要素の top/left に当てると座標系が合わずズレる
+    //  (ユーザ報告の「右下に拡大表示」「リフレッシュ非表示」の根本原因)。
+    //  screen → .app-stage local の変換を介して 1280×720 空間で扱う。
+    const appStageEl = document.querySelector('.app-stage') as HTMLElement | null
+    const appRect = appStageEl?.getBoundingClientRect()
+    const appScaleX = appRect ? appRect.width / 1280 : 1
+    const appScaleY = appRect ? appRect.height / 720 : 1
+    const appLeft = appRect ? appRect.left : 0
+    const appTop = appRect ? appRect.top : 0
+    const screenToLocal = (sx: number, sy: number) => ({
+      x: (sx - appLeft) / appScaleX,
+      y: (sy - appTop) / appScaleY,
+    })
 
-    const centerX = window.innerWidth / 2
-    const centerY = window.innerHeight / 2
+    const cardRect = cardEl.getBoundingClientRect()
+    const startScreenX = cardRect.left + cardRect.width / 2
+    const startScreenY = cardRect.top + cardRect.height / 2
+    const startLocal = screenToLocal(startScreenX, startScreenY)
+    const startX = startLocal.x
+    const startY = startLocal.y
+
+    // .app-stage 内中央 (1280/2, 720/2)
+    const centerX = 640
+    const centerY = 360
 
     const dest = destinationFor(card)
     const destEl = dest === 'exhaust' ? exhaustPileRef.current : discardPileRef.current
@@ -1269,8 +1303,9 @@ export function BattleScreen({
     let destY = centerY
     if (destEl) {
       const r = destEl.getBoundingClientRect()
-      destX = r.left + r.width / 2
-      destY = r.top + r.height / 2
+      const destLocal = screenToLocal(r.left + r.width / 2, r.top + r.height / 2)
+      destX = destLocal.x
+      destY = destLocal.y
     }
 
     // 既存 leavingHand 経路 (turn-end discard 等) との互換のため LeavingHandEntry
