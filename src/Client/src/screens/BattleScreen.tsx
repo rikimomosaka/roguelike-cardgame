@@ -1163,46 +1163,89 @@ export function BattleScreen({
         i++
       }
 
-      // Why: 山札補充 (discard → draw) を playSteps の最終 setState の直前に
-      //  3 段表示 (pre-reshuffle 部分ドロー → reshuffle anim → post-reshuffle
-      //  残りドロー) として演出する。state は useCallback closure で前 turn の
-      //  old state なので、resp.state と差分比較できる。
-      //  pre.drawPile.length 枚は engine の DrawHelper が先に消化してから
-      //  reshuffle するため、その分は「先にドローした」と見せる。
+      // Why: 山札補充 + 複数枚ドローを 1 枚ずつ進行させる。
+      //  - reshuffle あり: pre-reshuffle 部分ドロー (1枚ずつ) → reshuffle anim →
+      //    post-reshuffle 残りドロー (1枚ずつ) の 3 段。
+      //  - reshuffle なしで複数枚ドロー: ただ 1 枚ずつ stagger。
+      //  staging 中は resp.state を baseline にするので HP/energy/status は
+      //  最終値で表示される。damageOverlay 等の累積を二重適用しないよう、
+      //  staging 開始前にオーバレイをクリアする。
+      const DRAW_STAGGER_MS = 80
       if (state) {
         const oldHandIds = new Set(state.hand.map(c => c.instanceId))
         const newlyDrawn = resp.state.hand.filter(c => !oldHandIds.has(c.instanceId))
         const preDrawIds = new Set(state.drawPile.map(c => c.instanceId))
         const postReshuffleDrawn = newlyDrawn.filter(c => !preDrawIds.has(c.instanceId))
+        const preReshuffleDrawn = newlyDrawn.filter(c => preDrawIds.has(c.instanceId))
         // reshuffle が起きた = pre.discard が消えて draw に補充された
         const reshuffleHappened =
           state.discardPile.length > 0
           && resp.state.discardPile.length < state.discardPile.length
           && postReshuffleDrawn.length + resp.state.drawPile.length > 0
-        if (reshuffleHappened) {
-          // Phase 1: リシャッフル直前の状態を見せる。
-          //   - hand = resp.state.hand から postReshuffleDrawn を除いたもの
-          //     (= リシャッフル時点で手元にあるカード = 残存 hand + preReshuffleDrawn)。
-          //     EndTurn では engine 側で古い手札を discard 済みなので残存=0 → preReshuffleDrawn のみ。
-          //     カードプレイで reshuffle が起きるレアケースでは生き残った手札も含む。
-          //   - drawPile は 0 (引き切った)。
-          //   - discardPile はリシャッフル対象カード一式 = resp.state.drawPile + postReshuffleDrawn
-          //     (old discardPile + 古い手札 + プレイ消費カード等が全部入る)。
-          const postIds = new Set(postReshuffleDrawn.map(c => c.instanceId))
-          const intermediateHand = resp.state.hand.filter(c => !postIds.has(c.instanceId))
-          const reshuffleCards = [...resp.state.drawPile, ...postReshuffleDrawn]
-          setState({
-            ...resp.state,
-            hand: intermediateHand,
-            drawPile: [],
-            discardPile: reshuffleCards,
-          })
-          await sleep(220)
-          // Phase 2: reshuffle 演出 (sprite が 1 枚ずつ弧で飛ぶ)
-          triggerReshuffleAnim(reshuffleCards)
-          const reshuffleMs = reshuffleCards.length * 110 + 700
-          await sleep(reshuffleMs)
-          // Phase 3 は既存の最終 setState(resp.state) でそのまま反映される。
+
+        const shouldStage = reshuffleHappened || newlyDrawn.length > 1
+        if (shouldStage) {
+          // Why: HP overlay 等は events ループで累積済み。staging 用 setState は
+          //  resp.state ベースなので、ここでクリアして二重適用を避ける。
+          setSlotAnim({})
+          setDamageOverlay({})
+          setBlockOverlay({})
+
+          // 既存手札 (resp.state.hand から newlyDrawn を除外) = 残存 hand。
+          // EndTurn では空、カードプレイ + draw 効果では残った手札。
+          const newlyDrawnIds = new Set(newlyDrawn.map(c => c.instanceId))
+          const survivingHand = resp.state.hand.filter(c => !newlyDrawnIds.has(c.instanceId))
+
+          if (reshuffleHappened) {
+            const reshuffleCards = [...resp.state.drawPile, ...postReshuffleDrawn]
+
+            // Phase 1: pre-reshuffle 分を 1 枚ずつ手札に追加。drawPile は減って
+            //  最終 0 になる。discardPile は reshuffleCards (リシャッフル対象一式)。
+            for (let i = 1; i <= preReshuffleDrawn.length; i++) {
+              setState({
+                ...resp.state,
+                hand: [...survivingHand, ...preReshuffleDrawn.slice(0, i)],
+                drawPile: state.drawPile.slice(i),
+                discardPile: reshuffleCards,
+              })
+              await sleep(DRAW_STAGGER_MS)
+            }
+            if (preReshuffleDrawn.length === 0) {
+              setState({
+                ...resp.state,
+                hand: survivingHand,
+                drawPile: [],
+                discardPile: reshuffleCards,
+              })
+            }
+
+            // Phase 2: reshuffle 演出 (sprite が 1 枚ずつ弧で飛ぶ)
+            await sleep(220)
+            triggerReshuffleAnim(reshuffleCards)
+            const reshuffleMs = reshuffleCards.length * 110 + 700
+            await sleep(reshuffleMs)
+
+            // Phase 3: post-reshuffle 分を 1 枚ずつ手札に追加。drawPile は
+            //  reshuffleCards から徐々に減って最終 resp.state.drawPile になる。
+            for (let i = 1; i <= postReshuffleDrawn.length; i++) {
+              setState({
+                ...resp.state,
+                hand: [...survivingHand, ...preReshuffleDrawn, ...postReshuffleDrawn.slice(0, i)],
+                drawPile: reshuffleCards.slice(0, reshuffleCards.length - i),
+              })
+              await sleep(DRAW_STAGGER_MS)
+            }
+          } else {
+            // reshuffle なし: 単純に newlyDrawn を 1 枚ずつ追加。
+            for (let i = 1; i <= newlyDrawn.length; i++) {
+              setState({
+                ...resp.state,
+                hand: [...survivingHand, ...newlyDrawn.slice(0, i)],
+                drawPile: state.drawPile.slice(i),
+              })
+              await sleep(DRAW_STAGGER_MS)
+            }
+          }
         }
       }
 
