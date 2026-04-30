@@ -450,9 +450,13 @@ button.pile:hover { filter: brightness(1.2); }
   left: 50%;
   transform: translateX(-50%);
   font-size: 24px;
-  /* Why: 三角形のフチに、選択キャラの sprite と同じ金色 drop-shadow を
-     重ねて目立たせる (ユーザ要望)。currentColor (青/赤) の edge も少し残す。 */
-  text-shadow: 0 0 4px currentColor;
+  /* Why: 白フチを 1px 4 方向で実装 (ユーザ要望)。さらに外側に金色 glow
+     (filter: drop-shadow) を重ねる。currentColor (青/赤) は文字の塗り。 */
+  text-shadow:
+    -1px -1px 0 white,
+     1px -1px 0 white,
+    -1px  1px 0 white,
+     1px  1px 0 white;
   filter:
     drop-shadow(0 0 4px rgba(241, 201, 91, 0.95))
     drop-shadow(0 0 8px rgba(241, 201, 91, 0.6));
@@ -483,24 +487,26 @@ button.pile:hover { filter: brightness(1.2); }
 }
 
 /* Intent chip */
-/* Why: intent (攻撃予定) は選択三角形 (top: -28px) のすぐ上に固定配置。
-   選択状態の有無に関わらず同じ Y、全 enemy slot で水平に揃う。tier 10 天井
-   (slot top -68px) 内に収まらないが、tier 10 で多少重なる程度は許容。 */
+/* Why: intent (攻撃予定) は選択三角形 (top: -110px) の下、頭上に固定配置。
+   選択状態の有無に関わらず同じ Y、全 enemy slot で水平に揃う。
+   ユーザ要望でボックス撤廃 (背景・枠・padding 撤去)、画像と数字のみ表示し、
+   背景に対して見やすいよう白フチを 1px 4 方向で text-shadow + drop-shadow。 */
 .intent {
   position: absolute; top: -50px; left: 50%;
   transform: translateX(-50%);
   display: flex; align-items: center; gap: 6px;
-  padding: 4px 12px;
-  background: rgba(10, 6, 4, 0.9);
-  border: 1px solid var(--border-mid);
-  border-radius: var(--radius-sm);
   font-family: var(--font-label);
   font-size: 18px;
   letter-spacing: 1.5px;
-  color: var(--fg-muted);
+  color: var(--fg);
   white-space: nowrap;
   z-index: 2;
   cursor: help;
+  text-shadow:
+    -1px -1px 0 white,
+     1px -1px 0 white,
+    -1px  1px 0 white,
+     1px  1px 0 white;
 }
 
 .intent__icon { font-size: 22px; }
@@ -510,6 +516,12 @@ button.pile:hover { filter: brightness(1.2); }
   object-fit: contain;
   vertical-align: middle;
   image-rendering: pixelated;
+  /* Why: ボックス撤廃で背景に直接乗るので、画像にも白 outline を 1px 4 方向で。 */
+  filter:
+    drop-shadow(1px 0 0 white)
+    drop-shadow(-1px 0 0 white)
+    drop-shadow(0 1px 0 white)
+    drop-shadow(0 -1px 0 white);
 }
 .status-buff__icon-img {
   width: 16px;
@@ -542,12 +554,9 @@ button.pile:hover { filter: brightness(1.2); }
   cursor: help;
 }
 
-/* Why: 複数 intent を & なしで連続表示する。隣接 segment 間に少しだけ余白。 */
+/* Why: 複数 intent を & なしで連続表示する。隣接 segment 間に少しだけ余白。
+   ボックス撤廃に伴い padding も削除。 */
 .intent--row { gap: 8px; }
-.intent--row.intent--multi {
-  /* 多数 segment 入りの枠は若干広めの padding で読みやすく */
-  padding: 4px 14px;
-}
 
 /* 後方互換: 単一 intent (.intent--{kind}) の色付け */
 .intent--attack .intent__seg--attack .intent__icon { color: #fff; }
@@ -855,102 +864,72 @@ button.pile:hover { filter: brightness(1.2); }
   box-shadow: 0 0 16px rgba(255, 213, 79, 0.5);
 }
 
-/* ================= Piles ================= */
+/* ================= Piles =================
+   Why: ユーザ要望でボックス (背景・枠・glow) と中の文字 (lbl) を撤廃。
+   アイコンを大きく表示し、その右下 (4 分割の 1 領域) に枚数の数字を重ねる。 */
 .pile {
   position: absolute;
   z-index: 4;
-  /* Why: end-turn ボタンと同じ gradient + border で統一感アップ。 */
-  background: linear-gradient(180deg, rgba(168, 85, 42, 0.35) 0%, rgba(90, 42, 20, 0.55) 100%);
-  border: 2px solid var(--fg-muted);
-  border-radius: var(--radius-md);
-  display: flex; align-items: center; justify-content: center;
+  width: 88px;
+  height: 88px;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  display: block;
   cursor: pointer;
-  transition: border-color 0.12s ease, box-shadow 0.12s ease;
-  box-shadow: 0 0 10px rgba(255, 213, 79, 0.3);
+  transition: transform 0.12s ease;
 }
 
 .pile:hover {
-  border-color: var(--border-hover);
-  box-shadow: 0 0 10px rgba(201, 152, 90, 0.3);
+  transform: scale(1.06);
 }
 
-.pile--draw, .pile--discard {
-  width: 88px; height: 88px;
-  flex-direction: column; gap: 4px;
-  padding: 8px 0;
+/* ラベル (山札/捨札/除外) は非表示 */
+.pile__lbl { display: none; }
+
+/* アイコンを大きく + 白 outline で背景に対するコントラスト確保 */
+.pile__sym--img {
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter:
+    drop-shadow(1px 0 0 white)
+    drop-shadow(-1px 0 0 white)
+    drop-shadow(0 1px 0 white)
+    drop-shadow(0 -1px 0 white);
 }
 
-.pile--draw .pile__sym,
-.pile--discard .pile__sym {
+/* 数字をアイコン右下クォドラントに重ねる */
+.pile .pile__num {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 44px;  /* 88 / 2 = アイコン右下 1/4 領域 */
+  height: 44px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
   font-family: var(--font-body);
-  font-size: 24px;
-  color: #d8d8d8;
-  line-height: 1;
-  text-shadow: 0 1px 0 #000;
-}
-
-.pile--draw .pile__lbl,
-.pile--discard .pile__lbl {
-  font-family: var(--font-body);
-  font-size: 13px;
-  letter-spacing: 2px;
-  color: #d8d8d8;
-  line-height: 1;
-}
-
-.pile--draw .pile__num,
-.pile--discard .pile__num {
-  font-family: var(--font-body);
-  font-size: 19px;
-  color: #d8d8d8;
+  font-size: 28px;
+  color: white;
   font-variant-numeric: tabular-nums;
   line-height: 1;
-  text-shadow: 0 1px 0 #000;
-}
-
-.pile--exhaust {
-  width: 88px; height: 52px;
-  flex-direction: row; gap: 6px;
-}
-
-.pile--exhaust .pile__sym {
-  font-family: var(--font-body);
-  font-size: 18px;
-  color: #d8d8d8;
-  text-shadow: 0 1px 0 #000;
-}
-
-.pile--exhaust .pile__lbl {
-  font-family: var(--font-body);
-  font-size: 12px;
-  letter-spacing: 2px;
-  color: #d8d8d8;
-}
-
-.pile--exhaust .pile__num {
-  font-family: var(--font-body);
-  font-size: 16px;
-  color: #d8d8d8;
-  font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 0 #000;
+  /* 黒フチで背景・アイコンに対するコントラスト確保 */
+  text-shadow:
+    -2px -2px 0 #000,
+     2px -2px 0 #000,
+    -2px  2px 0 #000,
+     2px  2px 0 #000;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .pile--draw    { left: 28px;  bottom: 30px; }
 .pile--discard { right: 28px; bottom: 30px; }
-.pile--exhaust { right: 28px; bottom: 168px; }
-
-/* Pile アイコン画像化 (24px tall, 縦横比維持) */
-.pile__sym--img {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-  image-rendering: pixelated;
-}
-
-.pile--exhaust .pile__sym--img {
-  width: 20px;
-  height: 20px;
-}
+.pile--exhaust { right: 28px; bottom: 130px; }
 
 /* ================= Hand (fanned) ================= */
 .hand-wrap {
