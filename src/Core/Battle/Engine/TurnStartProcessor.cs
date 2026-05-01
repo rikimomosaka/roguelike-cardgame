@@ -74,6 +74,12 @@ internal static class TurnStartProcessor
         s = afterRelic;
         foreach (var ev in evsRelic) { events.Add(ev with { Order = order++ }); }
 
+        // Step 8.5: OnTurnStart power カード発動 (10.5.E)
+        var (afterPower, evsPower) = PowerTriggerProcessor.Fire(
+            s, "OnTurnStart", catalog, rng, orderStart: order);
+        s = afterPower;
+        foreach (var ev in evsPower) { events.Add(ev with { Order = order++ }); }
+
         // Step 9: TurnStart event
         events.Add(new BattleEvent(BattleEventKind.TurnStart, Order: order++, Note: $"turn={s.Turn}"));
         return (s, events);
@@ -119,6 +125,14 @@ internal static class TurnStartProcessor
                     s = afterRelic;
                     foreach (var ev in evsRelic) { events.Add(ev with { Order = order++ }); }
                 }
+            }
+            else if (updated.DefinitionId == "hero" && updated.IsAlive && poison > 0)
+            {
+                // 10.5.E: hero に毒 damage が入った直後 OnDamageReceived power fire
+                var (afterPower, evsPower) = PowerTriggerProcessor.FireOnDamageReceived(
+                    s, catalog, rng, orderStart: order);
+                s = afterPower;
+                foreach (var ev in evsPower) { events.Add(ev with { Order = order++ }); }
             }
         }
         return s;

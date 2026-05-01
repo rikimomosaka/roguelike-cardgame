@@ -44,7 +44,7 @@ internal static class EffectApplier
             "upgrade"     => ApplyUpgrade(state, caster, effect, rng, catalog),
             "summon"      => ApplySummon(state, caster, effect, rng, catalog),
             // Phase 10.5.F: engine 新 actions
-            "selfDamage"        => ApplySelfDamage(state, caster, effect),
+            "selfDamage"        => ApplySelfDamage(state, caster, effect, rng, catalog),
             "addCard"           => ApplyAddCard(state, caster, effect),
             "recoverFromDiscard"=> ApplyRecoverFromDiscard(state, caster, effect, rng),
             "gainMaxEnergy"     => ApplyGainMaxEnergy(state, caster, effect),
@@ -81,9 +81,11 @@ internal static class EffectApplier
     /// <summary>
     /// 10.5.F: caster の HP を block 無視で直接削る (Lose HP)。
     /// 死亡したら ActorDeath を emit。Outcome 確定は呼出側に任せる。
+    /// 10.5.E: hero への self-damage 後 OnDamageReceived power が発火する。
     /// </summary>
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplySelfDamage(
-        BattleState state, CombatActor caster, CardEffect effect)
+        BattleState state, CombatActor caster, CardEffect effect,
+        IRng rng, DataCatalog catalog)
     {
         if (effect.Scope != EffectScope.Self)
             throw new InvalidOperationException(
@@ -102,12 +104,21 @@ internal static class EffectApplier
                 Amount: effect.Amount,
                 Note: "selfDamage"),
         };
+        int order = 1;
         if (current.IsAlive && !updated.IsAlive)
         {
             events.Add(new BattleEvent(
-                BattleEventKind.ActorDeath, Order: 0,
+                BattleEventKind.ActorDeath, Order: order++,
                 TargetInstanceId: caster.InstanceId,
                 Note: "selfDamage"));
+        }
+        else if (updated.DefinitionId == "hero" && updated.IsAlive && effect.Amount > 0)
+        {
+            // 10.5.E: hero に damage が入った直後 OnDamageReceived power fire
+            var (afterPower, evsPower) = PowerTriggerProcessor.FireOnDamageReceived(
+                next, catalog, rng, orderStart: order);
+            next = afterPower;
+            foreach (var ev in evsPower) { events.Add(ev with { Order = order++ }); }
         }
 
         return (next, events);

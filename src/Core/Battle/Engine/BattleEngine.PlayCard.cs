@@ -91,6 +91,11 @@ public static partial class BattleEngine
 
         foreach (var eff in effects)
         {
+            // 10.5.E: Trigger 指定 effect は即時実行ではなく、PowerTriggerProcessor 経由で対応
+            //  イベント発生時に fire される。ここでは skip。
+            if (!string.IsNullOrEmpty(eff.Trigger))
+                continue;
+
             // 10.2.C: per-effect comboMin filter（PlayCard 経路のみ）
             if (eff.ComboMin is { } min && newCombo < min)
                 continue;
@@ -155,6 +160,19 @@ public static partial class BattleEngine
         {
             s = s with { DiscardPile = s.DiscardPile.Add(card) };
         }
+
+        // 10.5.E: destination pile 振り分け後の power トリガ発動
+        // OnPlayCard はカード移動完了後 (Power カード自身が PowerCards に居る状態で) 発火
+        var (afterOnPlay, evsOnPlay) = PowerTriggerProcessor.Fire(
+            s, "OnPlayCard", catalog, rng, orderStart: order);
+        s = afterOnPlay;
+        foreach (var ev in evsOnPlay) { events.Add(ev with { Order = order++ }); }
+
+        // OnCombo は combo update 後で fire (combo は冒頭で update 済み)
+        var (afterCombo, evsCombo) = PowerTriggerProcessor.FireOnCombo(
+            s, s.ComboCount, catalog, rng, orderStart: order);
+        s = afterCombo;
+        foreach (var ev in evsCombo) { events.Add(ev with { Order = order++ }); }
 
         return (s, events);
     }

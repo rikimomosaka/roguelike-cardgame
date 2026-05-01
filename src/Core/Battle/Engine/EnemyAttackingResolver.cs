@@ -77,6 +77,21 @@ internal static class EnemyAttackingResolver
                         state = state with { Allies = state.Allies.SetItem(idx, updated) };
                         events.AddRange(evs);
                         order += evs.Count;
+
+                        // 10.5.E: hero に damage が入った直後に OnDamageReceived power fire
+                        //   - hero (DefinitionId=="hero") のみ対象 (現状 power は hero 専用)
+                        //   - damage 0 (block で全吸収) の時は発火しない
+                        //   - hero 死亡時は PowerTriggerProcessor 内で skip (caster 不在)
+                        bool dealt = evs.Any(e =>
+                            e.Kind == BattleEventKind.DealDamage && e.Amount > 0);
+                        if (dealt && updated.DefinitionId == "hero" && updated.IsAlive)
+                        {
+                            var (afterPower, evsPower) = PowerTriggerProcessor.FireOnDamageReceived(
+                                state, catalog, rng, orderStart: order);
+                            state = afterPower;
+                            foreach (var ev in evsPower) { events.Add(ev with { Order = order++ }); }
+                            // currentEnemyState は変動しないので再 fetch 不要
+                        }
                     }
                 }
                 else if (eff.Action == "block")
