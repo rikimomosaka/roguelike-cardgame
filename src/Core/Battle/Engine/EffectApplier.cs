@@ -24,32 +24,47 @@ internal static class EffectApplier
         BattleState state, CombatActor caster, CardEffect effect, IRng rng,
         DataCatalog catalog)                        // 10.2.D
     {
-        return effect.Action switch
+        // 10.5.D: AmountSource を runtime 値で resolve。null 指定の effect は素通し。
+        var resolved = ResolveAmount(effect, state, caster);
+
+        return resolved.Action switch
         {
-            "attack" => ApplyAttack(state, caster, effect),
-            "block"  => ApplyBlock(state, caster, effect),
-            "buff"   => ApplyStatusChange(state, caster, effect, rng),
-            "debuff" => ApplyStatusChange(state, caster, effect, rng),
-            "heal"   => ApplyHeal(state, caster, effect, rng),
-            "draw"   => ApplyDraw(state, caster, effect, rng),
+            "attack" => ApplyAttack(state, caster, resolved),
+            "block"  => ApplyBlock(state, caster, resolved),
+            "buff"   => ApplyStatusChange(state, caster, resolved, rng),
+            "debuff" => ApplyStatusChange(state, caster, resolved, rng),
+            "heal"   => ApplyHeal(state, caster, resolved, rng),
+            "draw"   => ApplyDraw(state, caster, resolved, rng),
             // Why: 既存 reward_*.json の draw 効果カードは "drawCards" 記法で
             // 書かれており、potion 側 "draw" と表記揺れしていた。両方サポート
             // することで洞察 / 叡智の奔流 / 戦術的撤退 等の効果が反映される。
-            "drawCards" => ApplyDraw(state, caster, effect, rng),
-            "discard"=> ApplyDiscard(state, caster, effect, rng),
+            "drawCards" => ApplyDraw(state, caster, resolved, rng),
+            "discard"=> ApplyDiscard(state, caster, resolved, rng),
             "exhaustSelf" => ApplyExhaustSelf(state, caster),
             "retainSelf"  => (state, Array.Empty<BattleEvent>()),
-            "gainEnergy"  => ApplyGainEnergy(state, caster, effect),
-            "exhaustCard" => ApplyExhaustCard(state, caster, effect, rng),
-            "upgrade"     => ApplyUpgrade(state, caster, effect, rng, catalog),
-            "summon"      => ApplySummon(state, caster, effect, rng, catalog),
+            "gainEnergy"  => ApplyGainEnergy(state, caster, resolved),
+            "exhaustCard" => ApplyExhaustCard(state, caster, resolved, rng),
+            "upgrade"     => ApplyUpgrade(state, caster, resolved, rng, catalog),
+            "summon"      => ApplySummon(state, caster, resolved, rng, catalog),
             // Phase 10.5.F: engine 新 actions
-            "selfDamage"        => ApplySelfDamage(state, caster, effect, rng, catalog),
-            "addCard"           => ApplyAddCard(state, caster, effect),
-            "recoverFromDiscard"=> ApplyRecoverFromDiscard(state, caster, effect, rng),
-            "gainMaxEnergy"     => ApplyGainMaxEnergy(state, caster, effect),
+            "selfDamage"        => ApplySelfDamage(state, caster, resolved, rng, catalog),
+            "addCard"           => ApplyAddCard(state, caster, resolved),
+            "recoverFromDiscard"=> ApplyRecoverFromDiscard(state, caster, resolved, rng),
+            "gainMaxEnergy"     => ApplyGainMaxEnergy(state, caster, resolved),
             _        => (state, Array.Empty<BattleEvent>()),
         };
+    }
+
+    /// <summary>
+    /// 10.5.D: effect.AmountSource が non-null なら AmountSourceEvaluator で
+    /// runtime 値を計算し、新 Amount を持った effect を返す。null は素通し。
+    /// </summary>
+    private static CardEffect ResolveAmount(
+        CardEffect effect, BattleState state, CombatActor caster)
+    {
+        if (string.IsNullOrEmpty(effect.AmountSource)) return effect;
+        int evaluated = AmountSourceEvaluator.Evaluate(effect.AmountSource!, state, caster);
+        return effect with { Amount = evaluated };
     }
 
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyExhaustSelf(

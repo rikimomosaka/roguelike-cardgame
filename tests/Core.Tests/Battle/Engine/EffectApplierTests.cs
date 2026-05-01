@@ -399,4 +399,100 @@ public class EffectApplierTests
         Assert.Equal(3, after.DiscardPile.Length);
         Assert.Contains(events, e => e.Kind == BattleEventKind.Discard && e.Amount == 3);
     }
+
+    // =========================================================================
+    // Phase 10.5.D: AmountSource resolution integration tests
+    // =========================================================================
+
+    [Fact]
+    public void Apply_attack_with_handCount_uses_runtime_hand_length_as_amount()
+    {
+        // Hand に 3 枚 → attack の amount は 3 として処理される
+        var hero = BattleFixtures.Hero();
+        var enemy = BattleFixtures.Goblin(hp: 20);
+        var hand = ImmutableArray.Create(
+            new BattleCardInstance("a", "x", false, null),
+            new BattleCardInstance("b", "y", false, null),
+            new BattleCardInstance("c", "z", false, null));
+        var state = BattleFixtures.MinimalState(
+            allies: ImmutableArray.Create(hero),
+            enemies: ImmutableArray.Create(enemy)) with
+        {
+            Hand = hand,
+            TargetEnemyIndex = 0,
+        };
+        var effect = new CardEffect("attack", EffectScope.Single, EffectSide.Enemy, 0,
+            AmountSource: "handCount");
+
+        var (after, _) = EffectApplier.Apply(state, hero, effect, _rng, _catalog);
+
+        var heroAfter = after.Allies.First(a => a.InstanceId == hero.InstanceId);
+        Assert.Equal(3, heroAfter.AttackSingle.Sum);
+        Assert.Equal(1, heroAfter.AttackSingle.AddCount);
+    }
+
+    [Fact]
+    public void Apply_draw_with_drawPileCount_uses_runtime_count()
+    {
+        // DrawPile 5 枚 → draw effect は 5 枚引く
+        var hero = BattleFixtures.Hero();
+        var draw = ImmutableArray.CreateRange(
+            Enumerable.Range(0, 5).Select(i =>
+                new BattleCardInstance($"d{i}", "x", false, null)));
+        var state = BattleFixtures.MakeStateWithHero(hero) with { DrawPile = draw };
+        var effect = new CardEffect("draw", EffectScope.Self, null, 0,
+            AmountSource: "drawPileCount");
+
+        var (after, _) = EffectApplier.Apply(state, hero, effect, _rng, _catalog);
+
+        Assert.Equal(5, after.Hand.Length);
+        Assert.Empty(after.DrawPile);
+    }
+
+    [Fact]
+    public void Apply_with_unknown_amountSource_throws()
+    {
+        var hero = BattleFixtures.Hero();
+        var state = BattleFixtures.MakeStateWithHero(hero);
+        var effect = new CardEffect("attack", EffectScope.Single, EffectSide.Enemy, 0,
+            AmountSource: "nonexistent");
+
+        Assert.Throws<InvalidOperationException>(() =>
+            EffectApplier.Apply(state, hero, effect, _rng, _catalog));
+    }
+
+    [Fact]
+    public void Apply_without_amountSource_uses_amount_as_is()
+    {
+        // AmountSource null → 既存挙動 (Amount=5 が直接使われる)
+        var hero = BattleFixtures.Hero();
+        var enemy = BattleFixtures.Goblin(hp: 20);
+        var state = BattleFixtures.MinimalState(
+            allies: ImmutableArray.Create(hero),
+            enemies: ImmutableArray.Create(enemy)) with
+        {
+            TargetEnemyIndex = 0,
+        };
+        var effect = new CardEffect("attack", EffectScope.Single, EffectSide.Enemy, 5);
+
+        var (after, _) = EffectApplier.Apply(state, hero, effect, _rng, _catalog);
+
+        var heroAfter = after.Allies.First(a => a.InstanceId == hero.InstanceId);
+        Assert.Equal(5, heroAfter.AttackSingle.Sum);
+    }
+
+    [Fact]
+    public void Apply_block_with_selfBlock_uses_runtime_block_value()
+    {
+        // 自身の block=4 → block effect は 4 ブロック追加 (合計 8 ブロック)
+        var hero = BattleFixtures.Hero() with { Block = BlockPool.Empty.Add(4) };
+        var state = BattleFixtures.MakeStateWithHero(hero);
+        var effect = new CardEffect("block", EffectScope.Self, null, 0,
+            AmountSource: "selfBlock");
+
+        var (after, _) = EffectApplier.Apply(state, hero, effect, _rng, _catalog);
+
+        var heroAfter = after.Allies.First(a => a.InstanceId == hero.InstanceId);
+        Assert.Equal(8, heroAfter.Block.Sum);  // 既存 4 + 評価値 4
+    }
 }
