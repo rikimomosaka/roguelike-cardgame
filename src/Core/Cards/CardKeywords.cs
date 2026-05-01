@@ -17,6 +17,9 @@ public static class CardKeywords
             "敵単体を対象とする攻撃が、ランダムな敵を対象に変わる。"),
         ["superwild"] = new("superwild", "スーパーワイルド",
             "敵単体を対象とする攻撃が、敵全体を対象に変わる。"),
+        // Phase 10.5.M2: retainSelf action から keyword 化。
+        ["wait"] = new("wait", "待機",
+            "このカードはプレイ後も捨札に行かず、次ターンに手札へ持ち越される。"),
     };
 
     public static KeywordMeta? Get(string id) =>

@@ -189,8 +189,10 @@ export const EFFECT_ACTION_FIELDS: Record<string, (keyof CardEffect)[]> = {
   retainSelf: [],
   gainEnergy: ['amount', 'trigger'],
   gainMaxEnergy: ['amount', 'trigger'],
-  exhaustCard: ['amount', 'pile', 'trigger'],
-  upgrade: ['amount', 'pile', 'trigger'],
+  // Phase 10.5.M2: exhaustCard / upgrade に select と pile (hand/draw/discard) 拡張。
+  // select=all なら amount は無視される。
+  exhaustCard: ['amount', 'pile', 'select', 'trigger'],
+  upgrade: ['amount', 'pile', 'select', 'trigger'],
   summon: ['unitId', 'amount', 'trigger'],
   selfDamage: ['amount', 'trigger'],
   addCard: ['cardRefId', 'amount', 'pile', 'trigger'],

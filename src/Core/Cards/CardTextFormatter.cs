@@ -126,13 +126,15 @@ public static class CardTextFormatter
         "debuff" => DescribeStatusChange(e, context, isDebuff: true),
         "heal" => DescribeHeal(e, context),
         "summon" => $"{e.UnitId ?? "ユニット"} を召喚",
-        "exhaustCard" => $"手札 {AmountToken(e, context)} 枚を除外",
+        "exhaustCard" => DescribeExhaustOrUpgrade(e, context, isUpgrade: false),
         "exhaustSelf" => "このカードを除外",
-        "retainSelf" => "このカードを次ターンに持ち越す",
+        // retainSelf は Phase 10.5.M2 で「待機」キーワード化された。後方互換のため
+        // formatter は文言を残すが、新規カードではキーワードを使うことを推奨。
+        "retainSelf" => "[K:wait]",
         "gainEnergy" => $"エナジー +{AmountToken(e, context)}",
-        "gainMaxEnergy" => $"エナジー上限を+{AmountToken(e, context)}する",
-        "upgrade" => $"カード {AmountToken(e, context)} 枚を強化",
-        "selfDamage" => $"自身のHPを-{AmountToken(e, context)}",
+        "gainMaxEnergy" => $"エナジー上限+{AmountToken(e, context)}",
+        "upgrade" => DescribeExhaustOrUpgrade(e, context, isUpgrade: true),
+        "selfDamage" => $"{TargetPrefix(e.Scope, e.Side)}{AmountToken(e, context)} ダメージ",
         "addCard" => DescribeAddCard(e, context),
         "recoverFromDiscard" => DescribeRecoverFromDiscard(e, context),
         _ => $"(未対応 action: {e.Action})",
@@ -149,22 +151,42 @@ public static class CardTextFormatter
         (EffectScope.Self, _) => "自身に ",
         (EffectScope.Single, EffectSide.Enemy) => "敵単体に ",
         (EffectScope.Single, EffectSide.Ally) => "味方単体に ",
-        (EffectScope.Random, EffectSide.Enemy) => "敵ランダムに ",
-        (EffectScope.Random, EffectSide.Ally) => "味方ランダムに ",
+        // Random は Single 表現の前に「ランダムな」を付ける
+        (EffectScope.Random, EffectSide.Enemy) => "ランダムな敵単体に ",
+        (EffectScope.Random, EffectSide.Ally) => "ランダムな味方単体に ",
         (EffectScope.All, EffectSide.Enemy) => "敵全体に ",
         (EffectScope.All, EffectSide.Ally) => "味方全体に ",
-        // side が null のフォールバック (Normalize で attack は Enemy 強制、その他は明示必要)
+        // side が null のフォールバック
         (EffectScope.Single, _) => "対象に ",
-        (EffectScope.Random, _) => "ランダムに ",
+        (EffectScope.Random, _) => "ランダムな対象に ",
         (EffectScope.All, _) => "全体に ",
         _ => "",
     };
 
     private static string DescribeAttack(CardEffect e, CardActorContext context)
-        => $"{TargetPrefix(e.Scope, e.Side)}{AmountToken(e, context)} ダメージ";
+        => $"{TargetPrefix(e.Scope, e.Side)}{AmountToken(e, context)} アタック";
 
     private static string DescribeBlock(CardEffect e, CardActorContext context)
-        => $"{TargetPrefix(e.Scope, e.Side)}ブロック {AmountToken(e, context)}";
+        => $"{TargetPrefix(e.Scope, e.Side)}{AmountToken(e, context)} ブロック";
+
+    /// <summary>
+    /// exhaustCard / upgrade を Select (random/choose/all) + Pile (hand/draw/discard) の
+    /// 組合せで翻訳する。共通フォーマット:
+    ///   Select=all → "{zone}を全て {verb}"
+    ///   Select=random → "{zone}を {amount} 枚ランダムに {verb}"
+    ///   Select=choose / null → "{zone}を {amount} 枚選んで {verb}"
+    /// </summary>
+    private static string DescribeExhaustOrUpgrade(CardEffect e, CardActorContext context, bool isUpgrade)
+    {
+        var zone = ZoneJp(e.Pile);
+        var verb = isUpgrade ? "強化" : "除外";
+        return e.Select switch
+        {
+            "all" => $"{zone}を全て{verb}",
+            "random" => $"{zone}を {AmountToken(e, context)} 枚ランダムに{verb}",
+            _ => $"{zone}を {AmountToken(e, context)} 枚選んで{verb}",
+        };
+    }
 
     private static string DescribeHeal(CardEffect e, CardActorContext context)
         => $"{TargetPrefix(e.Scope, e.Side)}HP を {AmountToken(e, context)} 回復";
@@ -266,8 +288,8 @@ public static class CardTextFormatter
         "draw" => "山札",
         "discard" => "捨札",
         "exhaust" => "除外",
-        null or "" => "手札",
-        _ => pile,
+        null or "" => "手札",  // 旧 effect (Pile 未指定) は手札を想定
+        _ => pile!,
     };
 
     private static string SelectJp(string? select) => select switch

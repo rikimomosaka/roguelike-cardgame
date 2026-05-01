@@ -642,15 +642,35 @@ internal static class EffectApplier
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyExhaustCard(
         BattleState state, CombatActor caster, CardEffect effect, IRng rng)
     {
+        // Phase 10.5.M2: Select 対応
+        // - "all": 当該 pile を全て除外 (Amount 無視)
+        // - "random" (or null): N 枚ランダム除外 (既存挙動)
+        // - "choose": UI input が必要、本フェーズ未実装で NotImplementedException
+        if (effect.Select == "choose")
+        {
+            throw new NotImplementedException(
+                "exhaustCard Select='choose' requires UI input flow, planned for 10.5.M");
+        }
+
         var (sourceBuilder, exhaustBuilder, applyResult) = OpenPile(state, effect.Pile);
 
-        int target = Math.Min(effect.Amount, sourceBuilder.Count);
-        for (int i = 0; i < target; i++)
+        int target;
+        if (effect.Select == "all")
         {
-            int idx = rng.NextInt(0, sourceBuilder.Count);
-            var card = sourceBuilder[idx];
-            sourceBuilder.RemoveAt(idx);
-            exhaustBuilder.Add(card);
+            target = sourceBuilder.Count;
+            foreach (var c in sourceBuilder) exhaustBuilder.Add(c);
+            sourceBuilder.Clear();
+        }
+        else
+        {
+            target = Math.Min(effect.Amount, sourceBuilder.Count);
+            for (int i = 0; i < target; i++)
+            {
+                int idx = rng.NextInt(0, sourceBuilder.Count);
+                var card = sourceBuilder[idx];
+                sourceBuilder.RemoveAt(idx);
+                exhaustBuilder.Add(card);
+            }
         }
 
         if (target == 0)
@@ -693,6 +713,16 @@ internal static class EffectApplier
         BattleState state, CombatActor caster, CardEffect effect, IRng rng,
         DataCatalog catalog)
     {
+        // Phase 10.5.M2: Select 対応
+        // - "all": pile 内の強化可能カードを全て強化 (Amount 無視)
+        // - "random" (or null): N 枚ランダム強化 (既存挙動)
+        // - "choose": UI input が必要、本フェーズ未実装で NotImplementedException
+        if (effect.Select == "choose")
+        {
+            throw new NotImplementedException(
+                "upgrade Select='choose' requires UI input flow, planned for 10.5.M");
+        }
+
         // Pile 検証は OpenSourcePile で（exhaust pile は使わない）
         var (sourceBuilder, applyResult) = OpenSourcePile(state, effect.Pile);
 
@@ -707,11 +737,13 @@ internal static class EffectApplier
             candidates.Add(i);
         }
 
-        int target = Math.Min(effect.Amount, candidates.Count);
+        int target = effect.Select == "all"
+            ? candidates.Count
+            : Math.Min(effect.Amount, candidates.Count);
         int upgradedCount = 0;
         for (int i = 0; i < target; i++)
         {
-            int pickIdx = rng.NextInt(0, candidates.Count);
+            int pickIdx = effect.Select == "all" ? 0 : rng.NextInt(0, candidates.Count);
             int sourceIdx = candidates[pickIdx];
             candidates.RemoveAt(pickIdx);
             var card = sourceBuilder[sourceIdx];

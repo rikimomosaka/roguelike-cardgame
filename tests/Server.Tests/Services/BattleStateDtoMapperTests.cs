@@ -56,7 +56,7 @@ public class BattleStateDtoMapperTests : IClassFixture<TempDataFactory>
             var strike = allCards.FirstOrDefault(c => c.CardDefinitionId == "strike");
             if (strike is not null)
             {
-                Assert.Equal("敵単体に [N:6] ダメージ。", strike.AdjustedDescription);
+                Assert.Equal("敵単体に [N:6] アタック。", strike.AdjustedDescription);
             }
         }
         finally
@@ -90,7 +90,7 @@ public class BattleStateDtoMapperTests : IClassFixture<TempDataFactory>
             var strike = allCards.FirstOrDefault(c => c.CardDefinitionId == "strike");
             Assert.NotNull(strike);
             // 6 + 2 = 8、base 6 と異なるので up 修飾。
-            Assert.Equal("敵単体に [N:8|up] ダメージ。", strike!.AdjustedDescription);
+            Assert.Equal("敵単体に [N:8|up] アタック。", strike!.AdjustedDescription);
         }
         finally
         {
@@ -120,7 +120,7 @@ public class BattleStateDtoMapperTests : IClassFixture<TempDataFactory>
             var strike = allCards.FirstOrDefault(c => c.CardDefinitionId == "strike");
             Assert.NotNull(strike);
             // 6 * 0.75 = 4.5 → floor 4、base 6 と異なるので down 修飾。
-            Assert.Equal("敵単体に [N:4|down] ダメージ。", strike!.AdjustedDescription);
+            Assert.Equal("敵単体に [N:4|down] アタック。", strike!.AdjustedDescription);
         }
         finally
         {
@@ -201,7 +201,7 @@ public class BattleStateDtoMapperTests : IClassFixture<TempDataFactory>
             var strike = allCards.FirstOrDefault(c => c.CardDefinitionId == "strike");
             Assert.NotNull(strike);
             Assert.NotNull(strike!.AdjustedUpgradedDescription);
-            Assert.Equal("敵単体に [N:9] ダメージ。", strike.AdjustedUpgradedDescription);
+            Assert.Equal("敵単体に [N:9] アタック。", strike.AdjustedUpgradedDescription);
         }
         finally
         {

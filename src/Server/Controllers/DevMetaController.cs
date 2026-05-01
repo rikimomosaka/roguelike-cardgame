@@ -37,10 +37,13 @@ public sealed class DevMetaController : ControllerBase
                 new { value = 4, label = "Legendary" },
                 new { value = 5, label = "Token" },
             },
+            // Phase 10.5.M2: drawCards (draw との重複) と retainSelf (keyword "wait" 化) を一覧から外す。
+            //   - drawCards は formatter / engine で alias として動作維持 (旧 JSON 互換)
+            //   - retainSelf も formatter で alias として残るが、新規カードは keyword "wait" を使う
             effectActions = new[]
             {
-                "attack", "block", "buff", "debuff", "heal", "draw", "drawCards", "discard",
-                "exhaustSelf", "retainSelf", "gainEnergy", "gainMaxEnergy", "exhaustCard",
+                "attack", "block", "buff", "debuff", "heal", "draw", "discard",
+                "exhaustSelf", "gainEnergy", "gainMaxEnergy", "exhaustCard",
                 "upgrade", "summon", "selfDamage", "addCard", "recoverFromDiscard",
             },
             effectScopes = new[] { "self", "single", "random", "all" },

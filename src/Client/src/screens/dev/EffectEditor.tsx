@@ -217,18 +217,19 @@ export function EffectEditor({ effect, meta, allCardIds, onChange, onRemove }: P
 
 function scopeJp(s: string): string {
   switch (s) {
-    case 'Self': return '自分 (Self)'
-    case 'Single': return '対象 1 体 (Single)'
-    case 'Random': return 'ランダム 1 体 (Random)'
-    case 'All': return '全体 (All)'
+    // Server meta endpoint は lowercase で返す。後方互換のため capital も拾う。
+    case 'self': case 'Self': return '自分 (self)'
+    case 'single': case 'Single': return '単体 (single)'
+    case 'random': case 'Random': return 'ランダム (random)'
+    case 'all': case 'All': return '全体 (all)'
     default: return s
   }
 }
 
 function sideJp(s: string): string {
   switch (s) {
-    case 'Enemy': return '敵 (Enemy)'
-    case 'Ally': return '味方 (Ally)'
+    case 'enemy': case 'Enemy': return '敵 (enemy)'
+    case 'ally': case 'Ally': return '味方 (ally)'
     default: return s
   }
 }
