@@ -85,8 +85,8 @@ export function DevCardsScreen({ onBack }: Props = {}) {
     }
   }, [])
 
-  if (error) return <div className="dev-error">Error: {error}</div>
-  if (!cards || !meta) return <div className="dev-loading">Loading...</div>
+  if (error) return <div className="dev-error">エラー: {error}</div>
+  if (!cards || !meta) return <div className="dev-loading">読込中...</div>
 
   const selected = cards.find((c) => c.id === selectedId) ?? null
   const allCardIds = cards.map((c) => c.id)
@@ -98,13 +98,13 @@ export function DevCardsScreen({ onBack }: Props = {}) {
   return (
     <div className="dev-cards">
       <aside className="dev-cards__list">
-        <h2>Cards ({cards.length})</h2>
+        <h2>カード一覧 ({cards.length})</h2>
         <button
           type="button"
           className="dev-new-card-btn"
           onClick={() => setNewCardOpen(true)}
         >
-          + New Card
+          + 新規カード
         </button>
         <ul>
           {cards.map((c) => (
@@ -126,7 +126,7 @@ export function DevCardsScreen({ onBack }: Props = {}) {
         {onBack ? (
           <div className="dev-cards__close">
             <button type="button" onClick={onBack}>
-              ← Dev ホームへ
+              ← 開発者メニューへ
             </button>
           </div>
         ) : null}
@@ -184,15 +184,15 @@ function NewCardModal({ existingIds, onClose, onCreated }: NewCardModalProps) {
   const submit = async () => {
     setError(null)
     if (!/^[a-z][a-z0-9_]*$/.test(id)) {
-      setError('id must match ^[a-z][a-z0-9_]*$')
+      setError('ID は半角英小文字 + 数字 + アンダースコアのみ (例: my_card)')
       return
     }
     if (!name) {
-      setError('name is required')
+      setError('名前は必須です')
       return
     }
     if (existingIds.includes(id)) {
-      setError(`id '${id}' already exists`)
+      setError(`ID '${id}' は既に存在します`)
       return
     }
     setSubmitting(true)
@@ -214,7 +214,7 @@ function NewCardModal({ existingIds, onClose, onCreated }: NewCardModalProps) {
         role="dialog"
         aria-label="New Card"
       >
-        <h3>New Card</h3>
+        <h3>新規カード</h3>
         <label>
           ID
           <input
@@ -225,7 +225,7 @@ function NewCardModal({ existingIds, onClose, onCreated }: NewCardModalProps) {
           />
         </label>
         <label>
-          Name
+          名前
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -234,30 +234,30 @@ function NewCardModal({ existingIds, onClose, onCreated }: NewCardModalProps) {
           />
         </label>
         <label>
-          Display Name
+          表示名 (任意)
           <input
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="(optional)"
+            placeholder="(任意、name と異なる時のみ)"
             aria-label="new card display name"
           />
         </label>
         <label>
-          Template Card ID
+          テンプレートカード ID (任意)
           <input
             value={templateId}
             onChange={(e) => setTemplateId(e.target.value)}
-            placeholder="(optional, e.g., strike)"
+            placeholder="(任意、例: strike をクローン)"
             aria-label="new card template id"
           />
         </label>
         {error && <div className="dev-error">{error}</div>}
         <div className="dev-modal__actions">
           <button type="button" onClick={onClose} disabled={false}>
-            Cancel
+            キャンセル
           </button>
           <button type="button" onClick={submit} disabled={submitting}>
-            Create
+            作成
           </button>
         </div>
       </div>
@@ -297,9 +297,9 @@ function DeleteCardModal({ cardId, onClose, onConfirm }: DeleteModalProps) {
         role="dialog"
         aria-label="Delete Card"
       >
-        <h3>Delete Card</h3>
+        <h3>カードを削除</h3>
         <p>
-          Delete <code>{cardId}</code>?
+          <code>{cardId}</code> を削除しますか?
         </p>
         <label>
           <input
@@ -308,21 +308,21 @@ function DeleteCardModal({ cardId, onClose, onConfirm }: DeleteModalProps) {
             onChange={(e) => setAlsoBase(e.target.checked)}
             aria-label="also delete base file"
           />
-          Also delete base file (committed source). A backup is saved under
-          data-local/backups/.
+          ソース (src/Core/Data/Cards/) からも削除する。バックアップは
+          data-local/backups/ に保存されます。
         </label>
         {alsoBase && (
           <div className="dev-delete-modal__warning">
-            ⚠ base file (src/Core/Data/Cards/{cardId}.json) will be removed.
+            ⚠ ソースファイル (src/Core/Data/Cards/{cardId}.json) が削除されます。
           </div>
         )}
         {err && <div className="dev-error">{err}</div>}
         <div className="dev-modal__actions">
           <button type="button" onClick={onClose} disabled={submitting}>
-            Cancel
+            キャンセル
           </button>
           <button type="button" onClick={handle} disabled={submitting}>
-            {submitting ? 'Deleting...' : 'Confirm Delete'}
+            {submitting ? '削除中...' : '削除を確定'}
           </button>
         </div>
       </div>
@@ -401,7 +401,7 @@ function DevCardDetail({
   }
 
   const promote = async () => {
-    if (!confirm(`Promote ${versionId} to source (base JSON)?`)) {
+    if (!confirm(`${versionId} をソース (base JSON) に昇格しますか?`)) {
       return
     }
     setEditError(null)
@@ -417,7 +417,7 @@ function DevCardDetail({
   }
 
   const removeVersion = async () => {
-    if (!confirm(`Delete version ${versionId}?`)) {
+    if (!confirm(`バージョン ${versionId} を削除しますか?`)) {
       return
     }
     setEditError(null)
@@ -445,7 +445,7 @@ function DevCardDetail({
       <header>
         <h2>{card.name}</h2>
         <code>{card.id}</code>
-        {card.displayName ? <small>(displayName: {card.displayName})</small> : null}
+        {card.displayName ? <small>(表示名: {card.displayName})</small> : null}
         <button
           type="button"
           className="dev-card-detail__delete"
@@ -453,11 +453,11 @@ function DevCardDetail({
           disabled={saving}
           aria-label="delete card"
         >
-          🗑 Delete Card
+          🗑 カード削除
         </button>
       </header>
       <section className="dev-card-detail__versions">
-        <h3>Versions</h3>
+        <h3>バージョン</h3>
         <div className="dev-card-detail__version-tabs">
           {card.versions.map((v) => {
             const cls = ['dev-card-detail__ver-btn']
@@ -479,7 +479,7 @@ function DevCardDetail({
         </div>
       </section>
       <section className="dev-card-detail__form">
-        <h3>Spec Editor (selected: {versionId})</h3>
+        <h3>スペック編集 (選択中: {versionId})</h3>
         <CardSpecForm
           spec={draft}
           meta={meta}
@@ -494,7 +494,7 @@ function DevCardDetail({
         <input
           type="text"
           className="dev-card-detail__label-input"
-          placeholder="Label (optional)"
+          placeholder="ラベル (任意)"
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           disabled={saving}
@@ -502,16 +502,16 @@ function DevCardDetail({
         />
         <div className="dev-card-detail__actions">
           <button type="button" onClick={saveAsNew} disabled={saving}>
-            Save as v{nextVerN}
+            v{nextVerN} として保存
           </button>
           <button type="button" onClick={setActive} disabled={saving || isActive}>
-            Set as active
+            このバージョンを有効化
           </button>
           <button type="button" onClick={promote} disabled={saving}>
-            Promote to source
+            ソースに昇格
           </button>
           <button type="button" onClick={removeVersion} disabled={saving || isActive}>
-            Delete version
+            このバージョンを削除
           </button>
         </div>
         {editError ? <div className="dev-error">{editError}</div> : null}

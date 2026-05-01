@@ -12,11 +12,11 @@ type Props = {
 export function DevHomeScreen({ onOpenCards, onClose }: Props) {
   return (
     <main className="dev-home">
-      <h1>開発者メニュー (DEV ONLY)</h1>
+      <h1>開発者メニュー (DEV 環境限定)</h1>
       <ul>
         <li>
           <button type="button" onClick={onOpenCards}>
-            Cards Viewer
+            カード編集
           </button>
         </li>
       </ul>

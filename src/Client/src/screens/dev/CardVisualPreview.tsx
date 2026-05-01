@@ -66,7 +66,7 @@ export function CardVisualPreview({
   return (
     <div className="dev-card-visual-preview">
       <div className="dev-card-visual-preview__panel">
-        <div className="dev-card-visual-preview__caption">Normal</div>
+        <div className="dev-card-visual-preview__caption">通常</div>
         <Card
           name={name}
           cost={normalCost}
@@ -75,7 +75,7 @@ export function CardVisualPreview({
           upgraded={false}
           description={normalDesc}
           upgradedDescription={isUpgradable ? upgradedDesc : null}
-          width={140}
+          width={128}
         />
       </div>
       {isUpgradable && (
@@ -84,7 +84,7 @@ export function CardVisualPreview({
             →
           </span>
           <div className="dev-card-visual-preview__panel">
-            <div className="dev-card-visual-preview__caption">Upgraded</div>
+            <div className="dev-card-visual-preview__caption">強化後</div>
             <Card
               name={name}
               cost={upgradedCost}
@@ -93,7 +93,7 @@ export function CardVisualPreview({
               upgraded={true}
               description={normalDesc}
               upgradedDescription={upgradedDesc}
-              width={140}
+              width={128}
             />
           </div>
         </>

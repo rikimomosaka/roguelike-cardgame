@@ -72,7 +72,7 @@ describe('CardSpecForm', () => {
     expect(arg.rarity).toBe(2)
   })
 
-  it('shows + Add Effect button', () => {
+  it('shows + 効果を追加 button', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({ description: '' }),
@@ -88,6 +88,6 @@ describe('CardSpecForm', () => {
         onChange={() => {}}
       />,
     )
-    expect(screen.getAllByRole('button', { name: /\+ Add Effect/i }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('button', { name: /\+ 効果を追加/ }).length).toBeGreaterThan(0)
   })
 })

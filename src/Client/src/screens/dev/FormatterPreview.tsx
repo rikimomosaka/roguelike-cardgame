@@ -47,10 +47,10 @@ export function FormatterPreview({ spec, upgraded, cardNames, label }: Props) {
     <div className="formatter-preview">
       {label && <div className="formatter-preview__label">{label}</div>}
       {error ? (
-        <div className="dev-error formatter-preview__error">Preview error: {error}</div>
+        <div className="dev-error formatter-preview__error">プレビューエラー: {error}</div>
       ) : (
         <div className="formatter-preview__body">
-          {text ? <CardDesc text={text} cardNames={cardNames} /> : <em>(empty)</em>}
+          {text ? <CardDesc text={text} cardNames={cardNames} /> : <em>(空)</em>}
         </div>
       )}
     </div>

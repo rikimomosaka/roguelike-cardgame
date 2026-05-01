@@ -78,7 +78,7 @@ export function CardSpecForm({
     <div className="card-spec-form">
       <div className="card-spec-form__row">
         <label className="card-spec-form__label">
-          Rarity
+          レアリティ
           <select
             value={spec.rarity}
             onChange={(e) => set({ rarity: parseInt(e.target.value, 10) })}
@@ -92,7 +92,7 @@ export function CardSpecForm({
           </select>
         </label>
         <label className="card-spec-form__label">
-          Card Type
+          カード種別
           <select
             value={spec.cardType}
             onChange={(e) => set({ cardType: e.target.value })}
@@ -106,11 +106,11 @@ export function CardSpecForm({
           </select>
         </label>
         <label className="card-spec-form__label">
-          Cost
+          コスト
           <input
             type="number"
             value={spec.cost ?? ''}
-            placeholder="(unplayable)"
+            placeholder="(プレイ不可)"
             onChange={(e) =>
               set({ cost: e.target.value === '' ? null : parseInt(e.target.value, 10) })
             }
@@ -118,11 +118,11 @@ export function CardSpecForm({
           />
         </label>
         <label className="card-spec-form__label">
-          Upgraded Cost
+          強化後コスト
           <input
             type="number"
             value={spec.upgradedCost ?? ''}
-            placeholder="(=cost)"
+            placeholder="(=コスト)"
             onChange={(e) =>
               set({
                 upgradedCost: e.target.value === '' ? null : parseInt(e.target.value, 10),
@@ -136,13 +136,13 @@ export function CardSpecForm({
       <KeywordSelector
         value={spec.keywords}
         meta={meta}
-        label="Keywords"
+        label="キーワード"
         onChange={(v) => set({ keywords: v })}
       />
       <KeywordSelector
         value={spec.upgradedKeywords}
         meta={meta}
-        label="Upgraded Keywords"
+        label="強化後キーワード"
         onChange={(v) => set({ upgradedKeywords: v })}
       />
 
@@ -150,21 +150,21 @@ export function CardSpecForm({
         effects={spec.effects}
         meta={meta}
         allCardIds={allCardIds}
-        label="Effects"
+        label="効果"
         onChange={(e) => set({ effects: e })}
       />
       <EffectListEditor
         effects={spec.upgradedEffects ?? []}
         meta={meta}
         allCardIds={allCardIds}
-        label="Upgraded Effects"
+        label="強化後効果"
         onChange={(e) => set({ upgradedEffects: e.length === 0 ? null : e })}
       />
 
       <details className="card-spec-form__desc-override">
-        <summary>Description Override (optional)</summary>
+        <summary>テキスト手動上書き (任意、空なら自動生成)</summary>
         <label className="card-spec-form__label card-spec-form__label--block">
-          Description (override)
+          説明文 (手動)
           <textarea
             value={spec.description ?? ''}
             onChange={(e) => set({ description: e.target.value || null })}
@@ -172,7 +172,7 @@ export function CardSpecForm({
           />
         </label>
         <label className="card-spec-form__label card-spec-form__label--block">
-          Upgraded Description
+          強化後説明文 (手動)
           <textarea
             value={spec.upgradedDescription ?? ''}
             onChange={(e) => set({ upgradedDescription: e.target.value || null })}
@@ -182,7 +182,7 @@ export function CardSpecForm({
       </details>
 
       <div className="card-spec-form__previews">
-        <h4 className="card-spec-form__previews-heading">Card Visual Preview</h4>
+        <h4 className="card-spec-form__previews-heading">カードプレビュー</h4>
         <CardVisualPreview
           cardName={cardName}
           displayName={displayName}
@@ -190,19 +190,19 @@ export function CardSpecForm({
           normalAutoText={normalAuto}
           upgradedAutoText={upgradedAuto}
         />
-        <h4 className="card-spec-form__previews-heading">Auto-Text (raw markers)</h4>
+        <h4 className="card-spec-form__previews-heading">自動生成テキスト (マーカー含む)</h4>
         <FormatterPreview
           spec={spec}
           upgraded={false}
           cardNames={cardNames}
-          label="Normal"
+          label="通常"
         />
         {hasUpgraded && (
           <FormatterPreview
             spec={spec}
             upgraded={true}
             cardNames={cardNames}
-            label="Upgraded"
+            label="強化後"
           />
         )}
       </div>

@@ -24,7 +24,7 @@ export function KeywordSelector({ value, meta, label, onChange }: Props) {
       <div className="keyword-selector__label">{label}</div>
       <div className="keyword-selector__checks">
         {meta.keywords.length === 0 ? (
-          <em className="keyword-selector__empty">(no keywords defined)</em>
+          <em className="keyword-selector__empty">(キーワードが定義されていません)</em>
         ) : (
           meta.keywords.map((k) => (
             <label

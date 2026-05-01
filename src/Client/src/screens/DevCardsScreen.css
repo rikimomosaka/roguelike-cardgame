@@ -1,9 +1,13 @@
 /* Phase 10.5.I: Dev cards viewer の 2 カラムレイアウト。
    既存ゲーム画面と独立した dark テーマで「DEV モードに入った」ことが視覚的に分かるようにする。 */
 
+/* Why: .app-stage (1280×720) の中で完結するよう height: 100% にする。
+   旧 100vh だと viewport ベースになり、ブラウザ拡大率が低い時に画面外に
+   はみ出してスクロールが必要になっていた (ユーザ報告: 縦長で下まで表示できない)。 */
 .dev-cards {
   display: flex;
-  height: 100vh;
+  height: 100%;
+  width: 100%;
   background: #1a1a1a;
   color: #ddd;
   font-family: var(--font-body, sans-serif);
@@ -218,7 +222,9 @@
   padding: 24px;
   background: #1a1a1a;
   color: #ddd;
-  min-height: 100vh;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
 }
 
 .dev-home h1 {

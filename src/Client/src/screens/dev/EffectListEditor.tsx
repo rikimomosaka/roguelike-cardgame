@@ -75,7 +75,7 @@ export function EffectListEditor({
         </div>
       ))}
       <button type="button" className="effect-list__add" onClick={addNew}>
-        + Add Effect
+        + 効果を追加
       </button>
     </div>
   )

@@ -94,7 +94,7 @@ describe('DevCardsScreen', () => {
   it('shows loading then renders card list', async () => {
     setupFetchMock({})
     render(<DevCardsScreen />)
-    expect(screen.getByText(/Loading/i)).toBeInTheDocument()
+    expect(screen.getByText(/読込中/)).toBeInTheDocument()
     await waitFor(() =>
       expect(screen.getAllByText(/strike/).length).toBeGreaterThan(0),
     )
@@ -109,7 +109,7 @@ describe('DevCardsScreen', () => {
       },
     )
     render(<DevCardsScreen />)
-    await waitFor(() => expect(screen.getByText(/Error/)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText(/エラー/)).toBeInTheDocument())
   })
 
   it('shows structured form (rarity / cardType / cost) and 4 action buttons', async () => {
@@ -121,10 +121,10 @@ describe('DevCardsScreen', () => {
     expect(screen.getByLabelText(/card type/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/^card cost$/i)).toBeInTheDocument()
 
-    expect(screen.getByRole('button', { name: /Save as v2/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Set as active/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Promote to source/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Delete version/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /v2 として保存/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /このバージョンを有効化/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /ソースに昇格/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /このバージョンを削除/ })).toBeInTheDocument()
   })
 
   it('shows Delete Card button + opens delete modal', async () => {
@@ -139,7 +139,7 @@ describe('DevCardsScreen', () => {
     ).toBeInTheDocument()
     // checkbox + confirm button が出る
     expect(screen.getByLabelText(/also delete base file/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Confirm Delete/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /削除を確定/ })).toBeInTheDocument()
   })
 
   it('calls DELETE /api/dev/cards/{id} when confirmed', async () => {
@@ -150,7 +150,7 @@ describe('DevCardsScreen', () => {
     )
     fireEvent.click(delBtn)
     fireEvent.click(
-      await waitFor(() => screen.getByRole('button', { name: /Confirm Delete/i })),
+      await waitFor(() => screen.getByRole('button', { name: /削除を確定/ })),
     )
     await waitFor(() => {
       const call = fetchMock.mock.calls.find(
@@ -169,7 +169,7 @@ describe('DevCardsScreen', () => {
     await waitFor(() =>
       expect(screen.getByLabelText(/card rarity/i)).toBeInTheDocument(),
     )
-    fireEvent.click(screen.getByRole('button', { name: /Save as v2/i }))
+    fireEvent.click(screen.getByRole('button', { name: /v2 として保存/ }))
     await waitFor(() => {
       const call = fetchMock.mock.calls.find(
         (c) =>
@@ -187,7 +187,7 @@ describe('DevCardsScreen', () => {
     await waitFor(() =>
       expect(screen.getByLabelText(/card rarity/i)).toBeInTheDocument(),
     )
-    fireEvent.click(screen.getByRole('button', { name: /Promote to source/i }))
+    fireEvent.click(screen.getByRole('button', { name: /ソースに昇格/ }))
     await waitFor(() => {
       const call = fetchMock.mock.calls.find(
         (c) =>
@@ -198,13 +198,13 @@ describe('DevCardsScreen', () => {
   })
 
   // Phase 10.5.K: New Card modal
-  it('opens New Card modal when "+ New Card" button clicked', async () => {
+  it('opens New Card modal when "+ 新規カード" button clicked', async () => {
     setupFetchMock({})
     render(<DevCardsScreen />)
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /\+ New Card/i })).toBeInTheDocument(),
+      expect(screen.getByRole('button', { name: /\+ 新規カード/ })).toBeInTheDocument(),
     )
-    fireEvent.click(screen.getByRole('button', { name: /\+ New Card/i }))
+    fireEvent.click(screen.getByRole('button', { name: /\+ 新規カード/ }))
     expect(screen.getByRole('dialog', { name: /New Card/i })).toBeInTheDocument()
     expect(screen.getByLabelText(/new card id/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/new card name/i)).toBeInTheDocument()
@@ -214,16 +214,16 @@ describe('DevCardsScreen', () => {
     const { fetchMock } = setupFetchMock({})
     render(<DevCardsScreen />)
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /\+ New Card/i })).toBeInTheDocument(),
+      expect(screen.getByRole('button', { name: /\+ 新規カード/ })).toBeInTheDocument(),
     )
-    fireEvent.click(screen.getByRole('button', { name: /\+ New Card/i }))
+    fireEvent.click(screen.getByRole('button', { name: /\+ 新規カード/ }))
     fireEvent.change(screen.getByLabelText(/new card id/i), {
       target: { value: 'new_test' },
     })
     fireEvent.change(screen.getByLabelText(/new card name/i), {
       target: { value: 'テスト' },
     })
-    fireEvent.click(screen.getByRole('button', { name: /^Create$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^作成$/ }))
     await waitFor(() => {
       const call = fetchMock.mock.calls.find(
         (c) =>
