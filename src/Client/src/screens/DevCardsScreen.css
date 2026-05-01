@@ -136,6 +136,78 @@
   color: #ff6b6b;
 }
 
+/* Phase 10.5.J: editor (textarea + buttons) */
+.dev-card-detail__editor {
+  margin-top: 24px;
+  border-top: 1px dashed #444;
+  padding-top: 16px;
+}
+
+.dev-card-detail__editor h3 {
+  font-size: 14px;
+  letter-spacing: 1px;
+  color: #999;
+  margin: 0 0 8px 0;
+}
+
+.dev-card-detail__label-input {
+  width: 320px;
+  max-width: 100%;
+  padding: 6px 8px;
+  background: #0e0e0e;
+  color: #c9d1d9;
+  border: 1px solid #444;
+  font-size: 13px;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.dev-card-detail__textarea {
+  width: 100%;
+  min-height: 240px;
+  font-family: monospace;
+  font-size: 12px;
+  background: #0e0e0e;
+  color: #c9d1d9;
+  border: 1px solid #444;
+  padding: 8px;
+  box-sizing: border-box;
+  resize: vertical;
+}
+
+.dev-card-detail__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.dev-card-detail__actions button {
+  padding: 6px 12px;
+  background: #2a2a2a;
+  color: #ddd;
+  border: 1px solid #555;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.dev-card-detail__actions button:hover:not(:disabled) {
+  background: #3a3a3a;
+}
+
+.dev-card-detail__actions button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.dev-card-detail__editor .dev-error {
+  /* editor 内 inline error は背景・パディング控えめ */
+  padding: 8px;
+  background: #2a1010;
+  margin-top: 8px;
+  font-size: 13px;
+}
+
 .dev-loading {
   padding: 24px;
   background: #1a1a1a;

@@ -1,10 +1,15 @@
 // Phase 10.5.I: Dev cards read-only viewer.
-// 左カラムに card 一覧、右カラムに選択中 card の詳細 (versions タブ + spec JSON + auto-text プレビュー)。
-// 編集 UI は本フェーズでは出さない (10.5.J で追加)。
+// Phase 10.5.J: Editor (label + textarea + Save / Set active / Promote / Delete) を追加。
 
 import { useEffect, useState } from 'react'
 import type { DevCardDto } from '../api/dev'
-import { fetchDevCards } from '../api/dev'
+import {
+  deleteCardVersion,
+  fetchDevCards,
+  promoteCardVersion,
+  saveCardVersion,
+  switchActiveVersion,
+} from '../api/dev'
 import { CardDesc } from '../components/CardDesc'
 import './DevCardsScreen.css'
 
@@ -18,6 +23,7 @@ export function DevCardsScreen({ onBack }: Props = {}) {
   const [error, setError] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedVer, setSelectedVer] = useState<string | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -26,8 +32,14 @@ export function DevCardsScreen({ onBack }: Props = {}) {
         if (cancelled) return
         setCards(list)
         if (list.length > 0) {
-          setSelectedId(list[0].id)
-          setSelectedVer(list[0].activeVersion)
+          // selectedId がまだ無いか、再読込で消えていたら先頭を選択
+          setSelectedId((prevId) => {
+            const id = prevId && list.some((c) => c.id === prevId) ? prevId : list[0].id
+            // 選択中 card の最新 activeVersion に同期 (mutation 直後の natural な遷移)
+            const card = list.find((c) => c.id === id) ?? list[0]
+            setSelectedVer(card.activeVersion ?? null)
+            return id
+          })
         }
       })
       .catch((e) => {
@@ -36,7 +48,7 @@ export function DevCardsScreen({ onBack }: Props = {}) {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [reloadKey])
 
   if (error) return <div className="dev-error">Error: {error}</div>
   if (!cards) return <div className="dev-loading">Loading...</div>
@@ -73,9 +85,11 @@ export function DevCardsScreen({ onBack }: Props = {}) {
         ) : null}
         {selected ? (
           <DevCardDetail
+            key={`${selected.id}`}
             card={selected}
             versionId={selectedVer ?? selected.activeVersion}
             onSelectVersion={setSelectedVer}
+            onAfterMutation={() => setReloadKey((k) => k + 1)}
           />
         ) : (
           <p>カードを選択してください。</p>
@@ -89,9 +103,10 @@ type DetailProps = {
   card: DevCardDto
   versionId: string
   onSelectVersion: (v: string) => void
+  onAfterMutation: () => void
 }
 
-function DevCardDetail({ card, versionId, onSelectVersion }: DetailProps) {
+function DevCardDetail({ card, versionId, onSelectVersion, onAfterMutation }: DetailProps) {
   const ver = card.versions.find((v) => v.version === versionId)
 
   // spec は server から raw JSON 文字列で来るため、表示用に parse して整形。
@@ -110,6 +125,89 @@ function DevCardDetail({ card, versionId, onSelectVersion }: DetailProps) {
   // description 手書き値があれば preview に出す。なければプレースホルダ表示。
   const description =
     typeof parsedSpec.description === 'string' ? (parsedSpec.description as string) : null
+
+  // ---- editor state (Phase 10.5.J) ----
+  const initialDraft = ver ? formatDraft(ver.spec) : ''
+  const [draft, setDraft] = useState<string>(initialDraft)
+  const [label, setLabel] = useState<string>('')
+  const [editError, setEditError] = useState<string | null>(null)
+  const [saving, setSaving] = useState<boolean>(false)
+  const nextVerN = computeNextVerN(card)
+
+  useEffect(() => {
+    // version 切替で draft をその version の spec に同期
+    if (ver) setDraft(formatDraft(ver.spec))
+    setLabel('')
+    setEditError(null)
+  }, [card.id, versionId, ver?.spec])
+
+  const saveAsNew = async () => {
+    setEditError(null)
+    setSaving(true)
+    try {
+      let parsed: unknown
+      try {
+        parsed = JSON.parse(draft)
+      } catch (e) {
+        setEditError(`Invalid JSON: ${String(e)}`)
+        setSaving(false)
+        return
+      }
+      await saveCardVersion(card.id, label || null, parsed)
+      onAfterMutation()
+    } catch (e) {
+      setEditError(String(e))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const setActive = async () => {
+    setEditError(null)
+    setSaving(true)
+    try {
+      await switchActiveVersion(card.id, versionId)
+      onAfterMutation()
+    } catch (e) {
+      setEditError(String(e))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const promote = async () => {
+    if (!confirm(`Promote ${versionId} to source (base JSON)?`)) {
+      return
+    }
+    setEditError(null)
+    setSaving(true)
+    try {
+      await promoteCardVersion(card.id, versionId)
+      onAfterMutation()
+    } catch (e) {
+      setEditError(String(e))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const remove = async () => {
+    if (!confirm(`Delete version ${versionId}?`)) {
+      return
+    }
+    setEditError(null)
+    setSaving(true)
+    try {
+      await deleteCardVersion(card.id, versionId)
+      onAfterMutation()
+    } catch (e) {
+      setEditError(String(e))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const isActive = versionId === card.activeVersion
 
   return (
     <div className="dev-card-detail">
@@ -157,11 +255,65 @@ function DevCardDetail({ card, versionId, onSelectVersion }: DetailProps) {
         <h3>Spec (JSON)</h3>
         {parseError ? <p style={{ color: '#ff6b6b' }}>parse error: {parseError}</p> : null}
         <pre>
-          <code>
-            {parseError ? ver?.spec : JSON.stringify(parsedSpec, null, 2)}
-          </code>
+          <code>{parseError ? ver?.spec : JSON.stringify(parsedSpec, null, 2)}</code>
         </pre>
+      </section>
+      <section className="dev-card-detail__editor">
+        <h3>Editor (selected: {versionId})</h3>
+        <input
+          type="text"
+          className="dev-card-detail__label-input"
+          placeholder="Label (optional)"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          disabled={saving}
+        />
+        <textarea
+          className="dev-card-detail__textarea"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          disabled={saving}
+          aria-label="card spec editor"
+        />
+        <div className="dev-card-detail__actions">
+          <button type="button" onClick={saveAsNew} disabled={saving}>
+            Save as v{nextVerN}
+          </button>
+          <button type="button" onClick={setActive} disabled={saving || isActive}>
+            Set as active
+          </button>
+          <button type="button" onClick={promote} disabled={saving}>
+            Promote to source
+          </button>
+          <button type="button" onClick={remove} disabled={saving || isActive}>
+            Delete version
+          </button>
+        </div>
+        {editError ? <div className="dev-error">{editError}</div> : null}
       </section>
     </div>
   )
+}
+
+/** spec 文字列 (raw JSON) を整形して textarea 用 draft にする。parse 失敗時はそのまま返す。 */
+function formatDraft(specJson: string): string {
+  try {
+    const parsed = JSON.parse(specJson)
+    return JSON.stringify(parsed, null, 2)
+  } catch {
+    return specJson
+  }
+}
+
+/** base + override の versions[] から v\d+ パターンの最大番号を見て次を返す。 */
+function computeNextVerN(card: DevCardDto): number {
+  let max = 0
+  for (const v of card.versions) {
+    const m = /^v(\d+)$/.exec(v.version)
+    if (m) {
+      const n = parseInt(m[1], 10)
+      if (n > max) max = n
+    }
+  }
+  return max + 1
 }

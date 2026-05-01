@@ -26,3 +26,71 @@ export async function fetchDevCards(): Promise<DevCardDto[]> {
   }
   return (await resp.json()) as DevCardDto[]
 }
+
+// ---- Phase 10.5.J: card editor mutation API ----
+
+/**
+ * 新 version を override に追加。version id はサーバ側が base + override から自動採番 (`v{N+1}`)。
+ * 初 save (override 未存在) なら activeVersion も新 version に設定される。
+ */
+export async function saveCardVersion(
+  id: string,
+  label: string | null,
+  spec: unknown,
+): Promise<{ newVersion: string }> {
+  const resp = await fetch(`/api/dev/cards/${encodeURIComponent(id)}/versions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ label, spec }),
+  })
+  if (!resp.ok) {
+    const txt = await resp.text().catch(() => '')
+    throw new Error(`saveCardVersion failed: ${resp.status} ${txt}`)
+  }
+  return (await resp.json()) as { newVersion: string }
+}
+
+/** override の activeVersion を上書き保存。指定 version は base + override に存在する必要あり。 */
+export async function switchActiveVersion(id: string, version: string): Promise<void> {
+  const resp = await fetch(`/api/dev/cards/${encodeURIComponent(id)}/active`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ version }),
+  })
+  if (!resp.ok) {
+    const txt = await resp.text().catch(() => '')
+    throw new Error(`switchActiveVersion failed: ${resp.status} ${txt}`)
+  }
+}
+
+/** override から指定 version を削除。active な version は削除不可。 */
+export async function deleteCardVersion(id: string, version: string): Promise<void> {
+  const resp = await fetch(
+    `/api/dev/cards/${encodeURIComponent(id)}/versions/${encodeURIComponent(version)}`,
+    { method: 'DELETE' },
+  )
+  if (!resp.ok) {
+    const txt = await resp.text().catch(() => '')
+    throw new Error(`deleteCardVersion failed: ${resp.status} ${txt}`)
+  }
+}
+
+/**
+ * override の version を base JSON に転記、override から削除。base は backup を取ってから上書き。
+ * makeActiveOnBase=true なら base.activeVersion も更新。
+ */
+export async function promoteCardVersion(
+  id: string,
+  version: string,
+  makeActiveOnBase = false,
+): Promise<void> {
+  const resp = await fetch(`/api/dev/cards/${encodeURIComponent(id)}/promote`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ version, makeActiveOnBase }),
+  })
+  if (!resp.ok) {
+    const txt = await resp.text().catch(() => '')
+    throw new Error(`promoteCardVersion failed: ${resp.status} ${txt}`)
+  }
+}

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text.Json;
 
 namespace RoguelikeCardGame.Server.Dtos;
 
@@ -22,3 +23,14 @@ public sealed record DevCardVersionDto(
     string? CreatedAt,
     string? Label,
     string Spec);
+
+// ---- Phase 10.5.J mutation request DTOs ----
+
+/// <summary>POST /api/dev/cards/{id}/versions のリクエストボディ。</summary>
+public sealed record SaveCardVersionRequest(string? Label, JsonElement Spec);
+
+/// <summary>PATCH /api/dev/cards/{id}/active のリクエストボディ。</summary>
+public sealed record SwitchActiveVersionRequest(string Version);
+
+/// <summary>POST /api/dev/cards/{id}/promote のリクエストボディ。</summary>
+public sealed record PromoteCardVersionRequest(string Version, bool MakeActiveOnBase = false);

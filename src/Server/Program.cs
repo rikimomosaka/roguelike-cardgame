@@ -31,19 +31,23 @@ builder.Services.AddSingleton<IBestiaryRepository, FileBestiaryRepository>();
 
 builder.Services.AddSingleton<MapGenerationConfig>(_ => MapGenerationConfigLoader.LoadAct1());
 builder.Services.AddSingleton<IDungeonMapGenerator, DungeonMapGenerator>();
-builder.Services.AddSingleton<DataCatalog>(sp =>
+// Phase 10.5.J: DataCatalog をミュータブルに保つため Provider 経由に差し替え。
+// Provider 自体は Singleton。controller 側は DataCatalog を直 inject しているので、
+// Transient で都度 Provider.Current を返すと controller は無修正のまま最新 catalog を見る。
+builder.Services.AddSingleton<DataCatalogProvider>();
+builder.Services.AddTransient<DataCatalog>(sp =>
+    sp.GetRequiredService<DataCatalogProvider>().Current);
+
+// DevCardWriter: override / base / backup の disk I/O を担うヘルパ (DEV 専用)。
+// 本番環境でも DI に登録するが、controller 側で IsDevelopment ガードしているので呼ばれない。
+builder.Services.AddSingleton<DevCardWriter>(sp =>
 {
     var env = sp.GetRequiredService<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>();
-    if (!env.IsDevelopment())
-        return EmbeddedDataLoader.LoadCatalog();
-
-    // DEV モード: data-local/dev-overrides/cards/*.json があれば base にマージしてカタログ構築。
-    // ContentRootPath は通常 src/Server/、repo ルートからは ../../ 相対で data-local/ に到達する。
-    var overrideRoot = Path.Combine(env.ContentRootPath, "..", "..", "data-local", "dev-overrides");
-    var overrides = DevOverrideLoader.LoadCards(overrideRoot);
-    return overrides.Count == 0
-        ? EmbeddedDataLoader.LoadCatalog()
-        : EmbeddedDataLoader.LoadCatalogWithOverrides(overrides);
+    var repoRoot = Path.GetFullPath(Path.Combine(env.ContentRootPath, "..", ".."));
+    var overrideRoot = Path.Combine(repoRoot, "data-local", "dev-overrides");
+    var baseCardsDir = Path.Combine(repoRoot, "src", "Core", "Data", "Cards");
+    var backupRoot = Path.Combine(repoRoot, "data-local", "backups");
+    return new DevCardWriter(overrideRoot, baseCardsDir, backupRoot);
 });
 builder.Services.AddSingleton<RunStartService>();
 builder.Services.AddSingleton<BattleSessionStore>();
