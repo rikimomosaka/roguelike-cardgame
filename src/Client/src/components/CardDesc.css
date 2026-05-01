@@ -4,9 +4,13 @@
    battle 中の赤/青比較は 10.5.C で別 modifier class を追加予定。
    ============================================================= */
 
+/* Why: 親 (.tip__desc 等) は --fg-muted (#c9985a 黄系) を継承するため、
+   description 本文は明示的に白へ上書き。色付けは marker span の color が
+   優先されるので影響なし。 */
 .card-desc {
   display: inline;
   white-space: pre-wrap;
+  color: #ffffff;
 }
 
 .card-desc-line {
