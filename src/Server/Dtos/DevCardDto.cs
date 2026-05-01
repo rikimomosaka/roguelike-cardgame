@@ -1,0 +1,24 @@
+using System.Collections.Generic;
+
+namespace RoguelikeCardGame.Server.Dtos;
+
+/// <summary>
+/// /api/dev/cards で返す read-only な card 概要 DTO。Phase 10.5.I。
+/// versioned JSON の中身をほぼそのまま返し、spec 部分は raw JSON 文字列で保持して
+/// UI 側で構造を保ったまま表示できるようにする。
+/// </summary>
+public sealed record DevCardDto(
+    string Id,
+    string Name,
+    string? DisplayName,
+    string ActiveVersion,
+    IReadOnlyList<DevCardVersionDto> Versions);
+
+/// <summary>
+/// Card の各 version エントリ。spec は JSON 文字列のまま (UI 側で表示)。
+/// </summary>
+public sealed record DevCardVersionDto(
+    string Version,
+    string? CreatedAt,
+    string? Label,
+    string Spec);

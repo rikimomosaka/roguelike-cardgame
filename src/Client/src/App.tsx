@@ -6,6 +6,8 @@ import type { RunResultDto, RunSnapshotDto } from './api/types'
 import { Button } from './components/Button'
 import { useAccount } from './context/AccountContext'
 import { AchievementsScreen } from './screens/AchievementsScreen'
+import { DevCardsScreen } from './screens/DevCardsScreen'
+import { DevHomeScreen } from './screens/DevHomeScreen'
 import { LoginScreen } from './screens/LoginScreen'
 import { MainMenuScreen } from './screens/MainMenuScreen'
 import { MapScreen } from './screens/MapScreen'
@@ -21,6 +23,22 @@ type Screen =
   | { kind: 'map'; snapshot: RunSnapshotDto }
   | { kind: 'run-result'; result: RunResultDto; snapshot?: RunSnapshotDto }
   | { kind: 'bootstrap-error'; message: string }
+  | { kind: 'dev-home' }
+  | { kind: 'dev-cards' }
+
+// Why: 3 段ゲートのうち UI ゲート。`import.meta.env.DEV` は本番ビルド時に false で
+//   DCE 対象になるため、本番 bundle から DevHome/DevCards のコードが消える。
+//   実際の route 判定は ?dev=1 / ?dev=cards の query param で行う。
+function readDevParamOnce(): string | null {
+  if (!import.meta.env.DEV) return null
+  if (typeof window === 'undefined') return null
+  try {
+    const sp = new URLSearchParams(window.location.search)
+    return sp.get('dev')
+  } catch {
+    return null
+  }
+}
 
 export default function App() {
   const { accountId, logout } = useAccount()
@@ -29,6 +47,17 @@ export default function App() {
   useEffect(() => {
     let cancelled = false
     async function bootstrap() {
+      // DEV 専用 ?dev=... ショートカットは認証 / ラン状態に関係なく即座に dev 画面へ遷移する。
+      const devParam = readDevParamOnce()
+      if (devParam !== null) {
+        if (cancelled) return
+        if (devParam === 'cards') {
+          setScreen({ kind: 'dev-cards' })
+        } else {
+          setScreen({ kind: 'dev-home' })
+        }
+        return
+      }
       if (!accountId) {
         if (!cancelled) setScreen({ kind: 'login' })
         return
@@ -101,6 +130,18 @@ export default function App() {
         onReturnToMenu={() => setScreen({ kind: 'main-menu', hasCurrentRun: false })}
       />
     )
+  }
+  // DEV ガード: import.meta.env.DEV が false なら本番 build で dev branch は DCE される。
+  if (import.meta.env.DEV && screen.kind === 'dev-home') {
+    return (
+      <DevHomeScreen
+        onOpenCards={() => setScreen({ kind: 'dev-cards' })}
+        onClose={() => setScreen({ kind: 'main-menu' })}
+      />
+    )
+  }
+  if (import.meta.env.DEV && screen.kind === 'dev-cards') {
+    return <DevCardsScreen onBack={() => setScreen({ kind: 'dev-home' })} />
   }
   return <SettingsScreen onBack={() => setScreen({ kind: 'main-menu' })} />
 }
