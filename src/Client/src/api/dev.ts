@@ -94,3 +94,29 @@ export async function promoteCardVersion(
     throw new Error(`promoteCardVersion failed: ${resp.status} ${txt}`)
   }
 }
+
+// ---- Phase 10.5.K: new card creation API ----
+
+/**
+ * 新規カードを override 層に作成。
+ * id は `^[a-z][a-z0-9_]*$` を満たすこと、base + override で uniqueness が必要。
+ * templateCardId 指定時は当該カードの merged active spec を v1 にコピー、未指定時は default spec
+ * (Skill / cost 1 / effects=[])。
+ */
+export async function createNewCard(
+  id: string,
+  name: string,
+  displayName: string | null,
+  templateCardId: string | null,
+): Promise<{ id: string }> {
+  const resp = await fetch('/api/dev/cards', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, name, displayName, templateCardId }),
+  })
+  if (!resp.ok) {
+    const txt = await resp.text().catch(() => '')
+    throw new Error(`createNewCard failed: ${resp.status} ${txt}`)
+  }
+  return (await resp.json()) as { id: string }
+}

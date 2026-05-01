@@ -130,4 +130,71 @@ describe('DevCardsScreen', () => {
       expect(call).toBeTruthy()
     })
   })
+
+  // Phase 10.5.K: New Card modal
+  it('opens New Card modal when "+ New Card" button clicked', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => [sampleCard()],
+    } as Response)
+
+    render(<DevCardsScreen />)
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /\+ New Card/i })).toBeInTheDocument(),
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /\+ New Card/i }))
+
+    expect(screen.getByRole('dialog', { name: /New Card/i })).toBeInTheDocument()
+    expect(screen.getByLabelText(/new card id/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/new card name/i)).toBeInTheDocument()
+  })
+
+  it('creates new card via modal and calls POST /api/dev/cards', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      // 1) initial load
+      .mockResolvedValueOnce({ ok: true, json: async () => [sampleCard()] } as Response)
+      // 2) POST /api/dev/cards
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: 'new_test' }),
+      } as Response)
+      // 3) reload after create
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [
+          sampleCard(),
+          {
+            id: 'new_test',
+            name: 'テスト',
+            displayName: null,
+            activeVersion: 'v1',
+            versions: [
+              { version: 'v1', createdAt: null, label: 'new', spec: '{"effects":[]}' },
+            ],
+          },
+        ],
+      } as Response)
+
+    render(<DevCardsScreen />)
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /\+ New Card/i })).toBeInTheDocument(),
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /\+ New Card/i }))
+    fireEvent.change(screen.getByLabelText(/new card id/i), { target: { value: 'new_test' } })
+    fireEvent.change(screen.getByLabelText(/new card name/i), { target: { value: 'テスト' } })
+    fireEvent.click(screen.getByRole('button', { name: /^Create$/i }))
+
+    await waitFor(() => {
+      const call = fetchMock.mock.calls.find(
+        (c) =>
+          typeof c[0] === 'string' &&
+          c[0] === '/api/dev/cards' &&
+          (c[1] as RequestInit | undefined)?.method === 'POST',
+      )
+      expect(call).toBeTruthy()
+    })
+  })
 })

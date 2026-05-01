@@ -34,3 +34,12 @@ public sealed record SwitchActiveVersionRequest(string Version);
 
 /// <summary>POST /api/dev/cards/{id}/promote のリクエストボディ。</summary>
 public sealed record PromoteCardVersionRequest(string Version, bool MakeActiveOnBase = false);
+
+// ---- Phase 10.5.K new card creation request DTO ----
+
+/// <summary>POST /api/dev/cards のリクエストボディ。新規カード作成。</summary>
+public sealed record NewCardRequest(
+    string Id,
+    string Name,
+    string? DisplayName = null,
+    string? TemplateCardId = null);

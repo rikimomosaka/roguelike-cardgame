@@ -52,6 +52,9 @@ public sealed class DevCardsController : ControllerBase
 
         var asm = typeof(DataCatalog).Assembly;
         var result = new List<DevCardDto>();
+        var seenIds = new HashSet<string>(StringComparer.Ordinal);
+
+        // 1) manifest 由来の base カード (+ override マージ)
         foreach (var name in asm.GetManifestResourceNames())
         {
             if (!name.StartsWith(CardsResourcePrefix) || !name.EndsWith(".json")) continue;
@@ -61,6 +64,7 @@ public sealed class DevCardsController : ControllerBase
             var baseJson = reader.ReadToEnd();
 
             string mergedJson = baseJson;
+            string? cardId = null;
             try
             {
                 using var baseDoc = JsonDocument.Parse(baseJson);
@@ -68,10 +72,10 @@ public sealed class DevCardsController : ControllerBase
                     baseDoc.RootElement.TryGetProperty("id", out var idEl) &&
                     idEl.ValueKind == JsonValueKind.String)
                 {
-                    var id = idEl.GetString();
-                    if (!string.IsNullOrEmpty(id))
+                    cardId = idEl.GetString();
+                    if (!string.IsNullOrEmpty(cardId))
                     {
-                        var ovr = _writer.ReadOverride(id);
+                        var ovr = _writer.ReadOverride(cardId);
                         if (!string.IsNullOrEmpty(ovr))
                         {
                             try { mergedJson = CardOverrideMerger.Merge(baseJson, ovr); }
@@ -85,15 +89,154 @@ public sealed class DevCardsController : ControllerBase
             try
             {
                 var dto = ParseDevCardJson(mergedJson);
-                if (dto is not null) result.Add(dto);
+                if (dto is not null)
+                {
+                    result.Add(dto);
+                    if (!string.IsNullOrEmpty(cardId)) seenIds.Add(cardId);
+                }
             }
             catch (JsonException)
             {
                 // skip malformed entries
             }
         }
+
+        // 2) override-only カード (manifest に対応 base が無い ID — Phase 10.5.K 新規作成カード)
+        foreach (var ovrId in _writer.ListOverrideIds())
+        {
+            if (seenIds.Contains(ovrId)) continue;
+            var ovrJson = _writer.ReadOverride(ovrId);
+            if (string.IsNullOrEmpty(ovrJson)) continue;
+            try
+            {
+                var dto = ParseDevCardJson(ovrJson);
+                if (dto is not null)
+                {
+                    result.Add(dto);
+                    seenIds.Add(ovrId);
+                }
+            }
+            catch (JsonException) { /* skip malformed */ }
+        }
+
         result.Sort((a, b) => string.CompareOrdinal(a.Id, b.Id));
         return Ok(result);
+    }
+
+    /// <summary>
+    /// POST /api/dev/cards
+    /// 新規カードを override 層に作成 (Phase 10.5.K)。
+    /// id validation: <c>^[a-z][a-z0-9_]*$</c>。base + override どちらかに同 id があれば 409。
+    /// templateCardId 指定時は当該カードの merged active spec を v1 にコピー、未指定時は default spec
+    /// (rarity=1 / cardType=Skill / cost=1 / effects=[]) で v1 作成。
+    /// </summary>
+    [HttpPost("cards")]
+    public IActionResult NewCard([FromBody] NewCardRequest? body)
+    {
+        if (!_env.IsDevelopment()) return NotFound();
+        if (body is null) return BadRequest(new { error = "body is required." });
+
+        // id validation
+        if (string.IsNullOrEmpty(body.Id) ||
+            !Regex.IsMatch(body.Id, @"^[a-z][a-z0-9_]*$"))
+            return BadRequest(new { error = "Invalid id: must match ^[a-z][a-z0-9_]*$" });
+
+        if (string.IsNullOrEmpty(body.Name))
+            return BadRequest(new { error = "name is required." });
+
+        // 既存 base (manifest or disk) / override に同 id が無いか
+        var existingBaseManifest = ReadBaseFromManifest(body.Id);
+        var existingBaseDisk = _writer.ReadBase(body.Id);
+        var existingOverride = _writer.ReadOverride(body.Id);
+        if (existingBaseManifest is not null || existingBaseDisk is not null || existingOverride is not null)
+            return Conflict(new { error = $"card '{body.Id}' already exists" });
+
+        // template clone or default
+        JsonNode specNode;
+        if (!string.IsNullOrEmpty(body.TemplateCardId))
+        {
+            // template の base は manifest 経由 (組み込みカードを引くため)、override は disk
+            var tmplBase = _writer.ReadBase(body.TemplateCardId) ?? ReadBaseFromManifest(body.TemplateCardId);
+            var tmplOverride = _writer.ReadOverride(body.TemplateCardId);
+            if (tmplBase is null && tmplOverride is null)
+                return BadRequest(new { error = $"template card '{body.TemplateCardId}' not found" });
+
+            // merged JSON を取得 (両方あれば override で base を上書き)
+            string mergedJson;
+            if (tmplBase is not null && tmplOverride is not null)
+                mergedJson = CardOverrideMerger.Merge(tmplBase, tmplOverride);
+            else if (tmplOverride is not null)
+                mergedJson = tmplOverride;
+            else
+                mergedJson = tmplBase!;
+
+            using var tmplDoc = JsonDocument.Parse(mergedJson);
+            var tmplRoot = tmplDoc.RootElement;
+            if (!tmplRoot.TryGetProperty("activeVersion", out var avEl) ||
+                avEl.ValueKind != JsonValueKind.String)
+                return BadRequest(new { error = "template activeVersion missing" });
+            var activeVer = avEl.GetString();
+            if (string.IsNullOrEmpty(activeVer))
+                return BadRequest(new { error = "template activeVersion missing" });
+            if (!tmplRoot.TryGetProperty("versions", out var vsEl) ||
+                vsEl.ValueKind != JsonValueKind.Array)
+                return BadRequest(new { error = "template versions missing" });
+
+            string? matchedSpecRaw = null;
+            foreach (var v in vsEl.EnumerateArray())
+            {
+                if (v.TryGetProperty("version", out var verEl) &&
+                    verEl.ValueKind == JsonValueKind.String &&
+                    verEl.GetString() == activeVer &&
+                    v.TryGetProperty("spec", out var sEl))
+                {
+                    matchedSpecRaw = sEl.GetRawText();
+                    break;
+                }
+            }
+            if (matchedSpecRaw is null)
+                return BadRequest(new { error = "template active spec not found" });
+            specNode = JsonNode.Parse(matchedSpecRaw)
+                ?? throw new InvalidOperationException("template spec parse failed");
+        }
+        else
+        {
+            // default minimal spec (Skill / cost 1 / effects=[])
+            specNode = new JsonObject
+            {
+                ["rarity"] = 1,
+                ["cardType"] = "Skill",
+                ["cost"] = 1,
+                ["effects"] = new JsonArray(),
+            };
+        }
+
+        // 新規 versioned JSON 構築
+        var newCardObj = new JsonObject
+        {
+            ["id"] = body.Id,
+            ["name"] = body.Name,
+            ["displayName"] = body.DisplayName,  // null の場合も明示書込
+            ["activeVersion"] = "v1",
+            ["versions"] = new JsonArray
+            {
+                new JsonObject
+                {
+                    ["version"] = "v1",
+                    ["createdAt"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                    ["label"] = body.TemplateCardId is { Length: > 0 }
+                        ? $"clone of {body.TemplateCardId}"
+                        : "new",
+                    ["spec"] = specNode,
+                },
+            },
+        };
+
+        var json = newCardObj.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+        _writer.WriteOverride(body.Id, json);
+        _provider.Rebuild();
+
+        return Ok(new { id = body.Id });
     }
 
     /// <summary>

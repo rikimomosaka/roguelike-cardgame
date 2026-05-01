@@ -1,9 +1,11 @@
 // Phase 10.5.I: Dev cards read-only viewer.
 // Phase 10.5.J: Editor (label + textarea + Save / Set active / Promote / Delete) を追加。
+// Phase 10.5.K: "+ New Card" モーダルから override 層にゼロから新規カードを作成可能。
 
 import { useEffect, useState } from 'react'
 import type { DevCardDto } from '../api/dev'
 import {
+  createNewCard,
   deleteCardVersion,
   fetchDevCards,
   promoteCardVersion,
@@ -24,6 +26,10 @@ export function DevCardsScreen({ onBack }: Props = {}) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedVer, setSelectedVer] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
+  // Phase 10.5.K: new card modal state
+  const [newCardOpen, setNewCardOpen] = useState(false)
+  // 作成直後に list 再 fetch → 自動選択するための pending id
+  const [pendingSelectId, setPendingSelectId] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -32,14 +38,19 @@ export function DevCardsScreen({ onBack }: Props = {}) {
         if (cancelled) return
         setCards(list)
         if (list.length > 0) {
-          // selectedId がまだ無いか、再読込で消えていたら先頭を選択
+          // pendingSelectId があり list に含まれていればそれを優先 (新規作成直後)
           setSelectedId((prevId) => {
-            const id = prevId && list.some((c) => c.id === prevId) ? prevId : list[0].id
-            // 選択中 card の最新 activeVersion に同期 (mutation 直後の natural な遷移)
+            let id: string
+            if (pendingSelectId && list.some((c) => c.id === pendingSelectId)) {
+              id = pendingSelectId
+            } else {
+              id = prevId && list.some((c) => c.id === prevId) ? prevId : list[0].id
+            }
             const card = list.find((c) => c.id === id) ?? list[0]
             setSelectedVer(card.activeVersion ?? null)
             return id
           })
+          if (pendingSelectId) setPendingSelectId(null)
         }
       })
       .catch((e) => {
@@ -59,6 +70,13 @@ export function DevCardsScreen({ onBack }: Props = {}) {
     <div className="dev-cards">
       <aside className="dev-cards__list">
         <h2>Cards ({cards.length})</h2>
+        <button
+          type="button"
+          className="dev-new-card-btn"
+          onClick={() => setNewCardOpen(true)}
+        >
+          + New Card
+        </button>
         <ul>
           {cards.map((c) => (
             <li
@@ -95,6 +113,121 @@ export function DevCardsScreen({ onBack }: Props = {}) {
           <p>カードを選択してください。</p>
         )}
       </main>
+      {newCardOpen && (
+        <NewCardModal
+          existingIds={cards.map((c) => c.id)}
+          onClose={() => setNewCardOpen(false)}
+          onCreated={(id) => {
+            setNewCardOpen(false)
+            setPendingSelectId(id)
+            setReloadKey((k) => k + 1)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+// ---- Phase 10.5.K: New Card modal ----
+
+type NewCardModalProps = {
+  existingIds: string[]
+  onClose: () => void
+  onCreated: (id: string) => void
+}
+
+function NewCardModal({ existingIds, onClose, onCreated }: NewCardModalProps) {
+  const [id, setId] = useState('')
+  const [name, setName] = useState('')
+  const [displayName, setDisplayName] = useState('')
+  const [templateId, setTemplateId] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+
+  const submit = async () => {
+    setError(null)
+    if (!/^[a-z][a-z0-9_]*$/.test(id)) {
+      setError('id must match ^[a-z][a-z0-9_]*$')
+      return
+    }
+    if (!name) {
+      setError('name is required')
+      return
+    }
+    if (existingIds.includes(id)) {
+      setError(`id '${id}' already exists`)
+      return
+    }
+    setSubmitting(true)
+    try {
+      await createNewCard(id, name, displayName || null, templateId || null)
+      onCreated(id)
+    } catch (e) {
+      setError(String(e))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div
+      className="dev-modal-backdrop"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        className="dev-modal"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-label="New Card"
+      >
+        <h3>New Card</h3>
+        <label>
+          ID
+          <input
+            value={id}
+            onChange={(e) => setId(e.target.value)}
+            placeholder="lowercase_id"
+            aria-label="new card id"
+          />
+        </label>
+        <label>
+          Name
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="表示名"
+            aria-label="new card name"
+          />
+        </label>
+        <label>
+          Display Name
+          <input
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            placeholder="(optional)"
+            aria-label="new card display name"
+          />
+        </label>
+        <label>
+          Template Card ID
+          <input
+            value={templateId}
+            onChange={(e) => setTemplateId(e.target.value)}
+            placeholder="(optional, e.g., strike)"
+            aria-label="new card template id"
+          />
+        </label>
+        {error && <div className="dev-error">{error}</div>}
+        <div className="dev-modal__actions">
+          <button type="button" onClick={onClose} disabled={false}>
+            Cancel
+          </button>
+          <button type="button" onClick={submit} disabled={submitting}>
+            Create
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

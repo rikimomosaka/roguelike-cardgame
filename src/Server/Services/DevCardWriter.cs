@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace RoguelikeCardGame.Server.Services;
@@ -78,5 +79,22 @@ public sealed class DevCardWriter
         if (_baseCardsDir is null) return null;
         var path = Path.Combine(_baseCardsDir, $"{cardId}.json");
         return File.Exists(path) ? File.ReadAllText(path) : null;
+    }
+
+    /// <summary>
+    /// override directory に存在するカード ID 一覧 (Phase 10.5.K — override-only 新規カードを GET で
+    /// 列挙するため)。directory 不在時は空配列。
+    /// </summary>
+    public IReadOnlyList<string> ListOverrideIds()
+    {
+        var dir = Path.Combine(_overrideRoot, "cards");
+        if (!Directory.Exists(dir)) return System.Array.Empty<string>();
+        var files = Directory.GetFiles(dir, "*.json");
+        var ids = new System.Collections.Generic.List<string>(files.Length);
+        foreach (var f in files)
+        {
+            ids.Add(Path.GetFileNameWithoutExtension(f));
+        }
+        return ids;
     }
 }
