@@ -1,27 +1,38 @@
 {
-  "id": "reward_epic_04",
-  "name": "三段斬り",
-  "rarity": 3,
-  "cardType": "Attack",
-  "cost": 2,
-  "effects": [
-    {
-      "action": "attack",
-      "scope": "single",
-      "side": "enemy",
-      "amount": 12
-    },
-    {
-      "action": "attack",
-      "scope": "single",
-      "side": "enemy",
-      "amount": 12
-    },
-    {
-      "action": "attack",
-      "scope": "single",
-      "side": "enemy",
-      "amount": 12
-    }
-  ]
+    "id":  "reward_epic_04",
+    "name":  "三段斬り",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-01T03:54:50Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  3,
+                                      "cardType":  "Attack",
+                                      "cost":  2,
+                                      "effects":  [
+                                                      {
+                                                          "action":  "attack",
+                                                          "scope":  "single",
+                                                          "side":  "enemy",
+                                                          "amount":  12
+                                                      },
+                                                      {
+                                                          "action":  "attack",
+                                                          "scope":  "single",
+                                                          "side":  "enemy",
+                                                          "amount":  12
+                                                      },
+                                                      {
+                                                          "action":  "attack",
+                                                          "scope":  "single",
+                                                          "side":  "enemy",
+                                                          "amount":  12
+                                                      }
+                                                  ]
+                                  }
+                     }
+                 ]
 }

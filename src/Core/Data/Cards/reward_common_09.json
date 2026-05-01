@@ -1,15 +1,26 @@
 {
-  "id": "reward_common_09",
-  "name": "軽撃",
-  "rarity": 1,
-  "cardType": "Attack",
-  "cost": 0,
-  "effects": [
-    {
-      "action": "attack",
-      "scope": "single",
-      "side": "enemy",
-      "amount": 4
-    }
-  ]
+    "id":  "reward_common_09",
+    "name":  "軽撃",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-01T03:54:50Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  1,
+                                      "cardType":  "Attack",
+                                      "cost":  0,
+                                      "effects":  [
+                                                      {
+                                                          "action":  "attack",
+                                                          "scope":  "single",
+                                                          "side":  "enemy",
+                                                          "amount":  4
+                                                      }
+                                                  ]
+                                  }
+                     }
+                 ]
 }

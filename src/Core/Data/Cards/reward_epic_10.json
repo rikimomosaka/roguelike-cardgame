@@ -1,19 +1,30 @@
 {
-  "id": "reward_epic_10",
-  "name": "戦略的布陣",
-  "rarity": 3,
-  "cardType": "Skill",
-  "cost": 1,
-  "effects": [
-    {
-      "action": "drawCards",
-      "scope": "self",
-      "amount": 2
-    },
-    {
-      "action": "block",
-      "scope": "self",
-      "amount": 8
-    }
-  ]
+    "id":  "reward_epic_10",
+    "name":  "戦略的布陣",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-01T03:54:50Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  3,
+                                      "cardType":  "Skill",
+                                      "cost":  1,
+                                      "effects":  [
+                                                      {
+                                                          "action":  "drawCards",
+                                                          "scope":  "self",
+                                                          "amount":  2
+                                                      },
+                                                      {
+                                                          "action":  "block",
+                                                          "scope":  "self",
+                                                          "amount":  8
+                                                      }
+                                                  ]
+                                  }
+                     }
+                 ]
 }

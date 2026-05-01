@@ -1,14 +1,25 @@
 {
-  "id": "reward_rare_05",
-  "name": "闘気開放",
-  "rarity": 2,
-  "cardType": "Skill",
-  "cost": 1,
-  "effects": [
-    {
-      "action": "gainEnergy",
-      "scope": "self",
-      "amount": 2
-    }
-  ]
+    "id":  "reward_rare_05",
+    "name":  "闘気開放",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-01T03:54:50Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  2,
+                                      "cardType":  "Skill",
+                                      "cost":  1,
+                                      "effects":  [
+                                                      {
+                                                          "action":  "gainEnergy",
+                                                          "scope":  "self",
+                                                          "amount":  2
+                                                      }
+                                                  ]
+                                  }
+                     }
+                 ]
 }

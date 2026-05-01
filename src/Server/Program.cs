@@ -31,7 +31,20 @@ builder.Services.AddSingleton<IBestiaryRepository, FileBestiaryRepository>();
 
 builder.Services.AddSingleton<MapGenerationConfig>(_ => MapGenerationConfigLoader.LoadAct1());
 builder.Services.AddSingleton<IDungeonMapGenerator, DungeonMapGenerator>();
-builder.Services.AddSingleton<DataCatalog>(_ => EmbeddedDataLoader.LoadCatalog());
+builder.Services.AddSingleton<DataCatalog>(sp =>
+{
+    var env = sp.GetRequiredService<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>();
+    if (!env.IsDevelopment())
+        return EmbeddedDataLoader.LoadCatalog();
+
+    // DEV モード: data-local/dev-overrides/cards/*.json があれば base にマージしてカタログ構築。
+    // ContentRootPath は通常 src/Server/、repo ルートからは ../../ 相対で data-local/ に到達する。
+    var overrideRoot = Path.Combine(env.ContentRootPath, "..", "..", "data-local", "dev-overrides");
+    var overrides = DevOverrideLoader.LoadCards(overrideRoot);
+    return overrides.Count == 0
+        ? EmbeddedDataLoader.LoadCatalog()
+        : EmbeddedDataLoader.LoadCatalogWithOverrides(overrides);
+});
 builder.Services.AddSingleton<RunStartService>();
 builder.Services.AddSingleton<BattleSessionStore>();
 

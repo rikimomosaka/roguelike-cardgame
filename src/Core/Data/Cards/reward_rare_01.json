@@ -1,15 +1,26 @@
 {
-  "id": "reward_rare_01",
-  "name": "強襲",
-  "rarity": 2,
-  "cardType": "Attack",
-  "cost": 2,
-  "effects": [
-    {
-      "action": "attack",
-      "scope": "single",
-      "side": "enemy",
-      "amount": 18
-    }
-  ]
+    "id":  "reward_rare_01",
+    "name":  "強襲",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-01T03:54:50Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  2,
+                                      "cardType":  "Attack",
+                                      "cost":  2,
+                                      "effects":  [
+                                                      {
+                                                          "action":  "attack",
+                                                          "scope":  "single",
+                                                          "side":  "enemy",
+                                                          "amount":  18
+                                                      }
+                                                  ]
+                                  }
+                     }
+                 ]
 }

@@ -37,3 +37,6 @@ Thumbs.db
 # Phase 2 file-backed stand-in database
 /src/Server/data-local/
 /src/Server/bin/**/data-local/
+
+# Phase 10.5.H: 開発者ローカル card override (machine-local)
+/data-local/dev-overrides/

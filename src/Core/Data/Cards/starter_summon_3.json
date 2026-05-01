@@ -1,24 +1,37 @@
 {
-  "id": "starter_summon_3",
-  "name": "ウィスプ召喚",
-  "rarity": 1,
-  "cardType": "Unit",
-  "cost": 3,
-  "effects": [
-    {
-      "action": "summon",
-      "scope": "self",
-      "amount": 0,
-      "unitId": "wisp"
-    }
-  ],
-  "upgradedEffects": [
-    {
-      "action": "summon",
-      "scope": "self",
-      "amount": 0,
-      "unitId": "wisp"
-    }
-  ],
-  "upgradedKeywords": ["superwild"]
+    "id":  "starter_summon_3",
+    "name":  "ウィスプ召喚",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-01T03:54:50Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  1,
+                                      "cardType":  "Unit",
+                                      "cost":  3,
+                                      "effects":  [
+                                                      {
+                                                          "action":  "summon",
+                                                          "scope":  "self",
+                                                          "amount":  0,
+                                                          "unitId":  "wisp"
+                                                      }
+                                                  ],
+                                      "upgradedEffects":  [
+                                                              {
+                                                                  "action":  "summon",
+                                                                  "scope":  "self",
+                                                                  "amount":  0,
+                                                                  "unitId":  "wisp"
+                                                              }
+                                                          ],
+                                      "upgradedKeywords":  [
+                                                               "superwild"
+                                                           ]
+                                  }
+                     }
+                 ]
 }

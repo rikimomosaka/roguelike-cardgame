@@ -1,21 +1,32 @@
 {
-  "id": "reward_rare_08",
-  "name": "双剣連撃",
-  "rarity": 2,
-  "cardType": "Attack",
-  "cost": 2,
-  "effects": [
-    {
-      "action": "attack",
-      "scope": "single",
-      "side": "enemy",
-      "amount": 8
-    },
-    {
-      "action": "attack",
-      "scope": "single",
-      "side": "enemy",
-      "amount": 8
-    }
-  ]
+    "id":  "reward_rare_08",
+    "name":  "双剣連撃",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-01T03:54:50Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  2,
+                                      "cardType":  "Attack",
+                                      "cost":  2,
+                                      "effects":  [
+                                                      {
+                                                          "action":  "attack",
+                                                          "scope":  "single",
+                                                          "side":  "enemy",
+                                                          "amount":  8
+                                                      },
+                                                      {
+                                                          "action":  "attack",
+                                                          "scope":  "single",
+                                                          "side":  "enemy",
+                                                          "amount":  8
+                                                      }
+                                                  ]
+                                  }
+                     }
+                 ]
 }

@@ -1,23 +1,34 @@
 {
-  "id": "starter_block_0",
-  "name": "小盾",
-  "rarity": 1,
-  "cardType": "Skill",
-  "cost": 0,
-  "effects": [
-    {
-      "action": "block",
-      "scope": "single",
-      "side": "ally",
-      "amount": 3
-    }
-  ],
-  "upgradedEffects": [
-    {
-      "action": "block",
-      "scope": "single",
-      "side": "ally",
-      "amount": 5
-    }
-  ]
+    "id":  "starter_block_0",
+    "name":  "小盾",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-01T03:54:50Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  1,
+                                      "cardType":  "Skill",
+                                      "cost":  0,
+                                      "effects":  [
+                                                      {
+                                                          "action":  "block",
+                                                          "scope":  "single",
+                                                          "side":  "ally",
+                                                          "amount":  3
+                                                      }
+                                                  ],
+                                      "upgradedEffects":  [
+                                                              {
+                                                                  "action":  "block",
+                                                                  "scope":  "single",
+                                                                  "side":  "ally",
+                                                                  "amount":  5
+                                                              }
+                                                          ]
+                                  }
+                     }
+                 ]
 }

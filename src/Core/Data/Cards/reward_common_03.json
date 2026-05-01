@@ -1,14 +1,25 @@
 {
-  "id": "reward_common_03",
-  "name": "盾構え",
-  "rarity": 1,
-  "cardType": "Skill",
-  "cost": 1,
-  "effects": [
-    {
-      "action": "block",
-      "scope": "self",
-      "amount": 7
-    }
-  ]
+    "id":  "reward_common_03",
+    "name":  "盾構え",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-01T03:54:50Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  1,
+                                      "cardType":  "Skill",
+                                      "cost":  1,
+                                      "effects":  [
+                                                      {
+                                                          "action":  "block",
+                                                          "scope":  "self",
+                                                          "amount":  7
+                                                      }
+                                                  ]
+                                  }
+                     }
+                 ]
 }

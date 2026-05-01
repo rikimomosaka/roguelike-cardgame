@@ -1,15 +1,26 @@
 {
-  "id": "reward_common_01",
-  "name": "鋭い一撃",
-  "rarity": 1,
-  "cardType": "Attack",
-  "cost": 1,
-  "effects": [
-    {
-      "action": "attack",
-      "scope": "single",
-      "side": "enemy",
-      "amount": 8
-    }
-  ]
+    "id":  "reward_common_01",
+    "name":  "鋭い一撃",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-01T03:54:50Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  1,
+                                      "cardType":  "Attack",
+                                      "cost":  1,
+                                      "effects":  [
+                                                      {
+                                                          "action":  "attack",
+                                                          "scope":  "single",
+                                                          "side":  "enemy",
+                                                          "amount":  8
+                                                      }
+                                                  ]
+                                  }
+                     }
+                 ]
 }

@@ -269,4 +269,90 @@ public class CardJsonLoaderTests
         Assert.Null(def.Description);
         Assert.Null(def.UpgradedDescription);
     }
+
+    // --- Phase 10.5.H: versioned schema 対応テスト ---
+
+    [Fact]
+    public void Parses_versioned_card_format()
+    {
+        var json = """
+        {
+          "id": "strike",
+          "name": "ストライク",
+          "displayName": null,
+          "activeVersion": "v1",
+          "versions": [
+            {
+              "version": "v1",
+              "createdAt": "2026-05-01T00:00:00Z",
+              "label": "original",
+              "spec": {
+                "rarity": 1,
+                "cardType": "Attack",
+                "cost": 1,
+                "effects": [{ "action": "attack", "scope": "single", "side": "enemy", "amount": 6 }]
+              }
+            }
+          ]
+        }
+        """;
+        var def = CardJsonLoader.Parse(json);
+        Assert.Equal("strike", def.Id);
+        Assert.Equal("ストライク", def.Name);
+        Assert.Equal(CardRarity.Common, def.Rarity);
+        Assert.Equal(CardType.Attack, def.CardType);
+        Assert.Equal(1, def.Cost);
+        Assert.Single(def.Effects);
+    }
+
+    [Fact]
+    public void Versioned_with_multiple_versions_picks_active()
+    {
+        var json = """
+        {
+          "id": "strike",
+          "name": "ストライク",
+          "activeVersion": "v2",
+          "versions": [
+            { "version": "v1", "spec": { "rarity": 1, "cardType": "Attack", "cost": 1, "effects": [{ "action": "attack", "scope": "single", "side": "enemy", "amount": 6 }] } },
+            { "version": "v2", "spec": { "rarity": 1, "cardType": "Attack", "cost": 0, "effects": [{ "action": "attack", "scope": "single", "side": "enemy", "amount": 8 }] } }
+          ]
+        }
+        """;
+        var def = CardJsonLoader.Parse(json);
+        Assert.Equal(0, def.Cost);
+        Assert.Equal(8, def.Effects[0].Amount);
+    }
+
+    [Fact]
+    public void Versioned_unknown_active_version_throws()
+    {
+        var json = """
+        {
+          "id": "x", "name": "x",
+          "activeVersion": "v99",
+          "versions": [{ "version": "v1", "spec": { "rarity": 1, "cardType": "Attack", "cost": 1, "effects": [] } }]
+        }
+        """;
+        Assert.Throws<CardJsonException>(() => CardJsonLoader.Parse(json));
+    }
+
+    [Fact]
+    public void Flat_format_still_parses_for_backward_compat()
+    {
+        // 既存 35 card JSON は flat 形式のままなので、これが緑のままであることが必須
+        var json = """
+        {
+          "id": "strike",
+          "name": "ストライク",
+          "rarity": 1,
+          "cardType": "Attack",
+          "cost": 1,
+          "effects": [{ "action": "attack", "scope": "single", "side": "enemy", "amount": 6 }]
+        }
+        """;
+        var def = CardJsonLoader.Parse(json);
+        Assert.Equal("strike", def.Id);
+        Assert.Equal(1, def.Cost);
+    }
 }

@@ -1,14 +1,25 @@
 {
-  "id": "reward_epic_05",
-  "name": "絶対防壁",
-  "rarity": 3,
-  "cardType": "Skill",
-  "cost": 1,
-  "effects": [
-    {
-      "action": "block",
-      "scope": "self",
-      "amount": 18
-    }
-  ]
+    "id":  "reward_epic_05",
+    "name":  "絶対防壁",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-01T03:54:50Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  3,
+                                      "cardType":  "Skill",
+                                      "cost":  1,
+                                      "effects":  [
+                                                      {
+                                                          "action":  "block",
+                                                          "scope":  "self",
+                                                          "amount":  18
+                                                      }
+                                                  ]
+                                  }
+                     }
+                 ]
 }

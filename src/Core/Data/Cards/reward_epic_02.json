@@ -1,14 +1,25 @@
 {
-  "id": "reward_epic_02",
-  "name": "覇者の咆哮",
-  "rarity": 3,
-  "cardType": "Power",
-  "cost": 2,
-  "effects": [
-    {
-      "action": "gainStrength",
-      "scope": "self",
-      "amount": 3
-    }
-  ]
+    "id":  "reward_epic_02",
+    "name":  "覇者の咆哮",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-01T03:54:50Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  3,
+                                      "cardType":  "Power",
+                                      "cost":  2,
+                                      "effects":  [
+                                                      {
+                                                          "action":  "gainStrength",
+                                                          "scope":  "self",
+                                                          "amount":  3
+                                                      }
+                                                  ]
+                                  }
+                     }
+                 ]
 }

@@ -1,19 +1,30 @@
 {
-  "id": "reward_rare_07",
-  "name": "戦術的退避",
-  "rarity": 2,
-  "cardType": "Skill",
-  "cost": 0,
-  "effects": [
-    {
-      "action": "block",
-      "scope": "self",
-      "amount": 5
-    },
-    {
-      "action": "drawCards",
-      "scope": "self",
-      "amount": 1
-    }
-  ]
+    "id":  "reward_rare_07",
+    "name":  "戦術的退避",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-01T03:54:50Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  2,
+                                      "cardType":  "Skill",
+                                      "cost":  0,
+                                      "effects":  [
+                                                      {
+                                                          "action":  "block",
+                                                          "scope":  "self",
+                                                          "amount":  5
+                                                      },
+                                                      {
+                                                          "action":  "drawCards",
+                                                          "scope":  "self",
+                                                          "amount":  1
+                                                      }
+                                                  ]
+                                  }
+                     }
+                 ]
 }
