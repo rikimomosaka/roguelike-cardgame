@@ -136,7 +136,11 @@ public static class RewardGenerator
             else if (r < commonFinal + rareFinal) rarity = CardRarity.Rare;
             else rarity = CardRarity.Epic;
 
+            // Why: c.Rarity == rarity (Common/Rare/Epic) で Token は元々除外されるが、
+            // 将来 rarity 選択ロジックが変わっても token カードが紛れ込まないよう
+            // 明示的に Token を除外する防御的フィルタを追加 (Phase 10.5.G)。
             var pool2 = data.Cards.Values
+                .Where(c => c.Rarity != CardRarity.Token)
                 .Where(c => c.Rarity == rarity && c.Id.StartsWith("reward_"))
                 .Where(c => !excl.Contains(c.Id) && !seen.Contains(c.Id))
                 .Select(c => c.Id)

@@ -31,12 +31,17 @@ function potionRarityCode(n: number | undefined): CardRarity | undefined {
   }
 }
 
+// Why: Token rarity (Phase 10.5.G) は achievements (図鑑) の通常コレクション
+//   対象外なので RARITY_ORDER には含めない。RARITY_LABEL は CardRarity 全
+//   バリアントを網羅する Record 型なので 't' エントリを置いておく
+//   (ラベル名は他レア同様に大文字スネーク)。
 const RARITY_ORDER: CardRarity[] = ['c', 'r', 'e', 'l']
 const RARITY_LABEL: Record<CardRarity, string> = {
   c: 'COMMON',
   r: 'RARE',
   e: 'EPIC',
   l: 'LEGENDARY',
+  t: 'TOKEN',
 }
 
 /** Card-type filter values. 'summon' is reserved for a future card type. */

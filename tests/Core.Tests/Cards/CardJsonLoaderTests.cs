@@ -234,6 +234,23 @@ public class CardJsonLoaderTests
     }
 
     [Fact]
+    public void Loads_token_rarity()
+    {
+        var json = """
+        {
+          "id": "wound",
+          "name": "傷",
+          "rarity": 5,
+          "cardType": "Status",
+          "cost": null,
+          "effects": []
+        }
+        """;
+        var def = CardJsonLoader.Parse(json);
+        Assert.Equal(CardRarity.Token, def.Rarity);
+    }
+
+    [Fact]
     public void Loads_card_with_empty_description_strings_normalizes_to_null()
     {
         var json = """

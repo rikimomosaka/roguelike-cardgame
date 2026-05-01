@@ -142,6 +142,7 @@ function defaultRarityLabel(r: CardRarity): string {
     case 'r': return 'RARE'
     case 'e': return 'EPIC'
     case 'l': return 'LEGENDARY'
+    case 't': return 'TOKEN'
   }
 }
 

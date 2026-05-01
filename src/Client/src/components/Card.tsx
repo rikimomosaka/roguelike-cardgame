@@ -5,7 +5,7 @@ import type { TooltipContent } from './Tooltip'
 import './Card.css'
 
 export type CardType = 'attack' | 'skill' | 'power' | 'curse' | 'status' | 'unit'
-export type CardRarity = 'c' | 'r' | 'e' | 'l'
+export type CardRarity = 'c' | 'r' | 'e' | 'l' | 't'
 
 type Props = {
   name: string

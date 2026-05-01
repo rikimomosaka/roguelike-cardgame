@@ -8,4 +8,10 @@ public enum CardRarity
     Rare = 2,
     Epic = 3,
     Legendary = 4,
+    /// <summary>
+    /// バトル中の addCard effect で手札に加えられる token カード。
+    /// 報酬・商人プールには出現しない (RewardGenerator / MerchantInventoryGenerator で除外)。
+    /// 図鑑の通常コレクション対象外。
+    /// </summary>
+    Token = 5,
 }

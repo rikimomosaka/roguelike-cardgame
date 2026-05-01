@@ -234,3 +234,9 @@
 .card--rarity-l .card__cost   { border-color: #c9a838; color: var(--rarity-l); box-shadow: 0 0 6px rgba(255,229,138,0.6); }
 .card--rarity-l .card__name   { color: var(--rarity-l); }
 .card--rarity-l .card__illust { border-color: rgba(201,168,56,0.65); box-shadow: inset 0 0 6px rgba(201,168,56,0.2); }
+
+/* Why: Phase 10.5.G で追加された CardRarity.Token (= 't') の placeholder スタイル。
+   当面 Common (--rarity-c) と同色で扱い、差別化は別フェーズで実施する。 */
+.card--rarity-t .card__cost   { border-color: #d8d8d8; color: #f0f0f0; box-shadow: 0 0 4px rgba(216,216,216,0.3); }
+.card--rarity-t .card__name   { color: var(--rarity-c); }
+.card--rarity-t .card__illust { border-color: rgba(216,216,216,0.4); }

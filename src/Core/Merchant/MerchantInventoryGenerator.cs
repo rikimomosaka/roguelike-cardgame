@@ -33,7 +33,12 @@ public static class MerchantInventoryGenerator
     private static ImmutableArray<MerchantOffer> PickCards(
         DataCatalog catalog, MerchantPrices prices, RunState s, IRng rng, int count)
     {
+        // Why: prices.Cards に Token rarity の価格は存在しないので
+        // ContainsKey で除外されるが、将来 prices に Token 価格が誤って
+        // 追加された場合でも token カードが商人在庫に並ばないよう明示的に
+        // 除外する防御フィルタ (Phase 10.5.G)。
         var candidates = catalog.Cards.Values
+            .Where(c => c.Rarity != CardRarity.Token)
             .Where(c => c.Id.StartsWith("reward_") && prices.Cards.ContainsKey(c.Rarity))
             .OrderBy(c => c.Id)
             .ToList();

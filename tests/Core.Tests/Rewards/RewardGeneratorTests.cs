@@ -200,4 +200,40 @@ public class RewardGeneratorTests
         Assert.Null(reward.RelicId);
         Assert.True(reward.RelicClaimed);
     }
+
+    /// <summary>
+    /// Token rarity (=5) のカードは reward_ プレフィックスを持ち、
+    /// rarity 値が Common/Rare/Epic と一致しなくても、防御的フィルタで
+    /// 報酬抽選プールから除外される。これにより将来 rarity 抽選ロジックが
+    /// 変わっても token カードが報酬に紛れ込まない。
+    /// </summary>
+    [Fact]
+    public void Generate_ExcludesTokenRarityCardsFromRewards()
+    {
+        var baseCat = EmbeddedDataLoader.LoadCatalog();
+        var tokenCard = new CardDefinition(
+            Id: "reward_token_test",
+            Name: "テストトークン",
+            DisplayName: null,
+            Rarity: CardRarity.Token,
+            CardType: CardType.Status,
+            Cost: null,
+            UpgradedCost: null,
+            Effects: System.Array.Empty<CardEffect>(),
+            UpgradedEffects: null,
+            Keywords: null);
+        var augmentedCards = baseCat.Cards
+            .Concat(new[] { new System.Collections.Generic.KeyValuePair<string, CardDefinition>(
+                tokenCard.Id, tokenCard) })
+            .ToDictionary(kv => kv.Key, kv => kv.Value);
+        var catalog = baseCat with { Cards = augmentedCards };
+        var rt = catalog.RewardTables["act1"];
+        var ctx = new RewardContext.FromEnemy(new EnemyPool(1, EnemyTier.Weak));
+        for (int seed = 0; seed < 50; seed++)
+        {
+            var (reward, _) = RewardGenerator.Generate(ctx, new RewardRngState(40, 0),
+                StarterExclusions, rt, catalog, new SystemRng(seed));
+            Assert.DoesNotContain("reward_token_test", reward.CardChoices);
+        }
+    }
 }

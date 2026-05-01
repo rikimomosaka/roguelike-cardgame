@@ -49,6 +49,11 @@ function cardRarityFromNumber(n: number): CardRarity {
     case 1: return 'r'
     case 2: return 'e'
     case 3: return 'l'
+    // Why: 5 は Phase 10.5.G で追加された CardRarity.Token。Token カードは
+    //   addCard effect で battle 中に手札に来るが、報酬・商人プールには
+    //   出現しない。Client は他のレアリティと同様 't' で表示し、
+    //   defaultRarityLabel('t') === 'TOKEN' としてラベル化する。
+    case 5: return 't'
     default: return 'c'
   }
 }

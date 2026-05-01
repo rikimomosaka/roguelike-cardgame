@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Map;
 using RoguelikeCardGame.Core.Merchant;
@@ -91,5 +93,37 @@ public class MerchantInventoryGeneratorTests
         var b = MerchantInventoryGenerator.Generate(
             Catalog, Catalog.MerchantPrices!, Base(), new SequentialRng(99UL));
         Assert.Equal(a.Cards.Select(o => o.Id), b.Cards.Select(o => o.Id));
+    }
+
+    /// <summary>
+    /// Token rarity (=5) のカードは reward_ プレフィックスを持っていても
+    /// 商人の在庫に並ばない。MerchantPrices.Cards に Token 価格は無いので
+    /// `prices.Cards.ContainsKey(c.Rarity)` でも除外されるが、明示的な
+    /// 防御フィルタで意図を明確化する (Phase 10.5.G)。
+    /// </summary>
+    [Fact]
+    public void Generate_ExcludesTokenRarityCardsFromMerchantInventory()
+    {
+        var tokenCard = new CardDefinition(
+            Id: "reward_token_test",
+            Name: "テストトークン",
+            DisplayName: null,
+            Rarity: CardRarity.Token,
+            CardType: CardType.Status,
+            Cost: null,
+            UpgradedCost: null,
+            Effects: System.Array.Empty<CardEffect>(),
+            UpgradedEffects: null,
+            Keywords: null);
+        var augmentedCards = Catalog.Cards
+            .Concat(new[] { new KeyValuePair<string, CardDefinition>(tokenCard.Id, tokenCard) })
+            .ToDictionary(kv => kv.Key, kv => kv.Value);
+        var augmented = Catalog with { Cards = augmentedCards };
+        for (ulong seed = 1; seed < 30; seed++)
+        {
+            var inv = MerchantInventoryGenerator.Generate(
+                augmented, augmented.MerchantPrices!, Base(), new SequentialRng(seed));
+            Assert.DoesNotContain("reward_token_test", inv.Cards.Select(o => o.Id));
+        }
     }
 }

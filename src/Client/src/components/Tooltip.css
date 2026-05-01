@@ -49,6 +49,8 @@
 .tip__name--r { color: var(--rarity-r); }
 .tip__name--e { color: var(--rarity-e); }
 .tip__name--l { color: var(--rarity-l); }
+/* Why: Phase 10.5.G — Token rarity placeholder。差別化は別フェーズ。 */
+.tip__name--t { color: var(--rarity-c); }
 
 .tip__rare {
   font-family: var(--font-label);
@@ -63,6 +65,8 @@
 .tip__rare--r { color: var(--rarity-r); border-color: var(--rarity-r-border); background: var(--rarity-r-bg); }
 .tip__rare--e { color: var(--rarity-e); border-color: var(--rarity-e-border); background: var(--rarity-e-bg); }
 .tip__rare--l { color: var(--rarity-l); border-color: var(--rarity-l-border); background: var(--rarity-l-bg); }
+/* Why: Phase 10.5.G — Token rarity placeholder。差別化は別フェーズ。 */
+.tip__rare--t { color: var(--rarity-c); border-color: var(--rarity-c-border); background: var(--rarity-c-bg); }
 
 .tip__desc {
   color: var(--fg-muted);
