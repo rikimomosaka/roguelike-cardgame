@@ -124,28 +124,28 @@ public class CardTextFormatterTests
     public void Buff_self_strength()
     {
         var s = CardTextFormatter.FormatEffects(new[] { E("buff", EffectScope.Self, null, 1, "strength") });
-        Assert.Equal("自身に 筋力 [N:1] を付与。", s);
+        Assert.Equal("自身に [S:strength] [N:1] を付与。", s);
     }
 
     [Fact]
     public void Debuff_weak_single_enemy()
     {
         var s = CardTextFormatter.FormatEffects(new[] { E("debuff", EffectScope.Single, EffectSide.Enemy, 1, "weak") });
-        Assert.Equal("敵単体に 脱力 [N:1] を付与。", s);
+        Assert.Equal("敵単体に [S:weak] [N:1] を付与。", s);
     }
 
     [Fact]
     public void Debuff_vulnerable_all_enemies()
     {
         var s = CardTextFormatter.FormatEffects(new[] { E("debuff", EffectScope.All, EffectSide.Enemy, 2, "vulnerable") });
-        Assert.Equal("敵全体に 脆弱 [N:2] を付与。", s);
+        Assert.Equal("敵全体に [S:vulnerable] [N:2] を付与。", s);
     }
 
     [Fact]
     public void Buff_ally_all_dexterity()
     {
         var s = CardTextFormatter.FormatEffects(new[] { E("buff", EffectScope.All, EffectSide.Ally, 1, "dexterity") });
-        Assert.Equal("味方全体に 敏捷 [N:1] を付与。", s);
+        Assert.Equal("味方全体に [S:dexterity] [N:1] を付与。", s);
     }
 
     // --- Heal ---

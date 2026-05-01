@@ -184,12 +184,14 @@
   margin-left: 1px;
 }
 
-/* ---------- Illustration (1:1 square) ---------- */
+/* ---------- Illustration (4:3 horizontal, Phase 10.5.M2) ----------
+   旧: 1:1 正方形 → カードの上半分のみで描画。
+   新: 4:3 横長 (高さ -25%) で上に寄せ、下半分は description 用 .card__desc に明け渡す。 */
 .card__illust {
   position: relative; z-index: 1;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 4 / 3;
   width: calc(100% - 6px);
-  margin: 7px auto 0;
+  margin: 4px auto 0;
   background:
     repeating-linear-gradient(0deg, rgba(0,0,0,0.25) 0 2px, transparent 2px 4px),
     var(--bg-2);
@@ -204,6 +206,35 @@
   letter-spacing: 1px;
   flex-shrink: 0;
 }
+
+/* ---------- Description (Phase 10.5.M2) ----------
+   カード下半分に formatter 出力テキストを描画。CardDesc が marker を span 化し、
+   ここで黒フチ + 小さめ font + 中央寄せに整形する。 */
+.card__desc {
+  position: relative; z-index: 2;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  text-align: center;
+  padding: 4px 4px 2px;
+  font-family: var(--font-body);
+  font-size: 9px;
+  line-height: 1.25;
+  color: #ffffff;
+  /* 4 方向 black outline (text-stroke 互換)。 */
+  text-shadow:
+    -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px  1px 0 #000,
+    1px  1px 0 #000,
+    0    0   2px rgba(0,0,0,0.7);
+  overflow: hidden;
+  letter-spacing: 0;
+}
+
+/* card__desc 内の CardDesc 系 span は色を保つが、text-shadow は親から継承される
+   ので各色の数字/keyword 等も黒フチが乗る。 */
 
 /* ---------- Bottom type label ---------- */
 .card__type {

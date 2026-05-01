@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, MouseEventHandler, ReactNode } from 'react'
 import { useTooltipTarget } from './Tooltip'
 import type { TooltipContent } from './Tooltip'
+import { CardDesc } from './CardDesc'
 import './Card.css'
 
 export type CardType = 'attack' | 'skill' | 'power' | 'curse' | 'status' | 'unit'
@@ -147,6 +148,14 @@ export function Card({
         </div>
       </div>
       <div className="card__illust">{art ?? 'ILLUST'}</div>
+      {/* Why: カード下半分に description (formatter の auto-text) を表示。
+          [N:..] / [K:..] / [S:..] 等の marker を CardDesc が span 化、CSS で
+          黒フチ + 小さめ font に整形して in-card に収める。 */}
+      {activeDesc ? (
+        <div className="card__desc">
+          <CardDesc text={activeDesc} />
+        </div>
+      ) : null}
       <div className="card__type">{typeLabel}</div>
     </div>
   )

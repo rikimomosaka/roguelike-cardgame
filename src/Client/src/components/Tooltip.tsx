@@ -8,7 +8,8 @@ import {
 } from 'react'
 import type { MouseEvent, ReactNode } from 'react'
 import type { CardRarity } from './Card'
-import { CardDesc } from './CardDesc'
+import { CardDesc, extractCardDescRefs } from './CardDesc'
+import type { CardDescRef } from './CardDesc'
 import { useCardCatalog } from '../hooks/useCardCatalog'
 import './Tooltip.css'
 
@@ -81,6 +82,11 @@ export function TooltipHost({ children }: { children: ReactNode }) {
               content.desc
             )}
           </div>
+          {/* Phase 10.5.M2: description に含まれる keyword / status / cardref の
+              詳細定義を二段目 popup として並べる。 */}
+          {typeof content.desc === 'string' ? (
+            <TipRefs refs={extractCardDescRefs(content.desc, cardNames)} />
+          ) : null}
         </div>
       ) : null}
     </TooltipContext.Provider>
@@ -133,6 +139,24 @@ export function useTooltipTarget(content: TooltipContent | null) {
       },
     }),
     [ctx, content],
+  )
+}
+
+/**
+ * Tooltip 二段目: description 内の keyword / status / cardref の詳細定義を並べる。
+ * 1 個も無ければ何も描画しない。
+ */
+function TipRefs({ refs }: { refs: CardDescRef[] }) {
+  if (refs.length === 0) return null
+  return (
+    <div className="tip__refs">
+      {refs.map((r) => (
+        <div key={`${r.kind}:${r.id}`} className={`tip__ref tip__ref--${r.kind}`}>
+          <div className="tip__ref-name">{r.name}</div>
+          {r.kind === 'card' ? null : <div className="tip__ref-desc">{r.desc}</div>}
+        </div>
+      ))}
+    </div>
   )
 }
 

@@ -1,15 +1,35 @@
 import type { ReactNode } from 'react'
 import './CardDesc.css'
 
-// Why: キーワード ID → 日本語表示名。Core 側 CardKeywords 辞書 (10.5.B) と同期。
-//   将来 catalog API で配布する想定だが、現状は静的にミラー。
-const KEYWORD_JP: Record<string, string> = {
-  wild: 'ワイルド',
-  superwild: 'スーパーワイルド',
+// Why: キーワード ID → 日本語表示名 + 説明文。Core 側 CardKeywords 辞書と同期。
+//   tooltip の二段目で定義 popup を出すために description も保持。
+export const KEYWORD_DEFS: Record<string, { name: string; desc: string }> = {
+  wild: {
+    name: 'ワイルド',
+    desc: '敵単体を対象とする攻撃が、ランダムな敵を対象に変わる。',
+  },
+  superwild: {
+    name: 'スーパーワイルド',
+    desc: '敵単体を対象とする攻撃が、敵全体を対象に変わる。',
+  },
+  wait: {
+    name: '待機',
+    desc: 'このカードはプレイ後も捨札に行かず、次ターンに手札へ持ち越される。',
+  },
 }
 
-// Why: パワーカードの発火タイミング ID → 日本語表示。10.5.E で engine 実装予定だが
-//   text marker は本フェーズで先行採用。
+// Why: status ID → 日本語名 + 効果説明。tooltip 二段目で定義 popup 表示用。
+//   Core 側 (CardTextFormatter.JpStatusName / Server meta endpoint) と同期。
+export const STATUS_DEFS: Record<string, { name: string; desc: string }> = {
+  strength: { name: '筋力', desc: '与えるダメージが X 増加する。' },
+  dexterity: { name: '敏捷', desc: '得るブロックが X 増加する。' },
+  weak: { name: '脱力', desc: '与えるダメージが 0.75 倍になる (端数切捨)。X ターン残存。' },
+  vulnerable: { name: '脆弱', desc: '受けるダメージが 1.5 倍になる。X ターン残存。' },
+  poison: { name: '毒', desc: 'ターン開始時に X ダメージを受け、X が 1 減る。' },
+  omnistrike: { name: '全体攻撃', desc: '攻撃が敵全体に当たる。X ターン残存。' },
+}
+
+// Why: パワーカードの発火タイミング ID → 日本語表示。
 const TRIGGER_JP: Record<string, string> = {
   OnTurnStart: 'ターン開始時',
   OnTurnEnd: 'ターン終了時',
@@ -18,14 +38,49 @@ const TRIGGER_JP: Record<string, string> = {
   OnCombo: 'コンボ達成時',
 }
 
+/**
+ * description テキストから参照されるキーワード / status / カード ID を抽出する。
+ * tooltip の二段目で定義 popup を出すための入力。
+ * 重複は除去 (順序は最初の出現順を維持)。
+ */
+export type CardDescRef =
+  | { kind: 'keyword'; id: string; name: string; desc: string }
+  | { kind: 'status'; id: string; name: string; desc: string }
+  | { kind: 'card'; id: string; name: string }
+
+export function extractCardDescRefs(
+  text: string,
+  cardNames: Record<string, string> = {},
+): CardDescRef[] {
+  const seen = new Set<string>()
+  const refs: CardDescRef[] = []
+  for (const m of text.matchAll(MARKER_RE)) {
+    const [, kind, value] = m
+    const key = `${kind}:${value}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    if (kind === 'K') {
+      const def = KEYWORD_DEFS[value]
+      if (def) refs.push({ kind: 'keyword', id: value, name: def.name, desc: def.desc })
+    } else if (kind === 'S') {
+      const def = STATUS_DEFS[value]
+      if (def) refs.push({ kind: 'status', id: value, name: def.name, desc: def.desc })
+    } else if (kind === 'C') {
+      const name = cardNames[value] ?? value
+      refs.push({ kind: 'card', id: value, name })
+    }
+  }
+  return refs
+}
+
 type Props = {
   text: string
   /** [C:cardId] のカード id → 表示名マップ。catalog から渡す。 */
   cardNames?: Record<string, string>
 }
 
-// [N:5] / [K:wild] / [T:OnTurnStart] / [V:X|手札の数] / [C:strike]
-const MARKER_RE = /\[(N|K|T|V|C):([^\]|]+)(?:\|([^\]]+))?\]/g
+// [N:5] / [K:wild] / [S:strength] / [T:OnTurnStart] / [V:X|手札の数] / [C:strike]
+const MARKER_RE = /\[(N|K|S|T|V|C):([^\]|]+)(?:\|([^\]]+))?\]/g
 
 /**
  * カード description のリッチテキスト描画。
@@ -88,9 +143,17 @@ function renderMarker(
       )
     }
     case 'K': {
-      const jp = KEYWORD_JP[value] ?? value
+      const jp = KEYWORD_DEFS[value]?.name ?? value
       return (
         <span key={key} className="card-desc-keyword" data-keyword={value}>
+          {jp}
+        </span>
+      )
+    }
+    case 'S': {
+      const jp = STATUS_DEFS[value]?.name ?? value
+      return (
+        <span key={key} className="card-desc-status" data-status={value}>
           {jp}
         </span>
       )

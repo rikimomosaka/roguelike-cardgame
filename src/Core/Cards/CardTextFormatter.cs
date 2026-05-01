@@ -193,8 +193,10 @@ public static class CardTextFormatter
 
     private static string DescribeStatusChange(CardEffect e, CardActorContext context, bool isDebuff)
     {
-        var jpName = JpStatusName(e.Name);
-        return $"{TargetPrefix(e.Scope, e.Side)}{jpName} {AmountToken(e, context)} を付与";
+        // Phase 10.5.M2: status 名を [S:id] marker として emit。Client 側で JP 名と
+        //  ホバー定義 popup へ展開する (旧: bare JP 文字列、scan 困難だった)。
+        var statusToken = string.IsNullOrEmpty(e.Name) ? "ステータス" : $"[S:{e.Name}]";
+        return $"{TargetPrefix(e.Scope, e.Side)}{statusToken} {AmountToken(e, context)} を付与";
     }
 
     private static string DescribeDiscard(CardEffect e, CardActorContext context)

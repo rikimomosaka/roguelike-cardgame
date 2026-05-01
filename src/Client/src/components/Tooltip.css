@@ -73,3 +73,34 @@
   font-size: 15px;
   line-height: 1.55;
 }
+
+/* Phase 10.5.M2: tooltip 二段目 — description 内のキーワード / ステータス /
+   カード参照の詳細定義を並べる。各行は名前 (色付け) + 説明文。 */
+.tip__refs {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(201, 152, 90, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tip__ref {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.tip__ref-name {
+  font-weight: bold;
+  display: inline;
+}
+
+.tip__ref-desc {
+  display: inline;
+  margin-left: 6px;
+  color: var(--fg-muted);
+}
+
+.tip__ref--keyword .tip__ref-name { color: #c5d4ff; }
+.tip__ref--status .tip__ref-name { color: #ffd9a0; }
+.tip__ref--card .tip__ref-name { color: #d8b4ff; }

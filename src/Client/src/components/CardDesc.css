@@ -23,19 +23,26 @@
   font-weight: bold;
 }
 
-/* Phase 10.5.C: battle 中 actor の statuses で base より上振れ → 赤 (= 強くなった)。 */
+/* Phase 10.5.M2: 上振れ → 緑 (= 良くなった)、下振れ → 赤 (= 悪くなった)。
+   旧: up=赤 / down=青 から、ユーザ要望で色感覚を反転 (+ 青 → 赤)。 */
 .card-desc-num--up {
+  color: #7aff7a;
+}
+
+.card-desc-num--down {
   color: #ff7a7a;
 }
 
-/* Phase 10.5.C: base より下振れ → 青 (= 弱くなった)。 */
-.card-desc-num--down {
-  color: #7aa8ff;
-}
-
-/* キーワード (ワイルド等)。hover popup は 10.5.B 範囲外、まずは色分けのみ。 */
+/* キーワード (ワイルド等)。tooltip 二段目で詳細定義が出る。 */
 .card-desc-keyword {
   color: #c5d4ff;
+  font-weight: bold;
+  cursor: help;
+}
+
+/* ステータス (筋力 / 脆弱 / 毒 等)。tooltip 二段目で詳細定義が出る。 */
+.card-desc-status {
+  color: #ffd9a0;
   font-weight: bold;
   cursor: help;
 }
