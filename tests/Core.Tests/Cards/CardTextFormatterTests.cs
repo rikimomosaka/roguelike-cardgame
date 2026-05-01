@@ -33,14 +33,14 @@ public class CardTextFormatterTests
     public void Attack_single_enemy()
     {
         var s = CardTextFormatter.FormatEffects(new[] { E("attack", EffectScope.Single, EffectSide.Enemy, 6) });
-        Assert.Equal("敵 1 体に [N:6] ダメージ。", s);
+        Assert.Equal("敵単体に [N:6] ダメージ。", s);
     }
 
     [Fact]
     public void Attack_random_enemy()
     {
         var s = CardTextFormatter.FormatEffects(new[] { E("attack", EffectScope.Random, EffectSide.Enemy, 5) });
-        Assert.Equal("敵ランダム 1 体に [N:5] ダメージ。", s);
+        Assert.Equal("敵ランダムに [N:5] ダメージ。", s);
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public class CardTextFormatterTests
             E("attack", EffectScope.Single, EffectSide.Enemy, 5),
             E("attack", EffectScope.Single, EffectSide.Enemy, 5),
         });
-        Assert.Equal("敵 1 体に [N:5] ダメージ × [N:3] 回。", s);
+        Assert.Equal("敵単体に [N:5] ダメージ × [N:3] 回。", s);
     }
 
     // --- Block ---
@@ -68,21 +68,21 @@ public class CardTextFormatterTests
     public void Block_self()
     {
         var s = CardTextFormatter.FormatEffects(new[] { E("block", EffectScope.Self, null, 5) });
-        Assert.Equal("ブロック [N:5] を得る。", s);
+        Assert.Equal("自身に ブロック [N:5]。", s);
     }
 
     [Fact]
     public void Block_ally_single()
     {
         var s = CardTextFormatter.FormatEffects(new[] { E("block", EffectScope.Single, EffectSide.Ally, 3) });
-        Assert.Equal("味方 1 体にブロック [N:3]。", s);
+        Assert.Equal("味方単体に ブロック [N:3]。", s);
     }
 
     [Fact]
     public void Block_ally_all()
     {
         var s = CardTextFormatter.FormatEffects(new[] { E("block", EffectScope.All, EffectSide.Ally, 4) });
-        Assert.Equal("味方全体にブロック [N:4]。", s);
+        Assert.Equal("味方全体に ブロック [N:4]。", s);
     }
 
     // --- Draw / Discard ---
@@ -91,7 +91,7 @@ public class CardTextFormatterTests
     public void Draw_self()
     {
         var s = CardTextFormatter.FormatEffects(new[] { E("draw", EffectScope.Self, null, 2) });
-        Assert.Equal("カードを [N:2] 枚引く。", s);
+        Assert.Equal("[N:2] 枚ドローする。", s);
     }
 
     [Fact]
@@ -131,7 +131,7 @@ public class CardTextFormatterTests
     public void Debuff_weak_single_enemy()
     {
         var s = CardTextFormatter.FormatEffects(new[] { E("debuff", EffectScope.Single, EffectSide.Enemy, 1, "weak") });
-        Assert.Equal("敵 1 体に 脱力 [N:1] を付与。", s);
+        Assert.Equal("敵単体に 脱力 [N:1] を付与。", s);
     }
 
     [Fact]
@@ -154,14 +154,14 @@ public class CardTextFormatterTests
     public void Heal_self()
     {
         var s = CardTextFormatter.FormatEffects(new[] { E("heal", EffectScope.Self, null, 5) });
-        Assert.Equal("HP を [N:5] 回復。", s);
+        Assert.Equal("自身に HP を [N:5] 回復。", s);
     }
 
     [Fact]
     public void Heal_ally_single()
     {
         var s = CardTextFormatter.FormatEffects(new[] { E("heal", EffectScope.Single, EffectSide.Ally, 3) });
-        Assert.Equal("味方 1 体の HP を [N:3] 回復。", s);
+        Assert.Equal("味方単体に HP を [N:3] 回復。", s);
     }
 
     // --- Summon ---
@@ -220,7 +220,7 @@ public class CardTextFormatterTests
             E("attack", EffectScope.Single, EffectSide.Enemy, 6),
             E("block", EffectScope.Self, null, 3),
         });
-        Assert.Equal("敵 1 体に [N:6] ダメージ。\nブロック [N:3] を得る。", s);
+        Assert.Equal("敵単体に [N:6] ダメージ。\n自身に ブロック [N:3]。", s);
     }
 
     [Fact]
@@ -255,7 +255,7 @@ public class CardTextFormatterTests
             Effects: new[] { E("attack", EffectScope.Single, EffectSide.Enemy, 6) },
             UpgradedEffects: null, Keywords: null, UpgradedKeywords: null,
             Description: null, UpgradedDescription: null);
-        Assert.Equal("敵 1 体に [N:6] ダメージ。", CardTextFormatter.Format(def, upgraded: false));
+        Assert.Equal("敵単体に [N:6] ダメージ。", CardTextFormatter.Format(def, upgraded: false));
     }
 
     [Fact]
@@ -269,7 +269,7 @@ public class CardTextFormatterTests
             UpgradedEffects: new[] { E("attack", EffectScope.Single, EffectSide.Enemy, 9) },
             Keywords: null, UpgradedKeywords: null,
             Description: null, UpgradedDescription: null);
-        Assert.Equal("敵 1 体に [N:9] ダメージ。", CardTextFormatter.Format(def, upgraded: true));
+        Assert.Equal("敵単体に [N:9] ダメージ。", CardTextFormatter.Format(def, upgraded: true));
     }
 
     [Fact]
@@ -296,7 +296,7 @@ public class CardTextFormatterTests
             Effects: new[] { E("attack", EffectScope.Single, EffectSide.Enemy, 6) },
             UpgradedEffects: null, Keywords: null, UpgradedKeywords: null,
             Description: "   ", UpgradedDescription: null);
-        Assert.Equal("敵 1 体に [N:6] ダメージ。", CardTextFormatter.Format(def, upgraded: false));
+        Assert.Equal("敵単体に [N:6] ダメージ。", CardTextFormatter.Format(def, upgraded: false));
     }
 
     // --- 10.5.B: Keyword lines ---
@@ -306,7 +306,7 @@ public class CardTextFormatterTests
     {
         var def = MakeAttackDef(amount: 5, keywords: new[] { "wild" });
         var s = CardTextFormatter.Format(def, upgraded: false);
-        Assert.Equal("[K:wild]\n敵 1 体に [N:5] ダメージ。", s);
+        Assert.Equal("[K:wild]\n敵単体に [N:5] ダメージ。", s);
     }
 
     [Fact]
@@ -314,7 +314,7 @@ public class CardTextFormatterTests
     {
         var def = MakeAttackDef(amount: 5, keywords: new[] { "wild", "superwild" });
         var s = CardTextFormatter.Format(def, upgraded: false);
-        Assert.Equal("[K:wild]\n[K:superwild]\n敵 1 体に [N:5] ダメージ。", s);
+        Assert.Equal("[K:wild]\n[K:superwild]\n敵単体に [N:5] ダメージ。", s);
     }
 
     [Fact]
@@ -332,7 +332,7 @@ public class CardTextFormatterTests
     {
         var def = MakeAttackDef(amount: 5, keywords: null);
         var s = CardTextFormatter.Format(def, upgraded: false);
-        Assert.Equal("敵 1 体に [N:5] ダメージ。", s);
+        Assert.Equal("敵単体に [N:5] ダメージ。", s);
     }
 
     // --- 10.5.B: New action specs ---
@@ -398,7 +398,7 @@ public class CardTextFormatterTests
     {
         var e = new CardEffect("draw", EffectScope.Self, null, 1, Trigger: "OnTurnStart");
         var s = CardTextFormatter.FormatEffects(new[] { e });
-        Assert.Equal("[T:OnTurnStart]の度にカードを [N:1] 枚引く。", s);
+        Assert.Equal("[T:OnTurnStart]の度に[N:1] 枚ドローする。", s);
     }
 
     [Fact]
@@ -407,7 +407,7 @@ public class CardTextFormatterTests
         // 同一 Trigger + 同一 spec が連続したら × N 回
         var e = new CardEffect("draw", EffectScope.Self, null, 1, Trigger: "OnTurnStart");
         var s = CardTextFormatter.FormatEffects(new[] { e, e });
-        Assert.Equal("[T:OnTurnStart]の度にカードを [N:1] 枚引く × [N:2] 回。", s);
+        Assert.Equal("[T:OnTurnStart]の度に[N:1] 枚ドローする × [N:2] 回。", s);
     }
 
     [Fact]
@@ -416,7 +416,7 @@ public class CardTextFormatterTests
         var a = new CardEffect("draw", EffectScope.Self, null, 1, Trigger: "OnTurnStart");
         var b = new CardEffect("draw", EffectScope.Self, null, 1, Trigger: "OnPlayCard");
         var s = CardTextFormatter.FormatEffects(new[] { a, b });
-        Assert.Equal("[T:OnTurnStart]の度にカードを [N:1] 枚引く。\n[T:OnPlayCard]の度にカードを [N:1] 枚引く。", s);
+        Assert.Equal("[T:OnTurnStart]の度に[N:1] 枚ドローする。\n[T:OnPlayCard]の度に[N:1] 枚ドローする。", s);
     }
 
     // --- 10.5.B: AmountSource (Variable X) marker ---
@@ -426,7 +426,7 @@ public class CardTextFormatterTests
     {
         var e = new CardEffect("attack", EffectScope.Single, EffectSide.Enemy, 0, AmountSource: "handCount");
         var s = CardTextFormatter.FormatEffects(new[] { e });
-        Assert.Equal("敵 1 体に [V:X|手札の数] ダメージ。", s);
+        Assert.Equal("敵単体に [V:X|手札の数] ダメージ。", s);
     }
 
     [Fact]
@@ -434,7 +434,7 @@ public class CardTextFormatterTests
     {
         var e = new CardEffect("block", EffectScope.Self, null, 0, AmountSource: "drawPileCount");
         var s = CardTextFormatter.FormatEffects(new[] { e });
-        Assert.Equal("ブロック [V:X|山札の数] を得る。", s);
+        Assert.Equal("自身に ブロック [V:X|山札の数]。", s);
     }
 
     [Fact]
@@ -442,7 +442,7 @@ public class CardTextFormatterTests
     {
         var e = new CardEffect("attack", EffectScope.Single, EffectSide.Enemy, 0, AmountSource: "weirdSrc");
         var s = CardTextFormatter.FormatEffects(new[] { e });
-        Assert.Equal("敵 1 体に [V:X|weirdSrc] ダメージ。", s);
+        Assert.Equal("敵単体に [V:X|weirdSrc] ダメージ。", s);
     }
 
     // --- 10.5.C: CardActorContext (up/down marker) ---
@@ -453,7 +453,7 @@ public class CardTextFormatterTests
         var def = MakeAttackDef(amount: 5);
         var ctx = new CardActorContext(Strength: 2, Weak: 0, Dexterity: 0);
         var s = CardTextFormatter.Format(def, upgraded: false, ctx);
-        Assert.Equal("敵 1 体に [N:7|up] ダメージ。", s);
+        Assert.Equal("敵単体に [N:7|up] ダメージ。", s);
     }
 
     [Fact]
@@ -463,7 +463,7 @@ public class CardTextFormatterTests
         var ctx = new CardActorContext(Strength: 0, Weak: 1, Dexterity: 0);
         // 5 * 0.75 = 3.75 → floor 3
         var s = CardTextFormatter.Format(def, upgraded: false, ctx);
-        Assert.Equal("敵 1 体に [N:3|down] ダメージ。", s);
+        Assert.Equal("敵単体に [N:3|down] ダメージ。", s);
     }
 
     [Fact]
@@ -471,7 +471,7 @@ public class CardTextFormatterTests
     {
         var def = MakeAttackDef(amount: 5);
         var s = CardTextFormatter.Format(def, upgraded: false, CardActorContext.Empty);
-        Assert.Equal("敵 1 体に [N:5] ダメージ。", s);
+        Assert.Equal("敵単体に [N:5] ダメージ。", s);
     }
 
     [Fact]
@@ -486,7 +486,7 @@ public class CardTextFormatterTests
             Description: null, UpgradedDescription: null);
         var ctx = new CardActorContext(Strength: 0, Weak: 0, Dexterity: 3);
         var s = CardTextFormatter.Format(def, upgraded: false, ctx);
-        Assert.Equal("ブロック [N:8|up] を得る。", s);
+        Assert.Equal("自身に ブロック [N:8|up]。", s);
     }
 
     [Fact]
@@ -496,7 +496,7 @@ public class CardTextFormatterTests
         var def = MakeAttackDef(amount: 5);
         var ctx = new CardActorContext(Strength: 2, Weak: 1, Dexterity: 0);
         var s = CardTextFormatter.Format(def, upgraded: false, ctx);
-        Assert.Equal("敵 1 体に [N:5] ダメージ。", s);
+        Assert.Equal("敵単体に [N:5] ダメージ。", s);
     }
 
     [Fact]
@@ -505,7 +505,7 @@ public class CardTextFormatterTests
         // 既存 Format(def, upgraded) は無 context として動く (CardActorContext.Empty 経由)。
         var def = MakeAttackDef(amount: 5);
         var s = CardTextFormatter.Format(def, upgraded: false);
-        Assert.Equal("敵 1 体に [N:5] ダメージ。", s);
+        Assert.Equal("敵単体に [N:5] ダメージ。", s);
     }
 
     [Fact]
@@ -514,7 +514,7 @@ public class CardTextFormatterTests
         var ctx = new CardActorContext(Strength: 3, Weak: 0, Dexterity: 0);
         var s = CardTextFormatter.FormatEffects(
             new[] { E("attack", EffectScope.Single, EffectSide.Enemy, 6) }, ctx);
-        Assert.Equal("敵 1 体に [N:9|up] ダメージ。", s);
+        Assert.Equal("敵単体に [N:9|up] ダメージ。", s);
     }
 
     [Fact]
@@ -534,7 +534,7 @@ public class CardTextFormatterTests
             Description: null, UpgradedDescription: null);
         var ctx = new CardActorContext(Strength: 0, Weak: 0, Dexterity: 2);
         var s = CardTextFormatter.Format(def, upgraded: false, ctx);
-        Assert.Equal("敵 1 体に [N:6] ダメージ。\nブロック [N:7|up] を得る。", s);
+        Assert.Equal("敵単体に [N:6] ダメージ。\n自身に ブロック [N:7|up]。", s);
     }
 
     [Fact]
@@ -544,6 +544,6 @@ public class CardTextFormatterTests
         var ctx = new CardActorContext(Strength: 5, Weak: 0, Dexterity: 0);
         var e = new CardEffect("attack", EffectScope.Single, EffectSide.Enemy, 0, AmountSource: "handCount");
         var s = CardTextFormatter.FormatEffects(new[] { e }, ctx);
-        Assert.Equal("敵 1 体に [V:X|手札の数] ダメージ。", s);
+        Assert.Equal("敵単体に [V:X|手札の数] ダメージ。", s);
     }
 }

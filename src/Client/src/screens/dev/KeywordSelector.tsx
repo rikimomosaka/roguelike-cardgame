@@ -7,9 +7,11 @@ type Props = {
   meta: DevMeta
   label: string
   onChange: (next: string[] | null) => void
+  /** Why: 「強化前をコピー」ボタン用。upgradedKeywords 編集時のみ渡される。 */
+  onCopyFromNormal?: () => void
 }
 
-export function KeywordSelector({ value, meta, label, onChange }: Props) {
+export function KeywordSelector({ value, meta, label, onChange, onCopyFromNormal }: Props) {
   const set = new Set(value ?? [])
   const toggle = (id: string) => {
     if (set.has(id)) set.delete(id)
@@ -21,7 +23,19 @@ export function KeywordSelector({ value, meta, label, onChange }: Props) {
 
   return (
     <div className="keyword-selector">
-      <div className="keyword-selector__label">{label}</div>
+      <div className="keyword-selector__header">
+        <div className="keyword-selector__label">{label}</div>
+        {onCopyFromNormal && (
+          <button
+            type="button"
+            className="keyword-selector__copy"
+            onClick={onCopyFromNormal}
+            aria-label={`${label} に強化前をコピー`}
+          >
+            強化前をコピー
+          </button>
+        )}
+      </div>
       <div className="keyword-selector__checks">
         {meta.keywords.length === 0 ? (
           <em className="keyword-selector__empty">(キーワードが定義されていません)</em>

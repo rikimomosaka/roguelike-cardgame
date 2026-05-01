@@ -144,6 +144,9 @@ export function CardSpecForm({
         meta={meta}
         label="強化後キーワード"
         onChange={(v) => set({ upgradedKeywords: v })}
+        onCopyFromNormal={() =>
+          set({ upgradedKeywords: spec.keywords ? [...spec.keywords] : null })
+        }
       />
 
       <EffectListEditor
@@ -159,6 +162,9 @@ export function CardSpecForm({
         allCardIds={allCardIds}
         label="強化後効果"
         onChange={(e) => set({ upgradedEffects: e.length === 0 ? null : e })}
+        onCopyFromNormal={() =>
+          set({ upgradedEffects: spec.effects.map((eff) => ({ ...eff })) })
+        }
       />
 
       <details className="card-spec-form__desc-override">

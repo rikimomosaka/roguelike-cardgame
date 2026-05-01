@@ -11,6 +11,9 @@ type Props = {
   allCardIds: string[]
   label: string
   onChange: (next: CardEffect[]) => void
+  /** Why: 「強化前をコピー」ボタンを表示するための callback。
+   *  upgradedEffects 編集時に CardSpecForm から渡される。 */
+  onCopyFromNormal?: () => void
 }
 
 export function EffectListEditor({
@@ -19,6 +22,7 @@ export function EffectListEditor({
   allCardIds,
   label,
   onChange,
+  onCopyFromNormal,
 }: Props) {
   const updateAt = (i: number, eff: CardEffect) => {
     const next = effects.slice()
@@ -42,9 +46,21 @@ export function EffectListEditor({
 
   return (
     <div className="effect-list">
-      <h4 className="effect-list__heading">
-        {label} ({effects.length})
-      </h4>
+      <div className="effect-list__header">
+        <h4 className="effect-list__heading">
+          {label} ({effects.length})
+        </h4>
+        {onCopyFromNormal && (
+          <button
+            type="button"
+            className="effect-list__copy"
+            onClick={onCopyFromNormal}
+            aria-label={`${label} に強化前をコピー`}
+          >
+            強化前をコピー
+          </button>
+        )}
+      </div>
       {effects.map((eff, i) => (
         <div key={i} className="effect-row">
           <div className="effect-row__order">

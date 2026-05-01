@@ -119,7 +119,8 @@ public static class CardTextFormatter
     {
         "attack" => DescribeAttack(e, context),
         "block" => DescribeBlock(e, context),
-        "draw" => $"カードを {AmountToken(e, context)} 枚引く",
+        "draw" => $"{AmountToken(e, context)} 枚ドローする",
+        "drawCards" => $"{AmountToken(e, context)} 枚ドローする",
         "discard" => DescribeDiscard(e, context),
         "buff" => DescribeStatusChange(e, context, isDebuff: false),
         "debuff" => DescribeStatusChange(e, context, isDebuff: true),
@@ -137,45 +138,41 @@ public static class CardTextFormatter
         _ => $"(未対応 action: {e.Action})",
     };
 
-    private static string DescribeAttack(CardEffect e, CardActorContext context) => e.Scope switch
+    /// <summary>
+    /// (Scope, Side) の組から日本語の対象表現プレフィックスを返す統一ヘルパ。
+    /// 例: (Self, _) → "自身に "、(Single, Enemy) → "敵単体に "、(All, Ally) → "味方全体に "。
+    /// 全 action (attack/block/buff/debuff/heal 等) で同じ法則を適用する。
+    /// 末尾に半角スペースを含める (続く amount/status/etc との分離用)。
+    /// </summary>
+    private static string TargetPrefix(EffectScope scope, EffectSide? side) => (scope, side) switch
     {
-        EffectScope.Single => $"敵 1 体に {AmountToken(e, context)} ダメージ",
-        EffectScope.Random => $"敵ランダム 1 体に {AmountToken(e, context)} ダメージ",
-        EffectScope.All => $"敵全体に {AmountToken(e, context)} ダメージ",
-        _ => $"敵に {AmountToken(e, context)} ダメージ",
+        (EffectScope.Self, _) => "自身に ",
+        (EffectScope.Single, EffectSide.Enemy) => "敵単体に ",
+        (EffectScope.Single, EffectSide.Ally) => "味方単体に ",
+        (EffectScope.Random, EffectSide.Enemy) => "敵ランダムに ",
+        (EffectScope.Random, EffectSide.Ally) => "味方ランダムに ",
+        (EffectScope.All, EffectSide.Enemy) => "敵全体に ",
+        (EffectScope.All, EffectSide.Ally) => "味方全体に ",
+        // side が null のフォールバック (Normalize で attack は Enemy 強制、その他は明示必要)
+        (EffectScope.Single, _) => "対象に ",
+        (EffectScope.Random, _) => "ランダムに ",
+        (EffectScope.All, _) => "全体に ",
+        _ => "",
     };
 
-    private static string DescribeBlock(CardEffect e, CardActorContext context) => (e.Scope, e.Side) switch
-    {
-        (EffectScope.Self, _) => $"ブロック {AmountToken(e, context)} を得る",
-        (EffectScope.Single, EffectSide.Ally) => $"味方 1 体にブロック {AmountToken(e, context)}",
-        (EffectScope.All, EffectSide.Ally) => $"味方全体にブロック {AmountToken(e, context)}",
-        _ => $"ブロック {AmountToken(e, context)}",
-    };
+    private static string DescribeAttack(CardEffect e, CardActorContext context)
+        => $"{TargetPrefix(e.Scope, e.Side)}{AmountToken(e, context)} ダメージ";
 
-    private static string DescribeHeal(CardEffect e, CardActorContext context) => (e.Scope, e.Side) switch
-    {
-        (EffectScope.Self, _) => $"HP を {AmountToken(e, context)} 回復",
-        (EffectScope.Single, EffectSide.Ally) => $"味方 1 体の HP を {AmountToken(e, context)} 回復",
-        (EffectScope.All, EffectSide.Ally) => $"味方全体の HP を {AmountToken(e, context)} 回復",
-        _ => $"HP を {AmountToken(e, context)} 回復",
-    };
+    private static string DescribeBlock(CardEffect e, CardActorContext context)
+        => $"{TargetPrefix(e.Scope, e.Side)}ブロック {AmountToken(e, context)}";
+
+    private static string DescribeHeal(CardEffect e, CardActorContext context)
+        => $"{TargetPrefix(e.Scope, e.Side)}HP を {AmountToken(e, context)} 回復";
 
     private static string DescribeStatusChange(CardEffect e, CardActorContext context, bool isDebuff)
     {
         var jpName = JpStatusName(e.Name);
-        var target = (e.Scope, e.Side) switch
-        {
-            (EffectScope.Self, _) => "自身",
-            (EffectScope.Single, EffectSide.Enemy) => "敵 1 体",
-            (EffectScope.Single, EffectSide.Ally) => "味方 1 体",
-            (EffectScope.All, EffectSide.Enemy) => "敵全体",
-            (EffectScope.All, EffectSide.Ally) => "味方全体",
-            (EffectScope.Random, EffectSide.Enemy) => "敵ランダム 1 体",
-            (EffectScope.Random, EffectSide.Ally) => "味方ランダム 1 体",
-            _ => "対象",
-        };
-        return $"{target}に {jpName} {AmountToken(e, context)} を付与";
+        return $"{TargetPrefix(e.Scope, e.Side)}{jpName} {AmountToken(e, context)} を付与";
     }
 
     private static string DescribeDiscard(CardEffect e, CardActorContext context)
