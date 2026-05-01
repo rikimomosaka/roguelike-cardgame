@@ -40,19 +40,21 @@ public static class CardTextFormatter
         if (!string.IsNullOrWhiteSpace(manual)) return manual!;
 
         var keywords = def.EffectiveKeywords(upgraded);
-        var keywordLines = keywords is null
-            ? Enumerable.Empty<string>()
-            : keywords.Select(k => $"[K:{k}]");
+        // Phase 10.5.M3: 複数キーワードは "/" 区切りで 1 行に並べる
+        //   (Client 側 CardDesc が `/` を白文字で描画する)。
+        var keywordLine = keywords is null || keywords.Count == 0
+            ? null
+            : string.Join("/", keywords.Select(k => $"[K:{k}]"));
 
         var effects = upgraded && def.UpgradedEffects is not null
             ? def.UpgradedEffects
             : def.Effects;
         var effectText = FormatEffects(effects, context);
 
-        var allLines = keywordLines.Concat(effectText.Length == 0
-            ? Enumerable.Empty<string>()
-            : effectText.Split('\n'));
-        return string.Join("\n", allLines);
+        var lines = new List<string>();
+        if (keywordLine is not null) lines.Add(keywordLine);
+        if (effectText.Length > 0) lines.AddRange(effectText.Split('\n'));
+        return string.Join("\n", lines);
     }
 
     /// <summary>
@@ -127,7 +129,9 @@ public static class CardTextFormatter
         "heal" => DescribeHeal(e, context),
         "summon" => $"{e.UnitId ?? "ユニット"} を召喚",
         "exhaustCard" => DescribeExhaustOrUpgrade(e, context, isUpgrade: false),
-        "exhaustSelf" => "このカードを除外",
+        // Phase 10.5.M3: exhaustSelf も keyword "exhaust" 化。後方互換のため
+        // formatter は marker を emit して、二段ポップで定義を出す。
+        "exhaustSelf" => "[K:exhaust]",
         // retainSelf は Phase 10.5.M2 で「待機」キーワード化された。後方互換のため
         // formatter は文言を残すが、新規カードではキーワードを使うことを推奨。
         "retainSelf" => "[K:wait]",

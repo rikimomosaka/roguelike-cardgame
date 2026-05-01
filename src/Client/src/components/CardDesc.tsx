@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import './CardDesc.css'
 
@@ -6,15 +7,19 @@ import './CardDesc.css'
 export const KEYWORD_DEFS: Record<string, { name: string; desc: string }> = {
   wild: {
     name: 'ワイルド',
-    desc: '敵単体を対象とする攻撃が、ランダムな敵を対象に変わる。',
+    desc: 'プレイ時、コスト連番に関係なくコンボが継続する。',
   },
   superwild: {
     name: 'スーパーワイルド',
-    desc: '敵単体を対象とする攻撃が、敵全体を対象に変わる。',
+    desc: 'プレイ時、コンボが継続する。さらに次にプレイするカードもコンボ継続が保証される。',
   },
   wait: {
     name: '待機',
     desc: 'このカードはプレイ後も捨札に行かず、次ターンに手札へ持ち越される。',
+  },
+  exhaust: {
+    name: '消費',
+    desc: 'プレイ後、このカードは捨札ではなく除外山札に送られる (戦闘終了まで戻らない)。',
   },
 }
 
@@ -96,11 +101,67 @@ export function CardDesc({ text, cardNames = {} }: Props) {
   return (
     <span className="card-desc">
       {lines.map((line, lineIdx) => (
-        <span key={lineIdx} className="card-desc-line">
-          {renderLine(line, cardNames)}
-          {lineIdx < lines.length - 1 ? <br /> : null}
-        </span>
+        <CardDescLine key={lineIdx} line={line} cardNames={cardNames} />
       ))}
+    </span>
+  )
+}
+
+/**
+ * 1 行分の描画 + 自動文字幅圧縮。
+ * Phase 10.5.M3:
+ *   - white-space: nowrap で 1 文に保つ
+ *   - 自然幅 > 親幅 のとき transform: scaleX(ratio) で横方向に圧縮
+ *   - 自然幅 > 親幅 × 1.5 のとき (圧縮しすぎる) は wrap モードに切替えて 2-3 行表示
+ */
+function CardDescLine({
+  line,
+  cardNames,
+}: {
+  line: string
+  cardNames: Record<string, string>
+}) {
+  const wrapperRef = useRef<HTMLSpanElement>(null)
+  const innerRef = useRef<HTMLSpanElement>(null)
+
+  useLayoutEffect(() => {
+    const wrapper = wrapperRef.current
+    const inner = innerRef.current
+    if (!wrapper || !inner) return
+
+    // リセットして自然幅を取り直す
+    wrapper.classList.remove('card-desc-line--wrap')
+    inner.style.transform = ''
+    inner.style.width = ''
+
+    const containerWidth = wrapper.clientWidth
+    if (containerWidth <= 0) return  // 未レイアウト
+
+    const naturalWidth = inner.scrollWidth
+    if (naturalWidth <= containerWidth) {
+      // 余裕で収まる
+      return
+    }
+
+    // 1.5 倍超 → wrap モード (2-3 行)
+    if (naturalWidth > containerWidth * 1.5) {
+      wrapper.classList.add('card-desc-line--wrap')
+      return
+    }
+
+    // それ以外 → scaleX で横方向圧縮
+    const ratio = containerWidth / naturalWidth
+    inner.style.transform = `scaleX(${ratio.toFixed(3)})`
+    inner.style.transformOrigin = 'left center'
+    // wrapper の hard-coded 幅で「inner box が圧縮された見え方」になるよう調整
+    inner.style.width = `${naturalWidth}px`
+  })
+
+  return (
+    <span ref={wrapperRef} className="card-desc-line">
+      <span ref={innerRef} className="card-desc-line-inner">
+        {renderLine(line, cardNames)}
+      </span>
     </span>
   )
 }

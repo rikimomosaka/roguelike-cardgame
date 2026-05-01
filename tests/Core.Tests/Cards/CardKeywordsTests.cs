@@ -11,7 +11,7 @@ public class CardKeywordsTests
         var meta = CardKeywords.Get("wild");
         Assert.NotNull(meta);
         Assert.Equal("ワイルド", meta!.Name);
-        Assert.Contains("敵", meta.Description);
+        Assert.Contains("コンボ", meta.Description);
     }
 
     [Fact]

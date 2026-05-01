@@ -13,8 +13,26 @@
   color: #ffffff;
 }
 
+/* Phase 10.5.M3: 各効果文を 1 行に保つ。
+   inner span の自然幅が親幅を超えた場合、CardDescLine の useLayoutEffect が
+   transform: scaleX で圧縮する (テキスト潰しではなく文字間隔を詰める形)。
+   1.5 倍超のときは .card-desc-line--wrap が付与され折返しモードへ。 */
 .card-desc-line {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.card-desc-line-inner {
+  display: inline-block;
+  white-space: nowrap;
+}
+.card-desc-line--wrap {
+  white-space: normal;
+}
+.card-desc-line--wrap .card-desc-line-inner {
   display: inline;
+  white-space: normal;
 }
 
 /* 数字 (デフォルト黄色)。battle 中のダメージ修正比較は 10.5.C で modifier を上書き。 */

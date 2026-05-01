@@ -122,8 +122,10 @@ public static partial class BattleEngine
         foreach (var ev in evsRelic) { events.Add(ev with { Order = order++ }); }
 
         // 10.2.D: 5 段優先順位（exhaustSelf → Power → Unit+success → retainSelf → Discard）
-        // 10.5.M2: retainSelf は keyword "wait" で代替可能化。後方互換のため両方チェック。
-        bool hasExhaustSelf = effects.Any(e => e.Action == "exhaustSelf");
+        // 10.5.M2/M3: retainSelf / exhaustSelf は keyword "wait" / "exhaust" で代替可能化。
+        // 後方互換のため action と keyword の両方をチェック。
+        bool hasExhaustSelf = effects.Any(e => e.Action == "exhaustSelf")
+            || (def.EffectiveKeywords(card.IsUpgraded)?.Contains("exhaust") ?? false);
         bool hasRetainSelf = effects.Any(e => e.Action == "retainSelf")
             || (def.EffectiveKeywords(card.IsUpgraded)?.Contains("wait") ?? false);
         bool isPower = def.CardType == CardType.Power;

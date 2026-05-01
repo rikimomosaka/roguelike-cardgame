@@ -13,13 +13,19 @@ public static class CardKeywords
 
     private static readonly Dictionary<string, KeywordMeta> _map = new()
     {
+        // Phase 10.5.M3: wild は「コンボ継続を保証する」キーワード。
+        //  engine: コスト連番判定 (LastPlayedOrigCost+1 == Cost) を満たさなくても
+        //          コンボが切れずに継続する。
         ["wild"] = new("wild", "ワイルド",
-            "敵単体を対象とする攻撃が、ランダムな敵を対象に変わる。"),
+            "プレイ時、コスト連番に関係なくコンボが継続する。"),
         ["superwild"] = new("superwild", "スーパーワイルド",
-            "敵単体を対象とする攻撃が、敵全体を対象に変わる。"),
+            "プレイ時、コンボが継続する。さらに次にプレイするカードもコンボ継続が保証される。"),
         // Phase 10.5.M2: retainSelf action から keyword 化。
         ["wait"] = new("wait", "待機",
             "このカードはプレイ後も捨札に行かず、次ターンに手札へ持ち越される。"),
+        // Phase 10.5.M3: exhaustSelf action から keyword 化。
+        ["exhaust"] = new("exhaust", "消費",
+            "プレイ後、このカードは捨札ではなく除外山札に送られる (戦闘終了まで戻らない)。"),
     };
 
     public static KeywordMeta? Get(string id) =>

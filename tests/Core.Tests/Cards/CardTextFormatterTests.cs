@@ -199,10 +199,11 @@ public class CardTextFormatterTests
     }
 
     [Fact]
-    public void ExhaustSelf()
+    public void ExhaustSelf_emits_exhaust_keyword_marker()
     {
+        // Phase 10.5.M3: exhaustSelf は keyword 化された。後方互換のため [K:exhaust] を emit。
         var s = CardTextFormatter.FormatEffects(new[] { E("exhaustSelf", EffectScope.Self, null, 0) });
-        Assert.Equal("このカードを除外。", s);
+        Assert.Equal("[K:exhaust]。", s);
     }
 
     [Fact]
@@ -343,11 +344,12 @@ public class CardTextFormatterTests
     }
 
     [Fact]
-    public void Multiple_keywords_each_on_own_line()
+    public void Multiple_keywords_join_with_slash_on_one_line()
     {
+        // Phase 10.5.M3: 複数キーワードは "/" 区切りで 1 行にまとめる。
         var def = MakeAttackDef(amount: 5, keywords: new[] { "wild", "superwild" });
         var s = CardTextFormatter.Format(def, upgraded: false);
-        Assert.Equal("[K:wild]\n[K:superwild]\n敵単体に [N:5] アタック。", s);
+        Assert.Equal("[K:wild]/[K:superwild]\n敵単体に [N:5] アタック。", s);
     }
 
     [Fact]
