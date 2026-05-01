@@ -88,8 +88,16 @@ public static class CardJsonLoader
                     upgradedKeywords = list;
                 }
 
+                string? description = root.TryGetProperty("description", out var d) && d.ValueKind == JsonValueKind.String
+                    ? (string.IsNullOrEmpty(d.GetString()) ? null : d.GetString())
+                    : null;
+                string? upgradedDescription = root.TryGetProperty("upgradedDescription", out var ud) && ud.ValueKind == JsonValueKind.String
+                    ? (string.IsNullOrEmpty(ud.GetString()) ? null : ud.GetString())
+                    : null;
+
                 return new CardDefinition(id, name, displayName, rarity, cardType,
-                    cost, upgradedCost, effects, upgraded, keywords, upgradedKeywords);
+                    cost, upgradedCost, effects, upgraded, keywords, upgradedKeywords,
+                    description, upgradedDescription);
             }
             catch (CardJsonException) { throw; }
             catch (Exception ex)

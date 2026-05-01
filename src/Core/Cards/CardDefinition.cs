@@ -14,6 +14,8 @@ namespace RoguelikeCardGame.Core.Cards;
 /// <param name="UpgradedEffects">強化時の効果配列。null/省略 = Effects と同じ</param>
 /// <param name="Keywords">キーワード能力（"wild"|"superwild" 等）。null/省略 = なし</param>
 /// <param name="UpgradedKeywords">強化時のキーワード能力。null/省略 = Keywords を継承</param>
+/// <param name="Description">手書き description override (任意)。null/空文字なら formatter で自動生成。</param>
+/// <param name="UpgradedDescription">強化版 description override (任意)。null/空文字なら formatter で自動生成。</param>
 public sealed record CardDefinition(
     string Id,
     string Name,
@@ -25,7 +27,9 @@ public sealed record CardDefinition(
     IReadOnlyList<CardEffect> Effects,
     IReadOnlyList<CardEffect>? UpgradedEffects,
     IReadOnlyList<string>? Keywords,
-    IReadOnlyList<string>? UpgradedKeywords = null)
+    IReadOnlyList<string>? UpgradedKeywords = null,
+    string? Description = null,
+    string? UpgradedDescription = null)
 {
     /// <summary>
     /// UpgradedCost / UpgradedEffects / UpgradedKeywords のいずれかが指定されているとき強化可能。

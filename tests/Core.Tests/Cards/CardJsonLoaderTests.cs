@@ -194,4 +194,62 @@ public class CardJsonLoaderTests
         var def = CardJsonLoader.Parse(json);
         Assert.Equal(CardType.Curse, def.CardType);
     }
+
+    [Fact]
+    public void Loads_card_with_description_override()
+    {
+        var json = """
+        {
+          "id": "test",
+          "name": "テスト",
+          "rarity": 0,
+          "cardType": "Attack",
+          "cost": 1,
+          "effects": [{"action":"attack","scope":"single","side":"enemy","amount":6}],
+          "description": "手書きの説明文。",
+          "upgradedDescription": "強化版の説明文。"
+        }
+        """;
+        var def = CardJsonLoader.Parse(json);
+        Assert.Equal("手書きの説明文。", def.Description);
+        Assert.Equal("強化版の説明文。", def.UpgradedDescription);
+    }
+
+    [Fact]
+    public void Loads_card_without_description_keys_yields_null_descriptions()
+    {
+        var json = """
+        {
+          "id": "test",
+          "name": "テスト",
+          "rarity": 0,
+          "cardType": "Attack",
+          "cost": 1,
+          "effects": [{"action":"attack","scope":"single","side":"enemy","amount":6}]
+        }
+        """;
+        var def = CardJsonLoader.Parse(json);
+        Assert.Null(def.Description);
+        Assert.Null(def.UpgradedDescription);
+    }
+
+    [Fact]
+    public void Loads_card_with_empty_description_strings_normalizes_to_null()
+    {
+        var json = """
+        {
+          "id": "test",
+          "name": "テスト",
+          "rarity": 0,
+          "cardType": "Attack",
+          "cost": 1,
+          "effects": [{"action":"attack","scope":"single","side":"enemy","amount":6}],
+          "description": "",
+          "upgradedDescription": ""
+        }
+        """;
+        var def = CardJsonLoader.Parse(json);
+        Assert.Null(def.Description);
+        Assert.Null(def.UpgradedDescription);
+    }
 }

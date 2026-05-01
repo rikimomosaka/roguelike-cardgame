@@ -76,8 +76,8 @@ public sealed class CatalogController : ControllerBase
                 def.Cost,
                 def.UpgradedCost,
                 def.IsUpgradable,
-                DescribeEffects(def.Effects),
-                def.UpgradedEffects is null ? null : DescribeEffects(def.UpgradedEffects));
+                CardTextFormatter.Format(def, upgraded: false),
+                def.IsUpgradable ? CardTextFormatter.Format(def, upgraded: true) : null);
         }
         return Ok(result);
     }
@@ -186,27 +186,11 @@ public sealed class CatalogController : ControllerBase
         return Ok(list);
     }
 
-    private static string DescribeEffects(IReadOnlyList<CardEffect> effects)
-    {
-        if (effects.Count == 0) return string.Empty;
-        return string.Join(" / ", effects.Select(CardEffectLabel));
-    }
-
     private static string DescribePotionEffects(Core.Potions.PotionDefinition def)
     {
         var prefix = def.IsUsableOutsideBattle ? "" : "[戦闘中] ";
-        return prefix + DescribeEffects(def.Effects);
+        return prefix + CardTextFormatter.FormatEffects(def.Effects);
     }
-
-    private static string CardEffectLabel(CardEffect e) => e.Action switch
-    {
-        "attack" => $"{e.Amount} ダメージ",
-        "block" => $"ブロック +{e.Amount}",
-        "gainMaxHp" => $"最大HP +{e.Amount}",
-        "gainGold" => $"+{e.Amount} ゴールド",
-        "restHealBonus" => $"休憩時の回復 +{e.Amount}",
-        _ => $"(未実装: {e.Action})",
-    };
 
     private static string EffectLabel(EventEffect e) => e switch
     {
