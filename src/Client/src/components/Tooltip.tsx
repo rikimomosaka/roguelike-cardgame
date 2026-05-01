@@ -65,7 +65,9 @@ export function TooltipHost({ children }: { children: ReactNode }) {
       {content ? (
         <div ref={tipRef} className="tip is-on" role="tooltip">
           <div className="tip__head">
-            <div className="tip__name">{content.name}</div>
+            <div className={`tip__name${content.rarity ? ` tip__name--${content.rarity}` : ''}`}>
+              {content.name}
+            </div>
             {content.rarity ? (
               <div className={`tip__rare tip__rare--${content.rarity}`}>
                 {content.rarityLabel ?? defaultRarityLabel(content.rarity)}

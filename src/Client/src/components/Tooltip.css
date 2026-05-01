@@ -43,6 +43,13 @@
   color: var(--gold-soft);
 }
 
+/* Why: カード名 (および relic / potion 等) のレアリティ色付け。
+   tooltip 上部のタイトルが、本体カードと同じレア色になるよう揃える。 */
+.tip__name--c { color: var(--rarity-c); }
+.tip__name--r { color: var(--rarity-r); }
+.tip__name--e { color: var(--rarity-e); }
+.tip__name--l { color: var(--rarity-l); }
+
 .tip__rare {
   font-family: var(--font-label);
   font-size: 13px;
