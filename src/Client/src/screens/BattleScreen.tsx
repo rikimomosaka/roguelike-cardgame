@@ -646,13 +646,16 @@ function PileModal({ kind, cards, onClose }: PileModalProps) {
             {ordered.map((card, i) => {
               const def = catalog?.[card.cardDefinitionId]
               const fallbackName = def?.displayName ?? def?.name ?? card.cardDefinitionId
+              // Why: 10.5.C - hero context 反映済の adjustedDescription を優先採用、
+              //   未指定 (catalog 経路 fallback) は static description を使う。
               const disp = {
                 name: fallbackName,
                 cost: card.costOverride ?? def?.cost ?? 0,
                 type: ((def?.cardType ?? 'attack').toLowerCase()) as CardType,
                 rarity: ((['c','r','e','l'][def?.rarity ?? 0]) ?? 'c') as CardRarity,
-                description: def?.description ?? '',
-                upgradedDescription: def?.upgradedDescription ?? null,
+                description: card.adjustedDescription ?? def?.description ?? '',
+                upgradedDescription:
+                  card.adjustedUpgradedDescription ?? def?.upgradedDescription ?? null,
               }
               return (
                 <li key={`${card.instanceId}-${i}`} className="pile-modal__item">

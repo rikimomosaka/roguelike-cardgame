@@ -78,4 +78,31 @@ describe('CardDesc', () => {
     const kw = container.querySelector('.card-desc-keyword')
     expect(kw?.textContent).toBe('unknownKw')
   })
+
+  // ===== Phase 10.5.C: up/down marker color =====
+
+  it('renders [N:7|up] with up class', () => {
+    const { container } = render(<CardDesc text="敵に [N:7|up] ダメージ。" />)
+    const num = container.querySelector('.card-desc-num')
+    expect(num).toBeInTheDocument()
+    expect(num?.classList.contains('card-desc-num--up')).toBe(true)
+    expect(num?.classList.contains('card-desc-num--down')).toBe(false)
+    expect(num?.textContent).toBe('7')
+  })
+
+  it('renders [N:3|down] with down class', () => {
+    const { container } = render(<CardDesc text="敵に [N:3|down] ダメージ。" />)
+    const num = container.querySelector('.card-desc-num')
+    expect(num).toBeInTheDocument()
+    expect(num?.classList.contains('card-desc-num--down')).toBe(true)
+    expect(num?.classList.contains('card-desc-num--up')).toBe(false)
+    expect(num?.textContent).toBe('3')
+  })
+
+  it('renders [N:5] (no modifier) with default class only', () => {
+    const { container } = render(<CardDesc text="敵に [N:5] ダメージ。" />)
+    const num = container.querySelector('.card-desc-num')
+    expect(num?.classList.contains('card-desc-num--up')).toBe(false)
+    expect(num?.classList.contains('card-desc-num--down')).toBe(false)
+  })
 })

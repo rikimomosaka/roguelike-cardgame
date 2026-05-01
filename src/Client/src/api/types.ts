@@ -240,6 +240,16 @@ export type BattleCardInstanceDto = {
   cardDefinitionId: string
   isUpgraded: boolean
   costOverride: number | null
+  /**
+   * Phase 10.5.C: hero (caster) の statuses を反映した description。
+   * 戦闘外 (catalog 等) では null。Client は null なら catalog の description にフォールバック。
+   */
+  adjustedDescription: string | null
+  /**
+   * Phase 10.5.C: 強化版の context 反映後 description。
+   * IsUpgradable でない、または context 不要なら null。
+   */
+  adjustedUpgradedDescription: string | null
 }
 
 export type BattleEventDto = {

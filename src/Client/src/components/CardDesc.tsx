@@ -74,12 +74,19 @@ function renderMarker(
   key: number,
 ): ReactNode {
   switch (kind) {
-    case 'N':
+    case 'N': {
+      // Why: 10.5.C で formatter が `[N:7|up]` / `[N:3|down]` を emit する。
+      //   battle 中の hero 統計を反映した結果、base より上振れ → 赤、下振れ → 青。
+      //   extra 無しの `[N:5]` は黄 (デフォルト) のまま。
+      const cls = ['card-desc-num']
+      if (extra === 'up') cls.push('card-desc-num--up')
+      else if (extra === 'down') cls.push('card-desc-num--down')
       return (
-        <span key={key} className="card-desc-num">
+        <span key={key} className={cls.join(' ')}>
           {value}
         </span>
       )
+    }
     case 'K': {
       const jp = KEYWORD_JP[value] ?? value
       return (

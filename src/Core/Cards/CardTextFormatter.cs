@@ -9,6 +9,8 @@ namespace RoguelikeCardGame.Core.Cards;
 ///
 /// 出力には marker syntax を含む:
 ///   [N:5]            数字 (Client で黄色表示)
+///   [N:7|up]         数字 (context 適用後 base より上振れ → 赤、10.5.C)
+///   [N:3|down]       数字 (context 適用後 base より下振れ → 青、10.5.C)
 ///   [K:wild]         キーワード ID (Client で表示名 / 色変え)
 ///   [T:OnTurnStart]  power カードの発火タイミング
 ///   [V:X|手札の数]    Variable X (AmountSource を持つ場合)
@@ -19,11 +21,20 @@ namespace RoguelikeCardGame.Core.Cards;
 public static class CardTextFormatter
 {
     /// <summary>
-    /// CardDefinition と upgraded フラグから表示テキストを生成する。
-    /// override (Description/UpgradedDescription) が非空ならそれを返し、
-    /// 空ならその時点の effects 配列 + キーワード行から自動生成する。
+    /// CardDefinition と upgraded フラグから表示テキストを生成する (context 無し)。
+    /// 既存呼出互換のため <see cref="CardActorContext.Empty"/> を渡す薄いラッパ。
     /// </summary>
     public static string Format(CardDefinition def, bool upgraded)
+        => Format(def, upgraded, CardActorContext.Empty);
+
+    /// <summary>
+    /// CardDefinition + upgraded + actor context から表示テキストを生成する。
+    /// override (Description/UpgradedDescription) が非空ならそれを返し、
+    /// 空ならその時点の effects 配列 + キーワード行から自動生成する。
+    /// context が <see cref="CardActorContext.Empty"/> でない場合、attack / block の
+    /// amount は context により調整され、base と異なれば |up / |down マーカーを emit する。
+    /// </summary>
+    public static string Format(CardDefinition def, bool upgraded, CardActorContext context)
     {
         string? manual = upgraded ? def.UpgradedDescription : def.Description;
         if (!string.IsNullOrWhiteSpace(manual)) return manual!;
@@ -36,7 +47,7 @@ public static class CardTextFormatter
         var effects = upgraded && def.UpgradedEffects is not null
             ? def.UpgradedEffects
             : def.Effects;
-        var effectText = FormatEffects(effects);
+        var effectText = FormatEffects(effects, context);
 
         var allLines = keywordLines.Concat(effectText.Length == 0
             ? Enumerable.Empty<string>()
@@ -45,15 +56,22 @@ public static class CardTextFormatter
     }
 
     /// <summary>
-    /// effects 配列単体から description 文字列を組み立てる。テスト・dev tool プレビュー用。
+    /// effects 配列単体から description 文字列を組み立てる (context 無し)。
+    /// 既存呼出互換のため <see cref="CardActorContext.Empty"/> を渡す薄いラッパ。
     /// </summary>
     public static string FormatEffects(IReadOnlyList<CardEffect> effects)
+        => FormatEffects(effects, CardActorContext.Empty);
+
+    /// <summary>
+    /// effects 配列単体 + context から description 文字列を組み立てる。
+    /// </summary>
+    public static string FormatEffects(IReadOnlyList<CardEffect> effects, CardActorContext context)
     {
         if (effects.Count == 0) return string.Empty;
 
         // 連続する完全同一 spec を 1 個にまとめて " × [N:N] 回" 表記。
         var grouped = GroupConsecutive(effects);
-        var sentences = grouped.Select(g => DescribeGroup(g.Effect, g.Count));
+        var sentences = grouped.Select(g => DescribeGroup(g.Effect, g.Count, context));
         return string.Join("\n", sentences);
     }
 
@@ -89,61 +107,61 @@ public static class CardTextFormatter
         && a.Trigger == b.Trigger
         && a.Pile == b.Pile;
 
-    private static string DescribeGroup(CardEffect e, int count)
+    private static string DescribeGroup(CardEffect e, int count, CardActorContext context)
     {
-        var head = DescribeOne(e);
+        var head = DescribeOne(e, context);
         var triggerPrefix = !string.IsNullOrEmpty(e.Trigger) ? $"[T:{e.Trigger}]の度に" : "";
         if (count <= 1) return triggerPrefix + head + "。";
         return triggerPrefix + head + " × [N:" + count + "] 回。";
     }
 
-    private static string DescribeOne(CardEffect e) => e.Action switch
+    private static string DescribeOne(CardEffect e, CardActorContext context) => e.Action switch
     {
-        "attack" => DescribeAttack(e),
-        "block" => DescribeBlock(e),
-        "draw" => $"カードを {AmountToken(e)} 枚引く",
-        "discard" => DescribeDiscard(e),
-        "buff" => DescribeStatusChange(e, isDebuff: false),
-        "debuff" => DescribeStatusChange(e, isDebuff: true),
-        "heal" => DescribeHeal(e),
+        "attack" => DescribeAttack(e, context),
+        "block" => DescribeBlock(e, context),
+        "draw" => $"カードを {AmountToken(e, context)} 枚引く",
+        "discard" => DescribeDiscard(e, context),
+        "buff" => DescribeStatusChange(e, context, isDebuff: false),
+        "debuff" => DescribeStatusChange(e, context, isDebuff: true),
+        "heal" => DescribeHeal(e, context),
         "summon" => $"{e.UnitId ?? "ユニット"} を召喚",
-        "exhaustCard" => $"手札 {AmountToken(e)} 枚を除外",
+        "exhaustCard" => $"手札 {AmountToken(e, context)} 枚を除外",
         "exhaustSelf" => "このカードを除外",
         "retainSelf" => "このカードを次ターンに持ち越す",
-        "gainEnergy" => $"エナジー +{AmountToken(e)}",
-        "gainMaxEnergy" => $"エナジー上限を+{AmountToken(e)}する",
-        "upgrade" => $"カード {AmountToken(e)} 枚を強化",
-        "selfDamage" => $"自身のHPを-{AmountToken(e)}",
-        "addCard" => DescribeAddCard(e),
-        "recoverFromDiscard" => DescribeRecoverFromDiscard(e),
+        "gainEnergy" => $"エナジー +{AmountToken(e, context)}",
+        "gainMaxEnergy" => $"エナジー上限を+{AmountToken(e, context)}する",
+        "upgrade" => $"カード {AmountToken(e, context)} 枚を強化",
+        "selfDamage" => $"自身のHPを-{AmountToken(e, context)}",
+        "addCard" => DescribeAddCard(e, context),
+        "recoverFromDiscard" => DescribeRecoverFromDiscard(e, context),
         _ => $"(未対応 action: {e.Action})",
     };
 
-    private static string DescribeAttack(CardEffect e) => e.Scope switch
+    private static string DescribeAttack(CardEffect e, CardActorContext context) => e.Scope switch
     {
-        EffectScope.Single => $"敵 1 体に {AmountToken(e)} ダメージ",
-        EffectScope.Random => $"敵ランダム 1 体に {AmountToken(e)} ダメージ",
-        EffectScope.All => $"敵全体に {AmountToken(e)} ダメージ",
-        _ => $"敵に {AmountToken(e)} ダメージ",
+        EffectScope.Single => $"敵 1 体に {AmountToken(e, context)} ダメージ",
+        EffectScope.Random => $"敵ランダム 1 体に {AmountToken(e, context)} ダメージ",
+        EffectScope.All => $"敵全体に {AmountToken(e, context)} ダメージ",
+        _ => $"敵に {AmountToken(e, context)} ダメージ",
     };
 
-    private static string DescribeBlock(CardEffect e) => (e.Scope, e.Side) switch
+    private static string DescribeBlock(CardEffect e, CardActorContext context) => (e.Scope, e.Side) switch
     {
-        (EffectScope.Self, _) => $"ブロック {AmountToken(e)} を得る",
-        (EffectScope.Single, EffectSide.Ally) => $"味方 1 体にブロック {AmountToken(e)}",
-        (EffectScope.All, EffectSide.Ally) => $"味方全体にブロック {AmountToken(e)}",
-        _ => $"ブロック {AmountToken(e)}",
+        (EffectScope.Self, _) => $"ブロック {AmountToken(e, context)} を得る",
+        (EffectScope.Single, EffectSide.Ally) => $"味方 1 体にブロック {AmountToken(e, context)}",
+        (EffectScope.All, EffectSide.Ally) => $"味方全体にブロック {AmountToken(e, context)}",
+        _ => $"ブロック {AmountToken(e, context)}",
     };
 
-    private static string DescribeHeal(CardEffect e) => (e.Scope, e.Side) switch
+    private static string DescribeHeal(CardEffect e, CardActorContext context) => (e.Scope, e.Side) switch
     {
-        (EffectScope.Self, _) => $"HP を {AmountToken(e)} 回復",
-        (EffectScope.Single, EffectSide.Ally) => $"味方 1 体の HP を {AmountToken(e)} 回復",
-        (EffectScope.All, EffectSide.Ally) => $"味方全体の HP を {AmountToken(e)} 回復",
-        _ => $"HP を {AmountToken(e)} 回復",
+        (EffectScope.Self, _) => $"HP を {AmountToken(e, context)} 回復",
+        (EffectScope.Single, EffectSide.Ally) => $"味方 1 体の HP を {AmountToken(e, context)} 回復",
+        (EffectScope.All, EffectSide.Ally) => $"味方全体の HP を {AmountToken(e, context)} 回復",
+        _ => $"HP を {AmountToken(e, context)} 回復",
     };
 
-    private static string DescribeStatusChange(CardEffect e, bool isDebuff)
+    private static string DescribeStatusChange(CardEffect e, CardActorContext context, bool isDebuff)
     {
         var jpName = JpStatusName(e.Name);
         var target = (e.Scope, e.Side) switch
@@ -157,50 +175,81 @@ public static class CardTextFormatter
             (EffectScope.Random, EffectSide.Ally) => "味方ランダム 1 体",
             _ => "対象",
         };
-        return $"{target}に {jpName} {AmountToken(e)} を付与";
+        return $"{target}に {jpName} {AmountToken(e, context)} を付与";
     }
 
-    private static string DescribeDiscard(CardEffect e)
+    private static string DescribeDiscard(CardEffect e, CardActorContext context)
     {
         if (string.IsNullOrEmpty(e.Select))
         {
             // 旧仕様 (Select なし) はランダム扱いの簡略文言
-            return $"手札 {AmountToken(e)} 枚を捨てる";
+            return $"手札 {AmountToken(e, context)} 枚を捨てる";
         }
         return e.Select switch
         {
-            "choose" => $"手札を選んで {AmountToken(e)} 枚捨てる",
-            "random" => $"手札からランダムに {AmountToken(e)} 枚捨てる",
+            "choose" => $"手札を選んで {AmountToken(e, context)} 枚捨てる",
+            "random" => $"手札からランダムに {AmountToken(e, context)} 枚捨てる",
             "all" => "手札を全て捨てる",
-            _ => $"手札 {AmountToken(e)} 枚を捨てる",
+            _ => $"手札 {AmountToken(e, context)} 枚を捨てる",
         };
     }
 
-    private static string DescribeAddCard(CardEffect e)
+    private static string DescribeAddCard(CardEffect e, CardActorContext context)
     {
         var cardRef = !string.IsNullOrEmpty(e.CardRefId) ? $"[C:{e.CardRefId}]" : "[C:?]";
         var zone = ZoneJp(e.Pile);
-        return $"{cardRef} を{zone}に {AmountToken(e)} 枚加える";
+        return $"{cardRef} を{zone}に {AmountToken(e, context)} 枚加える";
     }
 
-    private static string DescribeRecoverFromDiscard(CardEffect e)
+    private static string DescribeRecoverFromDiscard(CardEffect e, CardActorContext context)
     {
         var selectJp = SelectJp(e.Select);
         var dest = ZoneJp(e.Pile);
         // exhaust の場合は「除外する」、それ以外は「<dest>に戻す」
         if (e.Pile == "exhaust")
         {
-            return $"捨札から{selectJp} {AmountToken(e)} 枚、除外する";
+            return $"捨札から{selectJp} {AmountToken(e, context)} 枚、除外する";
         }
-        return $"捨札から{selectJp} {AmountToken(e)} 枚、{dest}に戻す";
+        return $"捨札から{selectJp} {AmountToken(e, context)} 枚、{dest}に戻す";
     }
 
-    private static string AmountToken(CardEffect e)
+    /// <summary>
+    /// effect の amount を context で調整した上で marker token を返す。
+    /// AmountSource (Variable X) があればそちらを優先 (10.5.D で engine 評価予定)。
+    /// 調整後 == base なら無修飾 [N:base]、上振れ |up、下振れ |down を付ける。
+    /// </summary>
+    private static string AmountToken(CardEffect e, CardActorContext context)
     {
-        if (string.IsNullOrEmpty(e.AmountSource)) return $"[N:{e.Amount}]";
-        var label = AmountSourceJp(e.AmountSource);
-        // 1 個目変数は X (将来 Y/Z 採番予定。本フェーズでは X 固定)
-        return $"[V:X|{label}]";
+        if (!string.IsNullOrEmpty(e.AmountSource))
+        {
+            var label = AmountSourceJp(e.AmountSource);
+            // 1 個目変数は X (将来 Y/Z 採番予定。本フェーズでは X 固定)
+            return $"[V:X|{label}]";
+        }
+        int adjusted = AdjustAmount(e, context);
+        if (adjusted == e.Amount) return $"[N:{e.Amount}]";
+        var modifier = adjusted > e.Amount ? "up" : "down";
+        return $"[N:{adjusted}|{modifier}]";
+    }
+
+    /// <summary>
+    /// attack: strength 加算 → weak>0 なら 0.75 倍 (floor)。
+    /// block: dexterity を単純加算。
+    /// その他 action は当面比較対象外で base を返す。
+    /// engine 側 (BattleEngine / EffectApplier) の計算とずれる場合は formatter 内で完結。
+    /// </summary>
+    private static int AdjustAmount(CardEffect e, CardActorContext ctx)
+    {
+        if (e.Action == "attack")
+        {
+            int withStr = e.Amount + ctx.Strength;
+            return ctx.Weak > 0 ? (int)(withStr * 0.75) : withStr;
+        }
+        if (e.Action == "block")
+        {
+            return e.Amount + ctx.Dexterity;
+        }
+        return e.Amount;
     }
 
     private static string AmountSourceJp(string src) => src switch

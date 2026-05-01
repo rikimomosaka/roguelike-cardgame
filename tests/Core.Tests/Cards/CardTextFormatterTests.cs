@@ -444,4 +444,106 @@ public class CardTextFormatterTests
         var s = CardTextFormatter.FormatEffects(new[] { e });
         Assert.Equal("敵 1 体に [V:X|weirdSrc] ダメージ。", s);
     }
+
+    // --- 10.5.C: CardActorContext (up/down marker) ---
+
+    [Fact]
+    public void Attack_with_strength_emits_up_marker()
+    {
+        var def = MakeAttackDef(amount: 5);
+        var ctx = new CardActorContext(Strength: 2, Weak: 0, Dexterity: 0);
+        var s = CardTextFormatter.Format(def, upgraded: false, ctx);
+        Assert.Equal("敵 1 体に [N:7|up] ダメージ。", s);
+    }
+
+    [Fact]
+    public void Attack_with_weak_emits_down_marker()
+    {
+        var def = MakeAttackDef(amount: 5);
+        var ctx = new CardActorContext(Strength: 0, Weak: 1, Dexterity: 0);
+        // 5 * 0.75 = 3.75 → floor 3
+        var s = CardTextFormatter.Format(def, upgraded: false, ctx);
+        Assert.Equal("敵 1 体に [N:3|down] ダメージ。", s);
+    }
+
+    [Fact]
+    public void Attack_unchanged_emits_no_modifier()
+    {
+        var def = MakeAttackDef(amount: 5);
+        var s = CardTextFormatter.Format(def, upgraded: false, CardActorContext.Empty);
+        Assert.Equal("敵 1 体に [N:5] ダメージ。", s);
+    }
+
+    [Fact]
+    public void Block_with_dexterity_emits_up()
+    {
+        var def = new CardDefinition(
+            Id: "x", Name: "x", DisplayName: null,
+            Rarity: CardRarity.Common, CardType: CardType.Skill,
+            Cost: 1, UpgradedCost: null,
+            Effects: new[] { E("block", EffectScope.Self, null, 5) },
+            UpgradedEffects: null, Keywords: null, UpgradedKeywords: null,
+            Description: null, UpgradedDescription: null);
+        var ctx = new CardActorContext(Strength: 0, Weak: 0, Dexterity: 3);
+        var s = CardTextFormatter.Format(def, upgraded: false, ctx);
+        Assert.Equal("ブロック [N:8|up] を得る。", s);
+    }
+
+    [Fact]
+    public void Strength_after_weak_uses_floor()
+    {
+        // (5 + 2) * 0.75 = 5.25 → 5。base 5 と等しいので無修飾。
+        var def = MakeAttackDef(amount: 5);
+        var ctx = new CardActorContext(Strength: 2, Weak: 1, Dexterity: 0);
+        var s = CardTextFormatter.Format(def, upgraded: false, ctx);
+        Assert.Equal("敵 1 体に [N:5] ダメージ。", s);
+    }
+
+    [Fact]
+    public void Format_overload_without_context_keeps_existing_behavior()
+    {
+        // 既存 Format(def, upgraded) は無 context として動く (CardActorContext.Empty 経由)。
+        var def = MakeAttackDef(amount: 5);
+        var s = CardTextFormatter.Format(def, upgraded: false);
+        Assert.Equal("敵 1 体に [N:5] ダメージ。", s);
+    }
+
+    [Fact]
+    public void FormatEffects_context_overload_applies_adjustment()
+    {
+        var ctx = new CardActorContext(Strength: 3, Weak: 0, Dexterity: 0);
+        var s = CardTextFormatter.FormatEffects(
+            new[] { E("attack", EffectScope.Single, EffectSide.Enemy, 6) }, ctx);
+        Assert.Equal("敵 1 体に [N:9|up] ダメージ。", s);
+    }
+
+    [Fact]
+    public void Block_context_only_dexterity_does_not_affect_attack_in_same_card()
+    {
+        // attack は dexterity を見ず、block は strength/weak を見ない。
+        var def = new CardDefinition(
+            Id: "x", Name: "x", DisplayName: null,
+            Rarity: CardRarity.Common, CardType: CardType.Attack,
+            Cost: 1, UpgradedCost: null,
+            Effects: new[]
+            {
+                E("attack", EffectScope.Single, EffectSide.Enemy, 6),
+                E("block", EffectScope.Self, null, 5),
+            },
+            UpgradedEffects: null, Keywords: null, UpgradedKeywords: null,
+            Description: null, UpgradedDescription: null);
+        var ctx = new CardActorContext(Strength: 0, Weak: 0, Dexterity: 2);
+        var s = CardTextFormatter.Format(def, upgraded: false, ctx);
+        Assert.Equal("敵 1 体に [N:6] ダメージ。\nブロック [N:7|up] を得る。", s);
+    }
+
+    [Fact]
+    public void AmountSource_with_context_keeps_variable_marker()
+    {
+        // Variable X を使う effect は context があっても [V:X|...] を維持 (10.5.D で別途扱う)。
+        var ctx = new CardActorContext(Strength: 5, Weak: 0, Dexterity: 0);
+        var e = new CardEffect("attack", EffectScope.Single, EffectSide.Enemy, 0, AmountSource: "handCount");
+        var s = CardTextFormatter.FormatEffects(new[] { e }, ctx);
+        Assert.Equal("敵 1 体に [V:X|手札の数] ダメージ。", s);
+    }
 }

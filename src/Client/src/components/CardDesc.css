@@ -17,10 +17,20 @@
   display: inline;
 }
 
-/* 数字 (デフォルト黄色)。battle 中のダメージ修正比較は 10.5.C で modifier 追加。 */
+/* 数字 (デフォルト黄色)。battle 中のダメージ修正比較は 10.5.C で modifier を上書き。 */
 .card-desc-num {
   color: #ffd23f;
   font-weight: bold;
+}
+
+/* Phase 10.5.C: battle 中 actor の statuses で base より上振れ → 赤 (= 強くなった)。 */
+.card-desc-num--up {
+  color: #ff7a7a;
+}
+
+/* Phase 10.5.C: base より下振れ → 青 (= 弱くなった)。 */
+.card-desc-num--down {
+  color: #7aa8ff;
 }
 
 /* キーワード (ワイルド等)。hover popup は 10.5.B 範囲外、まずは色分けのみ。 */

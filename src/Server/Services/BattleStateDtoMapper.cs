@@ -18,8 +18,12 @@ namespace RoguelikeCardGame.Server.Services;
 /// </summary>
 internal static class BattleStateDtoMapper
 {
-    public static BattleStateDto ToDto(BattleState state, DataCatalog data) =>
-        new(
+    public static BattleStateDto ToDto(BattleState state, DataCatalog data)
+    {
+        // Why: hero の statuses を一度だけ計算し、各 pile のカード変換で再利用。
+        // 10.5.C: formatter に渡して [N:N|up] / [N:N|down] のマーカーを emit させる。
+        var heroCtx = BuildHeroContext(state);
+        return new(
             Turn: state.Turn,
             Phase: state.Phase.ToString(),
             Outcome: state.Outcome.ToString(),
@@ -29,18 +33,33 @@ internal static class BattleStateDtoMapper
             TargetEnemyIndex: state.TargetEnemyIndex,
             Energy: state.Energy,
             EnergyMax: state.EnergyMax,
-            DrawPile: state.DrawPile.Select(ToCardDto).ToList(),
-            Hand: state.Hand.Select(ToCardDto).ToList(),
-            DiscardPile: state.DiscardPile.Select(ToCardDto).ToList(),
-            ExhaustPile: state.ExhaustPile.Select(ToCardDto).ToList(),
-            SummonHeld: state.SummonHeld.Select(ToCardDto).ToList(),
-            PowerCards: state.PowerCards.Select(ToCardDto).ToList(),
+            DrawPile: state.DrawPile.Select(c => ToCardDto(c, data, heroCtx)).ToList(),
+            Hand: state.Hand.Select(c => ToCardDto(c, data, heroCtx)).ToList(),
+            DiscardPile: state.DiscardPile.Select(c => ToCardDto(c, data, heroCtx)).ToList(),
+            ExhaustPile: state.ExhaustPile.Select(c => ToCardDto(c, data, heroCtx)).ToList(),
+            SummonHeld: state.SummonHeld.Select(c => ToCardDto(c, data, heroCtx)).ToList(),
+            PowerCards: state.PowerCards.Select(c => ToCardDto(c, data, heroCtx)).ToList(),
             ComboCount: state.ComboCount,
             LastPlayedOrigCost: state.LastPlayedOrigCost,
             NextCardComboFreePass: state.NextCardComboFreePass,
             OwnedRelicIds: state.OwnedRelicIds.ToList(),
             Potions: state.Potions.ToList(),
             EncounterId: state.EncounterId);
+    }
+
+    /// <summary>
+    /// 10.5.C: hero (caster) の statuses を <see cref="CardActorContext"/> に変換。
+    /// hero が見つからない場合は <see cref="CardActorContext.Empty"/>。
+    /// </summary>
+    private static CardActorContext BuildHeroContext(BattleState state)
+    {
+        var hero = state.Allies.FirstOrDefault(a => a.DefinitionId == "hero");
+        if (hero is null) return CardActorContext.Empty;
+        return new CardActorContext(
+            Strength: hero.GetStatus("strength"),
+            Weak: hero.GetStatus("weak"),
+            Dexterity: hero.GetStatus("dexterity"));
+    }
 
     private static CombatActorDto ToActorDto(CombatActor a, DataCatalog data) =>
         new(
@@ -149,8 +168,26 @@ internal static class BattleStateDtoMapper
         return withStr;
     }
 
-    private static BattleCardInstanceDto ToCardDto(BattleCardInstance c) =>
-        new(c.InstanceId, c.CardDefinitionId, c.IsUpgraded, c.CostOverride);
+    /// <summary>
+    /// 10.5.C: hero context を formatter に渡して adjustedDescription を populate する。
+    /// catalog から CardDefinition を引けない場合は null のまま (Client は catalog の
+    /// description にフォールバック)。upgraded 版は IsUpgradable の場合のみ計算。
+    /// </summary>
+    private static BattleCardInstanceDto ToCardDto(
+        BattleCardInstance c, DataCatalog data, CardActorContext heroCtx)
+    {
+        string? adjusted = null;
+        string? adjustedUp = null;
+        if (data.Cards.TryGetValue(c.CardDefinitionId, out var def))
+        {
+            adjusted = CardTextFormatter.Format(def, upgraded: false, heroCtx);
+            if (def.IsUpgradable)
+                adjustedUp = CardTextFormatter.Format(def, upgraded: true, heroCtx);
+        }
+        return new BattleCardInstanceDto(
+            c.InstanceId, c.CardDefinitionId, c.IsUpgraded, c.CostOverride,
+            adjusted, adjustedUp);
+    }
 
     public static BattleEventDto ToEventDto(BattleEvent ev) =>
         new(

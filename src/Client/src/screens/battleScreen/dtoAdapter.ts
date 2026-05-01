@@ -365,6 +365,13 @@ export function toHandCardDemo(
       : null
   const playable =
     reducedCost !== null && reducedCost !== undefined && reducedCost <= energy
+  // Why: 10.5.C で Server が hero context を反映した adjustedDescription を populate
+  //   するようになった。null (戦闘外 catalog 等) のときは catalog の static description
+  //   にフォールバックする。adjustedDescription/adjustedUpgradedDescription は marker
+  //   `[N:N|up]` `[N:N|down]` を含み得るので、CardDesc で赤/青に色分けされる。
+  const description = card.adjustedDescription ?? def?.description ?? ''
+  const upgradedDescription =
+    card.adjustedUpgradedDescription ?? def?.upgradedDescription ?? null
   return {
     name: def?.displayName ?? def?.name ?? card.cardDefinitionId,
     // Why: PileModal と同じく Card 側に upgraded を渡して "+" を専用 span で
@@ -372,8 +379,8 @@ export function toHandCardDemo(
     upgraded: card.isUpgraded,
     // Why: 右クリック長押しトグル用に通常 / 強化両方のテキストを保持。
     //  Card 側の useTooltipTarget が effectiveUpgraded に応じて切替える。
-    description: def?.description ?? '',
-    upgradedDescription: def?.upgradedDescription ?? null,
+    description,
+    upgradedDescription,
     cost: reducedCost ?? 'X',
     // Why: 軽減発生時のみ表示用に元コストを露出。Card が "{orig}→{cost}" を描画する。
     costOrig: willCombo && baseCost !== null && baseCost !== undefined ? baseCost : null,
@@ -381,7 +388,7 @@ export function toHandCardDemo(
     rarity: def ? cardRarityFromNumber(def.rarity) : 'c',
     playable,
     desc: card.isUpgraded
-      ? def?.upgradedDescription ?? def?.description ?? ''
-      : def?.description ?? '',
+      ? upgradedDescription ?? description
+      : description,
   }
 }
