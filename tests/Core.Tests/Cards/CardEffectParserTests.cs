@@ -109,4 +109,44 @@ public class CardEffectParserTests
         Assert.Throws<Exception>(() =>
             Parse("""{"action":"attack","scope":"single","side":"middle","amount":5}"""));
     }
+
+    // --- 10.5.B: reserved fields (engine 動作は後続 sub-phase で実装、本フェーズは JSON ロードのみ) ---
+
+    [Fact]
+    public void Parses_optional_card_ref_id()
+    {
+        var e = Parse("""{"action":"addCard","scope":"self","amount":1,"cardRefId":"strike"}""");
+        Assert.Equal("strike", e.CardRefId);
+    }
+
+    [Fact]
+    public void Parses_optional_select()
+    {
+        var e = Parse("""{"action":"discard","scope":"self","amount":1,"select":"choose"}""");
+        Assert.Equal("choose", e.Select);
+    }
+
+    [Fact]
+    public void Parses_optional_amount_source()
+    {
+        var e = Parse("""{"action":"attack","scope":"single","side":"enemy","amount":0,"amountSource":"handCount"}""");
+        Assert.Equal("handCount", e.AmountSource);
+    }
+
+    [Fact]
+    public void Parses_optional_trigger()
+    {
+        var e = Parse("""{"action":"draw","scope":"self","amount":1,"trigger":"OnTurnStart"}""");
+        Assert.Equal("OnTurnStart", e.Trigger);
+    }
+
+    [Fact]
+    public void Missing_optional_reserved_fields_default_null()
+    {
+        var e = Parse("""{"action":"attack","scope":"single","side":"enemy","amount":6}""");
+        Assert.Null(e.CardRefId);
+        Assert.Null(e.Select);
+        Assert.Null(e.AmountSource);
+        Assert.Null(e.Trigger);
+    }
 }

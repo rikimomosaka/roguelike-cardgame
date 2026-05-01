@@ -35,28 +35,28 @@ public class CatalogControllerTests : IClassFixture<TempDataFactory>
     [Fact]
     public async Task GetCards_Description_uses_CardTextFormatter()
     {
-        // 10.5.A: description は CardTextFormatter で自動生成される。
-        // strike (single enemy attack 6) → 「敵 1 体に 6 ダメージ。」
+        // 10.5.B: 数字は [N:N] marker syntax で出力される。
+        // strike (single enemy attack 6) → 「敵 1 体に [N:6] ダメージ。」
         var client = _factory.CreateClient();
         var res = await client.GetAsync("/api/v1/catalog/cards");
         res.EnsureSuccessStatusCode();
         var body = await res.Content.ReadFromJsonAsync<JsonElement>();
         Assert.True(body.TryGetProperty("strike", out var strike));
-        Assert.Equal("敵 1 体に 6 ダメージ。", strike.GetProperty("description").GetString());
+        Assert.Equal("敵 1 体に [N:6] ダメージ。", strike.GetProperty("description").GetString());
         // upgraded: 9 ダメージ
-        Assert.Equal("敵 1 体に 9 ダメージ。", strike.GetProperty("upgradedDescription").GetString());
+        Assert.Equal("敵 1 体に [N:9] ダメージ。", strike.GetProperty("upgradedDescription").GetString());
     }
 
     [Fact]
     public async Task GetCards_Defend_description_is_block_via_formatter()
     {
-        // defend は scope=Single, side=Ally のため、formatter は「味方 1 体にブロック 5。」を返す。
+        // defend は scope=Single, side=Ally のため、formatter は「味方 1 体にブロック [N:5]。」を返す。
         var client = _factory.CreateClient();
         var res = await client.GetAsync("/api/v1/catalog/cards");
         res.EnsureSuccessStatusCode();
         var body = await res.Content.ReadFromJsonAsync<JsonElement>();
         Assert.True(body.TryGetProperty("defend", out var defend));
-        Assert.Equal("味方 1 体にブロック 5。", defend.GetProperty("description").GetString());
+        Assert.Equal("味方 1 体にブロック [N:5]。", defend.GetProperty("description").GetString());
     }
 
     [Fact]

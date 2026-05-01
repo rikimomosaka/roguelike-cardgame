@@ -30,8 +30,15 @@ public static class CardEffectParser
         bool battleOnly = el.TryGetProperty("battleOnly", out var boEl)
                           && boEl.ValueKind == JsonValueKind.True;
 
+        // 10.5.B reserved fields (engine は本フェーズでは無視。10.5.D-F で順次対応)
+        string? cardRefId = GetOptionalString(el, "cardRefId");
+        string? select = GetOptionalString(el, "select");
+        string? amountSource = GetOptionalString(el, "amountSource");
+        string? trigger = GetOptionalString(el, "trigger");
+
         var raw = new CardEffect(action, scope, side, amount,
-            Name: name, UnitId: unitId, ComboMin: comboMin, Pile: pile, BattleOnly: battleOnly);
+            Name: name, UnitId: unitId, ComboMin: comboMin, Pile: pile, BattleOnly: battleOnly,
+            CardRefId: cardRefId, Select: select, AmountSource: amountSource, Trigger: trigger);
         return raw.Normalize();
     }
 

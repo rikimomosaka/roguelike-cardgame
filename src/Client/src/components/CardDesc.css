@@ -1,0 +1,44 @@
+/* =============================================================
+   CardDesc — リッチテキスト描画 (formatter v2 marker → span)
+   spec: docs/superpowers/specs/2026-05-01-phase10-5-design.md §1-3 Q9
+   battle 中の赤/青比較は 10.5.C で別 modifier class を追加予定。
+   ============================================================= */
+
+.card-desc {
+  display: inline;
+  white-space: pre-wrap;
+}
+
+.card-desc-line {
+  display: inline;
+}
+
+/* 数字 (デフォルト黄色)。battle 中のダメージ修正比較は 10.5.C で modifier 追加。 */
+.card-desc-num {
+  color: #ffd23f;
+  font-weight: bold;
+}
+
+/* キーワード (ワイルド等)。hover popup は 10.5.B 範囲外、まずは色分けのみ。 */
+.card-desc-keyword {
+  color: #c5d4ff;
+  font-weight: bold;
+  cursor: help;
+}
+
+/* power カードのトリガ部分 ("ターン開始時" 等)。 */
+.card-desc-trigger {
+  color: #ffd9a0;
+  font-weight: bold;
+}
+
+/* 変数 X / Y / Z (handCount 等の動的 amount)。緑系で「未計算の値」を示す。 */
+.card-desc-var {
+  color: #c8ffb3;
+  font-weight: bold;
+}
+
+/* カード参照 ([C:strike] など)。紫系で「他カード」を示す。 */
+.card-desc-cardref {
+  color: #d8b4ff;
+}

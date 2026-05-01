@@ -8,6 +8,8 @@ import {
 } from 'react'
 import type { MouseEvent, ReactNode } from 'react'
 import type { CardRarity } from './Card'
+import { CardDesc } from './CardDesc'
+import { useCardCatalog } from '../hooks/useCardCatalog'
 import './Tooltip.css'
 
 export type TooltipContent = {
@@ -53,6 +55,9 @@ export function TooltipHost({ children }: { children: ReactNode }) {
   }, [state])
 
   const { content } = state
+  // Why: marker (e.g. [C:strike]) を表示名へ解決するため catalog を引く。
+  //   未ロード時は空オブジェクトで CardDesc が cardId フォールバック表示する。
+  const { names: cardNames } = useCardCatalog()
 
   return (
     <TooltipContext.Provider value={ctx}>
@@ -67,7 +72,13 @@ export function TooltipHost({ children }: { children: ReactNode }) {
               </div>
             ) : null}
           </div>
-          <div className="tip__desc">{content.desc}</div>
+          <div className="tip__desc">
+            {typeof content.desc === 'string' ? (
+              <CardDesc text={content.desc} cardNames={cardNames} />
+            ) : (
+              content.desc
+            )}
+          </div>
         </div>
       ) : null}
     </TooltipContext.Provider>

@@ -13,6 +13,10 @@ namespace RoguelikeCardGame.Core.Cards;
 /// <param name="ComboMin">コンボ N 以上で適用（カードのみ意味あり）</param>
 /// <param name="Pile">"hand"|"discard"|"draw" (exhaustCard / upgrade / discard 用)</param>
 /// <param name="BattleOnly">true なら戦闘外発動時にスキップ</param>
+/// <param name="CardRefId">10.5.B reserved: addCard 等で参照する既存カード id。engine 動作は 10.5.F で実装。</param>
+/// <param name="Select">10.5.B reserved: discard 等の選択方式。"random" | "choose" | "all"。engine 動作は 10.5.F で実装。</param>
+/// <param name="AmountSource">10.5.B reserved: Variable X 等の amount ソース。"handCount" | "drawPileCount" 等。engine 動作は 10.5.D で実装。</param>
+/// <param name="Trigger">10.5.B reserved: power カードの発火タイミング。"OnTurnStart" | "OnPlayCard" 等。engine 動作は 10.5.E で実装。</param>
 public sealed record CardEffect(
     string Action,
     EffectScope Scope,
@@ -22,7 +26,11 @@ public sealed record CardEffect(
     string? UnitId = null,
     int? ComboMin = null,
     string? Pile = null,
-    bool BattleOnly = false)
+    bool BattleOnly = false,
+    string? CardRefId = null,
+    string? Select = null,
+    string? AmountSource = null,
+    string? Trigger = null)
 {
     /// <summary>
     /// JSON ロード時の safety net 正規化。
