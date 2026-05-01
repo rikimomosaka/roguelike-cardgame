@@ -19,6 +19,13 @@ public static class BattleFixtures
             ImmutableDictionary<string, int>.Empty, null,
             RemainingLifetimeTurns: null, AssociatedSummonHeldInstanceId: null);   // 10.2.D
 
+    /// <summary>10.5.F: テストで CurrentHp / MaxHp を別個に指定したい場合のヘルパー。</summary>
+    public static CombatActor Hero(int currentHp, int maxHp, int slotIndex = 0) =>
+        new("hero_inst", "hero", ActorSide.Ally, slotIndex, currentHp, maxHp,
+            BlockPool.Empty, AttackPool.Empty, AttackPool.Empty, AttackPool.Empty,
+            ImmutableDictionary<string, int>.Empty, null,
+            RemainingLifetimeTurns: null, AssociatedSummonHeldInstanceId: null);
+
     public static CombatActor Goblin(int slotIndex = 0, int hp = 20, string moveId = "swing") =>
         new($"goblin_inst_{slotIndex}", "goblin", ActorSide.Enemy, slotIndex, hp, hp,
             BlockPool.Empty, AttackPool.Empty, AttackPool.Empty, AttackPool.Empty,
@@ -176,6 +183,39 @@ public static class BattleFixtures
 
     public static BattleCardInstance MakeBattleCard(string defId, string instId, bool upgraded = false) =>
         new(instId, defId, upgraded, null);
+
+    // ===== 10.5.F: BattleState helpers for engine tests =====
+
+    /// <summary>Hero / Goblin / 空 piles の最小 state。</summary>
+    public static BattleState MakeMinimalState() => MinimalState();
+
+    /// <summary>指定 hero を含む最小 state。</summary>
+    public static BattleState MakeStateWithHero(CombatActor hero) =>
+        MinimalState(allies: ImmutableArray.Create(hero));
+
+    /// <summary>指定 cardDefIds で hand を埋めた最小 state。InstanceId は連番。</summary>
+    public static BattleState MakeStateWithHand(string[] cardDefIds)
+    {
+        var hand = ImmutableArray.CreateRange(
+            cardDefIds.Select((id, i) => new BattleCardInstance($"{id}-h{i}", id, false, null)));
+        return MinimalState(hand: hand);
+    }
+
+    /// <summary>指定 cardDefIds で draw pile を埋めた最小 state。先頭が top。</summary>
+    public static BattleState MakeStateWithDrawPile(string[] cardDefIds)
+    {
+        var draw = ImmutableArray.CreateRange(
+            cardDefIds.Select((id, i) => new BattleCardInstance($"{id}-d{i}", id, false, null)));
+        return MinimalState(draw: draw);
+    }
+
+    /// <summary>指定 cardDefIds で discard pile を埋めた最小 state。</summary>
+    public static BattleState MakeStateWithDiscardPile(string[] cardDefIds)
+    {
+        var discard = ImmutableArray.CreateRange(
+            cardDefIds.Select((id, i) => new BattleCardInstance($"{id}-x{i}", id, false, null)));
+        return MinimalState(discard: discard);
+    }
 
     // ===== Status helpers =====
 

@@ -3,6 +3,7 @@ namespace RoguelikeCardGame.Core.Battle.Events;
 /// <summary>
 /// バトル中に発生するイベント種別。
 /// 10.2.D で 7 値追加（Heal/Draw/Discard/Upgrade/Exhaust/GainEnergy/Summon）。
+/// 10.5.F で 3 値追加（AddCard/RecoverFromDiscard/GainMaxEnergy）。
 /// </summary>
 public enum BattleEventKind
 {
@@ -26,4 +27,12 @@ public enum BattleEventKind
     GainEnergy    = 17,    // 10.2.D
     Summon        = 18,    // 10.2.D
     UsePotion     = 19,    // 10.2.E
+
+    // Phase 10.5.F: engine 新 actions
+    /// <summary>カードを effect 経由で zone (hand/draw/discard/exhaust) に追加した。</summary>
+    AddCard            = 20,
+    /// <summary>カードを discard pile から hand or exhaust に戻した。</summary>
+    RecoverFromDiscard = 21,
+    /// <summary>EnergyMax を増加させた (永続)。</summary>
+    GainMaxEnergy      = 22,
 }

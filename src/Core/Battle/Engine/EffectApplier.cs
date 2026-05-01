@@ -43,6 +43,11 @@ internal static class EffectApplier
             "exhaustCard" => ApplyExhaustCard(state, caster, effect, rng),
             "upgrade"     => ApplyUpgrade(state, caster, effect, rng, catalog),
             "summon"      => ApplySummon(state, caster, effect, rng, catalog),
+            // Phase 10.5.F: engine 新 actions
+            "selfDamage"        => ApplySelfDamage(state, caster, effect),
+            "addCard"           => ApplyAddCard(state, caster, effect),
+            "recoverFromDiscard"=> ApplyRecoverFromDiscard(state, caster, effect, rng),
+            "gainMaxEnergy"     => ApplyGainMaxEnergy(state, caster, effect),
             _        => (state, Array.Empty<BattleEvent>()),
         };
     }
@@ -70,6 +75,178 @@ internal static class EffectApplier
             Amount: effect.Amount);
         return (next, new[] { ev });
     }
+
+    // ========== Phase 10.5.F handlers ==========
+
+    /// <summary>
+    /// 10.5.F: caster の HP を block 無視で直接削る (Lose HP)。
+    /// 死亡したら ActorDeath を emit。Outcome 確定は呼出側に任せる。
+    /// </summary>
+    private static (BattleState, IReadOnlyList<BattleEvent>) ApplySelfDamage(
+        BattleState state, CombatActor caster, CardEffect effect)
+    {
+        if (effect.Scope != EffectScope.Self)
+            throw new InvalidOperationException(
+                $"selfDamage requires Scope=Self, got {effect.Scope}");
+
+        var current = FindActor(state, caster.InstanceId) ?? caster;
+        int newHp = Math.Max(0, current.CurrentHp - effect.Amount);
+        var updated = current with { CurrentHp = newHp };
+        var next = ReplaceActor(state, caster.InstanceId, updated);
+
+        var events = new List<BattleEvent>
+        {
+            new(BattleEventKind.DealDamage, Order: 0,
+                CasterInstanceId: caster.InstanceId,
+                TargetInstanceId: caster.InstanceId,
+                Amount: effect.Amount,
+                Note: "selfDamage"),
+        };
+        if (current.IsAlive && !updated.IsAlive)
+        {
+            events.Add(new BattleEvent(
+                BattleEventKind.ActorDeath, Order: 0,
+                TargetInstanceId: caster.InstanceId,
+                Note: "selfDamage"));
+        }
+
+        return (next, events);
+    }
+
+    /// <summary>
+    /// 10.5.F: 新規 BattleCardInstance を生成し pile (hand/draw/discard/exhaust) に追加。
+    /// hand 上限 (10) 超過分は discard に流す。CardRefId / Pile は必須。
+    /// </summary>
+    private static (BattleState, IReadOnlyList<BattleEvent>) ApplyAddCard(
+        BattleState state, CombatActor caster, CardEffect effect)
+    {
+        if (string.IsNullOrEmpty(effect.CardRefId))
+            throw new InvalidOperationException(
+                "addCard requires non-null CardRefId");
+        if (string.IsNullOrEmpty(effect.Pile))
+            throw new InvalidOperationException(
+                "addCard requires non-null Pile (hand/draw/discard/exhaust)");
+        if (effect.Amount <= 0) return (state, Array.Empty<BattleEvent>());
+
+        var s = state;
+        int added = 0;
+        for (int i = 0; i < effect.Amount; i++)
+        {
+            var instance = new BattleCardInstance(
+                InstanceId: NewBattleInstanceId(effect.CardRefId!),
+                CardDefinitionId: effect.CardRefId!,
+                IsUpgraded: false,
+                CostOverride: null);
+            s = AddInstanceToPile(s, instance, effect.Pile!);
+            added++;
+        }
+
+        var ev = new BattleEvent(
+            BattleEventKind.AddCard, Order: 0,
+            CasterInstanceId: caster.InstanceId,
+            Amount: added,
+            Note: $"{effect.CardRefId}:{effect.Pile}");
+        return (s, new[] { ev });
+    }
+
+    /// <summary>
+    /// 10.5.F: discard pile から N 枚を hand or exhaust に移動。
+    /// Select=all/random 対応。choose は NotImplementedException (10.5.M で実装)。
+    /// hand overflow は discard に戻す。
+    /// </summary>
+    private static (BattleState, IReadOnlyList<BattleEvent>) ApplyRecoverFromDiscard(
+        BattleState state, CombatActor caster, CardEffect effect, IRng rng)
+    {
+        if (effect.Pile != "hand" && effect.Pile != "exhaust")
+            throw new InvalidOperationException(
+                $"recoverFromDiscard requires Pile='hand' or 'exhaust', got '{effect.Pile}'");
+
+        var select = effect.Select ?? "random";
+        if (select == "choose")
+            throw new NotImplementedException(
+                "Select='choose' requires UI input flow, planned for 10.5.M");
+
+        if (state.DiscardPile.Length == 0)
+            return (state, Array.Empty<BattleEvent>());
+
+        var discardBuilder = state.DiscardPile.ToBuilder();
+        var picked = new List<BattleCardInstance>();
+
+        if (select == "all")
+        {
+            picked.AddRange(discardBuilder);
+            discardBuilder.Clear();
+        }
+        else // "random" (default)
+        {
+            int target = Math.Min(effect.Amount, discardBuilder.Count);
+            for (int i = 0; i < target; i++)
+            {
+                int idx = rng.NextInt(0, discardBuilder.Count);
+                picked.Add(discardBuilder[idx]);
+                discardBuilder.RemoveAt(idx);
+            }
+        }
+
+        if (picked.Count == 0)
+            return (state, Array.Empty<BattleEvent>());
+
+        var s = state with { DiscardPile = discardBuilder.ToImmutable() };
+        foreach (var card in picked)
+        {
+            s = AddInstanceToPile(s, card, effect.Pile!);
+        }
+
+        var ev = new BattleEvent(
+            BattleEventKind.RecoverFromDiscard, Order: 0,
+            CasterInstanceId: caster.InstanceId,
+            Amount: picked.Count,
+            Note: $"{select}:{effect.Pile}");
+        return (s, new[] { ev });
+    }
+
+    /// <summary>
+    /// 10.5.F: EnergyMax を永続的に増やす。当ターンの Energy はそのまま
+    /// (StS 慣習: 次ターン開始時に EnergyMax まで補充される)。
+    /// </summary>
+    private static (BattleState, IReadOnlyList<BattleEvent>) ApplyGainMaxEnergy(
+        BattleState state, CombatActor caster, CardEffect effect)
+    {
+        if (effect.Scope != EffectScope.Self)
+            throw new InvalidOperationException(
+                $"gainMaxEnergy requires Scope=Self, got {effect.Scope}");
+
+        var next = state with { EnergyMax = state.EnergyMax + effect.Amount };
+        var ev = new BattleEvent(
+            BattleEventKind.GainMaxEnergy, Order: 0,
+            CasterInstanceId: caster.InstanceId,
+            Amount: effect.Amount);
+        return (next, new[] { ev });
+    }
+
+    /// <summary>
+    /// 10.5.F: pile 名から BattleCardInstance を追加した state を返す。
+    /// hand 上限超過時は discard に流す。draw は top (先頭) に挿入。
+    /// </summary>
+    private static BattleState AddInstanceToPile(
+        BattleState state, BattleCardInstance instance, string pile) => pile switch
+    {
+        "hand" => state.Hand.Length < DrawHelper.HandCap
+            ? state with { Hand = state.Hand.Add(instance) }
+            : state with { DiscardPile = state.DiscardPile.Add(instance) },
+        "draw"    => state with { DrawPile = state.DrawPile.Insert(0, instance) },
+        "discard" => state with { DiscardPile = state.DiscardPile.Add(instance) },
+        "exhaust" => state with { ExhaustPile = state.ExhaustPile.Add(instance) },
+        _ => throw new InvalidOperationException(
+            $"Unknown pile '{pile}', expected hand|draw|discard|exhaust"),
+    };
+
+    /// <summary>
+    /// 10.5.F: addCard 等で生成する InstanceId 採番。RNG 非依存で衝突予防。
+    /// 形式: "{cardRefId}-{Guid 8 char}"。
+    /// </summary>
+    private static string NewBattleInstanceId(string cardRefId)
+        => $"{cardRefId}-{Guid.NewGuid().ToString("N").Substring(0, 8)}";
 
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyAttack(
         BattleState state, CombatActor caster, CardEffect effect)
@@ -332,6 +509,13 @@ internal static class EffectApplier
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyDiscard(
         BattleState state, CombatActor caster, CardEffect effect, IRng rng)
     {
+        // Phase 10.5.F: Select 優先パス。Select 指定があれば新ロジック。
+        // Select=null は既存 Scope ベース挙動 (後方互換)。
+        if (!string.IsNullOrEmpty(effect.Select))
+        {
+            return ApplyDiscardWithSelect(state, caster, effect, rng);
+        }
+
         if (effect.Scope == EffectScope.Single)
             throw new InvalidOperationException(
                 "discard Scope=Single is not supported (UI not yet wired)");
@@ -366,6 +550,47 @@ internal static class EffectApplier
             }
             return BuildResult(state, caster, hand, discard, target, note);
         }
+    }
+
+    /// <summary>
+    /// 10.5.F: discard の Select 対応版。Select=all/random/choose を解釈する。
+    /// choose は本フェーズでは UI 入力フローが無いため NotImplementedException。
+    /// </summary>
+    private static (BattleState, IReadOnlyList<BattleEvent>) ApplyDiscardWithSelect(
+        BattleState state, CombatActor caster, CardEffect effect, IRng rng)
+    {
+        if (effect.Select == "choose")
+            throw new NotImplementedException(
+                "Select='choose' requires UI input flow, planned for 10.5.M");
+
+        if (state.Hand.Length == 0) return (state, Array.Empty<BattleEvent>());
+
+        var hand = state.Hand.ToBuilder();
+        var discard = state.DiscardPile.ToBuilder();
+        int target;
+        string note;
+
+        if (effect.Select == "all")
+        {
+            target = hand.Count;
+            foreach (var c in hand) discard.Add(c);
+            hand.Clear();
+            note = "all";
+        }
+        else // "random" or unknown → random
+        {
+            target = Math.Min(effect.Amount, hand.Count);
+            for (int i = 0; i < target; i++)
+            {
+                int idx = rng.NextInt(0, hand.Count);
+                var card = hand[idx];
+                hand.RemoveAt(idx);
+                discard.Add(card);
+            }
+            note = "random";
+        }
+
+        return BuildResult(state, caster, hand, discard, target, note);
     }
 
     private static (BattleState, IReadOnlyList<BattleEvent>) BuildResult(

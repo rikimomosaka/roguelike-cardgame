@@ -200,6 +200,8 @@ export type BattleEventKind =
   | 'ApplyStatus' | 'RemoveStatus' | 'PoisonTick'
   | 'Heal' | 'Draw' | 'Discard' | 'Upgrade' | 'Exhaust'
   | 'GainEnergy' | 'Summon' | 'UsePotion'
+  // Phase 10.5.F: engine 新 actions
+  | 'AddCard' | 'RecoverFromDiscard' | 'GainMaxEnergy'
 
 export type IntentDto = {
   /** 通常攻撃 (single) の予定ダメージ。 */
