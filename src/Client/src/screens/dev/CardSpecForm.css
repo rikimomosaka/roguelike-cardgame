@@ -1,0 +1,336 @@
+/* Phase 10.5.M: 構造化フォーム + ライブプレビューのスタイル。
+   既存 dev menu の dark テーマ (#1a1a1a bg / #ddd text / #444 border) を踏襲。 */
+
+.card-spec-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-family: var(--font-body, sans-serif);
+  color: #ddd;
+}
+
+.card-spec-form__row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.card-spec-form__label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #aaa;
+}
+
+.card-spec-form__label--block {
+  display: block;
+  width: 100%;
+}
+
+.card-spec-form__label select,
+.card-spec-form__label input[type='number'],
+.card-spec-form__label input[type='text'],
+.card-spec-form__label textarea {
+  background: #0e0e0e;
+  color: #c9d1d9;
+  border: 1px solid #444;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  min-width: 120px;
+}
+
+.card-spec-form__label textarea {
+  width: 100%;
+  min-height: 60px;
+  font-family: monospace;
+  resize: vertical;
+}
+
+.card-spec-form__desc-override {
+  background: #0e0e0e;
+  border: 1px solid #333;
+  padding: 8px 12px;
+}
+
+.card-spec-form__desc-override > summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: #aaa;
+}
+
+.card-spec-form__desc-override > label {
+  margin-top: 8px;
+}
+
+.card-spec-form__previews {
+  margin-top: 8px;
+  padding: 12px;
+  background: #0e0e0e;
+  border: 1px solid #333;
+}
+
+.card-spec-form__previews-heading {
+  margin: 8px 0 4px 0;
+  font-size: 12px;
+  color: #999;
+  letter-spacing: 1px;
+}
+
+.card-spec-form__previews-heading:first-child {
+  margin-top: 0;
+}
+
+/* ---- effect list / row / editor ---- */
+
+.effect-list {
+  background: #0e0e0e;
+  border: 1px solid #333;
+  padding: 12px;
+}
+
+.effect-list__heading {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: #ffd23f;
+  letter-spacing: 1px;
+}
+
+.effect-list__add {
+  margin-top: 8px;
+  padding: 4px 12px;
+  background: #2a4a2a;
+  color: #c8ffb3;
+  border: 1px solid #4a7a4a;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.effect-list__add:hover {
+  background: #3a5a3a;
+}
+
+.effect-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  padding: 6px 0;
+  border-top: 1px dashed #333;
+}
+
+.effect-row:first-of-type {
+  border-top: none;
+}
+
+.effect-row__order {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.effect-row__order button {
+  background: #2a2a2a;
+  color: #ddd;
+  border: 1px solid #444;
+  padding: 2px 6px;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.effect-row__order button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.effect-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #161616;
+  border: 1px solid #333;
+  padding: 8px;
+}
+
+.effect-editor__row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.effect-editor__row--header {
+  justify-content: space-between;
+}
+
+.effect-editor__label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  color: #aaa;
+}
+
+.effect-editor__label select,
+.effect-editor__label input[type='number'],
+.effect-editor__label input[type='text'] {
+  background: #0e0e0e;
+  color: #c9d1d9;
+  border: 1px solid #444;
+  padding: 4px 6px;
+  font-size: 12px;
+  font-family: inherit;
+  min-width: 100px;
+}
+
+.effect-editor__remove {
+  background: #4a2020;
+  color: #ffaaaa;
+  border: 1px solid #663333;
+  cursor: pointer;
+  padding: 2px 8px;
+  font-size: 13px;
+  height: 24px;
+  align-self: center;
+}
+
+.effect-editor__remove:hover {
+  background: #663030;
+}
+
+.effect-editor__fields {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ---- keyword selector ---- */
+
+.keyword-selector {
+  background: #0e0e0e;
+  border: 1px solid #333;
+  padding: 8px 12px;
+}
+
+.keyword-selector__label {
+  font-size: 12px;
+  color: #aaa;
+  margin-bottom: 4px;
+}
+
+.keyword-selector__checks {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.keyword-selector__check {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #ddd;
+  cursor: pointer;
+}
+
+.keyword-selector__empty {
+  font-size: 12px;
+  color: #666;
+}
+
+/* ---- formatter preview ---- */
+
+.formatter-preview {
+  margin-top: 4px;
+  padding: 8px 10px;
+  background: #161616;
+  border: 1px solid #333;
+}
+
+.formatter-preview__label {
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 4px;
+  letter-spacing: 1px;
+}
+
+.formatter-preview__body {
+  font-size: 13px;
+  color: #ddd;
+  min-height: 1.2em;
+}
+
+.formatter-preview__body[data-loading] {
+  opacity: 0.6;
+}
+
+.formatter-preview__error {
+  margin-top: 4px;
+  font-size: 12px;
+  background: #2a1010;
+  padding: 6px 8px;
+  color: #ff8888;
+}
+
+/* ---- card visual preview ---- */
+
+.dev-card-visual-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px 8px;
+  flex-wrap: wrap;
+}
+
+.dev-card-visual-preview__panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.dev-card-visual-preview__caption {
+  font-size: 11px;
+  color: #888;
+  letter-spacing: 1px;
+}
+
+.dev-card-visual-preview__arrow {
+  font-size: 28px;
+  font-weight: bold;
+  color: #ffd23f;
+  text-shadow: 0 0 8px rgba(255, 200, 80, 0.6);
+}
+
+/* ---- delete card button + modal ---- */
+
+.dev-card-detail__delete {
+  margin-left: auto;
+  padding: 4px 12px;
+  background: #4a2020;
+  color: #ffaaaa;
+  border: 1px solid #663333;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.dev-card-detail__delete:hover {
+  background: #663030;
+}
+
+.dev-delete-modal label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #ddd;
+  margin: 8px 0;
+}
+
+.dev-delete-modal__warning {
+  color: #ffaa66;
+  font-size: 12px;
+  margin: 4px 0 8px;
+}

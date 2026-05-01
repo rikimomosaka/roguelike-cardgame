@@ -43,3 +43,9 @@ public sealed record NewCardRequest(
     string Name,
     string? DisplayName = null,
     string? TemplateCardId = null);
+
+// ---- Phase 10.5.M preview request DTO ----
+
+/// <summary>POST /api/dev/cards/preview のリクエストボディ。
+/// spec を CardDefinition に組み立てて CardTextFormatter で auto-text を返す。</summary>
+public sealed record PreviewCardRequest(JsonElement Spec, bool Upgraded);

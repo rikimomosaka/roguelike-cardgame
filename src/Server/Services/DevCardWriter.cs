@@ -82,6 +82,29 @@ public sealed class DevCardWriter
     }
 
     /// <summary>
+    /// base カード JSON file を削除。削除前に backup を取る (Phase 10.5.M)。
+    /// baseCardsDir 未設定なら InvalidOperationException。file 不在なら何もしない。
+    /// </summary>
+    public void DeleteBaseWithBackup(string cardId)
+    {
+        if (_baseCardsDir is null)
+            throw new InvalidOperationException("baseCardsDir not configured.");
+
+        var basePath = Path.Combine(_baseCardsDir, $"{cardId}.json");
+        if (!File.Exists(basePath)) return;
+
+        if (_backupRoot is not null)
+        {
+            var backupDir = Path.Combine(_backupRoot, "cards");
+            Directory.CreateDirectory(backupDir);
+            var ts = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff");
+            var backupPath = Path.Combine(backupDir, $"{cardId}-deleted-{ts}.json");
+            File.Copy(basePath, backupPath, overwrite: false);
+        }
+        File.Delete(basePath);
+    }
+
+    /// <summary>
     /// override directory に存在するカード ID 一覧 (Phase 10.5.K — override-only 新規カードを GET で
     /// 列挙するため)。directory 不在時は空配列。
     /// </summary>

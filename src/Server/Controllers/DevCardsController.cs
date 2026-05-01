@@ -384,6 +384,75 @@ public sealed class DevCardsController : ControllerBase
     }
 
     /// <summary>
+    /// POST /api/dev/cards/preview (Phase 10.5.M)
+    /// spec を CardDefinition に組み立てて CardTextFormatter.Format で auto-text を返す。
+    /// 構造化フォームのライブプレビュー用。base/override には書き込まない。
+    /// </summary>
+    [HttpPost("cards/preview")]
+    public IActionResult Preview([FromBody] PreviewCardRequest? body)
+    {
+        if (!_env.IsDevelopment()) return NotFound();
+        if (body is null) return BadRequest(new { error = "body is required." });
+
+        try
+        {
+            // spec から CardDefinition を構築 (id/name/activeVersion は dummy)。
+            // CardJsonLoader.Parse は versioned 形式を要求するため、versions=[v1] にラップする。
+            var dummy = new JsonObject
+            {
+                ["id"] = "preview",
+                ["name"] = "preview",
+                ["activeVersion"] = "v1",
+                ["versions"] = new JsonArray
+                {
+                    new JsonObject
+                    {
+                        ["version"] = "v1",
+                        ["spec"] = JsonNode.Parse(body.Spec.GetRawText()),
+                    },
+                },
+            };
+            var def = CardJsonLoader.Parse(dummy.ToJsonString());
+            var desc = CardTextFormatter.Format(def, body.Upgraded);
+            return Ok(new { description = desc });
+        }
+        catch (CardJsonException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// DELETE /api/dev/cards/{id}?alsoBase=bool (Phase 10.5.M)
+    /// override file を削除。alsoBase=true なら base file も backup を取って削除。
+    /// override / base どちらにも存在しなければ 404。
+    /// </summary>
+    [HttpDelete("cards/{id}")]
+    public IActionResult DeleteCard(string id, [FromQuery] bool alsoBase = false)
+    {
+        if (!_env.IsDevelopment()) return NotFound();
+        if (string.IsNullOrEmpty(id)) return BadRequest("id is required.");
+
+        var hasOverride = !string.IsNullOrEmpty(_writer.ReadOverride(id));
+        var hasBaseDisk = _writer.ReadBase(id) is not null;
+        var hasBaseManifest = ReadBaseFromManifest(id) is not null;
+        var hasBase = hasBaseDisk || hasBaseManifest;
+        if (!hasOverride && !hasBase) return NotFound(new { error = $"card '{id}' not found" });
+
+        if (hasOverride) _writer.DeleteOverride(id);
+        if (alsoBase && hasBaseDisk)
+        {
+            _writer.DeleteBaseWithBackup(id);
+        }
+        _provider.Rebuild();
+        return Ok(new { deleted = id, alsoBase });
+    }
+
+    /// <summary>
     /// POST /api/dev/cards/{id}/promote
     /// override の version を base JSON に転記、override から削除。
     /// base は backup を取ってから上書き。override の versions が空になれば override file ごと削除。

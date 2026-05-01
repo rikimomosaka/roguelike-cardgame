@@ -1,19 +1,26 @@
 // Phase 10.5.I: Dev cards read-only viewer.
 // Phase 10.5.J: Editor (label + textarea + Save / Set active / Promote / Delete) を追加。
 // Phase 10.5.K: "+ New Card" モーダルから override 層にゼロから新規カードを作成可能。
+// Phase 10.5.M: textarea 撤去 → CardSpecForm (構造化フォーム + ライブテキスト + ライブビジュアル
+//               プレビュー)。Delete Card ボタンで override only / alsoBase 削除可能。
 
 import { useEffect, useState } from 'react'
-import type { DevCardDto } from '../api/dev'
+import type { DevCardDto, DevMeta } from '../api/dev'
 import {
   createNewCard,
+  deleteCard as deleteCardApi,
   deleteCardVersion,
   fetchDevCards,
+  fetchDevMeta,
   promoteCardVersion,
   saveCardVersion,
   switchActiveVersion,
 } from '../api/dev'
-import { CardDesc } from '../components/CardDesc'
+import { CardSpecForm } from './dev/CardSpecForm'
+import type { CardSpec } from './dev/DevSpecTypes'
+import { parseSpec, specToJsonObject } from './dev/DevSpecTypes'
 import './DevCardsScreen.css'
+import './dev/CardSpecForm.css'
 
 type Props = {
   /** ?dev (home) へ戻る用。省略可 (テスト用)。 */
@@ -22,15 +29,15 @@ type Props = {
 
 export function DevCardsScreen({ onBack }: Props = {}) {
   const [cards, setCards] = useState<DevCardDto[] | null>(null)
+  const [meta, setMeta] = useState<DevMeta | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedVer, setSelectedVer] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
-  // Phase 10.5.K: new card modal state
   const [newCardOpen, setNewCardOpen] = useState(false)
-  // 作成直後に list 再 fetch → 自動選択するための pending id
   const [pendingSelectId, setPendingSelectId] = useState<string | null>(null)
 
+  // 1) cards を fetch
   useEffect(() => {
     let cancelled = false
     fetchDevCards()
@@ -38,7 +45,6 @@ export function DevCardsScreen({ onBack }: Props = {}) {
         if (cancelled) return
         setCards(list)
         if (list.length > 0) {
-          // pendingSelectId があり list に含まれていればそれを優先 (新規作成直後)
           setSelectedId((prevId) => {
             let id: string
             if (pendingSelectId && list.some((c) => c.id === pendingSelectId)) {
@@ -51,6 +57,9 @@ export function DevCardsScreen({ onBack }: Props = {}) {
             return id
           })
           if (pendingSelectId) setPendingSelectId(null)
+        } else {
+          setSelectedId(null)
+          setSelectedVer(null)
         }
       })
       .catch((e) => {
@@ -61,10 +70,30 @@ export function DevCardsScreen({ onBack }: Props = {}) {
     }
   }, [reloadKey])
 
+  // 2) meta を 1 回だけ fetch
+  useEffect(() => {
+    let cancelled = false
+    fetchDevMeta()
+      .then((m) => {
+        if (!cancelled) setMeta(m)
+      })
+      .catch((e) => {
+        if (!cancelled) setError(String(e))
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   if (error) return <div className="dev-error">Error: {error}</div>
-  if (!cards) return <div className="dev-loading">Loading...</div>
+  if (!cards || !meta) return <div className="dev-loading">Loading...</div>
 
   const selected = cards.find((c) => c.id === selectedId) ?? null
+  const allCardIds = cards.map((c) => c.id)
+  const cardNames: Record<string, string> = {}
+  for (const c of cards) {
+    cardNames[c.id] = c.displayName ?? c.name
+  }
 
   return (
     <div className="dev-cards">
@@ -106,8 +135,16 @@ export function DevCardsScreen({ onBack }: Props = {}) {
             key={`${selected.id}`}
             card={selected}
             versionId={selectedVer ?? selected.activeVersion}
+            meta={meta}
+            allCardIds={allCardIds}
+            cardNames={cardNames}
             onSelectVersion={setSelectedVer}
             onAfterMutation={() => setReloadKey((k) => k + 1)}
+            onAfterDelete={() => {
+              setSelectedId(null)
+              setSelectedVer(null)
+              setReloadKey((k) => k + 1)
+            }}
           />
         ) : (
           <p>カードを選択してください。</p>
@@ -170,11 +207,7 @@ function NewCardModal({ existingIds, onClose, onCreated }: NewCardModalProps) {
   }
 
   return (
-    <div
-      className="dev-modal-backdrop"
-      onClick={onClose}
-      role="presentation"
-    >
+    <div className="dev-modal-backdrop" onClick={onClose} role="presentation">
       <div
         className="dev-modal"
         onClick={(e) => e.stopPropagation()}
@@ -232,61 +265,120 @@ function NewCardModal({ existingIds, onClose, onCreated }: NewCardModalProps) {
   )
 }
 
-type DetailProps = {
-  card: DevCardDto
-  versionId: string
-  onSelectVersion: (v: string) => void
-  onAfterMutation: () => void
+// ---- Phase 10.5.M: Delete Card modal ----
+
+type DeleteModalProps = {
+  cardId: string
+  onClose: () => void
+  onConfirm: (alsoBase: boolean) => Promise<void>
 }
 
-function DevCardDetail({ card, versionId, onSelectVersion, onAfterMutation }: DetailProps) {
-  const ver = card.versions.find((v) => v.version === versionId)
+function DeleteCardModal({ cardId, onClose, onConfirm }: DeleteModalProps) {
+  const [alsoBase, setAlsoBase] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
 
-  // spec は server から raw JSON 文字列で来るため、表示用に parse して整形。
-  // parse 失敗時は空オブジェクト相当として扱い、spec 表示はそのまま raw 文字列を出す。
-  let parsedSpec: Record<string, unknown> = {}
-  let parseError: string | null = null
-  if (ver) {
+  const handle = async () => {
+    setSubmitting(true)
+    setErr(null)
     try {
-      const v = JSON.parse(ver.spec) as unknown
-      if (v && typeof v === 'object') parsedSpec = v as Record<string, unknown>
+      await onConfirm(alsoBase)
     } catch (e) {
-      parseError = String(e)
+      setErr(String(e))
+      setSubmitting(false)
     }
   }
 
-  // description 手書き値があれば preview に出す。なければプレースホルダ表示。
-  const description =
-    typeof parsedSpec.description === 'string' ? (parsedSpec.description as string) : null
+  return (
+    <div className="dev-modal-backdrop" onClick={onClose} role="presentation">
+      <div
+        className="dev-modal dev-delete-modal"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-label="Delete Card"
+      >
+        <h3>Delete Card</h3>
+        <p>
+          Delete <code>{cardId}</code>?
+        </p>
+        <label>
+          <input
+            type="checkbox"
+            checked={alsoBase}
+            onChange={(e) => setAlsoBase(e.target.checked)}
+            aria-label="also delete base file"
+          />
+          Also delete base file (committed source). A backup is saved under
+          data-local/backups/.
+        </label>
+        {alsoBase && (
+          <div className="dev-delete-modal__warning">
+            ⚠ base file (src/Core/Data/Cards/{cardId}.json) will be removed.
+          </div>
+        )}
+        {err && <div className="dev-error">{err}</div>}
+        <div className="dev-modal__actions">
+          <button type="button" onClick={onClose} disabled={submitting}>
+            Cancel
+          </button>
+          <button type="button" onClick={handle} disabled={submitting}>
+            {submitting ? 'Deleting...' : 'Confirm Delete'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
-  // ---- editor state (Phase 10.5.J) ----
-  const initialDraft = ver ? formatDraft(ver.spec) : ''
-  const [draft, setDraft] = useState<string>(initialDraft)
+// ---- Card detail panel ----
+
+type DetailProps = {
+  card: DevCardDto
+  versionId: string
+  meta: DevMeta
+  allCardIds: string[]
+  cardNames: Record<string, string>
+  onSelectVersion: (v: string) => void
+  onAfterMutation: () => void
+  onAfterDelete: () => void
+}
+
+function DevCardDetail({
+  card,
+  versionId,
+  meta,
+  allCardIds,
+  cardNames,
+  onSelectVersion,
+  onAfterMutation,
+  onAfterDelete,
+}: DetailProps) {
+  const ver = card.versions.find((v) => v.version === versionId)
+
+  // ---- editor state (Phase 10.5.J → M) ----
+  const [draft, setDraft] = useState<CardSpec>(() =>
+    ver ? parseSpec(ver.spec) : parseSpec('{}'),
+  )
   const [label, setLabel] = useState<string>('')
   const [editError, setEditError] = useState<string | null>(null)
   const [saving, setSaving] = useState<boolean>(false)
+  const [deleteOpen, setDeleteOpen] = useState<boolean>(false)
   const nextVerN = computeNextVerN(card)
 
   useEffect(() => {
-    // version 切替で draft をその version の spec に同期
-    if (ver) setDraft(formatDraft(ver.spec))
+    if (ver) setDraft(parseSpec(ver.spec))
     setLabel('')
     setEditError(null)
+    // Why: card.id / version 切替で draft をその version の spec に同期する。
+    //   ver?.spec が依存に入っているのは外部 mutation 後 reload した場合の同期用。
   }, [card.id, versionId, ver?.spec])
 
   const saveAsNew = async () => {
     setEditError(null)
     setSaving(true)
     try {
-      let parsed: unknown
-      try {
-        parsed = JSON.parse(draft)
-      } catch (e) {
-        setEditError(`Invalid JSON: ${String(e)}`)
-        setSaving(false)
-        return
-      }
-      await saveCardVersion(card.id, label || null, parsed)
+      const obj = specToJsonObject(draft)
+      await saveCardVersion(card.id, label || null, obj)
       onAfterMutation()
     } catch (e) {
       setEditError(String(e))
@@ -324,7 +416,7 @@ function DevCardDetail({ card, versionId, onSelectVersion, onAfterMutation }: De
     }
   }
 
-  const remove = async () => {
+  const removeVersion = async () => {
     if (!confirm(`Delete version ${versionId}?`)) {
       return
     }
@@ -340,6 +432,12 @@ function DevCardDetail({ card, versionId, onSelectVersion, onAfterMutation }: De
     }
   }
 
+  const handleDeleteCard = async (alsoBase: boolean) => {
+    await deleteCardApi(card.id, alsoBase)
+    setDeleteOpen(false)
+    onAfterDelete()
+  }
+
   const isActive = versionId === card.activeVersion
 
   return (
@@ -348,6 +446,15 @@ function DevCardDetail({ card, versionId, onSelectVersion, onAfterMutation }: De
         <h2>{card.name}</h2>
         <code>{card.id}</code>
         {card.displayName ? <small>(displayName: {card.displayName})</small> : null}
+        <button
+          type="button"
+          className="dev-card-detail__delete"
+          onClick={() => setDeleteOpen(true)}
+          disabled={saving}
+          aria-label="delete card"
+        >
+          🗑 Delete Card
+        </button>
       </header>
       <section className="dev-card-detail__versions">
         <h3>Versions</h3>
@@ -371,28 +478,19 @@ function DevCardDetail({ card, versionId, onSelectVersion, onAfterMutation }: De
           })}
         </div>
       </section>
-      <section className="dev-card-detail__preview">
-        <h3>Description Preview ({versionId})</h3>
-        <div className="dev-card-detail__card-wrap">
-          {description ? (
-            <CardDesc text={description} />
-          ) : (
-            <em>
-              (description override は未設定。auto-text は catalog 経由で生成されるため、ここでは spec
-              JSON を参照してください。)
-            </em>
-          )}
-        </div>
+      <section className="dev-card-detail__form">
+        <h3>Spec Editor (selected: {versionId})</h3>
+        <CardSpecForm
+          spec={draft}
+          meta={meta}
+          allCardIds={allCardIds}
+          cardNames={cardNames}
+          cardName={card.name}
+          displayName={card.displayName}
+          onChange={setDraft}
+        />
       </section>
-      <section className="dev-card-detail__spec">
-        <h3>Spec (JSON)</h3>
-        {parseError ? <p style={{ color: '#ff6b6b' }}>parse error: {parseError}</p> : null}
-        <pre>
-          <code>{parseError ? ver?.spec : JSON.stringify(parsedSpec, null, 2)}</code>
-        </pre>
-      </section>
-      <section className="dev-card-detail__editor">
-        <h3>Editor (selected: {versionId})</h3>
+      <section className="dev-card-detail__editor-actions">
         <input
           type="text"
           className="dev-card-detail__label-input"
@@ -400,13 +498,7 @@ function DevCardDetail({ card, versionId, onSelectVersion, onAfterMutation }: De
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           disabled={saving}
-        />
-        <textarea
-          className="dev-card-detail__textarea"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          disabled={saving}
-          aria-label="card spec editor"
+          aria-label="version label"
         />
         <div className="dev-card-detail__actions">
           <button type="button" onClick={saveAsNew} disabled={saving}>
@@ -418,24 +510,21 @@ function DevCardDetail({ card, versionId, onSelectVersion, onAfterMutation }: De
           <button type="button" onClick={promote} disabled={saving}>
             Promote to source
           </button>
-          <button type="button" onClick={remove} disabled={saving || isActive}>
+          <button type="button" onClick={removeVersion} disabled={saving || isActive}>
             Delete version
           </button>
         </div>
         {editError ? <div className="dev-error">{editError}</div> : null}
       </section>
+      {deleteOpen && (
+        <DeleteCardModal
+          cardId={card.id}
+          onClose={() => setDeleteOpen(false)}
+          onConfirm={handleDeleteCard}
+        />
+      )}
     </div>
   )
-}
-
-/** spec 文字列 (raw JSON) を整形して textarea 用 draft にする。parse 失敗時はそのまま返す。 */
-function formatDraft(specJson: string): string {
-  try {
-    const parsed = JSON.parse(specJson)
-    return JSON.stringify(parsed, null, 2)
-  } catch {
-    return specJson
-  }
 }
 
 /** base + override の versions[] から v\d+ パターンの最大番号を見て次を返す。 */

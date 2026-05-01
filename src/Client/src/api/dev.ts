@@ -95,6 +95,66 @@ export async function promoteCardVersion(
   }
 }
 
+// ---- Phase 10.5.M: form editor / preview / delete / meta API ----
+
+/** /api/dev/meta が返す enum 値リスト。 Form の dropdown 選択肢供給用。 */
+export type DevMeta = {
+  cardTypes: string[]
+  rarities: { value: number; label: string }[]
+  effectActions: string[]
+  effectScopes: string[]
+  effectSides: string[]
+  piles: string[]
+  selectModes: string[]
+  triggers: string[]
+  amountSources: string[]
+  keywords: { id: string; name: string; description: string }[]
+  statuses: { id: string; jp: string }[]
+}
+
+/** GET /api/dev/meta — Form 用 enum リスト取得。 */
+export async function fetchDevMeta(): Promise<DevMeta> {
+  const r = await fetch('/api/dev/meta')
+  if (!r.ok) throw new Error(`fetchDevMeta failed: ${r.status}`)
+  return (await r.json()) as DevMeta
+}
+
+/**
+ * POST /api/dev/cards/preview — spec を CardTextFormatter で auto-text 化。
+ * marker 入りの description を返し、Client 側 CardDesc で render される。
+ */
+export async function previewDescription(
+  spec: unknown,
+  upgraded: boolean,
+): Promise<string> {
+  const r = await fetch('/api/dev/cards/preview', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ spec, upgraded }),
+  })
+  if (!r.ok) {
+    const txt = await r.text().catch(() => '')
+    throw new Error(`previewDescription failed: ${r.status} ${txt}`)
+  }
+  const j = (await r.json()) as { description: string }
+  return j.description
+}
+
+/**
+ * DELETE /api/dev/cards/{id} — override file を削除。
+ * alsoBase=true なら base file も backup を取って削除 (撤回不可)。
+ */
+export async function deleteCard(id: string, alsoBase: boolean): Promise<void> {
+  const r = await fetch(
+    `/api/dev/cards/${encodeURIComponent(id)}?alsoBase=${alsoBase}`,
+    { method: 'DELETE' },
+  )
+  if (!r.ok) {
+    const txt = await r.text().catch(() => '')
+    throw new Error(`deleteCard failed: ${r.status} ${txt}`)
+  }
+}
+
 // ---- Phase 10.5.K: new card creation API ----
 
 /**
