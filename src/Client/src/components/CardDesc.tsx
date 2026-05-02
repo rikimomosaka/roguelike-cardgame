@@ -135,26 +135,48 @@ function CardDescLine({
       // リセットして自然幅を取り直す
       wrapper.classList.remove('card-desc-line--wrap')
       inner.style.transform = ''
-      inner.style.width = ''
+      inner.style.fontSize = ''
+      inner.style.letterSpacing = ''
 
       const containerWidth = wrapper.clientWidth
       if (containerWidth <= 0) return  // 未レイアウト
-      const naturalWidth = inner.scrollWidth
-      if (naturalWidth <= containerWidth) return  // 余裕で収まる
+      const initialNatural = inner.scrollWidth
+      if (initialNatural <= containerWidth) return  // 余裕で収まる
 
-      // 1.3 倍超 → wrap モード (両端切れ防止)
-      if (naturalWidth > containerWidth * 1.3) {
+      // M4-2: 多段階圧縮。letter-spacing → font-size 縮小 → scaleX → wrap の順に
+      //  徐々に強度を上げ、なるべく自然な見た目で 1 行に収める。
+      //  各段で scrollWidth を再測定し、収まれば早期 return。
+
+      // Stage 1: letter-spacing 軽圧縮 (-0.4px)
+      inner.style.letterSpacing = '-0.4px'
+      let w = inner.scrollWidth
+      if (w <= containerWidth) return
+
+      // Stage 2: font-size 8px + letter-spacing -0.3px
+      inner.style.fontSize = '8px'
+      inner.style.letterSpacing = '-0.3px'
+      w = inner.scrollWidth
+      if (w <= containerWidth) return
+
+      // Stage 3: font-size 7px + letter-spacing -0.2px
+      inner.style.fontSize = '7px'
+      inner.style.letterSpacing = '-0.2px'
+      w = inner.scrollWidth
+      if (w <= containerWidth) return
+
+      // Stage 4: 最小設定でも収まらない & 1.3 倍超 → wrap モード
+      if (w > containerWidth * 1.3) {
+        // wrap モードでは font-size / letter-spacing をリセット (親 .card__desc
+        // のデフォルト 9px に戻して 2-3 行に折返す方が読みやすい)
+        inner.style.fontSize = ''
+        inner.style.letterSpacing = ''
         wrapper.classList.add('card-desc-line--wrap')
         return
       }
 
-      // それ以外 → scaleX で横方向圧縮。
-      // origin: center にしないと text-align: center の親で inline-block が
-      // 中央寄せされた結果、scaleX(ratio) origin: left が左にずれて視覚的に
-      // 左端が切れるバグになる (M4-1 修正)。
-      // SAFETY = 0.94 で両端 3% ずつ余白を確保する。
+      // Stage 5: scaleX 最終手段 (両端 3% 余白の SAFETY)
       const SAFETY = 0.94
-      const ratio = (containerWidth / naturalWidth) * SAFETY
+      const ratio = (containerWidth / w) * SAFETY
       inner.style.transform = `scaleX(${ratio.toFixed(3)})`
       inner.style.transformOrigin = 'center center'
     }
