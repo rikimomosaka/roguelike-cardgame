@@ -34,13 +34,27 @@ export const STATUS_DEFS: Record<string, { name: string; desc: string }> = {
   omnistrike: { name: '拡散', desc: '全ての攻撃を全体攻撃に変更する。X ターン残存。' },
 }
 
-// Why: パワーカードの発火タイミング ID → 日本語表示。
+// Why: relic / power カード共通の発火タイミング ID → 日本語表示。
+// Phase 10.5.L1.5: relic + power 統合に伴い 18 値の JP ラベル。
 const TRIGGER_JP: Record<string, string> = {
+  OnPickup: 'レリック取得時',
+  OnBattleStart: '戦闘開始時',
+  OnBattleEnd: '戦闘終了時',
   OnTurnStart: 'ターン開始時',
   OnTurnEnd: 'ターン終了時',
   OnPlayCard: 'カードプレイ時',
+  OnEnemyDeath: '敵撃破時',
   OnDamageReceived: 'ダメージ受け時',
   OnCombo: 'コンボ達成時',
+  OnMapTileResolved: 'マスイベント解決後',
+  OnCardDiscarded: 'カード捨て時',
+  OnCardExhausted: 'カード除外時',
+  OnEnterShop: 'ショップ訪問時',
+  OnEnterRestSite: '休憩所訪問時',
+  OnRest: '休憩時',
+  OnRewardGenerated: '報酬生成時',
+  OnCardAddedToDeck: 'デッキ追加時',
+  Passive: '常時',
 }
 
 /**

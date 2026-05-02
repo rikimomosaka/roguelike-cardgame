@@ -16,7 +16,6 @@ const meta: DevMeta = {
   amountSources: ['handCount'],
   keywords: [],
   statuses: [{ id: 'weak', jp: '脱力' }],
-  relicTriggers: [],
 }
 
 describe('EffectEditor', () => {

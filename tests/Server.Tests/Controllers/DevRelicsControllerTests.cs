@@ -76,8 +76,9 @@ public class DevRelicsControllerTests : IClassFixture<DevWebApplicationFactory>
         Assert.Equal("v1", v1.GetProperty("version").GetString());
         var spec = v1.GetProperty("spec").GetString();
         Assert.NotNull(spec);
-        Assert.Contains("\"trigger\"", spec);
+        // Phase 10.5.L1.5: top-level "trigger" 廃止、"effects" は必ずある (空 [] でも)
         Assert.Contains("\"effects\"", spec);
+        Assert.Contains("\"rarity\"", spec);
     }
 }
 

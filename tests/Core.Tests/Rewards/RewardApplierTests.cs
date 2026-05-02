@@ -162,16 +162,17 @@ public class RewardApplierTests
     }
 
     [Fact]
-    public void ClaimRelic_WithExtraMaxHp_ChainsOnPickup()
+    public void ClaimRelic_AddsRelicAndClearsRewardState()
     {
+        // Phase 10.5.L1.5: extra_max_hp の base effects=[] (リセット済み) なので、
+        // OnPickup 発火による MaxHp 加算は確認できない。Relics list 追加のみを検証。
         var s0 = StateWithReward(new RewardState(
             0, true, null, true,
             ImmutableArray<string>.Empty, CardRewardStatus.Claimed,
             RelicId: "extra_max_hp", RelicClaimed: false)) with
         { CurrentHp = 50, MaxHp = 80 };
         var s1 = RewardApplier.ClaimRelic(s0, Cat);
-        Assert.Equal(87, s1.MaxHp);
-        Assert.Equal(57, s1.CurrentHp);
         Assert.Contains("extra_max_hp", s1.Relics);
+        Assert.True(s1.ActiveReward!.RelicClaimed);
     }
 }

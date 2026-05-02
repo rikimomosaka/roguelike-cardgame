@@ -19,7 +19,6 @@ const meta: DevMeta = {
   amountSources: ['handCount'],
   keywords: [{ id: 'wild', name: 'ワイルド', description: '...' }],
   statuses: [{ id: 'weak', jp: '脱力' }],
-  relicTriggers: ['OnPickup', 'Passive'],
 }
 
 afterEach(() => {

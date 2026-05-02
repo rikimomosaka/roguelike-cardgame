@@ -140,13 +140,14 @@ public static class JsonFixtures
 
     // --- Relic フィクスチャ ---
 
+    // Phase 10.5.L1.5: relic-level "trigger" は loader が無視するため、
+    // 必要に応じて effects[].trigger に移行する。
     public const string BurningBloodJson = """
     {
       "id": "burning_blood",
       "name": "燃え盛る血",
       "rarity": 1,
-      "trigger": "OnBattleEnd",
-      "effects": [ { "action": "healPercent", "scope": "self", "amount": 6 } ]
+      "effects": [ { "action": "healPercent", "scope": "self", "amount": 6, "trigger": "OnBattleEnd" } ]
     }
     """;
 
@@ -155,7 +156,6 @@ public static class JsonFixtures
       "id": "lantern",
       "name": "ランタン",
       "rarity": 1,
-      "trigger": "Passive",
       "effects": []
     }
     """;
@@ -165,17 +165,6 @@ public static class JsonFixtures
       "id": "bad_relic",
       "name": "バッド",
       "rarity": 99,
-      "trigger": "Passive",
-      "effects": []
-    }
-    """;
-
-    public const string RelicUnknownTriggerJson = """
-    {
-      "id": "bad_relic_trigger",
-      "name": "バッド",
-      "rarity": 1,
-      "trigger": "OnMidnight",
       "effects": []
     }
     """;
@@ -185,8 +174,7 @@ public static class JsonFixtures
       "id": "damage_relic",
       "name": "ダメージレリック",
       "rarity": 1,
-      "trigger": "OnBattleStart",
-      "effects": [ { "action": "attack", "scope": "single", "side": "enemy", "amount": 7 } ]
+      "effects": [ { "action": "attack", "scope": "single", "side": "enemy", "amount": 7, "trigger": "OnBattleStart" } ]
     }
     """;
 

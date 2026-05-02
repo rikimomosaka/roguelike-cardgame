@@ -10,14 +10,9 @@
                          "label":  "original",
                          "spec":  {
                                       "rarity":  1,
-                                      "trigger":  "Passive",
                                       "description":  "ふんわり沈む羽毛枕。これを抱いて眠れば、悪夢も悪寒もどこかへ消える。",
                                       "effects":  [
-                                                      {
-                                                          "action":  "restHealBonus",
-                                                          "scope":  "self",
-                                                          "amount":  10
-                                                      }
+
                                                   ],
                                       "implemented":  true
                                   }

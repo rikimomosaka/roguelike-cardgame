@@ -144,8 +144,7 @@ public sealed class CatalogController : ControllerBase
                 Id: r.Id,
                 Name: r.Name,
                 Description: string.IsNullOrEmpty(r.Description) ? r.Name : r.Description,
-                Rarity: r.Rarity.ToString(),
-                Trigger: r.Trigger.ToString()))
+                Rarity: r.Rarity.ToString()))
             .ToList();
         return Ok(list);
     }

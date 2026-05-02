@@ -6,7 +6,6 @@ using RoguelikeCardGame.Core.Battle.Events;
 using RoguelikeCardGame.Core.Battle.State;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Random;
-using RoguelikeCardGame.Core.Relics;
 
 namespace RoguelikeCardGame.Core.Battle.Engine;
 
@@ -33,9 +32,9 @@ internal static class TurnEndProcessor
         var events = new List<BattleEvent>();
         int order = 0;
 
-        // Step 3: OnTurnEnd レリック発動 (10.2.E)
+        // Step 3: OnTurnEnd レリック発動 (10.2.E / 10.5.L1.5: 文字列 trigger に変更)
         var (afterRelic, evsRelic) = RelicTriggerProcessor.Fire(
-            s, RelicTrigger.OnTurnEnd, catalog, rng, orderStart: order);
+            s, "OnTurnEnd", catalog, rng, orderStart: order);
         s = afterRelic;
         foreach (var ev in evsRelic) { events.Add(ev with { Order = order++ }); }
 

@@ -1,8 +1,11 @@
 import { describe, expect, it, vi, afterEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { RelicSpecForm } from './RelicSpecForm'
 import { emptyRelicSpec } from './DevSpecTypes'
 import type { DevMeta } from '../../api/dev'
+
+// Phase 10.5.L1.5: relic-level Trigger dropdown 撤去 + effect-level trigger 表示。
+// テストも対応 (relic trigger select の検証は削除)。
 
 const meta: DevMeta = {
   cardTypes: ['Attack', 'Skill'],
@@ -15,11 +18,19 @@ const meta: DevMeta = {
   effectSides: ['Enemy', 'Ally'],
   piles: ['hand', 'draw'],
   selectModes: ['random', 'choose'],
-  triggers: ['OnTurnStart'],
+  // unified trigger list (Phase 10.5.L1.5 以降 18 値)
+  triggers: [
+    'OnPickup', 'OnBattleStart', 'OnBattleEnd',
+    'OnTurnStart', 'OnTurnEnd', 'OnPlayCard',
+    'OnEnemyDeath', 'OnDamageReceived', 'OnCombo',
+    'OnMapTileResolved', 'OnCardDiscarded', 'OnCardExhausted',
+    'OnEnterShop', 'OnEnterRestSite', 'OnRest',
+    'OnRewardGenerated', 'OnCardAddedToDeck',
+    'Passive',
+  ],
   amountSources: ['handCount'],
   keywords: [{ id: 'wild', name: 'ワイルド', description: '...' }],
   statuses: [{ id: 'weak', jp: '脱力' }],
-  relicTriggers: ['OnPickup', 'Passive', 'OnBattleStart'],
 }
 
 afterEach(() => {
@@ -27,7 +38,7 @@ afterEach(() => {
 })
 
 describe('RelicSpecForm', () => {
-  it('renders rarity / trigger / implemented fields', () => {
+  it('renders rarity / implemented fields (no relic-level trigger dropdown)', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({ description: '' }),
@@ -43,32 +54,9 @@ describe('RelicSpecForm', () => {
       />,
     )
     expect(screen.getByLabelText(/relic rarity/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/relic trigger/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/relic implemented/i)).toBeInTheDocument()
-  })
-
-  it('changing trigger calls onChange with new value', () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-      ok: true,
-      json: async () => ({ description: '' }),
-    } as Response)
-    const onChange = vi.fn()
-    render(
-      <RelicSpecForm
-        relicId="test_relic"
-        relicName="テストレリック"
-        spec={emptyRelicSpec()}
-        meta={meta}
-        allCardIds={[]}
-        onChange={onChange}
-      />,
-    )
-    fireEvent.change(screen.getByLabelText(/relic trigger/i), {
-      target: { value: 'Passive' },
-    })
-    expect(onChange).toHaveBeenCalled()
-    const arg = onChange.mock.calls[0][0]
-    expect(arg.trigger).toBe('Passive')
+    // relic-level Trigger dropdown は撤去された
+    expect(screen.queryByLabelText(/relic trigger/i)).toBeNull()
   })
 
   it('shows description override textarea', () => {

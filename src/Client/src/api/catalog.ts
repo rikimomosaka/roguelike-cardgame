@@ -62,12 +62,15 @@ export function resetPotionCatalogCacheForTests(): void {
   potionCache = null
 }
 
+/**
+ * Phase 10.5.L1.5: trigger フィールド廃止。発動タイミングは effects[].trigger で
+ * per-effect 管理されるため catalog DTO に冗長に含めない。
+ */
 export type RelicCatalogEntry = {
   id: string
   name: string
   description: string
   rarity: string
-  trigger: string
 }
 
 export type EventChoiceCatalogEntry = {

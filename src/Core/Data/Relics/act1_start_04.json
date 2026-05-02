@@ -10,14 +10,9 @@
                          "label":  "original",
                          "spec":  {
                                       "rarity":  1,
-                                      "trigger":  "OnPickup",
                                       "description":  "ずいぶんと短い剣。だが旅人の懐に忍ばせるには十分すぎる。",
                                       "effects":  [
-                                                      {
-                                                          "action":  "gainMaxHp",
-                                                          "scope":  "self",
-                                                          "amount":  5
-                                                      }
+
                                                   ],
                                       "implemented":  true
                                   }

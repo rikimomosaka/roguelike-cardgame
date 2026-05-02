@@ -181,10 +181,12 @@ export function specToJson(spec: CardSpec): string {
  * Relic の spec 構造 (versioned 形式の各 version.spec に対応)。
  * Card と異なり relic は upgraded / cost / cardType を持たない。
  * description は手書き必須が基本 (effects から自動生成も可能だが override が標準)。
+ *
+ * Phase 10.5.L1.5: relic-level trigger フィールドは削除。発動タイミングは
+ * 各 effect の trigger 文字列で per-effect 指定する。
  */
 export type RelicSpec = {
   rarity: number
-  trigger: string // "OnPickup" | "Passive" | ...
   description: string // override (手書き必須が基本、空なら server 側 formatter が effects から自動)
   effects: CardEffect[]
   implemented: boolean
@@ -193,7 +195,6 @@ export type RelicSpec = {
 export function emptyRelicSpec(): RelicSpec {
   return {
     rarity: 1,
-    trigger: 'OnPickup',
     description: '',
     effects: [],
     implemented: true,
@@ -211,7 +212,6 @@ export function parseRelicSpec(json: string): RelicSpec {
   const r = parsed as Record<string, unknown>
   const spec = emptyRelicSpec()
   if (typeof r.rarity === 'number') spec.rarity = r.rarity
-  if (typeof r.trigger === 'string') spec.trigger = r.trigger
   if (typeof r.description === 'string') spec.description = r.description
   if (Array.isArray(r.effects)) {
     spec.effects = r.effects.map(normalizeEffect)
@@ -223,15 +223,13 @@ export function parseRelicSpec(json: string): RelicSpec {
 export function relicSpecToJsonObject(spec: RelicSpec): Record<string, unknown> {
   const out: Record<string, unknown> = {
     rarity: spec.rarity,
-    trigger: spec.trigger,
   }
   // description は relic では空文字でも書く (override 文字列として常に渡す)。
   out.description = spec.description
-  // Phase 10.5.L1-fix: relic effect には effect-level の trigger / comboMin は不要。
-  //   stale データを持ち越さないよう除去して JSON 出力する。
+  // Phase 10.5.L1.5: relic effect は per-effect trigger を保持する。
+  //   comboMin は relic 側では意味を持たないため除去する。
   out.effects = spec.effects.map((e) => {
     const obj = effectToJsonObject(e)
-    delete obj.trigger
     delete obj.comboMin
     return obj
   })

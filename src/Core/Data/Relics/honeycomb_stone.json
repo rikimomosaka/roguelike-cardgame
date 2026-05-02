@@ -10,7 +10,6 @@
                          "label":  "original",
                          "spec":  {
                                       "rarity":  1,
-                                      "trigger":  "Passive",
                                       "description":  "[未実装] 蜜蜂の巣を思わせる多孔質の石。指で撫でると、心がじんわり温まる。",
                                       "effects":  [
 

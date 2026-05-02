@@ -5,6 +5,10 @@ using Xunit;
 
 namespace RoguelikeCardGame.Core.Tests.Relics;
 
+/// <summary>
+/// Phase 10.5.L1.5: relic-level Trigger 廃止に伴い、override merger テストの
+/// trigger フィールドを effect-level に移行。
+/// </summary>
 public class RelicOverrideMergerTests
 {
     private const string BaseAnchor = """
@@ -20,9 +24,10 @@ public class RelicOverrideMergerTests
           "label": "original",
           "spec": {
             "rarity": 1,
-            "trigger": "OnPickup",
             "description": "原文。",
-            "effects": [{ "action": "gainMaxHp", "scope": "self", "amount": 8 }],
+            "effects": [
+              { "action": "gainMaxHp", "scope": "self", "amount": 8, "trigger": "OnPickup" }
+            ],
             "implemented": true
           }
         }
@@ -44,9 +49,10 @@ public class RelicOverrideMergerTests
               "label": "buffed",
               "spec": {
                 "rarity": 2,
-                "trigger": "Passive",
                 "description": "強化版。",
-                "effects": [{ "action": "gainMaxHp", "scope": "self", "amount": 20 }],
+                "effects": [
+                  { "action": "gainMaxHp", "scope": "self", "amount": 20, "trigger": "OnPickup" }
+                ],
                 "implemented": true
               }
             }
@@ -61,8 +67,8 @@ public class RelicOverrideMergerTests
 
         // 結果が RelicJsonLoader でも読めて、active が v2 を指していること。
         var def = RelicJsonLoader.Parse(merged);
-        Assert.Equal(RelicTrigger.Passive, def.Trigger);
         Assert.Equal(20, def.Effects[0].Amount);
+        Assert.Equal("OnPickup", def.Effects[0].Trigger);
     }
 
     [Fact]
@@ -79,8 +85,9 @@ public class RelicOverrideMergerTests
               "label": "tweak",
               "spec": {
                 "rarity": 1,
-                "trigger": "OnPickup",
-                "effects": [{ "action": "gainMaxHp", "scope": "self", "amount": 99 }]
+                "effects": [
+                  { "action": "gainMaxHp", "scope": "self", "amount": 99, "trigger": "OnPickup" }
+                ]
               }
             }
           ]
@@ -119,7 +126,6 @@ public class RelicOverrideMergerTests
               "version": "v2",
               "spec": {
                 "rarity": 1,
-                "trigger": "OnPickup",
                 "effects": []
               }
             }

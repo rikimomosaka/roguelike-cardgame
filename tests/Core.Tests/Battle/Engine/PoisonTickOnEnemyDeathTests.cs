@@ -18,7 +18,7 @@ public class PoisonTickOnEnemyDeathTests
     [Fact]
     public void Enemy_dying_from_poison_fires_OnEnemyDeath()
     {
-        var relic = BattleFixtures.Relic("od", RelicTrigger.OnEnemyDeath, true,
+        var relic = BattleFixtures.Relic("od", "OnEnemyDeath", true,
             new CardEffect("block", EffectScope.Self, null, 1));
         var catalog = BattleFixtures.MinimalCatalog(relics: new[] { relic });
 
@@ -39,7 +39,7 @@ public class PoisonTickOnEnemyDeathTests
     [Fact]
     public void Hero_dying_from_poison_does_not_fire_OnEnemyDeath()
     {
-        var relic = BattleFixtures.Relic("od", RelicTrigger.OnEnemyDeath, true,
+        var relic = BattleFixtures.Relic("od", "OnEnemyDeath", true,
             new CardEffect("block", EffectScope.Self, null, 1));
         var catalog = BattleFixtures.MinimalCatalog(relics: new[] { relic });
 
@@ -58,7 +58,7 @@ public class PoisonTickOnEnemyDeathTests
     [Fact]
     public void Multiple_enemies_dying_simultaneously_fire_in_slot_order()
     {
-        var relic = BattleFixtures.Relic("od", RelicTrigger.OnEnemyDeath, true,
+        var relic = BattleFixtures.Relic("od", "OnEnemyDeath", true,
             new CardEffect("block", EffectScope.Self, null, 1));
         var catalog = BattleFixtures.MinimalCatalog(relics: new[] { relic });
 

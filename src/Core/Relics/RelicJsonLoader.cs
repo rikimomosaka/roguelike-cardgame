@@ -79,6 +79,11 @@ public static class RelicJsonLoader
     /// 旧 flat ロジックを spec オブジェクトから読み出す形に切り出した共通実装。
     /// flat 形式では root 自体を、versioned 形式では versions[*].spec を渡す。
     /// </summary>
+    /// <remarks>
+    /// Phase 10.5.L1.5: relic-level "trigger" フィールドは廃止。発動タイミングは
+    /// 各 effect の "trigger" 文字列フィールドで指定する。古い JSON が top-level
+    /// "trigger" を含んでいても黙って無視する (migration 完了後の状態を前提)。
+    /// </remarks>
     private static RelicDefinition ParseSpec(string id, string name, JsonElement spec)
     {
         // rarity: 範囲チェック
@@ -86,9 +91,6 @@ public static class RelicJsonLoader
         if (!Enum.IsDefined(typeof(CardRarity), rawRarity))
             throw new RelicJsonException($"rarity の値 {rawRarity} は無効です (relic id={id})。");
         var rarity = (CardRarity)rawRarity;
-
-        // trigger: 文字列 → enum パース
-        var trigger = ParseTrigger(GetRequiredString(spec, "trigger", id), id);
 
         var effects = ParseEffects(spec, "effects", id);
 
@@ -107,22 +109,8 @@ public static class RelicJsonLoader
                 $"implemented は boolean である必要があります (relic id={id})。");
         }
 
-        return new RelicDefinition(id, name, rarity, trigger, effects, description, implemented);
+        return new RelicDefinition(id, name, rarity, effects, description, implemented);
     }
-
-    private static RelicTrigger ParseTrigger(string s, string? id) => s switch
-    {
-        "OnPickup" => RelicTrigger.OnPickup,
-        "Passive" => RelicTrigger.Passive,
-        "OnBattleStart" => RelicTrigger.OnBattleStart,
-        "OnBattleEnd" => RelicTrigger.OnBattleEnd,
-        "OnMapTileResolved" => RelicTrigger.OnMapTileResolved,
-        "OnTurnStart" => RelicTrigger.OnTurnStart,
-        "OnTurnEnd" => RelicTrigger.OnTurnEnd,
-        "OnCardPlay" => RelicTrigger.OnCardPlay,
-        "OnEnemyDeath" => RelicTrigger.OnEnemyDeath,
-        _ => throw new RelicJsonException($"trigger の値 \"{s}\" は無効です (relic id={id})。"),
-    };
 
     private static IReadOnlyList<CardEffect> ParseEffects(JsonElement root, string key, string? id)
     {

@@ -217,7 +217,8 @@ public class RewardEndpointsTests : IClassFixture<TempDataFactory>
         var after = (await repo.TryLoadAsync("claim-relic-success", System.Threading.CancellationToken.None))!;
         Assert.Contains("extra_max_hp", after.Relics);
         Assert.True(after.ActiveReward!.RelicClaimed);
-        // extra_max_hp grants +7 MaxHp via NonBattleRelicEffects.ApplyOnPickup
-        Assert.Equal(beforeMaxHp + 7, after.MaxHp);
+        // Phase 10.5.L1.5: base relic JSON は effects=[] にリセット済みで、
+        // extra_max_hp は OnPickup 効果を持たない。MaxHp 据え置きを確認。
+        Assert.Equal(beforeMaxHp, after.MaxHp);
     }
 }

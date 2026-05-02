@@ -10,7 +10,6 @@
                          "label":  "original",
                          "spec":  {
                                       "rarity":  0,
-                                      "trigger":  "Passive",
                                       "description":  "[未実装] つるりと磨かれた小さなどんぐり。手に握ると、ほのかな木の香りで気が引き締まる。",
                                       "effects":  [
 

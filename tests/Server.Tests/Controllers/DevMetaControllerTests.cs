@@ -36,13 +36,13 @@ public class DevMetaControllerTests : IClassFixture<DevWebApplicationFactory>
         Assert.True(body.TryGetProperty("effectSides", out _));
         Assert.True(body.TryGetProperty("piles", out _));
         Assert.True(body.TryGetProperty("selectModes", out _));
-        Assert.True(body.TryGetProperty("triggers", out _));
+        Assert.True(body.TryGetProperty("triggers", out var trigsEl));
+        Assert.Equal(JsonValueKind.Array, trigsEl.ValueKind);
         Assert.True(body.TryGetProperty("amountSources", out _));
         Assert.True(body.TryGetProperty("keywords", out var kwEl));
         Assert.True(body.TryGetProperty("statuses", out _));
-        // Phase 10.5.L1: relicTriggers 追加
-        Assert.True(body.TryGetProperty("relicTriggers", out var rtEl));
-        Assert.Equal(JsonValueKind.Array, rtEl.ValueKind);
+        // Phase 10.5.L1.5: relicTriggers 廃止、triggers に統合 (18 値)。
+        Assert.False(body.TryGetProperty("relicTriggers", out _));
 
         // 内容サニティチェック
         var json = body.GetRawText();
@@ -50,10 +50,17 @@ public class DevMetaControllerTests : IClassFixture<DevWebApplicationFactory>
         Assert.Contains("addCard", json);
         Assert.Contains("wild", json);
         Assert.Contains("Common", json);
-        // relicTriggers の代表的な値
+        // unified triggers の代表的な値 (relic + power 統合)
         Assert.Contains("OnPickup", json);
         Assert.Contains("Passive", json);
         Assert.Contains("OnEnemyDeath", json);
+        Assert.Contains("OnPlayCard", json);
+        Assert.Contains("OnDamageReceived", json);
+        Assert.Contains("OnCombo", json);
+        Assert.Contains("OnCardDiscarded", json);
+        Assert.Contains("OnCardExhausted", json);
+        Assert.Contains("OnEnterShop", json);
+        Assert.Contains("OnCardAddedToDeck", json);
     }
 }
 

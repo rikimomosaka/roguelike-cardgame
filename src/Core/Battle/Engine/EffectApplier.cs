@@ -39,11 +39,11 @@ internal static class EffectApplier
             // 書かれており、potion 側 "draw" と表記揺れしていた。両方サポート
             // することで洞察 / 叡智の奔流 / 戦術的撤退 等の効果が反映される。
             "drawCards" => ApplyDraw(state, caster, resolved, rng),
-            "discard"=> ApplyDiscard(state, caster, resolved, rng),
-            "exhaustSelf" => ApplyExhaustSelf(state, caster),
+            "discard"=> ApplyDiscard(state, caster, resolved, rng, catalog),
+            "exhaustSelf" => ApplyExhaustSelf(state, caster, rng, catalog),
             "retainSelf"  => (state, Array.Empty<BattleEvent>()),
             "gainEnergy"  => ApplyGainEnergy(state, caster, resolved),
-            "exhaustCard" => ApplyExhaustCard(state, caster, resolved, rng),
+            "exhaustCard" => ApplyExhaustCard(state, caster, resolved, rng, catalog),
             "upgrade"     => ApplyUpgrade(state, caster, resolved, rng, catalog),
             "summon"      => ApplySummon(state, caster, resolved, rng, catalog),
             // Phase 10.5.F: engine 新 actions
@@ -68,13 +68,44 @@ internal static class EffectApplier
     }
 
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyExhaustSelf(
-        BattleState state, CombatActor caster)
+        BattleState state, CombatActor caster, IRng rng, DataCatalog catalog)
     {
         var ev = new BattleEvent(
             BattleEventKind.Exhaust, Order: 0,
             CasterInstanceId: caster.InstanceId,
             Amount: 1, Note: "self");
-        return (state, new[] { ev });
+        var events = new List<BattleEvent> { ev };
+        // Phase 10.5.L1.5: OnCardExhausted relic / power 発火
+        return FireOnCardExhausted(state, events, rng, catalog);
+    }
+
+    /// <summary>
+    /// Phase 10.5.L1.5: discard/exhaust の末尾で OnCardDiscarded / OnCardExhausted の
+    /// Relic + Power を fire する共通ヘルパ。base events に新規 events を append し、
+    /// state を更新して返す。
+    /// </summary>
+    private static (BattleState, IReadOnlyList<BattleEvent>) FireOnCardDiscarded(
+        BattleState state, List<BattleEvent> baseEvents, IRng rng, DataCatalog catalog)
+        => FireTrigger(state, baseEvents, "OnCardDiscarded", rng, catalog);
+
+    private static (BattleState, IReadOnlyList<BattleEvent>) FireOnCardExhausted(
+        BattleState state, List<BattleEvent> baseEvents, IRng rng, DataCatalog catalog)
+        => FireTrigger(state, baseEvents, "OnCardExhausted", rng, catalog);
+
+    private static (BattleState, IReadOnlyList<BattleEvent>) FireTrigger(
+        BattleState state, List<BattleEvent> baseEvents, string trigger,
+        IRng rng, DataCatalog catalog)
+    {
+        var s = state;
+        var (afterRelic, evsRelic) = RelicTriggerProcessor.Fire(
+            s, trigger, catalog, rng, orderStart: baseEvents.Count);
+        s = afterRelic;
+        baseEvents.AddRange(evsRelic);
+        var (afterPower, evsPower) = PowerTriggerProcessor.Fire(
+            s, trigger, catalog, rng, orderStart: baseEvents.Count);
+        s = afterPower;
+        baseEvents.AddRange(evsPower);
+        return (s, baseEvents);
     }
 
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyGainEnergy(
@@ -533,13 +564,14 @@ internal static class EffectApplier
     }
 
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyDiscard(
-        BattleState state, CombatActor caster, CardEffect effect, IRng rng)
+        BattleState state, CombatActor caster, CardEffect effect, IRng rng,
+        DataCatalog catalog)
     {
         // Phase 10.5.F: Select 優先パス。Select 指定があれば新ロジック。
         // Select=null は既存 Scope ベース挙動 (後方互換)。
         if (!string.IsNullOrEmpty(effect.Select))
         {
-            return ApplyDiscardWithSelect(state, caster, effect, rng);
+            return ApplyDiscardWithSelect(state, caster, effect, rng, catalog);
         }
 
         if (effect.Scope == EffectScope.Single)
@@ -561,7 +593,7 @@ internal static class EffectApplier
             foreach (var c in hand) discard.Add(c);
             int discardedCount = hand.Count;
             hand.Clear();
-            return BuildResult(state, caster, hand, discard, discardedCount, note);
+            return BuildResult(state, caster, hand, discard, discardedCount, note, rng, catalog);
         }
         else // Random
         {
@@ -574,7 +606,7 @@ internal static class EffectApplier
                 hand.RemoveAt(idx);
                 discard.Add(card);
             }
-            return BuildResult(state, caster, hand, discard, target, note);
+            return BuildResult(state, caster, hand, discard, target, note, rng, catalog);
         }
     }
 
@@ -583,7 +615,8 @@ internal static class EffectApplier
     /// choose は本フェーズでは UI 入力フローが無いため NotImplementedException。
     /// </summary>
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyDiscardWithSelect(
-        BattleState state, CombatActor caster, CardEffect effect, IRng rng)
+        BattleState state, CombatActor caster, CardEffect effect, IRng rng,
+        DataCatalog catalog)
     {
         if (effect.Select == "choose")
             throw new NotImplementedException(
@@ -616,14 +649,15 @@ internal static class EffectApplier
             note = "random";
         }
 
-        return BuildResult(state, caster, hand, discard, target, note);
+        return BuildResult(state, caster, hand, discard, target, note, rng, catalog);
     }
 
     private static (BattleState, IReadOnlyList<BattleEvent>) BuildResult(
         BattleState state, CombatActor caster,
         ImmutableArray<BattleCardInstance>.Builder hand,
         ImmutableArray<BattleCardInstance>.Builder discard,
-        int discardedCount, string note)
+        int discardedCount, string note,
+        IRng rng, DataCatalog catalog)
     {
         var next = state with
         {
@@ -631,16 +665,19 @@ internal static class EffectApplier
             DiscardPile = discard.ToImmutable(),
         };
         if (discardedCount == 0) return (next, Array.Empty<BattleEvent>());
-        var evs = new[] {
+        var events = new List<BattleEvent>
+        {
             new BattleEvent(BattleEventKind.Discard, Order: 0,
                 CasterInstanceId: caster.InstanceId,
                 Amount: discardedCount, Note: note),
         };
-        return (next, evs);
+        // Phase 10.5.L1.5: OnCardDiscarded relic / power 発火
+        return FireOnCardDiscarded(next, events, rng, catalog);
     }
 
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyExhaustCard(
-        BattleState state, CombatActor caster, CardEffect effect, IRng rng)
+        BattleState state, CombatActor caster, CardEffect effect, IRng rng,
+        DataCatalog catalog)
     {
         // Phase 10.5.M2: Select 対応
         // - "all": 当該 pile を全て除外 (Amount 無視)
@@ -677,11 +714,15 @@ internal static class EffectApplier
             return (state, Array.Empty<BattleEvent>());
 
         var next = applyResult(sourceBuilder, exhaustBuilder);
-        var ev = new BattleEvent(
-            BattleEventKind.Exhaust, Order: 0,
-            CasterInstanceId: caster.InstanceId,
-            Amount: target, Note: effect.Pile);
-        return (next, new[] { ev });
+        var events = new List<BattleEvent>
+        {
+            new BattleEvent(
+                BattleEventKind.Exhaust, Order: 0,
+                CasterInstanceId: caster.InstanceId,
+                Amount: target, Note: effect.Pile),
+        };
+        // Phase 10.5.L1.5: OnCardExhausted relic / power 発火
+        return FireOnCardExhausted(next, events, rng, catalog);
     }
 
     /// <summary>

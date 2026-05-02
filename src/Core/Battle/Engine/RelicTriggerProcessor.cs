@@ -4,20 +4,23 @@ using RoguelikeCardGame.Core.Battle.Events;
 using RoguelikeCardGame.Core.Battle.State;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Random;
-using RoguelikeCardGame.Core.Relics;
 
 namespace RoguelikeCardGame.Core.Battle.Engine;
 
 /// <summary>
-/// 戦闘内 4 Trigger（OnBattleStart / OnTurnStart / OnTurnEnd / OnCardPlay / OnEnemyDeath）の
-/// レリック発動を統一的に処理する internal static helper。
+/// 戦闘内 trigger でレリックの per-effect 発動を処理する internal static helper。
 /// 所持順発動 (state.OwnedRelicIds 配列順) + Implemented:false スキップ + caster=hero を集約。
-/// 親 spec §8-2 / 10.2.E spec §3 参照。
+/// 親 spec §8-2 / 10.2.E spec §3 / Phase 10.5.L1.5 unified-triggers 参照。
 /// </summary>
+/// <remarks>
+/// Phase 10.5.L1.5: relic-level Trigger フィールド廃止に伴い per-effect filter に変更。
+/// 各 relic の effects[] をループして eff.Trigger == trigger のものだけを EffectApplier で適用する。
+/// trigger は文字列 ("OnBattleStart" / "OnTurnStart" / etc.) で渡す。
+/// </remarks>
 internal static class RelicTriggerProcessor
 {
     public static (BattleState, IReadOnlyList<BattleEvent>) Fire(
-        BattleState state, RelicTrigger trigger,
+        BattleState state, string trigger,
         DataCatalog catalog, IRng rng, int orderStart)
     {
         return FireInternal(state, trigger, deadEnemyInstanceId: null, catalog, rng, orderStart);
@@ -27,11 +30,11 @@ internal static class RelicTriggerProcessor
         BattleState state, string deadEnemyInstanceId,
         DataCatalog catalog, IRng rng, int orderStart)
     {
-        return FireInternal(state, RelicTrigger.OnEnemyDeath, deadEnemyInstanceId, catalog, rng, orderStart);
+        return FireInternal(state, "OnEnemyDeath", deadEnemyInstanceId, catalog, rng, orderStart);
     }
 
     private static (BattleState, IReadOnlyList<BattleEvent>) FireInternal(
-        BattleState state, RelicTrigger trigger,
+        BattleState state, string trigger,
         string? deadEnemyInstanceId,
         DataCatalog catalog, IRng rng, int orderStart)
     {
@@ -46,10 +49,13 @@ internal static class RelicTriggerProcessor
         {
             if (!catalog.TryGetRelic(relicId, out var def)) continue;
             if (!def.Implemented) continue;
-            if (def.Trigger != trigger) continue;
 
+            // Phase 10.5.L1.5: per-effect Trigger フィルタ (relic-level Trigger 廃止)
             foreach (var eff in def.Effects)
             {
+                if (string.IsNullOrEmpty(eff.Trigger)) continue;
+                if (eff.Trigger != trigger) continue;
+
                 var (afterEff, evs) = EffectApplier.Apply(s, caster, eff, rng, catalog);
                 s = afterEff;
                 foreach (var ev in evs)

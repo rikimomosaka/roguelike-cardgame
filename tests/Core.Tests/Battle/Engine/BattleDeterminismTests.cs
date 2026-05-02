@@ -223,7 +223,7 @@ public class BattleDeterminismTests
     public void Combat_with_relic_and_potion_is_deterministic()
     {
         // 10.2.E: レリック発動 + UsePotion を含む 1 戦闘で seed 一致確認
-        var relic = BattleFixtures.Relic("ts_atk", RoguelikeCardGame.Core.Relics.RelicTrigger.OnTurnStart, true,
+        var relic = BattleFixtures.Relic("ts_atk", "OnTurnStart", true,
             new CardEffect("attack", EffectScope.All, EffectSide.Enemy, 2));
         var potion = BattleFixtures.Potion("heal_p",
             new CardEffect("heal", EffectScope.Self, null, 5));

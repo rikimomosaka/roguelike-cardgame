@@ -6,14 +6,18 @@ using Xunit;
 
 namespace RoguelikeCardGame.Core.Tests.Relics;
 
+/// <summary>
+/// Phase 10.5.L1.5: relic-level Trigger 廃止に伴い、JSON loader テストを per-effect
+/// trigger 形式に書き換えた。top-level "trigger" は読み捨てられ、各 effects[].trigger が
+/// effect 自身の Trigger 文字列になる。
+/// </summary>
 public class RelicJsonLoaderTests
 {
     [Fact]
-    public void ParseBurningBlood()
+    public void ParseBurningBlood_LoadsEffects()
     {
         var def = RelicJsonLoader.Parse(JsonFixtures.BurningBloodJson);
         Assert.Equal("burning_blood", def.Id);
-        Assert.Equal(RelicTrigger.OnBattleEnd, def.Trigger);
         Assert.Single(def.Effects);
     }
 
@@ -21,7 +25,6 @@ public class RelicJsonLoaderTests
     public void ParseLantern_EmptyEffects()
     {
         var def = RelicJsonLoader.Parse(JsonFixtures.LanternJson);
-        Assert.Equal(RelicTrigger.Passive, def.Trigger);
         Assert.Empty(def.Effects);
     }
 
@@ -34,10 +37,15 @@ public class RelicJsonLoaderTests
     }
 
     [Fact]
-    public void UnknownTrigger_Throws()
+    public void TopLevel_trigger_isIgnored_silently()
     {
-        var ex = Assert.Throws<RelicJsonException>(() => RelicJsonLoader.Parse(JsonFixtures.RelicUnknownTriggerJson));
-        Assert.Contains("trigger", ex.Message);
+        // Phase 10.5.L1.5: 旧 JSON が top-level "trigger" を持っていても loader は無視する
+        var json = """
+        {"id":"r","name":"n","rarity":1,"trigger":"OnMidnight","effects":[]}
+        """;
+        var def = RelicJsonLoader.Parse(json);
+        Assert.Equal("r", def.Id);
+        Assert.Empty(def.Effects);
     }
 
     [Fact]
@@ -50,58 +58,45 @@ public class RelicJsonLoaderTests
     }
 
     [Fact]
-    public void ParseRelicWithOnTurnStartTrigger()
+    public void ParseRelicWithEffectLevel_TriggerField()
     {
+        // Phase 10.5.L1.5: 各 effect が trigger 文字列を持つ形式
         var json = """
         {
-          "id":"r1","name":"r1","rarity":1,"trigger":"OnTurnStart","effects":[]
+          "id":"r1","name":"r1","rarity":1,
+          "effects":[
+            { "action":"block","scope":"self","amount":5,"trigger":"OnTurnStart" }
+          ]
         }
         """;
         var def = RelicJsonLoader.Parse(json);
-        Assert.Equal(RelicTrigger.OnTurnStart, def.Trigger);
+        Assert.Single(def.Effects);
+        Assert.Equal("OnTurnStart", def.Effects[0].Trigger);
     }
 
     [Fact]
-    public void ParseRelicWithOnTurnEndTrigger()
+    public void ParseRelicWithMultipleEffects_DifferentTriggers()
     {
         var json = """
         {
-          "id":"r2","name":"r2","rarity":1,"trigger":"OnTurnEnd","effects":[]
+          "id":"r2","name":"r2","rarity":1,
+          "effects":[
+            { "action":"gainMaxHp","scope":"self","amount":8,"trigger":"OnPickup" },
+            { "action":"block","scope":"self","amount":5,"trigger":"OnBattleStart" }
+          ]
         }
         """;
         var def = RelicJsonLoader.Parse(json);
-        Assert.Equal(RelicTrigger.OnTurnEnd, def.Trigger);
-    }
-
-    [Fact]
-    public void ParseRelicWithOnCardPlayTrigger()
-    {
-        var json = """
-        {
-          "id":"r3","name":"r3","rarity":1,"trigger":"OnCardPlay","effects":[]
-        }
-        """;
-        var def = RelicJsonLoader.Parse(json);
-        Assert.Equal(RelicTrigger.OnCardPlay, def.Trigger);
-    }
-
-    [Fact]
-    public void ParseRelicWithOnEnemyDeathTrigger()
-    {
-        var json = """
-        {
-          "id":"r4","name":"r4","rarity":1,"trigger":"OnEnemyDeath","effects":[]
-        }
-        """;
-        var def = RelicJsonLoader.Parse(json);
-        Assert.Equal(RelicTrigger.OnEnemyDeath, def.Trigger);
+        Assert.Equal(2, def.Effects.Count);
+        Assert.Equal("OnPickup", def.Effects[0].Trigger);
+        Assert.Equal("OnBattleStart", def.Effects[1].Trigger);
     }
 
     [Fact]
     public void Implemented_defaults_to_true_when_field_missing()
     {
         var json = """
-        {"id":"r","name":"n","rarity":1,"trigger":"OnPickup","effects":[]}
+        {"id":"r","name":"n","rarity":1,"effects":[]}
         """;
         var def = RelicJsonLoader.Parse(json);
         Assert.True(def.Implemented);
@@ -111,7 +106,7 @@ public class RelicJsonLoaderTests
     public void Implemented_explicit_false_is_loaded()
     {
         var json = """
-        {"id":"r","name":"n","rarity":1,"trigger":"OnPickup","effects":[],"implemented":false}
+        {"id":"r","name":"n","rarity":1,"effects":[],"implemented":false}
         """;
         var def = RelicJsonLoader.Parse(json);
         Assert.False(def.Implemented);
@@ -121,7 +116,7 @@ public class RelicJsonLoaderTests
     public void Implemented_explicit_true_is_loaded()
     {
         var json = """
-        {"id":"r","name":"n","rarity":1,"trigger":"OnPickup","effects":[],"implemented":true}
+        {"id":"r","name":"n","rarity":1,"effects":[],"implemented":true}
         """;
         var def = RelicJsonLoader.Parse(json);
         Assert.True(def.Implemented);
@@ -145,9 +140,10 @@ public class RelicJsonLoaderTests
               "label": "original",
               "spec": {
                 "rarity": 1,
-                "trigger": "OnPickup",
                 "description": "迷っても、心を留めるための小さな錨。",
-                "effects": [{ "action": "gainMaxHp", "scope": "self", "amount": 8 }],
+                "effects": [
+                  { "action": "gainMaxHp", "scope": "self", "amount": 8, "trigger": "OnPickup" }
+                ],
                 "implemented": true
               }
             }
@@ -157,9 +153,9 @@ public class RelicJsonLoaderTests
         var def = RelicJsonLoader.Parse(json);
         Assert.Equal("anchor", def.Id);
         Assert.Equal("アンカー", def.Name);
-        Assert.Equal(RelicTrigger.OnPickup, def.Trigger);
         Assert.Equal("迷っても、心を留めるための小さな錨。", def.Description);
         Assert.Single(def.Effects);
+        Assert.Equal("OnPickup", def.Effects[0].Trigger);
         Assert.True(def.Implemented);
     }
 
@@ -176,23 +172,24 @@ public class RelicJsonLoaderTests
               "version": "v1",
               "spec": {
                 "rarity": 1,
-                "trigger": "OnPickup",
-                "effects": [{ "action": "gainMaxHp", "scope": "self", "amount": 8 }]
+                "effects": [
+                  { "action": "gainMaxHp", "scope": "self", "amount": 8, "trigger": "OnPickup" }
+                ]
               }
             },
             {
               "version": "v2",
               "spec": {
                 "rarity": 2,
-                "trigger": "Passive",
-                "effects": [{ "action": "gainMaxHp", "scope": "self", "amount": 16 }]
+                "effects": [
+                  { "action": "gainMaxHp", "scope": "self", "amount": 16, "trigger": "OnPickup" }
+                ]
               }
             }
           ]
         }
         """;
         var def = RelicJsonLoader.Parse(json);
-        Assert.Equal(RelicTrigger.Passive, def.Trigger);
         Assert.Equal(CardRarity.Rare, def.Rarity);
         Assert.Equal(16, def.Effects[0].Amount);
     }
@@ -206,7 +203,7 @@ public class RelicJsonLoaderTests
           "name": "x",
           "activeVersion": "v9",
           "versions": [
-            { "version": "v1", "spec": { "rarity": 1, "trigger": "OnPickup", "effects": [] } }
+            { "version": "v1", "spec": { "rarity": 1, "effects": [] } }
           ]
         }
         """;
@@ -222,7 +219,7 @@ public class RelicJsonLoaderTests
           "id": "x",
           "name": "x",
           "versions": [
-            { "version": "v1", "spec": { "rarity": 1, "trigger": "OnPickup", "effects": [] } }
+            { "version": "v1", "spec": { "rarity": 1, "effects": [] } }
           ]
         }
         """;
@@ -235,6 +232,6 @@ public class RelicJsonLoaderTests
         // flat (legacy) も依然として動くこと。
         var def = RelicJsonLoader.Parse(JsonFixtures.BurningBloodJson);
         Assert.Equal("burning_blood", def.Id);
-        Assert.Equal(RelicTrigger.OnBattleEnd, def.Trigger);
+        Assert.Single(def.Effects);
     }
 }

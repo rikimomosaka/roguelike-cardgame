@@ -66,16 +66,18 @@ public class ActStartActionsTests
     }
 
     [Fact]
-    public void ChooseRelic_OnPickup_AppliesEffects()
+    public void ChooseRelic_AddsToRelicsList()
     {
+        // Phase 10.5.L1.5: base relic JSON は effects=[] にリセット済みなので、
+        // OnPickup 発火による副作用は base catalog では無く、Relics list への追加だけ確認。
         var cat = EmbeddedDataLoader.LoadCatalog();
-        // act1_start_01 は gainMaxHp +8
         var s = TestRunStates.FreshDefault(cat) with
         {
             ActiveActStartRelicChoice = new ActStartRelicChoice(
                 ImmutableArray.Create("act1_start_01", "act1_start_02", "act1_start_03")),
         };
         var next = ActStartActions.ChooseRelic(s, "act1_start_01", cat);
-        Assert.Equal(s.MaxHp + 8, next.MaxHp);
+        Assert.Contains("act1_start_01", next.Relics);
+        Assert.Null(next.ActiveActStartRelicChoice);
     }
 }

@@ -18,7 +18,7 @@ public class TurnStartProcessorOnTurnStartTests
     [Fact]
     public void OnTurnStart_relic_fires_after_Draw_before_TurnStart_event()
     {
-        var relic = BattleFixtures.Relic("r", RelicTrigger.OnTurnStart, true,
+        var relic = BattleFixtures.Relic("r", "OnTurnStart", true,
             new CardEffect("gainEnergy", EffectScope.Self, null, 1));
         var catalog = BattleFixtures.MinimalCatalog(relics: new[] { relic });
         var state = BattleFixtures.MinimalState(
@@ -53,7 +53,7 @@ public class TurnStartProcessorOnTurnStartTests
     [Fact]
     public void OnTurnStart_attack_relic_adds_to_hero_AttackPool()
     {
-        var relic = BattleFixtures.Relic("attack_r", RelicTrigger.OnTurnStart, true,
+        var relic = BattleFixtures.Relic("attack_r", "OnTurnStart", true,
             new CardEffect("attack", EffectScope.All, EffectSide.Enemy, 3));
         var catalog = BattleFixtures.MinimalCatalog(relics: new[] { relic });
         var state = BattleFixtures.MinimalState(
@@ -67,7 +67,7 @@ public class TurnStartProcessorOnTurnStartTests
     [Fact]
     public void OnTurnStart_Implemented_false_skipped()
     {
-        var unimpl = BattleFixtures.Relic("unimpl", RelicTrigger.OnTurnStart,
+        var unimpl = BattleFixtures.Relic("unimpl", "OnTurnStart",
             implemented: false,
             new CardEffect("gainEnergy", EffectScope.Self, null, 5));
         var catalog = BattleFixtures.MinimalCatalog(relics: new[] { unimpl });

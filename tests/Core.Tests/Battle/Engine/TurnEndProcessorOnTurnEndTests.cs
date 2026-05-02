@@ -19,7 +19,7 @@ public class TurnEndProcessorOnTurnEndTests
     public void OnTurnEnd_relic_fires_after_AttackPool_reset_before_combo_reset()
     {
         // attack relic: AttackPool reset 後に hero pool に加算 → 次 turn まで保持
-        var relic = BattleFixtures.Relic("te", RelicTrigger.OnTurnEnd, true,
+        var relic = BattleFixtures.Relic("te", "OnTurnEnd", true,
             new CardEffect("attack", EffectScope.All, EffectSide.Enemy, 4));
         var catalog = BattleFixtures.MinimalCatalog(relics: new[] { relic });
 
@@ -51,7 +51,7 @@ public class TurnEndProcessorOnTurnEndTests
     [Fact]
     public void OnTurnEnd_combo_resets_after_relic_fires()
     {
-        var relic = BattleFixtures.Relic("noop", RelicTrigger.OnTurnEnd, true,
+        var relic = BattleFixtures.Relic("noop", "OnTurnEnd", true,
             new CardEffect("block", EffectScope.Self, null, 1));
         var catalog = BattleFixtures.MinimalCatalog(relics: new[] { relic });
 

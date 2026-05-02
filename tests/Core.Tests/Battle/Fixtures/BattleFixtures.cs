@@ -126,13 +126,26 @@ public static class BattleFixtures
 
     // ===== RelicDefinition factory (10.2.E) =====
 
-    /// <summary>テスト用最小限の RelicDefinition。</summary>
+    /// <summary>
+    /// テスト用最小限の RelicDefinition。
+    /// Phase 10.5.L1.5: relic-level Trigger 廃止。trigger 引数は各 effect の Trigger
+    /// フィールドに自動コピーされる (effect 自身が trigger を持っていれば優先)。
+    /// </summary>
     public static RoguelikeCardGame.Core.Relics.RelicDefinition Relic(
         string id = "test_relic",
-        RoguelikeCardGame.Core.Relics.RelicTrigger trigger = RoguelikeCardGame.Core.Relics.RelicTrigger.OnTurnStart,
+        string trigger = "OnTurnStart",
         bool implemented = true,
-        params CardEffect[] effects) =>
-        new(id, id, CardRarity.Common, trigger, effects, "", implemented);
+        params CardEffect[] effects)
+    {
+        // 各 effect に trigger を伝搬 (test の互換性)。effect が既に Trigger を持つ場合はそのまま尊重。
+        var withTrigger = new CardEffect[effects.Length];
+        for (int i = 0; i < effects.Length; i++)
+        {
+            var e = effects[i];
+            withTrigger[i] = string.IsNullOrEmpty(e.Trigger) ? e with { Trigger = trigger } : e;
+        }
+        return new(id, id, CardRarity.Common, withTrigger, "", implemented);
+    }
 
     // ===== PotionDefinition factory (10.2.E) =====
 

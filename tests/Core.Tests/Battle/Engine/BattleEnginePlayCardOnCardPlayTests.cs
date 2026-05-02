@@ -18,7 +18,7 @@ public class BattleEnginePlayCardOnCardPlayTests
     [Fact]
     public void OnCardPlay_fires_after_card_effects_before_card_movement()
     {
-        var relic = BattleFixtures.Relic("oc", RelicTrigger.OnCardPlay, true,
+        var relic = BattleFixtures.Relic("oc", "OnPlayCard", true,
             new CardEffect("block", EffectScope.Self, null, 3));
         var catalog = BattleFixtures.MinimalCatalog(
             cards: new[] { BattleFixtures.Strike() },
@@ -64,7 +64,7 @@ public class BattleEnginePlayCardOnCardPlayTests
     {
         // strike (Attack カード, NonUnit) をプレイし、OnCardPlay レリックが summon 効果を持つ
         // → カード自身は Discard へ移動 (Unit でないので SummonHeld には行かない)
-        var relic = BattleFixtures.Relic("summon_r", RelicTrigger.OnCardPlay, true,
+        var relic = BattleFixtures.Relic("summon_r", "OnPlayCard", true,
             new CardEffect("summon", EffectScope.Self, null, 0, UnitId: "minion"));
         var catalog = BattleFixtures.MinimalCatalog(
             cards: new[] { BattleFixtures.Strike() },

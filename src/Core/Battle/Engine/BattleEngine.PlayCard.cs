@@ -6,7 +6,6 @@ using RoguelikeCardGame.Core.Battle.State;
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Random;
-using RoguelikeCardGame.Core.Relics;
 
 namespace RoguelikeCardGame.Core.Battle.Engine;
 
@@ -125,9 +124,10 @@ public static partial class BattleEngine
                 summonSucceeded = true;
         }
 
-        // 10.2.E 追加: OnCardPlay レリック発動（effect 適用後・カード移動前）
+        // 10.2.E 追加: OnPlayCard レリック発動（effect 適用後・カード移動前）
+        // Phase 10.5.L1.5: trigger ID を power 側と統一 ("OnCardPlay" → "OnPlayCard")。
         var (afterRelic, evsRelic) = RelicTriggerProcessor.Fire(
-            s, RelicTrigger.OnCardPlay, catalog, rng, orderStart: order);
+            s, "OnPlayCard", catalog, rng, orderStart: order);
         s = afterRelic;
         foreach (var ev in evsRelic) { events.Add(ev with { Order = order++ }); }
 

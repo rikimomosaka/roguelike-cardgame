@@ -67,7 +67,7 @@ public class BattleEngineStartRelicTests
     [Fact]
     public void Start_with_OnBattleStart_relic_fires_after_TurnStart()
     {
-        var relic = BattleFixtures.Relic("bs", RelicTrigger.OnBattleStart, true,
+        var relic = BattleFixtures.Relic("bs", "OnBattleStart", true,
             new CardEffect("block", EffectScope.Self, null, 5));
         var catalog = BattleFixtures.MinimalCatalog(relics: new[] { relic });
         var run = MakeRun(new[] { "bs" });
@@ -86,7 +86,7 @@ public class BattleEngineStartRelicTests
     [Fact]
     public void Start_snapshots_OwnedRelicIds_from_RunState()
     {
-        var relic = BattleFixtures.Relic("bs", RelicTrigger.OnBattleStart);
+        var relic = BattleFixtures.Relic("bs", "OnBattleStart");
         var catalog = BattleFixtures.MinimalCatalog(relics: new[] { relic });
         var run = MakeRun(new[] { "bs" });
 
@@ -113,7 +113,7 @@ public class BattleEngineStartRelicTests
     [Fact]
     public void Start_with_Implemented_false_OnBattleStart_skips()
     {
-        var relic = BattleFixtures.Relic("unimpl", RelicTrigger.OnBattleStart, implemented: false,
+        var relic = BattleFixtures.Relic("unimpl", "OnBattleStart", implemented: false,
             new CardEffect("block", EffectScope.Self, null, 5));
         var catalog = BattleFixtures.MinimalCatalog(relics: new[] { relic });
         var run = MakeRun(new[] { "unimpl" });

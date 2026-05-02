@@ -193,11 +193,11 @@ public sealed class DevRelicsController : ControllerBase
         }
         else
         {
-            // default minimal spec (rarity=1 / trigger=OnPickup / effects=[])
+            // default minimal spec (rarity=1 / effects=[])
+            // Phase 10.5.L1.5: relic-level trigger フィールド廃止。
             specNode = new JsonObject
             {
                 ["rarity"] = 1,
-                ["trigger"] = "OnPickup",
                 ["description"] = "",
                 ["effects"] = new JsonArray(),
                 ["implemented"] = true,

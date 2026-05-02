@@ -45,7 +45,7 @@ export function RelicVisualPreview({ relicId, relicName, spec, autoDescription }
         <div className="dev-relic-visual-preview__meta">
           <div className="dev-relic-visual-preview__name">{relicName || '(無名)'}</div>
           <div className="dev-relic-visual-preview__rarity">
-            {rarityLabel} / {spec.trigger}
+            {rarityLabel}
           </div>
           <div className="dev-relic-visual-preview__desc">{desc || '—'}</div>
           {!spec.implemented && (

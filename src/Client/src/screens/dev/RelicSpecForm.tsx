@@ -1,7 +1,10 @@
 // Phase 10.5.L1: Relic 用構造化フォーム。
 // CardSpecForm を mirror して relic の field のみを編集。
-// rarity / trigger / description / implemented / effects (CardEffect 共通) を編集し、
+// rarity / description / implemented / effects (CardEffect 共通) を編集し、
 // ライブプレビュー (RelicVisualPreview) を下部に表示。
+//
+// Phase 10.5.L1.5: relic-level Trigger フィールド廃止に伴い、当該 dropdown を削除し、
+// effect-level の trigger 編集を有効化 (excludeFields から 'trigger' を除去)。
 
 import { useEffect, useState } from 'react'
 import { previewRelicDescription } from '../../api/dev'
@@ -69,20 +72,6 @@ export function RelicSpecForm({
           </select>
         </label>
         <label className="card-spec-form__label">
-          トリガー
-          <select
-            value={spec.trigger}
-            onChange={(e) => set({ trigger: e.target.value })}
-            aria-label="relic trigger"
-          >
-            {meta.relicTriggers.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="card-spec-form__label">
           実装済み
           <input
             type="checkbox"
@@ -99,10 +88,10 @@ export function RelicSpecForm({
         allCardIds={allCardIds}
         label="効果"
         onChange={(e) => set({ effects: e })}
-        // Phase 10.5.L1-fix: relic は trigger を relic レベル (RelicDefinition.Trigger)
-        //   で 1 個固定。effect レベルの trigger / comboMin を出すと意味が二重になる
-        //   ので非表示にする (battle 中の card combo 文脈でしか機能しないため)。
-        excludeFields={['trigger', 'comboMin']}
+        // Phase 10.5.L1.5: relic は per-effect Trigger に統一。
+        //   effect レベルの trigger を表示する (excludeFields から除去)。
+        //   comboMin はカードの combo 文脈でしか機能しないため引き続き非表示。
+        excludeFields={['comboMin']}
       />
 
       <label className="card-spec-form__label card-spec-form__label--block">

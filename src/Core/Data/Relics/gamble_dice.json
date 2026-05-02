@@ -10,7 +10,6 @@
                          "label":  "original",
                          "spec":  {
                                       "rarity":  1,
-                                      "trigger":  "Passive",
                                       "description":  "[未実装] 角の削れたサイコロ。投げる前から、なぜか勝った気分になる不思議な代物。",
                                       "effects":  [
 

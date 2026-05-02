@@ -260,11 +260,26 @@ function selectJp(m: string): string {
 }
 
 function triggerJp(t: string): string {
+  // Phase 10.5.L1.5: relic + power 統合 unified trigger の JP ラベル。
   switch (t) {
+    case 'OnPickup': return 'レリック取得時'
+    case 'OnBattleStart': return '戦闘開始時'
+    case 'OnBattleEnd': return '戦闘終了時'
     case 'OnTurnStart': return 'ターン開始時'
+    case 'OnTurnEnd': return 'ターン終了時'
     case 'OnPlayCard': return 'カードプレイ時'
+    case 'OnEnemyDeath': return '敵撃破時'
     case 'OnDamageReceived': return 'ダメージ受け時'
     case 'OnCombo': return 'コンボ達成時'
+    case 'OnMapTileResolved': return 'マスイベント解決後'
+    case 'OnCardDiscarded': return 'カード捨て時'
+    case 'OnCardExhausted': return 'カード除外時'
+    case 'OnEnterShop': return 'ショップ訪問時'
+    case 'OnEnterRestSite': return '休憩所訪問時'
+    case 'OnRest': return '休憩時'
+    case 'OnRewardGenerated': return '報酬生成時'
+    case 'OnCardAddedToDeck': return 'デッキ追加時'
+    case 'Passive': return '常時'
     default: return t
   }
 }

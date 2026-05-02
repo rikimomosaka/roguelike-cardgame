@@ -6,7 +6,6 @@ using RoguelikeCardGame.Core.Battle.State;
 using RoguelikeCardGame.Core.Battle.Statuses;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Random;
-using RoguelikeCardGame.Core.Relics;
 
 namespace RoguelikeCardGame.Core.Battle.Engine;
 
@@ -68,9 +67,9 @@ internal static class TurnStartProcessor
         s = s with { Energy = s.EnergyMax };
         s = DrawHelper.Draw(s, DrawPerTurn, rng, out _);
 
-        // Step 8: OnTurnStart レリック発動 (10.2.E)
+        // Step 8: OnTurnStart レリック発動 (10.2.E / 10.5.L1.5: 文字列 trigger に変更)
         var (afterRelic, evsRelic) = RelicTriggerProcessor.Fire(
-            s, RelicTrigger.OnTurnStart, catalog, rng, orderStart: order);
+            s, "OnTurnStart", catalog, rng, orderStart: order);
         s = afterRelic;
         foreach (var ev in evsRelic) { events.Add(ev with { Order = order++ }); }
 

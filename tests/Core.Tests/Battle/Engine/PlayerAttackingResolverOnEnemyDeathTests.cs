@@ -18,7 +18,7 @@ public class PlayerAttackingResolverOnEnemyDeathTests
     [Fact]
     public void Single_attack_killing_one_enemy_fires_OnEnemyDeath_once()
     {
-        var relic = BattleFixtures.Relic("od", RelicTrigger.OnEnemyDeath, true,
+        var relic = BattleFixtures.Relic("od", "OnEnemyDeath", true,
             new CardEffect("block", EffectScope.Self, null, 1));
         var catalog = BattleFixtures.MinimalCatalog(relics: new[] { relic });
         var hero = BattleFixtures.Hero() with {
@@ -40,7 +40,7 @@ public class PlayerAttackingResolverOnEnemyDeathTests
     [Fact]
     public void All_attack_killing_three_enemies_fires_OnEnemyDeath_in_slot_order()
     {
-        var relic = BattleFixtures.Relic("od", RelicTrigger.OnEnemyDeath, true,
+        var relic = BattleFixtures.Relic("od", "OnEnemyDeath", true,
             new CardEffect("block", EffectScope.Self, null, 1));
         var catalog = BattleFixtures.MinimalCatalog(relics: new[] { relic });
         var hero = BattleFixtures.Hero() with {
@@ -70,7 +70,7 @@ public class PlayerAttackingResolverOnEnemyDeathTests
     [Fact]
     public void Attack_killing_zero_enemies_fires_no_OnEnemyDeath()
     {
-        var relic = BattleFixtures.Relic("od", RelicTrigger.OnEnemyDeath, true,
+        var relic = BattleFixtures.Relic("od", "OnEnemyDeath", true,
             new CardEffect("block", EffectScope.Self, null, 1));
         var catalog = BattleFixtures.MinimalCatalog(relics: new[] { relic });
         var hero = BattleFixtures.Hero() with {
@@ -91,7 +91,7 @@ public class PlayerAttackingResolverOnEnemyDeathTests
     [Fact]
     public void Already_dead_enemy_is_not_re_fired()
     {
-        var relic = BattleFixtures.Relic("od", RelicTrigger.OnEnemyDeath, true,
+        var relic = BattleFixtures.Relic("od", "OnEnemyDeath", true,
             new CardEffect("block", EffectScope.Self, null, 1));
         var catalog = BattleFixtures.MinimalCatalog(relics: new[] { relic });
         var hero = BattleFixtures.Hero() with {

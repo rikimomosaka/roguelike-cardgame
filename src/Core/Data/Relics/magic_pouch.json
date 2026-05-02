@@ -10,7 +10,6 @@
                          "label":  "original",
                          "spec":  {
                                       "rarity":  1,
-                                      "trigger":  "Passive",
                                       "description":  "[未実装] 必要なものが必ず入っている魔法じみた小袋。覗くたび中身が違うような気もする。",
                                       "effects":  [
 

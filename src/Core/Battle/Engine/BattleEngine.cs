@@ -5,7 +5,6 @@ using RoguelikeCardGame.Core.Battle.Events;
 using RoguelikeCardGame.Core.Battle.State;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Random;
-using RoguelikeCardGame.Core.Relics;
 using RoguelikeCardGame.Core.Run;
 
 namespace RoguelikeCardGame.Core.Battle.Engine;
@@ -102,8 +101,9 @@ public static partial class BattleEngine
         foreach (var ev in evsTurnStart) { events.Add(ev with { Order = order++ }); }
 
         // 10.2.E 追加: OnBattleStart レリック発動 (TurnStart 後)
+        // Phase 10.5.L1.5: relic-level Trigger 廃止、文字列指定に変更。
         var (afterBattleStart, evsBattleStart) = RelicTriggerProcessor.Fire(
-            afterTurnStart, RelicTrigger.OnBattleStart,
+            afterTurnStart, "OnBattleStart",
             catalog, rng, orderStart: order);
         foreach (var ev in evsBattleStart) { events.Add(ev with { Order = order++ }); }
 

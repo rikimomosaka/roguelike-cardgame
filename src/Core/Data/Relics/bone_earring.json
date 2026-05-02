@@ -10,7 +10,6 @@
                          "label":  "original",
                          "spec":  {
                                       "rarity":  1,
-                                      "trigger":  "Passive",
                                       "description":  "[未実装] 古い獣骨を磨いて作った野趣あふれるイヤリング。冷たい風にも怯まなくなる。",
                                       "effects":  [
 

@@ -10,14 +10,9 @@
                          "label":  "original",
                          "spec":  {
                                       "rarity":  1,
-                                      "trigger":  "OnPickup",
                                       "description":  "迷っても、心を留めるための小さな錨。胸の奥で「ここに帰ればいい」と囁く。",
                                       "effects":  [
-                                                      {
-                                                          "action":  "gainMaxHp",
-                                                          "scope":  "self",
-                                                          "amount":  8
-                                                      }
+
                                                   ],
                                       "implemented":  true
                                   }

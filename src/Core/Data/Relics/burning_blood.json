@@ -10,14 +10,9 @@
                          "label":  "original",
                          "spec":  {
                                       "rarity":  1,
-                                      "trigger":  "OnBattleEnd",
                                       "description":  "[未実装] 深紅に脈打つ珊瑚。戦いを終えるたび、血肉に低く熱を返してくる。",
                                       "effects":  [
-                                                      {
-                                                          "action":  "healPercent",
-                                                          "scope":  "self",
-                                                          "amount":  6
-                                                      }
+
                                                   ],
                                       "implemented":  false
                                   }

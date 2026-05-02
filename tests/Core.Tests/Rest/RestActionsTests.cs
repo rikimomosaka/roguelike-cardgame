@@ -78,13 +78,15 @@ public class RestActionsTests
     }
 
     [Fact]
-    public void Heal_WithWarmBlanket_AddsPassiveBonus()
+    public void Heal_WithWarmBlanket_BaseHealOnly()
     {
+        // Phase 10.5.L1.5: warm_blanket の base effects=[] (リセット済み)。
+        // Passive RestHealBonus が発火しないことを検証 (= base heal だけ)。
+        // ceil(80 * 0.30) = 24
         var s = PendingRunAt(currentHp: 30, maxHp: 80,
             relics: ImmutableArray.Create("warm_blanket"));
         var s1 = RestActions.Heal(s, Catalog());
-        // ceil(80 * 0.30) = 24, + 10 = 34
-        Assert.Equal(30 + 34, s1.CurrentHp);
+        Assert.Equal(30 + 24, s1.CurrentHp);
     }
 
     [Fact]

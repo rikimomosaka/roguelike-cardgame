@@ -10,14 +10,9 @@
                          "label":  "original",
                          "spec":  {
                                       "rarity":  1,
-                                      "trigger":  "Passive",
                                       "description":  "じっと佇む石の蛙。眺めているだけで、不思議と疲れが抜けていく。",
                                       "effects":  [
-                                                      {
-                                                          "action":  "restHealBonus",
-                                                          "scope":  "self",
-                                                          "amount":  5
-                                                      }
+
                                                   ],
                                       "implemented":  true
                                   }

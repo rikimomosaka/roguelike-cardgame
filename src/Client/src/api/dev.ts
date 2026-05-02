@@ -97,7 +97,12 @@ export async function promoteCardVersion(
 
 // ---- Phase 10.5.M: form editor / preview / delete / meta API ----
 
-/** /api/dev/meta が返す enum 値リスト。 Form の dropdown 選択肢供給用。 */
+/**
+ * /api/dev/meta が返す enum 値リスト。 Form の dropdown 選択肢供給用。
+ *
+ * Phase 10.5.L1.5: relicTriggers は廃止、triggers に relic + power 統合した
+ * 18 値を含むように変更。
+ */
 export type DevMeta = {
   cardTypes: string[]
   rarities: { value: number; label: string }[]
@@ -106,12 +111,11 @@ export type DevMeta = {
   effectSides: string[]
   piles: string[]
   selectModes: string[]
+  /** unified trigger list (relic + power statuses 統合)。Phase 10.5.L1.5 以降 18 値。 */
   triggers: string[]
   amountSources: string[]
   keywords: { id: string; name: string; description: string }[]
   statuses: { id: string; jp: string }[]
-  /** Phase 10.5.L1: Relic editor 用 trigger 列。Server / RelicTrigger と同期。 */
-  relicTriggers: string[]
 }
 
 /** GET /api/dev/meta — Form 用 enum リスト取得。 */

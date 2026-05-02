@@ -3,13 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { resetRelicCatalogCacheForTests } from '../api/catalog'
 import { useRelicCatalog } from './useRelicCatalog'
 
+// Phase 10.5.L1.5: trigger は廃止 (catalog DTO から削除)。
 const MOCK_RELICS = [
   {
     id: 'coin_purse',
     name: 'Coin Purse',
     description: 'Gain 20 gold on pickup.',
     rarity: 'Common',
-    trigger: 'OnPickup',
   },
 ]
 
@@ -35,7 +35,6 @@ describe('useRelicCatalog', () => {
 
     expect(result.current.catalog!['coin_purse'].name).toBe('Coin Purse')
     expect(result.current.catalog!['coin_purse'].rarity).toBe('Common')
-    expect(result.current.catalog!['coin_purse'].trigger).toBe('OnPickup')
     expect(result.current.names['coin_purse']).toBe('Coin Purse')
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/v1/catalog/relics',

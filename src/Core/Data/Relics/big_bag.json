@@ -10,7 +10,6 @@
                          "label":  "original",
                          "spec":  {
                                       "rarity":  1,
-                                      "trigger":  "Passive",
                                       "description":  "[未実装] 容量たっぷりの大型カバン。なんでも詰め込める安心感が、肩の力を抜いてくれる。",
                                       "effects":  [
 

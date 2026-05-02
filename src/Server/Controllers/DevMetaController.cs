@@ -50,13 +50,19 @@ public sealed class DevMetaController : ControllerBase
             effectSides = new[] { "enemy", "ally" },
             piles = new[] { "hand", "draw", "discard", "exhaust" },
             selectModes = new[] { "random", "choose", "all" },
-            triggers = new[] { "OnTurnStart", "OnTurnEnd", "OnPlayCard", "OnDamageReceived", "OnCombo" },
-            // Phase 10.5.L1: Relic editor 用 trigger 列。Core/Relics/RelicTrigger.cs と同期。
-            relicTriggers = new[]
+            // Phase 10.5.L1.5: relic と power を統一した trigger リスト (18 値)。
+            // engine 発火が実装済みのもの (12) と spec 列挙のみ (6: 10.6 で実装) を含む。
+            triggers = new[]
             {
-                "OnPickup", "Passive", "OnBattleStart", "OnBattleEnd",
-                "OnMapTileResolved", "OnTurnStart", "OnTurnEnd",
-                "OnCardPlay", "OnEnemyDeath",
+                "OnPickup", "OnBattleStart", "OnBattleEnd",
+                "OnTurnStart", "OnTurnEnd", "OnPlayCard",
+                "OnEnemyDeath", "OnDamageReceived", "OnCombo",
+                "OnMapTileResolved", "OnCardDiscarded", "OnCardExhausted",
+                // 以下は spec 列挙のみ、engine 発火は 10.6.A で実装
+                "OnEnterShop", "OnEnterRestSite", "OnRest",
+                "OnRewardGenerated", "OnCardAddedToDeck",
+                // Passive は 10.6.B (modifier system)
+                "Passive",
             },
             amountSources = new[]
             {

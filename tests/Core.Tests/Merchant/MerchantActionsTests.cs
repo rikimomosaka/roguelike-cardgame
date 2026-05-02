@@ -70,13 +70,16 @@ public class MerchantActionsTests
     }
 
     [Fact]
-    public void BuyRelic_AddsRelicAndTriggersOnPickup()
+    public void BuyRelic_AddsRelicAndDeductsGold()
     {
+        // Phase 10.5.L1.5: relic JSON は effects=[] にリセット済みなので、
+        // 購入による OnPickup 効果発火は base catalog では無く、relic 取得の
+        // gold deduction だけ検証する。OnPickup 発火自体は
+        // NonBattleRelicEffectsTests / RewardApplier の fake-catalog テスト側で確認。
         var s0 = BaseWithInventory(500);
         var s1 = MerchantActions.BuyRelic(s0, "extra_max_hp", Catalog);
         Assert.Contains("extra_max_hp", s1.Relics);
         Assert.Equal(350, s1.Gold);
-        Assert.Equal(s0.MaxHp + 7, s1.MaxHp);  // OnPickup 発火
     }
 
     [Fact]
