@@ -1,9 +1,22 @@
 {
-  "id": "claw_earring",
-  "name": "つめイヤリング",
-  "rarity": 1,
-  "trigger": "Passive",
-  "description": "[未実装] 鋭い爪をかたどった銀のイヤリング。鏡を覗くたび、内なる獣が静かに唸る。",
-  "effects": [],
-  "implemented": false
+    "id":  "claw_earring",
+    "name":  "つめイヤリング",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-02T03:29:22Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  1,
+                                      "trigger":  "Passive",
+                                      "description":  "[未実装] 鋭い爪をかたどった銀のイヤリング。鏡を覗くたび、内なる獣が静かに唸る。",
+                                      "effects":  [
+
+                                                  ],
+                                      "implemented":  false
+                                  }
+                     }
+                 ]
 }

@@ -1,9 +1,22 @@
 {
-  "id": "nyango_bell",
-  "name": "ニャンゴの鈴",
-  "rarity": 1,
-  "trigger": "Passive",
-  "description": "[未実装] 猫を呼び寄せる小さな鈴。鳴らすと、不思議と幸運がそっと寄り添ってくる。",
-  "effects": [],
-  "implemented": false
+    "id":  "nyango_bell",
+    "name":  "ニャンゴの鈴",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-02T03:29:22Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  1,
+                                      "trigger":  "Passive",
+                                      "description":  "[未実装] 猫を呼び寄せる小さな鈴。鳴らすと、不思議と幸運がそっと寄り添ってくる。",
+                                      "effects":  [
+
+                                                  ],
+                                      "implemented":  false
+                                  }
+                     }
+                 ]
 }

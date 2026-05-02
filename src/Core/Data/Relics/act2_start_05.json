@@ -1,9 +1,26 @@
 {
-  "id": "act2_start_05",
-  "name": "お宝マップ",
-  "rarity": 1,
-  "trigger": "OnPickup",
-  "description": "古い羊皮紙に描かれた覚え書き。ところどころに金貨の記号が躍る。",
-  "effects": [{ "action": "gainGold", "scope": "self", "amount": 80 }],
-  "implemented": true
+    "id":  "act2_start_05",
+    "name":  "お宝マップ",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-02T03:29:22Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  1,
+                                      "trigger":  "OnPickup",
+                                      "description":  "古い羊皮紙に描かれた覚え書き。ところどころに金貨の記号が躍る。",
+                                      "effects":  [
+                                                      {
+                                                          "action":  "gainGold",
+                                                          "scope":  "self",
+                                                          "amount":  80
+                                                      }
+                                                  ],
+                                      "implemented":  true
+                                  }
+                     }
+                 ]
 }

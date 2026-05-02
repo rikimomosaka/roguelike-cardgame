@@ -38,9 +38,10 @@ public sealed class DataCatalogProvider
             return EmbeddedDataLoader.LoadCatalog();
 
         var overrideRoot = Path.Combine(_env.ContentRootPath, "..", "..", "data-local", "dev-overrides");
-        var overrides = DevOverrideLoader.LoadCards(overrideRoot);
-        return overrides.Count == 0
+        var cardOverrides = DevOverrideLoader.LoadCards(overrideRoot);
+        var relicOverrides = DevOverrideLoader.LoadRelics(overrideRoot);
+        return cardOverrides.Count == 0 && relicOverrides.Count == 0
             ? EmbeddedDataLoader.LoadCatalog()
-            : EmbeddedDataLoader.LoadCatalogWithOverrides(overrides);
+            : EmbeddedDataLoader.LoadCatalogWithOverrides(cardOverrides, relicOverrides);
     }
 }

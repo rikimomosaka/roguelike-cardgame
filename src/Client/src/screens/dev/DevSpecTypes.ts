@@ -173,6 +173,65 @@ export function specToJson(spec: CardSpec): string {
   return JSON.stringify(specToJsonObject(spec), null, 2)
 }
 
+// ============================================================
+// Phase 10.5.L1: RelicSpec types
+// ============================================================
+
+/**
+ * Relic の spec 構造 (versioned 形式の各 version.spec に対応)。
+ * Card と異なり relic は upgraded / cost / cardType を持たない。
+ * description は手書き必須が基本 (effects から自動生成も可能だが override が標準)。
+ */
+export type RelicSpec = {
+  rarity: number
+  trigger: string // "OnPickup" | "Passive" | ...
+  description: string // override (手書き必須が基本、空なら server 側 formatter が effects から自動)
+  effects: CardEffect[]
+  implemented: boolean
+}
+
+export function emptyRelicSpec(): RelicSpec {
+  return {
+    rarity: 1,
+    trigger: 'OnPickup',
+    description: '',
+    effects: [],
+    implemented: true,
+  }
+}
+
+export function parseRelicSpec(json: string): RelicSpec {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(json)
+  } catch {
+    return emptyRelicSpec()
+  }
+  if (!parsed || typeof parsed !== 'object') return emptyRelicSpec()
+  const r = parsed as Record<string, unknown>
+  const spec = emptyRelicSpec()
+  if (typeof r.rarity === 'number') spec.rarity = r.rarity
+  if (typeof r.trigger === 'string') spec.trigger = r.trigger
+  if (typeof r.description === 'string') spec.description = r.description
+  if (Array.isArray(r.effects)) {
+    spec.effects = r.effects.map(normalizeEffect)
+  }
+  if (typeof r.implemented === 'boolean') spec.implemented = r.implemented
+  return spec
+}
+
+export function relicSpecToJsonObject(spec: RelicSpec): Record<string, unknown> {
+  const out: Record<string, unknown> = {
+    rarity: spec.rarity,
+    trigger: spec.trigger,
+  }
+  // description は relic では空文字でも書く (override 文字列として常に渡す)。
+  out.description = spec.description
+  out.effects = spec.effects.map(effectToJsonObject)
+  out.implemented = spec.implemented
+  return out
+}
+
 // ---- action ごとに表示する field の map ----
 
 /** 1 effect の表示すべき field 名一覧。action が map に無ければ空配列。 */

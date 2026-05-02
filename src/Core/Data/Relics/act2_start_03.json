@@ -1,9 +1,26 @@
 {
-  "id": "act2_start_03",
-  "name": "めのイヤリング",
-  "rarity": 1,
-  "trigger": "Passive",
-  "description": "瞳の意匠を象った耳飾り。装ければ、夜の見張りにもうたた寝にも気づかれないと言う。",
-  "effects": [{ "action": "restHealBonus", "scope": "self", "amount": 8 }],
-  "implemented": true
+    "id":  "act2_start_03",
+    "name":  "めのイヤリング",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-02T03:29:22Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  1,
+                                      "trigger":  "Passive",
+                                      "description":  "瞳の意匠を象った耳飾り。装ければ、夜の見張りにもうたた寝にも気づかれないと言う。",
+                                      "effects":  [
+                                                      {
+                                                          "action":  "restHealBonus",
+                                                          "scope":  "self",
+                                                          "amount":  8
+                                                      }
+                                                  ],
+                                      "implemented":  true
+                                  }
+                     }
+                 ]
 }

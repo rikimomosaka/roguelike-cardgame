@@ -30,33 +30,17 @@ public static class RelicJsonLoader
                 id = GetRequiredString(root, "id", null);
                 var name = GetRequiredString(root, "name", id);
 
-                // rarity: 範囲チェック
-                var rawRarity = GetRequiredInt(root, "rarity", id);
-                if (!Enum.IsDefined(typeof(CardRarity), rawRarity))
-                    throw new RelicJsonException($"rarity の値 {rawRarity} は無効です (relic id={id})。");
-                var rarity = (CardRarity)rawRarity;
-
-                // trigger: 文字列 → enum パース
-                var trigger = ParseTrigger(GetRequiredString(root, "trigger", id), id);
-
-                var effects = ParseEffects(root, "effects", id);
-
-                // description は任意フィールド (図鑑 / ツールチップ向けのフレーバーテキスト)
-                var description = root.TryGetProperty("description", out var descEl) && descEl.ValueKind == JsonValueKind.String
-                    ? descEl.GetString() ?? string.Empty
-                    : string.Empty;
-
-                // implemented は任意フィールド (省略時 true)
-                bool implemented = true;
-                if (root.TryGetProperty("implemented", out var implEl))
+                // Phase 10.5.L1: versioned 検出 — versions プロパティが配列なら versioned、
+                // それ以外は flat (legacy)。CardJsonLoader と同じパターン。
+                if (root.TryGetProperty("versions", out var versionsEl) &&
+                    versionsEl.ValueKind == JsonValueKind.Array)
                 {
-                    if (implEl.ValueKind == JsonValueKind.True) implemented = true;
-                    else if (implEl.ValueKind == JsonValueKind.False) implemented = false;
-                    else throw new RelicJsonException(
-                        $"implemented は boolean である必要があります (relic id={id})。");
+                    var activeSpec = ResolveActiveSpec(root, versionsEl, id);
+                    return ParseSpec(id, name, activeSpec);
                 }
 
-                return new RelicDefinition(id, name, rarity, trigger, effects, description, implemented);
+                // flat (legacy): root 自体を spec として扱う。
+                return ParseSpec(id, name, root);
             }
             catch (RelicJsonException)
             {
@@ -68,6 +52,62 @@ public static class RelicJsonLoader
                 throw new RelicJsonException($"レリック JSON のパースに失敗しました {where}: {ex.Message}", ex);
             }
         }
+    }
+
+    /// <summary>
+    /// versioned JSON から activeVersion が指す version の spec 要素を返す。
+    /// activeVersion が無い／対応する version が無ければ例外。
+    /// </summary>
+    private static JsonElement ResolveActiveSpec(JsonElement root, JsonElement versionsEl, string id)
+    {
+        var activeVersion = GetRequiredString(root, "activeVersion", id);
+        foreach (var v in versionsEl.EnumerateArray())
+        {
+            if (v.ValueKind != JsonValueKind.Object) continue;
+            if (!v.TryGetProperty("version", out var verEl) || verEl.ValueKind != JsonValueKind.String) continue;
+            if (verEl.GetString() != activeVersion) continue;
+            if (!v.TryGetProperty("spec", out var specEl) || specEl.ValueKind != JsonValueKind.Object)
+                throw new RelicJsonException(
+                    $"version '{activeVersion}' の spec が object ではありません (relic id={id})。");
+            return specEl;
+        }
+        throw new RelicJsonException(
+            $"activeVersion '{activeVersion}' が versions[] に見つかりません (relic id={id})。");
+    }
+
+    /// <summary>
+    /// 旧 flat ロジックを spec オブジェクトから読み出す形に切り出した共通実装。
+    /// flat 形式では root 自体を、versioned 形式では versions[*].spec を渡す。
+    /// </summary>
+    private static RelicDefinition ParseSpec(string id, string name, JsonElement spec)
+    {
+        // rarity: 範囲チェック
+        var rawRarity = GetRequiredInt(spec, "rarity", id);
+        if (!Enum.IsDefined(typeof(CardRarity), rawRarity))
+            throw new RelicJsonException($"rarity の値 {rawRarity} は無効です (relic id={id})。");
+        var rarity = (CardRarity)rawRarity;
+
+        // trigger: 文字列 → enum パース
+        var trigger = ParseTrigger(GetRequiredString(spec, "trigger", id), id);
+
+        var effects = ParseEffects(spec, "effects", id);
+
+        // description は任意フィールド (図鑑 / ツールチップ向けのフレーバーテキスト)
+        var description = spec.TryGetProperty("description", out var descEl) && descEl.ValueKind == JsonValueKind.String
+            ? descEl.GetString() ?? string.Empty
+            : string.Empty;
+
+        // implemented は任意フィールド (省略時 true)
+        bool implemented = true;
+        if (spec.TryGetProperty("implemented", out var implEl))
+        {
+            if (implEl.ValueKind == JsonValueKind.True) implemented = true;
+            else if (implEl.ValueKind == JsonValueKind.False) implemented = false;
+            else throw new RelicJsonException(
+                $"implemented は boolean である必要があります (relic id={id})。");
+        }
+
+        return new RelicDefinition(id, name, rarity, trigger, effects, description, implemented);
     }
 
     private static RelicTrigger ParseTrigger(string s, string? id) => s switch

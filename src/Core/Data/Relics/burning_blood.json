@@ -1,9 +1,26 @@
 {
-  "id": "burning_blood",
-  "name": "血のサンゴ",
-  "rarity": 1,
-  "trigger": "OnBattleEnd",
-  "description": "[未実装] 深紅に脈打つ珊瑚。戦いを終えるたび、血肉に低く熱を返してくる。",
-  "effects": [{ "action": "healPercent", "scope": "self", "amount": 6 }],
-  "implemented": false
+    "id":  "burning_blood",
+    "name":  "血のサンゴ",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-02T03:29:22Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  1,
+                                      "trigger":  "OnBattleEnd",
+                                      "description":  "[未実装] 深紅に脈打つ珊瑚。戦いを終えるたび、血肉に低く熱を返してくる。",
+                                      "effects":  [
+                                                      {
+                                                          "action":  "healPercent",
+                                                          "scope":  "self",
+                                                          "amount":  6
+                                                      }
+                                                  ],
+                                      "implemented":  false
+                                  }
+                     }
+                 ]
 }

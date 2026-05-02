@@ -18,12 +18,22 @@ public static class DevOverrideLoader
     /// dir が無い／読めないファイルは静かに skip。
     /// </summary>
     public static IReadOnlyDictionary<string, string> LoadCards(string overrideRoot)
+        => LoadFromSubDir(overrideRoot, "cards");
+
+    /// <summary>
+    /// <paramref name="overrideRoot"/> 直下の <c>relics/</c> から *.json を全て読み、id をキーに dict を返す。
+    /// Phase 10.5.L1。
+    /// </summary>
+    public static IReadOnlyDictionary<string, string> LoadRelics(string overrideRoot)
+        => LoadFromSubDir(overrideRoot, "relics");
+
+    private static IReadOnlyDictionary<string, string> LoadFromSubDir(string overrideRoot, string subDir)
     {
         var result = new Dictionary<string, string>();
-        var cardsDir = Path.Combine(overrideRoot, "cards");
-        if (!Directory.Exists(cardsDir)) return result;
+        var dir = Path.Combine(overrideRoot, subDir);
+        if (!Directory.Exists(dir)) return result;
 
-        foreach (var path in Directory.EnumerateFiles(cardsDir, "*.json"))
+        foreach (var path in Directory.EnumerateFiles(dir, "*.json"))
         {
             string json;
             try { json = File.ReadAllText(path); }

@@ -1,9 +1,26 @@
 {
-  "id": "act1_start_03",
-  "name": "ストーンフロッグ",
-  "rarity": 1,
-  "trigger": "Passive",
-  "description": "じっと佇む石の蛙。眺めているだけで、不思議と疲れが抜けていく。",
-  "effects": [{ "action": "restHealBonus", "scope": "self", "amount": 5 }],
-  "implemented": true
+    "id":  "act1_start_03",
+    "name":  "ストーンフロッグ",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-02T03:29:22Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  1,
+                                      "trigger":  "Passive",
+                                      "description":  "じっと佇む石の蛙。眺めているだけで、不思議と疲れが抜けていく。",
+                                      "effects":  [
+                                                      {
+                                                          "action":  "restHealBonus",
+                                                          "scope":  "self",
+                                                          "amount":  5
+                                                      }
+                                                  ],
+                                      "implemented":  true
+                                  }
+                     }
+                 ]
 }

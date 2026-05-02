@@ -1,9 +1,26 @@
 {
-  "id": "coin_purse",
-  "name": "固いサイフ",
-  "rarity": 0,
-  "trigger": "OnPickup",
-  "description": "革が固く張った旅人の財布。中身を覗くと、ちょうど旅費に足りる程度の金貨が。",
-  "effects": [{ "action": "gainGold", "scope": "self", "amount": 50 }],
-  "implemented": true
+    "id":  "coin_purse",
+    "name":  "固いサイフ",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-02T03:29:22Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  0,
+                                      "trigger":  "OnPickup",
+                                      "description":  "革が固く張った旅人の財布。中身を覗くと、ちょうど旅費に足りる程度の金貨が。",
+                                      "effects":  [
+                                                      {
+                                                          "action":  "gainGold",
+                                                          "scope":  "self",
+                                                          "amount":  50
+                                                      }
+                                                  ],
+                                      "implemented":  true
+                                  }
+                     }
+                 ]
 }

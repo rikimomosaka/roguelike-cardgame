@@ -1,9 +1,22 @@
 {
-  "id": "bone_earring",
-  "name": "ほねイヤリング",
-  "rarity": 1,
-  "trigger": "Passive",
-  "description": "[未実装] 古い獣骨を磨いて作った野趣あふれるイヤリング。冷たい風にも怯まなくなる。",
-  "effects": [],
-  "implemented": false
+    "id":  "bone_earring",
+    "name":  "ほねイヤリング",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-02T03:29:22Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  1,
+                                      "trigger":  "Passive",
+                                      "description":  "[未実装] 古い獣骨を磨いて作った野趣あふれるイヤリング。冷たい風にも怯まなくなる。",
+                                      "effects":  [
+
+                                                  ],
+                                      "implemented":  false
+                                  }
+                     }
+                 ]
 }

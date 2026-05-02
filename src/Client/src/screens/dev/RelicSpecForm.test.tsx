@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { CardSpecForm } from './CardSpecForm'
-import { emptySpec } from './DevSpecTypes'
+import { RelicSpecForm } from './RelicSpecForm'
+import { emptyRelicSpec } from './DevSpecTypes'
 import type { DevMeta } from '../../api/dev'
 
 const meta: DevMeta = {
@@ -19,76 +19,73 @@ const meta: DevMeta = {
   amountSources: ['handCount'],
   keywords: [{ id: 'wild', name: 'ワイルド', description: '...' }],
   statuses: [{ id: 'weak', jp: '脱力' }],
-  relicTriggers: ['OnPickup', 'Passive'],
+  relicTriggers: ['OnPickup', 'Passive', 'OnBattleStart'],
 }
 
 afterEach(() => {
   vi.restoreAllMocks()
 })
 
-describe('CardSpecForm', () => {
-  it('renders rarity / cardType / cost fields', () => {
+describe('RelicSpecForm', () => {
+  it('renders rarity / trigger / implemented fields', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({ description: '' }),
     } as Response)
     render(
-      <CardSpecForm
-        spec={emptySpec()}
+      <RelicSpecForm
+        relicId="test_relic"
+        relicName="テストレリック"
+        spec={emptyRelicSpec()}
         meta={meta}
-        allCardIds={['strike']}
-        cardNames={{ strike: 'ストライク' }}
-        cardName="テスト"
-        displayName={null}
+        allCardIds={[]}
         onChange={() => {}}
       />,
     )
-    expect(screen.getByLabelText(/card rarity/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/card type/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/^card cost$/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/relic rarity/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/relic trigger/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/relic implemented/i)).toBeInTheDocument()
   })
 
-  it('changing rarity calls onChange with new value', () => {
+  it('changing trigger calls onChange with new value', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({ description: '' }),
     } as Response)
     const onChange = vi.fn()
     render(
-      <CardSpecForm
-        spec={emptySpec()}
+      <RelicSpecForm
+        relicId="test_relic"
+        relicName="テストレリック"
+        spec={emptyRelicSpec()}
         meta={meta}
         allCardIds={[]}
-        cardNames={{}}
-        cardName="テスト"
-        displayName={null}
         onChange={onChange}
       />,
     )
-    fireEvent.change(screen.getByLabelText(/card rarity/i), {
-      target: { value: '2' },
+    fireEvent.change(screen.getByLabelText(/relic trigger/i), {
+      target: { value: 'Passive' },
     })
     expect(onChange).toHaveBeenCalled()
     const arg = onChange.mock.calls[0][0]
-    expect(arg.rarity).toBe(2)
+    expect(arg.trigger).toBe('Passive')
   })
 
-  it('shows + 効果を追加 button', () => {
+  it('shows description override textarea', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({ description: '' }),
     } as Response)
     render(
-      <CardSpecForm
-        spec={emptySpec()}
+      <RelicSpecForm
+        relicId="test_relic"
+        relicName="テストレリック"
+        spec={emptyRelicSpec()}
         meta={meta}
         allCardIds={[]}
-        cardNames={{}}
-        cardName="テスト"
-        displayName={null}
         onChange={() => {}}
       />,
     )
-    expect(screen.getAllByRole('button', { name: /\+ 効果を追加/ }).length).toBeGreaterThan(0)
+    expect(screen.getByLabelText(/relic description override/i)).toBeInTheDocument()
   })
 })

@@ -1,9 +1,26 @@
 {
-  "id": "act2_start_01",
-  "name": "騎士の兜",
-  "rarity": 1,
-  "trigger": "OnPickup",
-  "description": "見知らぬ戦士の遺品。被ると、ほんの少しだけ背筋が伸びる。",
-  "effects": [{ "action": "gainMaxHp", "scope": "self", "amount": 12 }],
-  "implemented": true
+    "id":  "act2_start_01",
+    "name":  "騎士の兜",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-02T03:29:22Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  1,
+                                      "trigger":  "OnPickup",
+                                      "description":  "見知らぬ戦士の遺品。被ると、ほんの少しだけ背筋が伸びる。",
+                                      "effects":  [
+                                                      {
+                                                          "action":  "gainMaxHp",
+                                                          "scope":  "self",
+                                                          "amount":  12
+                                                      }
+                                                  ],
+                                      "implemented":  true
+                                  }
+                     }
+                 ]
 }

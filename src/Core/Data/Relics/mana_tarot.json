@@ -1,9 +1,22 @@
 {
-  "id": "mana_tarot",
-  "name": "魔力のタロット",
-  "rarity": 2,
-  "trigger": "Passive",
-  "description": "[未実装] 神秘的な絵柄が踊るタロットカード。一枚引けば、魔力の流れが見えてくる気がする。",
-  "effects": [],
-  "implemented": false
+    "id":  "mana_tarot",
+    "name":  "魔力のタロット",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-02T03:29:22Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  2,
+                                      "trigger":  "Passive",
+                                      "description":  "[未実装] 神秘的な絵柄が踊るタロットカード。一枚引けば、魔力の流れが見えてくる気がする。",
+                                      "effects":  [
+
+                                                  ],
+                                      "implemented":  false
+                                  }
+                     }
+                 ]
 }

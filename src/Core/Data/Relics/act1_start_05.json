@@ -1,9 +1,26 @@
 {
-  "id": "act1_start_05",
-  "name": "コンパス",
-  "rarity": 1,
-  "trigger": "OnPickup",
-  "description": "曇った針が、なぜか黄金の方角を指し示す。",
-  "effects": [{ "action": "gainGold", "scope": "self", "amount": 50 }],
-  "implemented": true
+    "id":  "act1_start_05",
+    "name":  "コンパス",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-02T03:29:22Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  1,
+                                      "trigger":  "OnPickup",
+                                      "description":  "曇った針が、なぜか黄金の方角を指し示す。",
+                                      "effects":  [
+                                                      {
+                                                          "action":  "gainGold",
+                                                          "scope":  "self",
+                                                          "amount":  50
+                                                      }
+                                                  ],
+                                      "implemented":  true
+                                  }
+                     }
+                 ]
 }

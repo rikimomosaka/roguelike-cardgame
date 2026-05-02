@@ -8,6 +8,7 @@ import { useAccount } from './context/AccountContext'
 import { AchievementsScreen } from './screens/AchievementsScreen'
 import { DevCardsScreen } from './screens/DevCardsScreen'
 import { DevHomeScreen } from './screens/DevHomeScreen'
+import { DevRelicsScreen } from './screens/DevRelicsScreen'
 import { LoginScreen } from './screens/LoginScreen'
 import { MainMenuScreen } from './screens/MainMenuScreen'
 import { MapScreen } from './screens/MapScreen'
@@ -25,6 +26,7 @@ type Screen =
   | { kind: 'bootstrap-error'; message: string }
   | { kind: 'dev-home' }
   | { kind: 'dev-cards' }
+  | { kind: 'dev-relics' }
 
 // Why: 3 段ゲートのうち UI ゲート。`import.meta.env.DEV` は本番ビルド時に false で
 //   DCE 対象になるため、本番 bundle から DevHome/DevCards のコードが消える。
@@ -53,6 +55,8 @@ export default function App() {
         if (cancelled) return
         if (devParam === 'cards') {
           setScreen({ kind: 'dev-cards' })
+        } else if (devParam === 'relics') {
+          setScreen({ kind: 'dev-relics' })
         } else {
           setScreen({ kind: 'dev-home' })
         }
@@ -136,12 +140,16 @@ export default function App() {
     return (
       <DevHomeScreen
         onOpenCards={() => setScreen({ kind: 'dev-cards' })}
+        onOpenRelics={() => setScreen({ kind: 'dev-relics' })}
         onClose={() => setScreen({ kind: 'main-menu' })}
       />
     )
   }
   if (import.meta.env.DEV && screen.kind === 'dev-cards') {
     return <DevCardsScreen onBack={() => setScreen({ kind: 'dev-home' })} />
+  }
+  if (import.meta.env.DEV && screen.kind === 'dev-relics') {
+    return <DevRelicsScreen onBack={() => setScreen({ kind: 'dev-home' })} />
   }
   return <SettingsScreen onBack={() => setScreen({ kind: 'main-menu' })} />
 }

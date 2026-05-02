@@ -1,9 +1,26 @@
 {
-  "id": "act3_start_01",
-  "name": "ホログラムスター",
-  "rarity": 2,
-  "trigger": "OnPickup",
-  "description": "微かに七色を放つ星型の結晶。英雄の証として伝えられているが、由来は誰も知らない。",
-  "effects": [{ "action": "gainMaxHp", "scope": "self", "amount": 20 }],
-  "implemented": true
+    "id":  "act3_start_01",
+    "name":  "ホログラムスター",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-02T03:29:22Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  2,
+                                      "trigger":  "OnPickup",
+                                      "description":  "微かに七色を放つ星型の結晶。英雄の証として伝えられているが、由来は誰も知らない。",
+                                      "effects":  [
+                                                      {
+                                                          "action":  "gainMaxHp",
+                                                          "scope":  "self",
+                                                          "amount":  20
+                                                      }
+                                                  ],
+                                      "implemented":  true
+                                  }
+                     }
+                 ]
 }

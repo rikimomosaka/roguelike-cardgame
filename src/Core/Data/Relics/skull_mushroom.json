@@ -1,9 +1,22 @@
 {
-  "id": "skull_mushroom",
-  "name": "ドクロキノコ",
-  "rarity": 1,
-  "trigger": "Passive",
-  "description": "[未実装] 笠にドクロ模様が浮かぶ妖しいキノコ。一口齧れば、危険にも冷静でいられる。",
-  "effects": [],
-  "implemented": false
+    "id":  "skull_mushroom",
+    "name":  "ドクロキノコ",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-02T03:29:22Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  1,
+                                      "trigger":  "Passive",
+                                      "description":  "[未実装] 笠にドクロ模様が浮かぶ妖しいキノコ。一口齧れば、危険にも冷静でいられる。",
+                                      "effects":  [
+
+                                                  ],
+                                      "implemented":  false
+                                  }
+                     }
+                 ]
 }

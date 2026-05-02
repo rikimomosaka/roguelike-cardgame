@@ -1,9 +1,26 @@
 {
-  "id": "act3_start_03",
-  "name": "ボロ磁石",
-  "rarity": 2,
-  "trigger": "Passive",
-  "description": "錆びた古磁石。磁力は衰えたが、なぜか身体の凝りを引き寄せて散らしてくれる。",
-  "effects": [{ "action": "restHealBonus", "scope": "self", "amount": 12 }],
-  "implemented": true
+    "id":  "act3_start_03",
+    "name":  "ボロ磁石",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-02T03:29:22Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  2,
+                                      "trigger":  "Passive",
+                                      "description":  "錆びた古磁石。磁力は衰えたが、なぜか身体の凝りを引き寄せて散らしてくれる。",
+                                      "effects":  [
+                                                      {
+                                                          "action":  "restHealBonus",
+                                                          "scope":  "self",
+                                                          "amount":  12
+                                                      }
+                                                  ],
+                                      "implemented":  true
+                                  }
+                     }
+                 ]
 }

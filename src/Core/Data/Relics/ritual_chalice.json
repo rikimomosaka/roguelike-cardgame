@@ -1,9 +1,22 @@
 {
-  "id": "ritual_chalice",
-  "name": "儀式の盃",
-  "rarity": 2,
-  "trigger": "Passive",
-  "description": "[未実装] 古代の祭祀に使われた荘厳な盃。中をのぞくと、自分の影が誇らしげに微笑む。",
-  "effects": [],
-  "implemented": false
+    "id":  "ritual_chalice",
+    "name":  "儀式の盃",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-02T03:29:22Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  2,
+                                      "trigger":  "Passive",
+                                      "description":  "[未実装] 古代の祭祀に使われた荘厳な盃。中をのぞくと、自分の影が誇らしげに微笑む。",
+                                      "effects":  [
+
+                                                  ],
+                                      "implemented":  false
+                                  }
+                     }
+                 ]
 }

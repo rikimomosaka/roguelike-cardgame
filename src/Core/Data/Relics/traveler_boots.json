@@ -1,9 +1,26 @@
 {
-  "id": "traveler_boots",
-  "name": "ハチのお守り",
-  "rarity": 1,
-  "trigger": "OnMapTileResolved",
-  "description": "蜜を集めるように、こまめな歩みに小さな実りをもたらすお守り。",
-  "effects": [{ "action": "gainGold", "scope": "self", "amount": 1 }],
-  "implemented": true
+    "id":  "traveler_boots",
+    "name":  "ハチのお守り",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-02T03:29:22Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  1,
+                                      "trigger":  "OnMapTileResolved",
+                                      "description":  "蜜を集めるように、こまめな歩みに小さな実りをもたらすお守り。",
+                                      "effects":  [
+                                                      {
+                                                          "action":  "gainGold",
+                                                          "scope":  "self",
+                                                          "amount":  1
+                                                      }
+                                                  ],
+                                      "implemented":  true
+                                  }
+                     }
+                 ]
 }

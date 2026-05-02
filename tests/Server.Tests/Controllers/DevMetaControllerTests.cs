@@ -40,6 +40,9 @@ public class DevMetaControllerTests : IClassFixture<DevWebApplicationFactory>
         Assert.True(body.TryGetProperty("amountSources", out _));
         Assert.True(body.TryGetProperty("keywords", out var kwEl));
         Assert.True(body.TryGetProperty("statuses", out _));
+        // Phase 10.5.L1: relicTriggers 追加
+        Assert.True(body.TryGetProperty("relicTriggers", out var rtEl));
+        Assert.Equal(JsonValueKind.Array, rtEl.ValueKind);
 
         // 内容サニティチェック
         var json = body.GetRawText();
@@ -47,6 +50,10 @@ public class DevMetaControllerTests : IClassFixture<DevWebApplicationFactory>
         Assert.Contains("addCard", json);
         Assert.Contains("wild", json);
         Assert.Contains("Common", json);
+        // relicTriggers の代表的な値
+        Assert.Contains("OnPickup", json);
+        Assert.Contains("Passive", json);
+        Assert.Contains("OnEnemyDeath", json);
     }
 }
 

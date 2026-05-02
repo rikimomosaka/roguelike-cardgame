@@ -51,6 +51,13 @@ public sealed class DevMetaController : ControllerBase
             piles = new[] { "hand", "draw", "discard", "exhaust" },
             selectModes = new[] { "random", "choose", "all" },
             triggers = new[] { "OnTurnStart", "OnTurnEnd", "OnPlayCard", "OnDamageReceived", "OnCombo" },
+            // Phase 10.5.L1: Relic editor 用 trigger 列。Core/Relics/RelicTrigger.cs と同期。
+            relicTriggers = new[]
+            {
+                "OnPickup", "Passive", "OnBattleStart", "OnBattleEnd",
+                "OnMapTileResolved", "OnTurnStart", "OnTurnEnd",
+                "OnCardPlay", "OnEnemyDeath",
+            },
             amountSources = new[]
             {
                 "handCount", "drawPileCount", "discardPileCount", "exhaustPileCount",

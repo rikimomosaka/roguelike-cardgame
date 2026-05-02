@@ -1,9 +1,26 @@
 {
-  "id": "act3_start_04",
-  "name": "流星石",
-  "rarity": 2,
-  "trigger": "OnPickup",
-  "description": "夜空から落ちた燃え滓。掌の上で熱を孕み、決戦の朝を予感させる。",
-  "effects": [{ "action": "gainMaxHp", "scope": "self", "amount": 15 }],
-  "implemented": true
+    "id":  "act3_start_04",
+    "name":  "流星石",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-02T03:29:22Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  2,
+                                      "trigger":  "OnPickup",
+                                      "description":  "夜空から落ちた燃え滓。掌の上で熱を孕み、決戦の朝を予感させる。",
+                                      "effects":  [
+                                                      {
+                                                          "action":  "gainMaxHp",
+                                                          "scope":  "self",
+                                                          "amount":  15
+                                                      }
+                                                  ],
+                                      "implemented":  true
+                                  }
+                     }
+                 ]
 }

@@ -110,6 +110,8 @@ export type DevMeta = {
   amountSources: string[]
   keywords: { id: string; name: string; description: string }[]
   statuses: { id: string; jp: string }[]
+  /** Phase 10.5.L1: Relic editor 用 trigger 列。Server / RelicTrigger と同期。 */
+  relicTriggers: string[]
 }
 
 /** GET /api/dev/meta — Form 用 enum リスト取得。 */
@@ -179,4 +181,135 @@ export async function createNewCard(
     throw new Error(`createNewCard failed: ${resp.status} ${txt}`)
   }
   return (await resp.json()) as { id: string }
+}
+
+// ============================================================
+// Phase 10.5.L1: Relic dev API (mirror of card)
+// ============================================================
+
+export type DevRelicVersionDto = {
+  version: string
+  createdAt: string | null
+  label: string | null
+  /** spec は server から raw JSON 文字列で来る (UI 側で JSON.parse して表示)。 */
+  spec: string
+}
+
+export type DevRelicDto = {
+  id: string
+  name: string
+  displayName: string | null
+  activeVersion: string
+  versions: DevRelicVersionDto[]
+}
+
+export async function fetchDevRelics(): Promise<DevRelicDto[]> {
+  const resp = await fetch('/api/dev/relics')
+  if (!resp.ok) {
+    throw new Error(`fetchDevRelics failed: ${resp.status}`)
+  }
+  return (await resp.json()) as DevRelicDto[]
+}
+
+export async function saveRelicVersion(
+  id: string,
+  label: string | null,
+  spec: unknown,
+): Promise<{ newVersion: string }> {
+  const resp = await fetch(`/api/dev/relics/${encodeURIComponent(id)}/versions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ label, spec }),
+  })
+  if (!resp.ok) {
+    const txt = await resp.text().catch(() => '')
+    throw new Error(`saveRelicVersion failed: ${resp.status} ${txt}`)
+  }
+  return (await resp.json()) as { newVersion: string }
+}
+
+export async function switchActiveRelicVersion(id: string, version: string): Promise<void> {
+  const resp = await fetch(`/api/dev/relics/${encodeURIComponent(id)}/active`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ version }),
+  })
+  if (!resp.ok) {
+    const txt = await resp.text().catch(() => '')
+    throw new Error(`switchActiveRelicVersion failed: ${resp.status} ${txt}`)
+  }
+}
+
+export async function deleteRelicVersion(id: string, version: string): Promise<void> {
+  const resp = await fetch(
+    `/api/dev/relics/${encodeURIComponent(id)}/versions/${encodeURIComponent(version)}`,
+    { method: 'DELETE' },
+  )
+  if (!resp.ok) {
+    const txt = await resp.text().catch(() => '')
+    throw new Error(`deleteRelicVersion failed: ${resp.status} ${txt}`)
+  }
+}
+
+export async function promoteRelicVersion(
+  id: string,
+  version: string,
+  makeActiveOnBase = false,
+): Promise<void> {
+  const resp = await fetch(`/api/dev/relics/${encodeURIComponent(id)}/promote`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ version, makeActiveOnBase }),
+  })
+  if (!resp.ok) {
+    const txt = await resp.text().catch(() => '')
+    throw new Error(`promoteRelicVersion failed: ${resp.status} ${txt}`)
+  }
+}
+
+export async function createNewRelic(
+  id: string,
+  name: string,
+  displayName: string | null,
+  templateRelicId: string | null,
+): Promise<{ id: string }> {
+  const resp = await fetch('/api/dev/relics', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, name, displayName, templateRelicId }),
+  })
+  if (!resp.ok) {
+    const txt = await resp.text().catch(() => '')
+    throw new Error(`createNewRelic failed: ${resp.status} ${txt}`)
+  }
+  return (await resp.json()) as { id: string }
+}
+
+/**
+ * POST /api/dev/relics/preview — relic spec から description を返す。
+ * description override があればそのまま、無ければ effects から CardTextFormatter で自動生成。
+ */
+export async function previewRelicDescription(spec: unknown): Promise<string> {
+  const r = await fetch('/api/dev/relics/preview', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ spec }),
+  })
+  if (!r.ok) {
+    const txt = await r.text().catch(() => '')
+    throw new Error(`previewRelicDescription failed: ${r.status} ${txt}`)
+  }
+  const j = (await r.json()) as { description: string }
+  return j.description
+}
+
+export async function deleteRelic(id: string, alsoBase: boolean): Promise<void> {
+  const r = await fetch(
+    `/api/dev/relics/${encodeURIComponent(id)}?alsoBase=${alsoBase}`,
+    { method: 'DELETE' },
+  )
+  if (!r.ok) {
+    const txt = await r.text().catch(() => '')
+    throw new Error(`deleteRelic failed: ${r.status} ${txt}`)
+  }
 }

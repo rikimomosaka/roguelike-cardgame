@@ -1,9 +1,26 @@
 {
-  "id": "act1_start_04",
-  "name": "ショートショートソード",
-  "rarity": 1,
-  "trigger": "OnPickup",
-  "description": "ずいぶんと短い剣。だが旅人の懐に忍ばせるには十分すぎる。",
-  "effects": [{ "action": "gainMaxHp", "scope": "self", "amount": 5 }],
-  "implemented": true
+    "id":  "act1_start_04",
+    "name":  "ショートショートソード",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-02T03:29:22Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  1,
+                                      "trigger":  "OnPickup",
+                                      "description":  "ずいぶんと短い剣。だが旅人の懐に忍ばせるには十分すぎる。",
+                                      "effects":  [
+                                                      {
+                                                          "action":  "gainMaxHp",
+                                                          "scope":  "self",
+                                                          "amount":  5
+                                                      }
+                                                  ],
+                                      "implemented":  true
+                                  }
+                     }
+                 ]
 }

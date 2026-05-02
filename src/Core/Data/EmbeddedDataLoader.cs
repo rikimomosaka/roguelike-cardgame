@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using RoguelikeCardGame.Core.Cards;
+using RoguelikeCardGame.Core.Relics;
 
 namespace RoguelikeCardGame.Core.Data;
 
@@ -40,47 +41,30 @@ public static class EmbeddedDataLoader
     }
 
     /// <summary>
-    /// 開発者ローカル override (id → JSON 文字列) を base カード JSON に CardOverrideMerger で
-    /// マージしてから DataCatalog を構築する。Phase 10.5.H。
+    /// 開発者ローカル override (id → JSON 文字列) を base カード / レリック JSON に
+    /// CardOverrideMerger / RelicOverrideMerger でマージしてから DataCatalog を構築する。
+    /// Phase 10.5.H (cards) → 10.5.L1 で relicOverrides 引数を追加。
+    ///
     /// 引数は文字列辞書のみで file I/O は触らないため Core 内に置ける。Server 側は
     /// DevOverrideLoader で disk 読込→これを呼び出す。
     /// </summary>
-    public static DataCatalog LoadCatalogWithOverrides(IReadOnlyDictionary<string, string> cardOverrides)
+    public static DataCatalog LoadCatalogWithOverrides(
+        IReadOnlyDictionary<string, string> cardOverrides,
+        IReadOnlyDictionary<string, string>? relicOverrides = null)
     {
         var asm = typeof(EmbeddedDataLoader).Assembly;
         var baseCards = ReadAllWithPrefix(asm, CardsPrefix).ToList();
+        var baseRelics = ReadAllWithPrefix(asm, RelicsPrefix).ToList();
 
-        IEnumerable<string> mergedCards;
-        if (cardOverrides.Count == 0)
-        {
-            mergedCards = baseCards;
-        }
-        else
-        {
-            var merged = new List<string>(baseCards.Count);
-            foreach (var json in baseCards)
-            {
-                using var doc = JsonDocument.Parse(json);
-                string? id = null;
-                if (doc.RootElement.ValueKind == JsonValueKind.Object &&
-                    doc.RootElement.TryGetProperty("id", out var idEl) &&
-                    idEl.ValueKind == JsonValueKind.String)
-                {
-                    id = idEl.GetString();
-                }
-
-                if (id is not null && cardOverrides.TryGetValue(id, out var ovr))
-                    merged.Add(CardOverrideMerger.Merge(json, ovr));
-                else
-                    merged.Add(json);
-            }
-            mergedCards = merged;
-        }
+        IEnumerable<string> mergedCards = MergeWith(baseCards, cardOverrides, CardOverrideMerger.Merge);
+        IEnumerable<string> mergedRelics = relicOverrides is null
+            ? baseRelics
+            : MergeWith(baseRelics, relicOverrides, RelicOverrideMerger.Merge);
 
         string? merchantPricesJson = ReadSingle(asm, MerchantPricesResourceName);
         return DataCatalog.LoadFromStrings(
             cards: mergedCards,
-            relics: ReadAllWithPrefix(asm, RelicsPrefix),
+            relics: mergedRelics,
             potions: ReadAllWithPrefix(asm, PotionsPrefix),
             enemies: ReadAllWithPrefix(asm, EnemiesPrefix),
             encounters: ReadAllWithPrefix(asm, EncountersPrefix),
@@ -90,6 +74,36 @@ public static class EmbeddedDataLoader
             actStartRelicPools: ReadAllWithPrefix(asm, RelicsActStartPrefix),
             merchantPricesJson: merchantPricesJson,
             units: ReadAllWithPrefix(asm, UnitsPrefix));
+    }
+
+    /// <summary>
+    /// base entries を id でマッチさせて override が存在すれば <paramref name="merger"/> を呼ぶ。
+    /// override count=0 なら base そのままを返す。
+    /// </summary>
+    private static IReadOnlyList<string> MergeWith(
+        IReadOnlyList<string> baseEntries,
+        IReadOnlyDictionary<string, string> overrides,
+        System.Func<string, string, string> merger)
+    {
+        if (overrides.Count == 0) return baseEntries;
+        var merged = new List<string>(baseEntries.Count);
+        foreach (var json in baseEntries)
+        {
+            using var doc = JsonDocument.Parse(json);
+            string? id = null;
+            if (doc.RootElement.ValueKind == JsonValueKind.Object &&
+                doc.RootElement.TryGetProperty("id", out var idEl) &&
+                idEl.ValueKind == JsonValueKind.String)
+            {
+                id = idEl.GetString();
+            }
+
+            if (id is not null && overrides.TryGetValue(id, out var ovr))
+                merged.Add(merger(json, ovr));
+            else
+                merged.Add(json);
+        }
+        return merged;
     }
 
     private static string? ReadSingle(Assembly asm, string resourceName)

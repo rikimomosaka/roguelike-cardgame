@@ -1,9 +1,26 @@
 {
-  "id": "warm_blanket",
-  "name": "安眠マクラ",
-  "rarity": 1,
-  "trigger": "Passive",
-  "description": "ふんわり沈む羽毛枕。これを抱いて眠れば、悪夢も悪寒もどこかへ消える。",
-  "effects": [{ "action": "restHealBonus", "scope": "self", "amount": 10 }],
-  "implemented": true
+    "id":  "warm_blanket",
+    "name":  "安眠マクラ",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-02T03:29:22Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  1,
+                                      "trigger":  "Passive",
+                                      "description":  "ふんわり沈む羽毛枕。これを抱いて眠れば、悪夢も悪寒もどこかへ消える。",
+                                      "effects":  [
+                                                      {
+                                                          "action":  "restHealBonus",
+                                                          "scope":  "self",
+                                                          "amount":  10
+                                                      }
+                                                  ],
+                                      "implemented":  true
+                                  }
+                     }
+                 ]
 }

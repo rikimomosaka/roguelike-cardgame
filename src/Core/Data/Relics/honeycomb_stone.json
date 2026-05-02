@@ -1,9 +1,22 @@
 {
-  "id": "honeycomb_stone",
-  "name": "ハニカムストーン",
-  "rarity": 1,
-  "trigger": "Passive",
-  "description": "[未実装] 蜜蜂の巣を思わせる多孔質の石。指で撫でると、心がじんわり温まる。",
-  "effects": [],
-  "implemented": false
+    "id":  "honeycomb_stone",
+    "name":  "ハニカムストーン",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-02T03:29:22Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  1,
+                                      "trigger":  "Passive",
+                                      "description":  "[未実装] 蜜蜂の巣を思わせる多孔質の石。指で撫でると、心がじんわり温まる。",
+                                      "effects":  [
+
+                                                  ],
+                                      "implemented":  false
+                                  }
+                     }
+                 ]
 }

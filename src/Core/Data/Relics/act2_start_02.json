@@ -1,9 +1,26 @@
 {
-  "id": "act2_start_02",
-  "name": "シーリングスタンプ",
-  "rarity": 1,
-  "trigger": "OnPickup",
-  "description": "豪商が用いたという封蝋印。押された証文には金が集まると噂される。",
-  "effects": [{ "action": "gainGold", "scope": "self", "amount": 100 }],
-  "implemented": true
+    "id":  "act2_start_02",
+    "name":  "シーリングスタンプ",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-02T03:29:22Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  1,
+                                      "trigger":  "OnPickup",
+                                      "description":  "豪商が用いたという封蝋印。押された証文には金が集まると噂される。",
+                                      "effects":  [
+                                                      {
+                                                          "action":  "gainGold",
+                                                          "scope":  "self",
+                                                          "amount":  100
+                                                      }
+                                                  ],
+                                      "implemented":  true
+                                  }
+                     }
+                 ]
 }

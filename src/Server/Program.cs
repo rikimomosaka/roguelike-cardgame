@@ -49,6 +49,16 @@ builder.Services.AddSingleton<DevCardWriter>(sp =>
     var backupRoot = Path.Combine(repoRoot, "data-local", "backups");
     return new DevCardWriter(overrideRoot, baseCardsDir, backupRoot);
 });
+// DevRelicWriter: relic 用 (Phase 10.5.L1)。card と並列に override/base/backup を扱う。
+builder.Services.AddSingleton<DevRelicWriter>(sp =>
+{
+    var env = sp.GetRequiredService<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>();
+    var repoRoot = Path.GetFullPath(Path.Combine(env.ContentRootPath, "..", ".."));
+    var overrideRoot = Path.Combine(repoRoot, "data-local", "dev-overrides");
+    var baseRelicsDir = Path.Combine(repoRoot, "src", "Core", "Data", "Relics");
+    var backupRoot = Path.Combine(repoRoot, "data-local", "backups");
+    return new DevRelicWriter(overrideRoot, baseRelicsDir, backupRoot);
+});
 builder.Services.AddSingleton<RunStartService>();
 builder.Services.AddSingleton<BattleSessionStore>();
 
