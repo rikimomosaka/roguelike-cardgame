@@ -28,4 +28,10 @@ public sealed record BattleState(
     bool NextCardComboFreePass,
     ImmutableArray<string> OwnedRelicIds,         // ← 10.2.E 追加
     ImmutableArray<string> Potions,               // ← 10.2.E 追加
-    string EncounterId);
+    string EncounterId,
+    /// <summary>
+    /// 10.5.M4: ワイルド/スーパーワイルド系統が現在のコンボ連鎖中で既に発動済か。
+    /// true のあいだ、後続の wild / superwild キーワードはコンボ継続効果を発揮しない。
+    /// コンボ切断 (newCombo = 1) で false にリセット。
+    /// </summary>
+    bool WildUsedInCurrentCombo = false);

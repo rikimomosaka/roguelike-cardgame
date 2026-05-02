@@ -38,13 +38,16 @@ public static partial class BattleEngine
         // Why: 強化により獲得するキーワード (例: starter_summon_3+ で superwild) を反映するため、
         // 単一 Keywords ではなく EffectiveKeywords(IsUpgraded) を参照する。
         var keywords = def.EffectiveKeywords(card.IsUpgraded);
-        bool isWild = keywords?.Contains("wild") == true;
-        bool isSuperWild = keywords?.Contains("superwild") == true;
+        bool hasWild = keywords?.Contains("wild") == true;
+        bool hasSuperWild = keywords?.Contains("superwild") == true;
+        // 10.5.M4: ワイルド/スーパーワイルドは 1 コンボ連鎖につき最初の 1 回しか発動しない。
+        // すでに WildUsedInCurrentCombo が立っていればキーワード効果を無効化する。
+        bool wildEffective = (hasWild || hasSuperWild) && !state.WildUsedInCurrentCombo;
 
         bool isContinuing =
             state.NextCardComboFreePass ? true
           : matchesNormal              ? true
-          : (isWild || isSuperWild)    ? true
+          : wildEffective              ? true
           : false;
 
         bool isReduced = matchesNormal;
@@ -59,7 +62,13 @@ public static partial class BattleEngine
         // 10.2.C: combo フィールド更新
         int newCombo = isContinuing ? state.ComboCount + 1 : 1;
         int? newLastCost = actualCost;
-        bool newFreePass = isSuperWild;
+        // M4: スーパーワイルドの「次カード自動継続」効果も「初回のみ」。
+        bool newFreePass = wildEffective && hasSuperWild;
+        // M4: ワイルド系効果が今回発動した、または既に発動済 (連鎖継続中) なら立て続ける。
+        //   コンボ切断 (newCombo == 1) でリセット。
+        bool newWildUsed = newCombo == 1
+            ? false
+            : state.WildUsedInCurrentCombo || wildEffective;
 
         var s = state with
         {
@@ -67,6 +76,7 @@ public static partial class BattleEngine
             ComboCount = newCombo,
             LastPlayedOrigCost = newLastCost,
             NextCardComboFreePass = newFreePass,
+            WildUsedInCurrentCombo = newWildUsed,
             TargetEnemyIndex = targetEnemyIndex ?? state.TargetEnemyIndex,
             TargetAllyIndex = targetAllyIndex ?? state.TargetAllyIndex,
         };

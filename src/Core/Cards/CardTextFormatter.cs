@@ -114,15 +114,16 @@ public static class CardTextFormatter
         var head = DescribeOne(e, context);
         var triggerPrefix = !string.IsNullOrEmpty(e.Trigger) ? $"[T:{e.Trigger}]の度に" : "";
         if (count <= 1) return triggerPrefix + head + "。";
-        return triggerPrefix + head + " × [N:" + count + "] 回。";
+        // M4: 「× N 回」→「× N」(回 を除去)
+        return triggerPrefix + head + " × [N:" + count + "]。";
     }
 
     private static string DescribeOne(CardEffect e, CardActorContext context) => e.Action switch
     {
         "attack" => DescribeAttack(e, context),
         "block" => DescribeBlock(e, context),
-        "draw" => $"{AmountToken(e, context)} 枚ドローする",
-        "drawCards" => $"{AmountToken(e, context)} 枚ドローする",
+        "draw" => $"{AmountToken(e, context)} 枚引く",
+        "drawCards" => $"{AmountToken(e, context)} 枚引く",
         "discard" => DescribeDiscard(e, context),
         "buff" => DescribeStatusChange(e, context, isDebuff: false),
         "debuff" => DescribeStatusChange(e, context, isDebuff: true),
@@ -155,9 +156,9 @@ public static class CardTextFormatter
         (EffectScope.Self, _) => "自身に ",
         (EffectScope.Single, EffectSide.Enemy) => "敵単体に ",
         (EffectScope.Single, EffectSide.Ally) => "味方単体に ",
-        // Random は Single 表現の前に「ランダムな」を付ける
-        (EffectScope.Random, EffectSide.Enemy) => "ランダムな敵単体に ",
-        (EffectScope.Random, EffectSide.Ally) => "ランダムな味方単体に ",
+        // Random は「ランダムな (敵|味方) に」(M4: 単体 を除去)
+        (EffectScope.Random, EffectSide.Enemy) => "ランダムな敵に ",
+        (EffectScope.Random, EffectSide.Ally) => "ランダムな味方に ",
         (EffectScope.All, EffectSide.Enemy) => "敵全体に ",
         (EffectScope.All, EffectSide.Ally) => "味方全体に ",
         // side が null のフォールバック

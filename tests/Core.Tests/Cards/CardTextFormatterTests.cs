@@ -40,7 +40,7 @@ public class CardTextFormatterTests
     public void Attack_random_enemy()
     {
         var s = CardTextFormatter.FormatEffects(new[] { E("attack", EffectScope.Random, EffectSide.Enemy, 5) });
-        Assert.Equal("ランダムな敵単体に [N:5] アタック。", s);
+        Assert.Equal("ランダムな敵に [N:5] アタック。", s);
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public class CardTextFormatterTests
             E("attack", EffectScope.Single, EffectSide.Enemy, 5),
             E("attack", EffectScope.Single, EffectSide.Enemy, 5),
         });
-        Assert.Equal("敵単体に [N:5] アタック × [N:3] 回。", s);
+        Assert.Equal("敵単体に [N:5] アタック × [N:3]。", s);
     }
 
     // --- Block ---
@@ -91,7 +91,7 @@ public class CardTextFormatterTests
     public void Draw_self()
     {
         var s = CardTextFormatter.FormatEffects(new[] { E("draw", EffectScope.Self, null, 2) });
-        Assert.Equal("[N:2] 枚ドローする。", s);
+        Assert.Equal("[N:2] 枚引く。", s);
     }
 
     [Fact]
@@ -433,7 +433,7 @@ public class CardTextFormatterTests
     {
         var e = new CardEffect("draw", EffectScope.Self, null, 1, Trigger: "OnTurnStart");
         var s = CardTextFormatter.FormatEffects(new[] { e });
-        Assert.Equal("[T:OnTurnStart]の度に[N:1] 枚ドローする。", s);
+        Assert.Equal("[T:OnTurnStart]の度に[N:1] 枚引く。", s);
     }
 
     [Fact]
@@ -442,7 +442,7 @@ public class CardTextFormatterTests
         // 同一 Trigger + 同一 spec が連続したら × N 回
         var e = new CardEffect("draw", EffectScope.Self, null, 1, Trigger: "OnTurnStart");
         var s = CardTextFormatter.FormatEffects(new[] { e, e });
-        Assert.Equal("[T:OnTurnStart]の度に[N:1] 枚ドローする × [N:2] 回。", s);
+        Assert.Equal("[T:OnTurnStart]の度に[N:1] 枚引く × [N:2]。", s);
     }
 
     [Fact]
@@ -451,7 +451,7 @@ public class CardTextFormatterTests
         var a = new CardEffect("draw", EffectScope.Self, null, 1, Trigger: "OnTurnStart");
         var b = new CardEffect("draw", EffectScope.Self, null, 1, Trigger: "OnPlayCard");
         var s = CardTextFormatter.FormatEffects(new[] { a, b });
-        Assert.Equal("[T:OnTurnStart]の度に[N:1] 枚ドローする。\n[T:OnPlayCard]の度に[N:1] 枚ドローする。", s);
+        Assert.Equal("[T:OnTurnStart]の度に[N:1] 枚引く。\n[T:OnPlayCard]の度に[N:1] 枚引く。", s);
     }
 
     // --- 10.5.B: AmountSource (Variable X) marker ---
