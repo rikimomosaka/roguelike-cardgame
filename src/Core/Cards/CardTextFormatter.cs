@@ -114,21 +114,23 @@ public static class CardTextFormatter
         var head = DescribeOne(e, context);
         var triggerPrefix = !string.IsNullOrEmpty(e.Trigger) ? $"[T:{e.Trigger}]の度に" : "";
         if (count <= 1) return triggerPrefix + head + "。";
-        // M4: 「× N 回」→「× N」(回 を除去)
-        return triggerPrefix + head + " × [N:" + count + "]。";
+        // Phase 10.5.M6.4: 数字 marker 周辺のスペース全削除に伴い × も詰める。
+        return triggerPrefix + head + "×[N:" + count + "]。";
     }
 
     private static string DescribeOne(CardEffect e, CardActorContext context) => e.Action switch
     {
         "attack" => DescribeAttack(e, context),
         "block" => DescribeBlock(e, context),
-        "draw" => $"{AmountToken(e, context)} 枚引く",
-        "drawCards" => $"{AmountToken(e, context)} 枚引く",
+        "draw" => $"{AmountToken(e, context)}枚引く",
+        "drawCards" => $"{AmountToken(e, context)}枚引く",
         "discard" => DescribeDiscard(e, context),
         "buff" => DescribeStatusChange(e, context, isDebuff: false),
         "debuff" => DescribeStatusChange(e, context, isDebuff: true),
         "heal" => DescribeHeal(e, context),
-        "summon" => $"{e.UnitId ?? "ユニット"} を召喚",
+        // Phase 10.5.M6.7: unit ID は marker [U:id] にして Client 側で JP 名に解決。
+        //  "召喚" は keyword 化 ([K:summon])、tooltip 二段目で説明 popup を出す。
+        "summon" => $"[U:{e.UnitId ?? "?"}]を[K:summon]",
         "exhaustCard" => DescribeExhaustOrUpgrade(e, context, isUpgrade: false),
         // Phase 10.5.M3: exhaustSelf も keyword "exhaust" 化。後方互換のため
         // formatter は marker を emit して、二段ポップで定義を出す。
@@ -136,57 +138,60 @@ public static class CardTextFormatter
         // retainSelf は Phase 10.5.M2 で「待機」キーワード化された。後方互換のため
         // formatter は文言を残すが、新規カードではキーワードを使うことを推奨。
         "retainSelf" => "[K:wait]",
-        "gainEnergy" => $"エナジー +{AmountToken(e, context)}",
+        "gainEnergy" => $"エナジー+{AmountToken(e, context)}",
         "gainMaxEnergy" => $"エナジー上限+{AmountToken(e, context)}",
         "upgrade" => DescribeExhaustOrUpgrade(e, context, isUpgrade: true),
-        "selfDamage" => $"{TargetPrefix(e.Scope, e.Side)}{AmountToken(e, context)} ダメージ",
+        "selfDamage" => $"{TargetPrefix(e.Scope, e.Side)}{AmountToken(e, context)}ダメージ",
         "addCard" => DescribeAddCard(e, context),
         "recoverFromDiscard" => DescribeRecoverFromDiscard(e, context),
         // Phase 10.5.L1: relic 固有 action の自動文章化。formatter は battle 用と
         // 共有のため、relic action もここに併記する。
-        "gainMaxHp" => $"最大HP +{AmountToken(e, context)}",
-        "gainGold" => $"ゴールド +{AmountToken(e, context)}",
-        "restHealBonus" => $"休憩での HP 回復 +{AmountToken(e, context)}",
-        "healPercent" => $"HP を {AmountToken(e, context)}% 回復",
-        "extraEnergyOnFirstTurn" => $"戦闘 1 ターン目のみエナジー +{AmountToken(e, context)}",
+        "gainMaxHp" => $"最大HP+{AmountToken(e, context)}",
+        "gainGold" => $"ゴールド+{AmountToken(e, context)}",
+        "restHealBonus" => $"休憩でのHP回復+{AmountToken(e, context)}",
+        "healPercent" => $"HPを{AmountToken(e, context)}%回復",
+        "extraEnergyOnFirstTurn" => $"戦闘1ターン目のみエナジー+{AmountToken(e, context)}",
         _ => $"(未対応 action: {e.Action})",
     };
 
     /// <summary>
     /// (Scope, Side) の組から日本語の対象表現プレフィックスを返す統一ヘルパ。
-    /// 例: (Self, _) → "自身に "、(Single, Enemy) → "敵単体に "、(All, Ally) → "味方全体に "。
+    /// 例: (Self, _) → "自身に"、(Single, Enemy) → "敵単体に"、(All, Ally) → "味方全体に"。
     /// 全 action (attack/block/buff/debuff/heal 等) で同じ法則を適用する。
-    /// 末尾に半角スペースを含める (続く amount/status/etc との分離用)。
+    ///
+    /// Phase 10.5.M6.4: 数字 marker 周辺のスペースを全削除する方針 (カード狭幅枠で
+    /// テキストがはみ出す問題への対応)。視覚バランスは Client 側 .card-desc-num の
+    /// 左右 margin で確保。
     /// </summary>
     private static string TargetPrefix(EffectScope scope, EffectSide? side) => (scope, side) switch
     {
-        (EffectScope.Self, _) => "自身に ",
-        (EffectScope.Single, EffectSide.Enemy) => "敵単体に ",
-        (EffectScope.Single, EffectSide.Ally) => "味方単体に ",
+        (EffectScope.Self, _) => "自身に",
+        (EffectScope.Single, EffectSide.Enemy) => "敵単体に",
+        (EffectScope.Single, EffectSide.Ally) => "味方単体に",
         // Random は「ランダムな (敵|味方) に」(M4: 単体 を除去)
-        (EffectScope.Random, EffectSide.Enemy) => "ランダムな敵に ",
-        (EffectScope.Random, EffectSide.Ally) => "ランダムな味方に ",
-        (EffectScope.All, EffectSide.Enemy) => "敵全体に ",
-        (EffectScope.All, EffectSide.Ally) => "味方全体に ",
+        (EffectScope.Random, EffectSide.Enemy) => "ランダムな敵に",
+        (EffectScope.Random, EffectSide.Ally) => "ランダムな味方に",
+        (EffectScope.All, EffectSide.Enemy) => "敵全体に",
+        (EffectScope.All, EffectSide.Ally) => "味方全体に",
         // side が null のフォールバック
-        (EffectScope.Single, _) => "対象に ",
-        (EffectScope.Random, _) => "ランダムな対象に ",
-        (EffectScope.All, _) => "全体に ",
+        (EffectScope.Single, _) => "対象に",
+        (EffectScope.Random, _) => "ランダムな対象に",
+        (EffectScope.All, _) => "全体に",
         _ => "",
     };
 
     private static string DescribeAttack(CardEffect e, CardActorContext context)
-        => $"{TargetPrefix(e.Scope, e.Side)}{AmountToken(e, context)} アタック";
+        => $"{TargetPrefix(e.Scope, e.Side)}{AmountToken(e, context)}アタック";
 
     private static string DescribeBlock(CardEffect e, CardActorContext context)
-        => $"{TargetPrefix(e.Scope, e.Side)}{AmountToken(e, context)} ブロック";
+        => $"{TargetPrefix(e.Scope, e.Side)}{AmountToken(e, context)}ブロック";
 
     /// <summary>
     /// exhaustCard / upgrade を Select (random/choose/all) + Pile (hand/draw/discard) の
     /// 組合せで翻訳する。共通フォーマット:
-    ///   Select=all → "{zone}を全て {verb}"
-    ///   Select=random → "{zone}を {amount} 枚ランダムに {verb}"
-    ///   Select=choose / null → "{zone}を {amount} 枚選んで {verb}"
+    ///   Select=all → "{zone}を全て{verb}"
+    ///   Select=random → "{zone}を{amount}枚ランダムに{verb}"
+    ///   Select=choose / null → "{zone}を{amount}枚選んで{verb}"
     /// </summary>
     private static string DescribeExhaustOrUpgrade(CardEffect e, CardActorContext context, bool isUpgrade)
     {
@@ -195,20 +200,20 @@ public static class CardTextFormatter
         return e.Select switch
         {
             "all" => $"{zone}を全て{verb}",
-            "random" => $"{zone}を {AmountToken(e, context)} 枚ランダムに{verb}",
-            _ => $"{zone}を {AmountToken(e, context)} 枚選んで{verb}",
+            "random" => $"{zone}を{AmountToken(e, context)}枚ランダムに{verb}",
+            _ => $"{zone}を{AmountToken(e, context)}枚選んで{verb}",
         };
     }
 
     private static string DescribeHeal(CardEffect e, CardActorContext context)
-        => $"{TargetPrefix(e.Scope, e.Side)}HP を {AmountToken(e, context)} 回復";
+        => $"{TargetPrefix(e.Scope, e.Side)}HPを{AmountToken(e, context)}回復";
 
     private static string DescribeStatusChange(CardEffect e, CardActorContext context, bool isDebuff)
     {
         // Phase 10.5.M2: status 名を [S:id] marker として emit。Client 側で JP 名と
         //  ホバー定義 popup へ展開する (旧: bare JP 文字列、scan 困難だった)。
         var statusToken = string.IsNullOrEmpty(e.Name) ? "ステータス" : $"[S:{e.Name}]";
-        return $"{TargetPrefix(e.Scope, e.Side)}{statusToken} {AmountToken(e, context)} を付与";
+        return $"{TargetPrefix(e.Scope, e.Side)}{statusToken}{AmountToken(e, context)}を付与";
     }
 
     private static string DescribeDiscard(CardEffect e, CardActorContext context)
@@ -216,14 +221,14 @@ public static class CardTextFormatter
         if (string.IsNullOrEmpty(e.Select))
         {
             // 旧仕様 (Select なし) はランダム扱いの簡略文言
-            return $"手札 {AmountToken(e, context)} 枚を捨てる";
+            return $"手札{AmountToken(e, context)}枚を捨てる";
         }
         return e.Select switch
         {
-            "choose" => $"手札を選んで {AmountToken(e, context)} 枚捨てる",
-            "random" => $"手札からランダムに {AmountToken(e, context)} 枚捨てる",
+            "choose" => $"手札を選んで{AmountToken(e, context)}枚捨てる",
+            "random" => $"手札からランダムに{AmountToken(e, context)}枚捨てる",
             "all" => "手札を全て捨てる",
-            _ => $"手札 {AmountToken(e, context)} 枚を捨てる",
+            _ => $"手札{AmountToken(e, context)}枚を捨てる",
         };
     }
 
@@ -231,7 +236,7 @@ public static class CardTextFormatter
     {
         var cardRef = !string.IsNullOrEmpty(e.CardRefId) ? $"[C:{e.CardRefId}]" : "[C:?]";
         var zone = ZoneJp(e.Pile);
-        return $"{cardRef} を{zone}に {AmountToken(e, context)} 枚加える";
+        return $"{cardRef}を{zone}に{AmountToken(e, context)}枚加える";
     }
 
     private static string DescribeRecoverFromDiscard(CardEffect e, CardActorContext context)
@@ -241,9 +246,9 @@ public static class CardTextFormatter
         // exhaust の場合は「除外する」、それ以外は「<dest>に戻す」
         if (e.Pile == "exhaust")
         {
-            return $"捨札から{selectJp} {AmountToken(e, context)} 枚、除外する";
+            return $"捨札から{selectJp}{AmountToken(e, context)}枚、除外する";
         }
-        return $"捨札から{selectJp} {AmountToken(e, context)} 枚、{dest}に戻す";
+        return $"捨札から{selectJp}{AmountToken(e, context)}枚、{dest}に戻す";
     }
 
     /// <summary>

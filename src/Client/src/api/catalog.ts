@@ -65,11 +65,16 @@ export function resetPotionCatalogCacheForTests(): void {
 /**
  * Phase 10.5.L1.5: trigger フィールド廃止。発動タイミングは effects[].trigger で
  * per-effect 管理されるため catalog DTO に冗長に含めない。
+ *
+ * Phase 10.5.M6.3: tooltip 層別レイアウト用に effectText / flavor を分離。
+ * description は combined のまま (既存利用箇所の後方互換)。
  */
 export type RelicCatalogEntry = {
   id: string
   name: string
   description: string
+  effectText: string
+  flavor: string
   rarity: string
 }
 

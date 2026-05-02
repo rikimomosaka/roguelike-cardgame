@@ -6,9 +6,21 @@
 
 /* Why: 親 (.tip__desc 等) は --fg-muted (#c9985a 黄系) を継承するため、
    description 本文は明示的に白へ上書き。色付けは marker span の color が
-   優先されるので影響なし。 */
+   優先されるので影響なし。
+   Phase 10.5.M6.10: display: inline → block に変更。
+   Phase 10.5.M6.11: width: 100% + min-width: 0 を追加。
+     真因: .card__desc は display: flex の flex container。flex item の
+     .card-desc (block) は default で max-content まで伸びる (content の
+     自然幅で伸長) ため、.card-desc-line.width: 100% が親 .card-desc の
+     伸びた幅 (= 内容幅) を取得し、wrapper.clientWidth >= inner.scrollWidth
+     になり「収まっている」と誤判定される。
+     width: 100% + min-width: 0 で flex item を親 .card__desc の content
+     area 幅に固定し、.card-desc-line も同幅 → 正しく圧縮判定が起動する。 */
 .card-desc {
-  display: inline;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   white-space: pre-wrap;
   color: #ffffff;
 }
@@ -35,10 +47,15 @@
   white-space: normal;
 }
 
-/* 数字 (デフォルト黄色)。battle 中のダメージ修正比較は 10.5.C で modifier を上書き。 */
+/* 数字 (デフォルト黄色)。battle 中のダメージ修正比較は 10.5.C で modifier を上書き。
+   M6.4: formatter 側で数字 marker 前後のスペースを全削除したため、隣接日本語が
+   太字数字に密着しすぎる。視覚バランスのため左右 margin で薄い余白を確保。
+   M6.10: 1px → 0.5px に削減。長文時に N marker が複数あると累積 margin が
+   letter-spacing 圧縮を相殺してしまうため、視覚バランスは保ちつつ縮小。 */
 .card-desc-num {
   color: #ffd23f;
   font-weight: bold;
+  margin: 0 0.5px;
 }
 
 /* Phase 10.5.M2: 上振れ → 緑 (= 良くなった)、下振れ → 赤 (= 悪くなった)。
@@ -58,6 +75,12 @@
   cursor: help;
 }
 
+/* Phase 10.5.M6.7: 召喚は status と同じオレンジ系で「動詞的な作用」を表現。
+   tooltip 二段目で「召喚 — 指定されたユニットを味方として呼び出す。」を表示。 */
+.card-desc-keyword[data-keyword="summon"] {
+  color: #ffd9a0;
+}
+
 /* ステータス (筋力 / 脆弱 / 毒 等)。tooltip 二段目で詳細定義が出る。 */
 .card-desc-status {
   color: #ffd9a0;
@@ -65,10 +88,21 @@
   cursor: help;
 }
 
-/* power カードのトリガ部分 ("ターン開始時" 等)。 */
+/* power / relic のトリガ部分 ("ターン開始時" 等)。
+   M6.1: 黄色系から白へ変更。基本「数字以外の説明文は白」「数字のみ強調色」の
+   仕様に揃えるため。 */
 .card-desc-trigger {
-  color: #ffd9a0;
+  color: #ffffff;
   font-weight: bold;
+}
+
+/* compress=false 時のシンプルな行 wrapper。card-desc 親の pre-wrap で改行が
+   そのまま反映され、長文は自然折返し (圧縮 useLayoutEffect は走らない)。 */
+.card-desc--no-compress {
+  white-space: pre-wrap;
+}
+.card-desc-line-plain {
+  display: inline;
 }
 
 /* 変数 X / Y / Z (handCount 等の動的 amount)。緑系で「未計算の値」を示す。 */
@@ -79,5 +113,11 @@
 
 /* カード参照 ([C:strike] など)。紫系で「他カード」を示す。 */
 .card-desc-cardref {
+  color: #d8b4ff;
+}
+
+/* Phase 10.5.M6.7: ユニット参照 ([U:wisp] など)。
+   召喚対象の名前を視覚的に区別するため、cardref と同系統の紫を採用。 */
+.card-desc-unitref {
   color: #d8b4ff;
 }

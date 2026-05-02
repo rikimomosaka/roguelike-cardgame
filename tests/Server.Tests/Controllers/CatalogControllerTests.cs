@@ -42,9 +42,9 @@ public class CatalogControllerTests : IClassFixture<TempDataFactory>
         res.EnsureSuccessStatusCode();
         var body = await res.Content.ReadFromJsonAsync<JsonElement>();
         Assert.True(body.TryGetProperty("strike", out var strike));
-        Assert.Equal("敵単体に [N:6] アタック。", strike.GetProperty("description").GetString());
+        Assert.Equal("敵単体に[N:6]アタック。", strike.GetProperty("description").GetString());
         // upgraded: 9 アタック
-        Assert.Equal("敵単体に [N:9] アタック。", strike.GetProperty("upgradedDescription").GetString());
+        Assert.Equal("敵単体に[N:9]アタック。", strike.GetProperty("upgradedDescription").GetString());
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public class CatalogControllerTests : IClassFixture<TempDataFactory>
         res.EnsureSuccessStatusCode();
         var body = await res.Content.ReadFromJsonAsync<JsonElement>();
         Assert.True(body.TryGetProperty("defend", out var defend));
-        Assert.Equal("味方単体に [N:5] ブロック。", defend.GetProperty("description").GetString());
+        Assert.Equal("味方単体に[N:5]ブロック。", defend.GetProperty("description").GetString());
     }
 
     [Fact]

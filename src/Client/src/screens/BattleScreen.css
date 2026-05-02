@@ -1070,6 +1070,53 @@ button.pile:hover { filter: brightness(1.2); }
   animation: card-leave 260ms ease-in forwards;
 }
 
+/* Phase 10.5.M6.6 → M6.9: 喪失/除外されるカードは「中央へ拡大移動 → 回転縮小消滅」。
+   旧 (M6.6): その場で回転縮小消滅。
+   新 (M6.9): 効果で他カードを除外する場合 (叡智の奔流 等) に「何が消えたか」が
+     視認しやすいよう、まず画面中央に拡大移動して 200ms 程度 hold、その後回転しながら
+     縮小消滅する。「自身プレイ時の喪失」(playing-card overlay) と同じドラマ。
+   z-index は手札 (.hand) 階層内の z 値を上げて他カードの上に重なるよう確保。 */
+.hand > .card.is-leaving-exhaust {
+  pointer-events: none;
+  position: relative;
+  z-index: 50;
+  animation: card-leave-exhaust 700ms ease-in-out forwards;
+}
+@keyframes card-leave-exhaust {
+  0% {
+    opacity: 1;
+    transform:
+      translate(var(--fan-x, 0), var(--fan-y, 0))
+      rotate(var(--fan-r, 0deg))
+      scale(1);
+  }
+  /* 30%: 画面中央へ移動 + 1.6× 拡大 (fan-x/y を打ち消して X 軸 0、Y 軸 -300px)。
+     pivot 議論を避けるため translate のみで位置調整。 */
+  30% {
+    opacity: 1;
+    transform:
+      translate(calc(0px - var(--fan-x, 0px)), -300px)
+      rotate(0deg)
+      scale(1.6);
+  }
+  /* 55%: 中央でホールド (拡大状態を視認させる) */
+  55% {
+    opacity: 1;
+    transform:
+      translate(calc(0px - var(--fan-x, 0px)), -300px)
+      rotate(0deg)
+      scale(1.6);
+  }
+  /* 100%: 中央でその場回転 + 縮小 + フェード */
+  100% {
+    opacity: 0;
+    transform:
+      translate(calc(0px - var(--fan-x, 0px)), -300px)
+      rotate(720deg)
+      scale(0);
+  }
+}
+
 @keyframes card-enter {
   0% {
     opacity: 0;
@@ -1154,6 +1201,21 @@ button.pile:hover { filter: brightness(1.2); }
     translate(-50%, -50%)
     rotate(0deg)
     scale(0.4);
+  opacity: 0;
+}
+
+/* Phase 10.5.M6.6: 喪失行きはその場で高速回転しながら縮小消滅。
+   centering で center-x/y + scale(1.6) に到達した後、leaving では位置を
+   そのまま固定して transform のみ rotate(720deg) + scale(0) に遷移。
+   transition は transform/opacity のみ (top/left は触らない)。 */
+.playing-card[data-play-stage="leaving"][data-leaving-mode="exhaust"] {
+  transition: transform 320ms ease-in, opacity 320ms ease-in;
+  top: var(--center-y, 50%);
+  left: var(--center-x, 50%);
+  transform:
+    translate(-50%, -50%)
+    rotate(720deg)
+    scale(0);
   opacity: 0;
 }
 

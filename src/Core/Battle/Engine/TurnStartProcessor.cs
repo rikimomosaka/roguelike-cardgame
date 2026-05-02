@@ -103,12 +103,32 @@ internal static class TurnStartProcessor
 
             bool wasAlive = actor.IsAlive;
             bool wasEnemy = actor.Side == ActorSide.Enemy;
-            var updated = actor with { CurrentHp = actor.CurrentHp - poison };
+
+            // Phase 10.5.M6.5: ダメージを与えた直後に poison stack を -1 する。
+            //  旧仕様 (countdown 経由) では Enemy turn 終了後 countdown → 次 turn 開始で
+            //  poison-1 のダメージ、という順序になり、毒 4 のはずが 3 ダメで止まるバグ
+            //  があった。Slay the Spire と同じく「毒ダメ後に -1」が正しい。
+            int newPoison = poison - 1;
+            var newStatuses = newPoison <= 0
+                ? actor.Statuses.Remove("poison")
+                : actor.Statuses.SetItem("poison", newPoison);
+            var updated = actor with
+            {
+                CurrentHp = actor.CurrentHp - poison,
+                Statuses = newStatuses,
+            };
             s = ReplaceActor(s, aid, updated);
 
             events.Add(new BattleEvent(
                 BattleEventKind.PoisonTick, Order: order++,
                 TargetInstanceId: aid, Amount: poison, Note: "poison"));
+
+            if (newPoison <= 0)
+            {
+                events.Add(new BattleEvent(
+                    BattleEventKind.RemoveStatus, Order: order++,
+                    TargetInstanceId: aid, Note: "poison"));
+            }
 
             if (wasAlive && !updated.IsAlive)
             {

@@ -71,9 +71,10 @@
   border-top: 1px dashed rgba(255, 255, 255, 0.18);
 }
 
-/* M6: フレーバーテキスト — 小さめ + 斜体 + 控えめな色で「ストーリー描写」感を出す */
+/* M6: フレーバーテキスト — 斜体 + 控えめな色で「ストーリー描写」感を出す。
+   M6.1: 10px → 12px に戻す (読みづらかった)。区別は italic + 色で確保。 */
 .dev-relic-visual-preview__flavor {
-  font-size: 10px;
+  font-size: 12px;
   font-style: italic;
   color: #999;
   white-space: pre-wrap;

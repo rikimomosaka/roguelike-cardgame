@@ -11,6 +11,7 @@ import type { CardRarity } from './Card'
 import { CardDesc, extractCardDescRefs } from './CardDesc'
 import type { CardDescRef } from './CardDesc'
 import { useCardCatalog } from '../hooks/useCardCatalog'
+import { useUnitCatalog } from '../hooks/useUnitCatalog'
 import './Tooltip.css'
 
 export type TooltipContent = {
@@ -18,6 +19,12 @@ export type TooltipContent = {
   rarity?: CardRarity
   rarityLabel?: string
   desc: ReactNode
+  /**
+   * 任意のフレーバーテキスト。指定された場合 desc の下に点線で区切り
+   * 斜体・薄灰色で描画される (RelicVisualPreview と同じレイアウト)。
+   * Phase 10.5.M6.3。
+   */
+  flavor?: string
 }
 
 type Position = { x: number; y: number }
@@ -56,9 +63,10 @@ export function TooltipHost({ children }: { children: ReactNode }) {
   }, [state])
 
   const { content } = state
-  // Why: marker (e.g. [C:strike]) を表示名へ解決するため catalog を引く。
-  //   未ロード時は空オブジェクトで CardDesc が cardId フォールバック表示する。
+  // Why: marker (e.g. [C:strike] / [U:wisp]) を表示名へ解決するため catalog を引く。
+  //   未ロード時は空オブジェクトで CardDesc が ID フォールバック表示する。
   const { names: cardNames } = useCardCatalog()
+  const { names: unitNames } = useUnitCatalog()
 
   return (
     <TooltipContext.Provider value={ctx}>
@@ -77,11 +85,19 @@ export function TooltipHost({ children }: { children: ReactNode }) {
           </div>
           <div className="tip__desc">
             {typeof content.desc === 'string' ? (
-              <CardDesc text={content.desc} cardNames={cardNames} />
+              <CardDesc text={content.desc} cardNames={cardNames} unitNames={unitNames} compress={false} />
             ) : (
               content.desc
             )}
           </div>
+          {/* Phase 10.5.M6.3: フレーバーテキスト (任意)。点線区切り + 斜体グレーで
+              「ストーリー描写」感を出し、効果テキストとの視覚的区別を確保。 */}
+          {content.flavor ? (
+            <>
+              <div className="tip__flavor-sep" aria-hidden="true" />
+              <div className="tip__flavor">{content.flavor}</div>
+            </>
+          ) : null}
           {/* Phase 10.5.M2: description に含まれる keyword / status / cardref の
               詳細定義を二段目 popup として並べる。 */}
           {typeof content.desc === 'string' ? (
@@ -153,6 +169,9 @@ function TipRefs({ refs }: { refs: CardDescRef[] }) {
       {refs.map((r) => (
         <div key={`${r.kind}:${r.id}`} className={`tip__ref tip__ref--${r.kind}`}>
           <div className="tip__ref-name">{r.name}</div>
+          {/* card は名前のみ (cardref として識別補助)。
+              keyword / status は desc を併記。
+              unit は extractCardDescRefs 側で除外済 (M6.9)。 */}
           {r.kind === 'card' ? null : <div className="tip__ref-desc">{r.desc}</div>}
         </div>
       ))}

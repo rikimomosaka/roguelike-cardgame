@@ -218,10 +218,8 @@ internal static class EffectApplier
             throw new InvalidOperationException(
                 $"recoverFromDiscard requires Pile='hand' or 'exhaust', got '{effect.Pile}'");
 
+        // M6.9: choose は UI 入力フロー未実装のため random fallback。
         var select = effect.Select ?? "random";
-        if (select == "choose")
-            throw new NotImplementedException(
-                "Select='choose' requires UI input flow, planned for 10.5.M");
 
         if (state.DiscardPile.Length == 0)
             return (state, Array.Empty<BattleEvent>());
@@ -612,16 +610,13 @@ internal static class EffectApplier
 
     /// <summary>
     /// 10.5.F: discard の Select 対応版。Select=all/random/choose を解釈する。
-    /// choose は本フェーズでは UI 入力フローが無いため NotImplementedException。
+    /// M6.9: choose は UI 入力フロー未実装のため、暫定的に random と同じ挙動で fallback。
+    ///   将来 Phase 10.5.M で正式実装予定。
     /// </summary>
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyDiscardWithSelect(
         BattleState state, CombatActor caster, CardEffect effect, IRng rng,
         DataCatalog catalog)
     {
-        if (effect.Select == "choose")
-            throw new NotImplementedException(
-                "Select='choose' requires UI input flow, planned for 10.5.M");
-
         if (state.Hand.Length == 0) return (state, Array.Empty<BattleEvent>());
 
         var hand = state.Hand.ToBuilder();
@@ -682,12 +677,13 @@ internal static class EffectApplier
         // Phase 10.5.M2: Select 対応
         // - "all": 当該 pile を全て除外 (Amount 無視)
         // - "random" (or null): N 枚ランダム除外 (既存挙動)
-        // - "choose": UI input が必要、本フェーズ未実装で NotImplementedException
-        if (effect.Select == "choose")
-        {
-            throw new NotImplementedException(
-                "exhaustCard Select='choose' requires UI input flow, planned for 10.5.M");
-        }
+        // - "choose": UI input が必要。本フェーズではプレイヤー選択 modal が未実装の
+        //   ため、暫定的に random と同じ挙動 (N 枚ランダム除外) で fallback する。
+        //   description には「選んで除外」と表示されるが engine ロジックは random。
+        //   TODO: Phase 10.5.M で UI 選択フローを正式実装する (BattleEngine 側で
+        //   Pending state を持ち、Client が choice confirm を返す経路)。
+        // 旧仕様: NotImplementedException → Server 500 になり「叡智の奔流(強化版)」
+        //   等の choose 系カードがプレイ不能だった (M6.9 ユーザー報告)。
 
         var (sourceBuilder, exhaustBuilder, applyResult) = OpenPile(state, effect.Pile);
 
@@ -737,15 +733,17 @@ internal static class EffectApplier
     ) OpenPile(BattleState state, string? pileName)
     {
         var exhaustBuilder = state.ExhaustPile.ToBuilder();
+        // Phase 10.5.M6.7: pile 未指定 (null / 空文字) は "hand" として扱う。
+        //  CardTextFormatter.ZoneJp も同じく null/empty を「手札」とフォールバック
+        //  するため、formatter 出力と engine 動作の一貫性を確保。
         return pileName switch
         {
-            "hand" => (state.Hand.ToBuilder(), exhaustBuilder,
+            null or "" or "hand" => (state.Hand.ToBuilder(), exhaustBuilder,
                 (s, e) => state with { Hand = s.ToImmutable(), ExhaustPile = e.ToImmutable() }),
             "discard" => (state.DiscardPile.ToBuilder(), exhaustBuilder,
                 (s, e) => state with { DiscardPile = s.ToImmutable(), ExhaustPile = e.ToImmutable() }),
             "draw" => (state.DrawPile.ToBuilder(), exhaustBuilder,
                 (s, e) => state with { DrawPile = s.ToImmutable(), ExhaustPile = e.ToImmutable() }),
-            null => throw new InvalidOperationException("exhaustCard requires Pile (hand|discard|draw)"),
             _ => throw new InvalidOperationException($"exhaustCard invalid Pile '{pileName}', expected hand|discard|draw"),
         };
     }
@@ -757,12 +755,8 @@ internal static class EffectApplier
         // Phase 10.5.M2: Select 対応
         // - "all": pile 内の強化可能カードを全て強化 (Amount 無視)
         // - "random" (or null): N 枚ランダム強化 (既存挙動)
-        // - "choose": UI input が必要、本フェーズ未実装で NotImplementedException
-        if (effect.Select == "choose")
-        {
-            throw new NotImplementedException(
-                "upgrade Select='choose' requires UI input flow, planned for 10.5.M");
-        }
+        // - "choose": UI input が未実装のため、暫定的に random と同じ挙動で fallback。
+        //   M6.9: exhaustCard と同様、UI 選択フロー実装まで random fallback で動かす。
 
         // Pile 検証は OpenSourcePile で（exhaust pile は使わない）
         var (sourceBuilder, applyResult) = OpenSourcePile(state, effect.Pile);

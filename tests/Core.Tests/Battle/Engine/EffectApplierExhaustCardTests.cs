@@ -108,12 +108,17 @@ public class EffectApplierExhaustCardTests
             EffectApplier.Apply(s, hero, eff, Rng(), BattleFixtures.MinimalCatalog()));
     }
 
-    [Fact] public void Exhaust_null_pile_throws()
+    [Fact] public void Exhaust_null_pile_defaults_to_hand()
     {
-        var s = MakeState(hand: ImmutableArray.Create(BattleFixtures.MakeBattleCard("strike", "c1")));
+        // Phase 10.5.M6.7: pile 未指定 (null/empty) は "hand" として扱う仕様に変更。
+        //  CardTextFormatter.ZoneJp も同じく null → 手札 と扱うため整合性を保つ。
+        //  旧仕様 (null → throw) は formatter 表示と engine 動作の差異の元だった。
+        var hand = ImmutableArray.Create(BattleFixtures.MakeBattleCard("strike", "c1"));
+        var s = MakeState(hand: hand);
         var hero = s.Allies[0];
         var eff = new CardEffect("exhaustCard", EffectScope.Self, null, 1, Pile: null);
-        Assert.Throws<System.InvalidOperationException>(() =>
-            EffectApplier.Apply(s, hero, eff, Rng(), BattleFixtures.MinimalCatalog()));
+        var (next, _) = EffectApplier.Apply(s, hero, eff, Rng(), BattleFixtures.MinimalCatalog());
+        Assert.Empty(next.Hand);
+        Assert.Single(next.ExhaustPile);
     }
 }

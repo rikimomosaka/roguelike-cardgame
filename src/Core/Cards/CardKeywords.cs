@@ -26,6 +26,11 @@ public static class CardKeywords
         // Phase 10.5.M3/M4: exhaustSelf action から keyword 化。M4 で名前 喪失 に変更。
         ["exhaust"] = new("exhaust", "喪失",
             "このカードを除外する。"),
+        // Phase 10.5.M6.7: summon action の用語 "召喚" を keyword 化。tooltip 二段目で
+        //  "召喚 — 指定されたユニットを味方として呼び出す。" を表示。
+        //  色は status と同じオレンジ系で「動詞的な作用」を表現。
+        ["summon"] = new("summon", "召喚",
+            "指定されたユニットを味方として呼び出す。"),
     };
 
     public static KeywordMeta? Get(string id) =>

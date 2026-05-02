@@ -180,24 +180,39 @@ public class TurnStartProcessorTickTests
         Assert.Equal(4, next.Allies[0].GetStatus("dexterity"));
     }
 
-    [Fact] public void Poison_damage_at_turn_start_does_not_decrement_stack()
+    [Fact] public void Poison_damage_at_turn_start_decrements_stack_after_damage()
     {
-        // 新仕様: 毒ダメージは TurnStart で発生するが、countdown は分離されたので
-        // poison の stack は TurnStart 直後はまだ減っていない。
-        var hero = BattleFixtures.WithPoison(BattleFixtures.Hero(70), 3);
+        // Phase 10.5.M6.5: 新仕様で「ダメージ → -1」を 1 ステップで適用。
+        //  旧仕様: countdown が damage より先に走るバグで N→N-1 後 N-1 ダメ。
+        //  新仕様: poison=4 のターン開始 → 4 ダメ + poison 4→3 で残 3。
+        var hero = BattleFixtures.WithPoison(BattleFixtures.Hero(70), 4);
         var s = State(hero, BattleFixtures.Goblin());
         var (next, _) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
-        Assert.Equal(70 - 3, next.Allies[0].CurrentHp);
-        Assert.Equal(3, next.Allies[0].GetStatus("poison"));
+        Assert.Equal(70 - 4, next.Allies[0].CurrentHp);     // 4 ダメ受けた
+        Assert.Equal(3, next.Allies[0].GetStatus("poison")); // stack 4 → 3
     }
 
-    [Fact] public void Poison_stack_decrements_via_side_countdown()
+    [Fact] public void Poison_stack_at_one_emits_RemoveStatus_after_damage()
     {
-        // Side countdown で poison stack が 1 減ることを単体検証。
+        // poison 1 → 1 ダメ受けて 0 に → RemoveStatus イベント発火 + Statuses から削除。
+        var hero = BattleFixtures.WithPoison(BattleFixtures.Hero(70), 1);
+        var s = State(hero, BattleFixtures.Goblin());
+        var (next, evs) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
+        Assert.Equal(70 - 1, next.Allies[0].CurrentHp);
+        Assert.False(next.Allies[0].Statuses.ContainsKey("poison"));
+        Assert.Contains(evs, e => e.Kind == BattleEventKind.RemoveStatus
+                                  && e.Note == "poison"
+                                  && e.TargetInstanceId == hero.InstanceId);
+    }
+
+    [Fact] public void Poison_stack_does_not_decrement_via_side_countdown()
+    {
+        // Phase 10.5.M6.5: poison は SideStatusCountdown 対象外なので変化しない。
+        //  減算は TurnStartProcessor.ApplyPoisonTick 側で実行される。
         var hero = BattleFixtures.WithPoison(BattleFixtures.Hero(70), 3);
         var s = State(hero, BattleFixtures.Goblin());
         var (next, _) = SideStatusCountdown.ApplyForSide(s, ActorSide.Ally, 0);
-        Assert.Equal(2, next.Allies[0].GetStatus("poison"));
+        Assert.Equal(3, next.Allies[0].GetStatus("poison"));
     }
 
     [Fact] public void Multiple_decrement_statuses_all_tick()

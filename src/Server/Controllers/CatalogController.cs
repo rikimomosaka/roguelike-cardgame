@@ -140,11 +140,22 @@ public sealed class CatalogController : ControllerBase
     {
         var list = _data.Relics.Values
             .OrderBy(r => r.Id, StringComparer.Ordinal)
-            .Select(r => new RelicDto(
-                Id: r.Id,
-                Name: r.Name,
-                Description: string.IsNullOrEmpty(r.Description) ? r.Name : r.Description,
-                Rarity: r.Rarity.ToString()))
+            .Select(r =>
+            {
+                var manual = r.Description ?? string.Empty;
+                var auto = r.Effects is { Count: > 0 } ? CardTextFormatter.FormatEffects(r.Effects) : string.Empty;
+                string combined =
+                    manual.Length > 0 && auto.Length > 0 ? auto + "\n" + manual :
+                    auto.Length > 0 ? auto :
+                    manual.Length > 0 ? manual : r.Name;
+                return new RelicDto(
+                    Id: r.Id,
+                    Name: r.Name,
+                    Description: combined,
+                    EffectText: auto,
+                    Flavor: manual,
+                    Rarity: r.Rarity.ToString());
+            })
             .ToList();
         return Ok(list);
     }

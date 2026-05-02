@@ -13,13 +13,23 @@ type Props = {
 export function RelicIcon({ id, catalog, names }: Props) {
   const entry = catalog?.[id] ?? null
   const name = entry?.name ?? names[id] ?? id
-  const desc = entry?.description ?? ''
+  // M6.3: 効果テキストとフレーバーを分離して tooltip に渡す。
+  //   effectText 単体を desc に、flavor は専用スロットへ。古い catalog (effectText
+  //   未提供) には description フォールバックで動作。
+  const effectText = entry?.effectText ?? ''
+  const flavor = entry?.flavor ?? ''
+  const fallbackDesc = effectText.length > 0 ? effectText : entry?.description ?? ''
   const rarityKey = entry ? rarityClassOf(entry.rarity) : 'common'
   const rarityClass = `relic-icon--${rarityKey}`
   const rarityCode = rarityCodeFromKey(rarityKey)
   const content = useMemo(
-    () => ({ name, rarity: rarityCode, desc: desc || '—' }),
-    [name, rarityCode, desc],
+    () => ({
+      name,
+      rarity: rarityCode,
+      desc: fallbackDesc || '—',
+      flavor: flavor || undefined,
+    }),
+    [name, rarityCode, fallbackDesc, flavor],
   )
   const tip = useTooltipTarget(content)
   return (

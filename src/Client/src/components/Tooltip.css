@@ -74,6 +74,21 @@
   line-height: 1.55;
 }
 
+/* Phase 10.5.M6.3: フレーバー区切り (点線) + フレーバー本体 (斜体グレー)。
+   RelicVisualPreview と同じ視覚言語で、効果テキストの方を目立たせる。 */
+.tip__flavor-sep {
+  margin: 6px 0 4px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.18);
+}
+.tip__flavor {
+  font-size: 12px;
+  font-style: italic;
+  color: #999;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
 /* Phase 10.5.M2: tooltip 二段目 — description 内のキーワード / ステータス /
    カード参照の詳細定義を並べる。各行は名前 (色付け) + 説明文。 */
 .tip__refs {
@@ -104,3 +119,5 @@
 .tip__ref--keyword .tip__ref-name { color: #c5d4ff; }
 .tip__ref--status .tip__ref-name { color: #ffd9a0; }
 .tip__ref--card .tip__ref-name { color: #d8b4ff; }
+/* Phase 10.5.M6.7: unit ref ([U:wisp] 等)。cardref と同系統の紫。 */
+.tip__ref--unit .tip__ref-name { color: #d8b4ff; }

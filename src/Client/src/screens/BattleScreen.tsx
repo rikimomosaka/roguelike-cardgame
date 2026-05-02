@@ -167,7 +167,11 @@ type Props = {
 const STEP_DELAY_MS = 80         // 既存 fallback (汎用 event)
 const ATTACK_SLIDE_MS = 280      // 攻撃側 slot の slide-in/out 1 周
 const HIT_FLASH_MS = 320         // 被弾 slot の赤点滅
-const CARD_LEAVE_MS = 260        // 手札カード exit (捨札方向に縮小フェード)
+// 手札カード exit (捨札方向に縮小フェード / 喪失行きは中央拡大→回転消滅)。
+// M6.9: 喪失アニメは 700ms (中央移動 + ホールド + 回転消滅) なので長い方に合わせる。
+//  短い discard アニメ (260ms) は完了後に DOM が残るがレイアウト的に害無し
+//  (.is-leaving は pointer-events: none)。
+const CARD_LEAVE_MS = 700
 // Why: 死亡アニメーションは廃止 (ユーザ要望)。HP=0 で alive filter から外れて
 // 自然消滅するため、後追い blink は入れない。
 
@@ -516,6 +520,12 @@ type HandCardProps = {
   /** leaving 時の行先方向 (px)。card-leave keyframe が --leave-dx/--leave-dy を読む。 */
   leaveDx?: number
   leaveDy?: number
+  /**
+   * Phase 10.5.M6.6: 喪失/除外と通常捨札で leaving 演出を切替える。
+   *  'discard': 既存の捨札方向への縮小フェード (位置移動あり)。
+   *  'exhaust': その場で高速回転しながら縮小消滅 (位置移動なし)。
+   */
+  leavingMode?: 'discard' | 'exhaust'
   /** 親が DOM 要素を識別 (rect 計測) するための callback。 */
   onCardElement?: (el: HTMLDivElement | null) => void
   /** Why: 同じカードが <PlayingCard> overlay で表示されている間は手札側を
@@ -523,7 +533,7 @@ type HandCardProps = {
   hidden?: boolean
 }
 
-function HandCard({ card, fan, onClick, leaving, leaveDx, leaveDy, onCardElement, hidden }: HandCardProps) {
+function HandCard({ card, fan, onClick, leaving, leaveDx, leaveDy, leavingMode, onCardElement, hidden }: HandCardProps) {
   // We need the rendered `.card` element to be a direct child of
   // `.hand` (CSS selector `.hand > .card` keys off this). Card.tsx
   // does not expose a ref. We use a sibling probe <span> (via
@@ -589,6 +599,8 @@ function HandCard({ card, fan, onClick, leaving, leaveDx, leaveDy, onCardElement
         className={[
           card.playable ? 'is-playable' : '',
           leaving ? 'is-leaving' : '',
+          // M6.6: 喪失行きは別 class でその場回転縮小消滅アニメへ。
+          leaving && leavingMode === 'exhaust' ? 'is-leaving-exhaust' : '',
           hidden ? 'is-playing-hidden' : '',
         ].filter(Boolean).join(' ') || undefined}
         onClick={leaving ? undefined : onClick}
@@ -782,10 +794,18 @@ export function BattleScreen({
     destination: 'discard' | 'exhaust'
   }
   const [leavingHand, setLeavingHand] = useState<LeavingHandEntry[]>([])
-  const prevHandRef = useRef<{ list: BattleCardInstanceDto[]; demos: HandCardDemo[]; fans: { x: number; y: number; r: number }[] }>({
+  const prevHandRef = useRef<{
+    list: BattleCardInstanceDto[]
+    demos: HandCardDemo[]
+    fans: { x: number; y: number; r: number }[]
+    /** M6.6: hand から消えたカードが exhaust pile に入ったか判定するための
+     *  前回スナップショット (instanceId 集合)。差分検出で除外行きを識別。 */
+    exhaustIds: Set<string>
+  }>({
     list: [],
     demos: [],
     fans: [],
+    exhaustIds: new Set(),
   })
 
   // Why: 多段階 play アニメ + パイル位置計測用の DOM ref。
@@ -873,6 +893,14 @@ export function BattleScreen({
     const prev = prevHandRef.current
     const currentIds = new Set(hand.map(c => c.instanceId))
     const newlyLeaving: LeavingHandEntry[] = []
+    // M6.6: hand から消えたカードが exhaust pile に新規追加されたか判定するため、
+    //  前回 vs 今回の exhaustPile 差分を計算。新規 exhaust エントリは destination='exhaust'
+    //  に設定し、CSS でその場回転縮小消滅アニメに切替える。
+    const currentExhaustIds = new Set(state.exhaustPile.map(c => c.instanceId))
+    const newlyExhaustedIds = new Set<string>()
+    currentExhaustIds.forEach(id => {
+      if (!prev.exhaustIds.has(id)) newlyExhaustedIds.add(id)
+    })
     // Why: ゾーン間移動の終点は捨札パイル中心 (B 要件)。要素 rect が取れる場合は
     // それを使い、取れない場合は手札 wrap 中央を fallback にする。
     const playingId = playingCard?.entry.card.instanceId
@@ -890,15 +918,17 @@ export function BattleScreen({
       const r = cardEl?.getBoundingClientRect()
       const cardCx = r ? r.left + r.width / 2 : fallbackHandCx
       const cardCy = r ? r.top + r.height / 2 : fallbackHandCy
-      const destDx = discardCx - cardCx
-      const destDy = discardCy - cardCy
+      const isExhaust = newlyExhaustedIds.has(card.instanceId)
+      // exhaust 行きは位置移動しないので destDx/Dy は 0 (CSS keyframe 側で参照されない)。
+      const destDx = isExhaust ? 0 : discardCx - cardCx
+      const destDy = isExhaust ? 0 : discardCy - cardCy
       newlyLeaving.push({
         card,
         demo: prev.demos[idx],
         fan: prev.fans[idx],
         destDx,
         destDy,
-        destination: 'discard',
+        destination: isExhaust ? 'exhaust' : 'discard',
       })
     })
     if (newlyLeaving.length > 0) {
@@ -910,8 +940,8 @@ export function BattleScreen({
         )
       }, CARD_LEAVE_MS)
     }
-    // 次回比較用に現在の hand / demos / fans を ref に保存。demos と fans は
-    // render 内の handDemos / fan と同じ計算で生成 (cardCatalog 等は dep に
+    // 次回比較用に現在の hand / demos / fans / exhaustIds を ref に保存。demos と
+    // fans は render 内の handDemos / fan と同じ計算で生成 (cardCatalog 等は dep に
     // 入れず最新値を読む)。
     const newDemos = hand.map((c) =>
       toHandCardDemo(c, cardCatalog, state.energy, state.lastPlayedOrigCost),
@@ -921,6 +951,7 @@ export function BattleScreen({
       list: hand.slice(),
       demos: newDemos,
       fans: newFans,
+      exhaustIds: currentExhaustIds,
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state?.hand])
@@ -1383,10 +1414,17 @@ export function BattleScreen({
     }
   }
 
-  // Why: 行先パイルを判定する。catalog にカード effects が無いため、現在の
-  //  データセットには exhaustSelf を持つカードが無い前提で常に 'discard'。
-  //  TODO: catalog に effects が公開されたら exhaustSelf を見て分岐。
-  function destinationFor(_card: BattleCardInstanceDto): 'discard' | 'exhaust' {
+  // Phase 10.5.M6.6: 行先パイルを判定する。
+  //  formatter は exhaustSelf action / "exhaust" keyword を共に [K:exhaust]
+  //  marker として description に出力するため、それを含むかで判定する。
+  //  これで「使ったら喪失」系カードは playing-card overlay の Stage 3 で
+  //  data-leaving-mode="exhaust" になり、その場回転縮小消滅アニメに切替わる。
+  function destinationFor(card: BattleCardInstanceDto): 'discard' | 'exhaust' {
+    const def = cardCatalog?.[card.cardDefinitionId]
+    const desc = card.isUpgraded
+      ? def?.upgradedDescription ?? def?.description
+      : def?.description
+    if (desc && /\[K:exhaust\]/.test(desc)) return 'exhaust'
     return 'discard'
   }
 
@@ -1503,9 +1541,10 @@ export function BattleScreen({
       return
     }
     await playSteps(resp)
-    // Stage 3: leaving (280ms 縮小フェード → パイル中心へ)
+    // Stage 3: leaving (パイル中心 / 喪失なら回転縮小消滅)
+    //   discard: 280ms / exhaust: 320ms (CSS と一致)。
     setPlayingCard(p => (p ? { ...p, stage: 'leaving' } : null))
-    await sleep(280)
+    await sleep(dest === 'exhaust' ? 320 : 280)
     setPlayingCard(null)
   }
 
@@ -1798,6 +1837,7 @@ export function BattleScreen({
                   leaving
                   leaveDx={lh.destDx}
                   leaveDy={lh.destDy}
+                  leavingMode={lh.destination}
                 />
               ))}
             </div>
@@ -1842,6 +1882,7 @@ export function BattleScreen({
         <div
           className="playing-card"
           data-play-stage={playingCard.stage}
+          data-leaving-mode={playingCard.entry.destination}
           style={{
             '--start-x': `${playingCard.startX}px`,
             '--start-y': `${playingCard.startY}px`,

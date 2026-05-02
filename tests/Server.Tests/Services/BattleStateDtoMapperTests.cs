@@ -56,7 +56,7 @@ public class BattleStateDtoMapperTests : IClassFixture<TempDataFactory>
             var strike = allCards.FirstOrDefault(c => c.CardDefinitionId == "strike");
             if (strike is not null)
             {
-                Assert.Equal("敵単体に [N:6] アタック。", strike.AdjustedDescription);
+                Assert.Equal("敵単体に[N:6]アタック。", strike.AdjustedDescription);
             }
         }
         finally
@@ -201,7 +201,7 @@ public class BattleStateDtoMapperTests : IClassFixture<TempDataFactory>
             var strike = allCards.FirstOrDefault(c => c.CardDefinitionId == "strike");
             Assert.NotNull(strike);
             Assert.NotNull(strike!.AdjustedUpgradedDescription);
-            Assert.Equal("敵単体に [N:9] アタック。", strike.AdjustedUpgradedDescription);
+            Assert.Equal("敵単体に[N:9]アタック。", strike.AdjustedUpgradedDescription);
         }
         finally
         {

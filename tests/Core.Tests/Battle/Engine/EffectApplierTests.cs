@@ -290,14 +290,17 @@ public class EffectApplierTests
     }
 
     [Fact]
-    public void RecoverFromDiscard_choose_throws_not_implemented()
+    public void RecoverFromDiscard_choose_falls_back_to_random()
     {
+        // Phase 10.5.M6.9: UI 選択フロー未実装のため、choose は暫定的に random と
+        //  同じ挙動 (N 枚ランダム抽出) で fallback。500 エラーを避ける。
         var state = BattleFixtures.MakeStateWithDiscardPile(new[] { "a" });
         var effect = new CardEffect("recoverFromDiscard", EffectScope.Self, null, 1,
             Pile: "hand", Select: "choose");
 
-        Assert.Throws<NotImplementedException>(() =>
-            EffectApplier.Apply(state, state.Allies[0], effect, _rng, _catalog));
+        var (after, _) = EffectApplier.Apply(state, state.Allies[0], effect, _rng, _catalog);
+        Assert.Empty(after.DiscardPile);
+        Assert.Single(after.Hand);
     }
 
     [Fact]
@@ -376,13 +379,15 @@ public class EffectApplierTests
     }
 
     [Fact]
-    public void Discard_select_choose_throws_not_implemented()
+    public void Discard_select_choose_falls_back_to_random()
     {
+        // Phase 10.5.M6.9: UI 選択フロー未実装のため、choose は random fallback。
         var state = BattleFixtures.MakeStateWithHand(new[] { "a", "b" });
         var effect = new CardEffect("discard", EffectScope.Self, null, 1, Select: "choose");
 
-        Assert.Throws<NotImplementedException>(() =>
-            EffectApplier.Apply(state, state.Allies[0], effect, _rng, _catalog));
+        var (after, _) = EffectApplier.Apply(state, state.Allies[0], effect, _rng, _catalog);
+        Assert.Single(after.Hand);
+        Assert.Single(after.DiscardPile);
     }
 
     [Fact]

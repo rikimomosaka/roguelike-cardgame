@@ -3,6 +3,8 @@ import type { CSSProperties, MouseEventHandler, ReactNode } from 'react'
 import { useTooltipTarget } from './Tooltip'
 import type { TooltipContent } from './Tooltip'
 import { CardDesc } from './CardDesc'
+import { useCardCatalog } from '../hooks/useCardCatalog'
+import { useUnitCatalog } from '../hooks/useUnitCatalog'
 import './Card.css'
 
 export type CardType = 'attack' | 'skill' | 'power' | 'curse' | 'status' | 'unit'
@@ -60,6 +62,11 @@ export function Card({
   const style: CSSProperties = { width: `${width}px` }
   // Why: 'unit' は内部 enum 値だが UI では「召喚カード」を表す概念で「SUMMON」表示。
   const typeLabel = type === 'unit' ? 'SUMMON' : type.toUpperCase()
+
+  // Phase 10.5.M6.7: card / unit catalog を読んで marker → JP 名解決に使う。
+  //  catalog 未ロード時は names = {} で CardDesc が ID フォールバック。
+  const { names: cardCatalogNames } = useCardCatalog()
+  const { names: unitCatalogNames } = useUnitCatalog()
 
   // Why: 右クリック長押し中は upgraded ⇄ unupgraded を反転表示する
   //  (ユーザ要望: 全領域・全リスト共通で +/非+ を比較可能にする)。
@@ -153,7 +160,9 @@ export function Card({
           黒フチ + 小さめ font に整形して in-card に収める。 */}
       {activeDesc ? (
         <div className="card__desc">
-          <CardDesc text={activeDesc} />
+          {/* Phase 10.5.M6.7: catalog を引いて [C:..] / [U:..] marker を JP 名に解決。
+              hook はデフォルト空 names を返すため fetch 失敗環境でも safe (ID 表示)。 */}
+          <CardDesc text={activeDesc} cardNames={cardCatalogNames} unitNames={unitCatalogNames} />
         </div>
       ) : null}
       <div className="card__type">{typeLabel}</div>

@@ -58,12 +58,14 @@ public class StatusDefinitionTests
         Assert.Equal(StatusTickDirection.Decrement, s.TickDirection);
     }
 
-    [Fact] public void Poison_is_decrementing_debuff()
+    [Fact] public void Poison_is_non_countdown_debuff()
     {
+        // Phase 10.5.M6.5: poison は SideStatusCountdown 対象から外され、
+        // TurnStartProcessor.ApplyPoisonTick 内で「ダメージ後に -1」される。
         var s = StatusDefinition.Get("poison");
         Assert.Equal(StatusKind.Debuff, s.Kind);
         Assert.False(s.IsPermanent);
-        Assert.Equal(StatusTickDirection.Decrement, s.TickDirection);
+        Assert.Equal(StatusTickDirection.None, s.TickDirection);
     }
 
     [Fact] public void Get_unknown_throws()

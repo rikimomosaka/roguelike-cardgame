@@ -21,7 +21,11 @@ public sealed record StatusDefinition(
         new StatusDefinition("omnistrike", StatusKind.Buff,   IsPermanent: false, StatusTickDirection.Decrement),
         new StatusDefinition("vulnerable", StatusKind.Debuff, IsPermanent: false, StatusTickDirection.Decrement),
         new StatusDefinition("weak",       StatusKind.Debuff, IsPermanent: false, StatusTickDirection.Decrement),
-        new StatusDefinition("poison",     StatusKind.Debuff, IsPermanent: false, StatusTickDirection.Decrement),
+        // Phase 10.5.M6.5: poison は SideStatusCountdown ではなく TurnStartProcessor の
+        // ApplyPoisonTick 内でダメージ適用と同時に -1 する (Slay the Spire 慣習)。
+        // 旧仕様では countdown が damage より先に走り、N→N-1 されてから N-1 ダメージで
+        // 残 N-1、というバグがあった。
+        new StatusDefinition("poison",     StatusKind.Debuff, IsPermanent: false, StatusTickDirection.None),
     };
 
     public static StatusDefinition Get(string id) =>

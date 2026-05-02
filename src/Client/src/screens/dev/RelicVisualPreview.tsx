@@ -2,9 +2,15 @@
 // Phase 10.5.L1.5+ (M6): description を effectText (CardDesc 経由 marker 翻訳) と
 //   flavor (フレーバーテキスト、点線で区切って小さめ font) の 2 段で描画する。
 //   旧: server combined description をそのまま表示 → marker が解釈されない問題
+// M6.2: パネル全体ホバーでゲーム中の relic tooltip と同じ pop を出す
+//   (useTooltipTarget)。圧縮ロジックは tooltip / preview とも不要なので
+//   CardDesc には compress={false} を渡す。
 
+import { useMemo } from 'react'
 import type { RelicSpec } from './DevSpecTypes'
 import { CardDesc } from '../../components/CardDesc'
+import { useTooltipTarget } from '../../components/Tooltip'
+import type { CardRarity } from '../../components/Card'
 
 type Props = {
   relicId: string
@@ -25,14 +31,41 @@ const RARITY_LABEL: Record<number, string> = {
   5: 'Token',
 }
 
+/** spec.rarity (number) → CardRarity 文字。RelicIcon の rarityClassOf と揃える。 */
+function rarityCodeFromValue(v: number): CardRarity {
+  switch (v) {
+    case 2: return 'r'
+    case 3: return 'e'
+    case 4: return 'l'
+    case 5: return 't'
+    default: return 'c'
+  }
+}
+
 export function RelicVisualPreview({ relicId, relicName, spec, flavor, effectText }: Props) {
   const rarityLabel = RARITY_LABEL[spec.rarity] ?? 'Unknown'
   const hasEffect = effectText.length > 0
   const hasFlavor = flavor.length > 0
 
+  // ゲーム中の RelicIcon と同じ仕様で tooltip を構築。
+  //   desc は effectText のみ、flavor は専用スロットへ (Tooltip 側で
+  //   点線区切り + 斜体グレーレイアウト)。
+  const tooltipDesc = hasEffect ? effectText : hasFlavor ? '' : '—'
+  const rarityCode = rarityCodeFromValue(spec.rarity)
+  const tipContent = useMemo(
+    () => ({
+      name: relicName || '(無名)',
+      rarity: rarityCode,
+      desc: tooltipDesc,
+      flavor: hasFlavor ? flavor : undefined,
+    }),
+    [relicName, rarityCode, tooltipDesc, hasFlavor, flavor],
+  )
+  const tip = useTooltipTarget(tipContent)
+
   return (
     <div className="dev-relic-visual-preview">
-      <div className="dev-relic-visual-preview__panel">
+      <div className="dev-relic-visual-preview__panel" tabIndex={0} {...tip}>
         <div className="dev-relic-visual-preview__icon">
           <img
             src={`/icons/relics/${relicId}.png`}
@@ -51,7 +84,7 @@ export function RelicVisualPreview({ relicId, relicName, spec, flavor, effectTex
           {/* M6: 効果テキスト (CardDesc で marker → JP / 黄数字 解釈) */}
           {hasEffect && (
             <div className="dev-relic-visual-preview__desc">
-              <CardDesc text={effectText} />
+              <CardDesc text={effectText} compress={false} />
             </div>
           )}
           {/* M6: 効果とフレーバーの間に点線区切り (両方ある場合のみ) */}
