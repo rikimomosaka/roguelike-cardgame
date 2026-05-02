@@ -14,6 +14,10 @@ type Props = {
   /** Why: 「強化前をコピー」ボタンを表示するための callback。
    *  upgradedEffects 編集時に CardSpecForm から渡される。 */
   onCopyFromNormal?: () => void
+  /** Why: 特定の field (trigger / comboMin 等) を非表示にする。
+   *  relic editor では trigger は relic レベルで指定するため、effect レベル
+   *  の trigger を出すと二重になり混乱を招くので除外する (Phase 10.5.L1-fix)。 */
+  excludeFields?: ReadonlyArray<keyof CardEffect>
 }
 
 export function EffectListEditor({
@@ -23,6 +27,7 @@ export function EffectListEditor({
   label,
   onChange,
   onCopyFromNormal,
+  excludeFields,
 }: Props) {
   const updateAt = (i: number, eff: CardEffect) => {
     const next = effects.slice()
@@ -87,6 +92,7 @@ export function EffectListEditor({
             allCardIds={allCardIds}
             onChange={(e) => updateAt(i, e)}
             onRemove={() => removeAt(i)}
+            excludeFields={excludeFields}
           />
         </div>
       ))}

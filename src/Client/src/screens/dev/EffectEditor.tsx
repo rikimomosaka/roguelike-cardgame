@@ -11,10 +11,16 @@ type Props = {
   allCardIds: string[]
   onChange: (e: CardEffect) => void
   onRemove: () => void
+  /** Why: relic editor では trigger / comboMin を effect レベルで持たないので、
+   *  特定 field を非表示にできる。RelicSpecForm から ['trigger', 'comboMin'] を渡す。 */
+  excludeFields?: ReadonlyArray<keyof CardEffect>
 }
 
-export function EffectEditor({ effect, meta, allCardIds, onChange, onRemove }: Props) {
-  const fields = EFFECT_ACTION_FIELDS[effect.action] ?? []
+export function EffectEditor({ effect, meta, allCardIds, onChange, onRemove, excludeFields }: Props) {
+  const allFields = EFFECT_ACTION_FIELDS[effect.action] ?? []
+  const fields = excludeFields && excludeFields.length > 0
+    ? allFields.filter((f) => !excludeFields.includes(f))
+    : allFields
 
   const set = (patch: Partial<CardEffect>) => onChange({ ...effect, ...patch })
 

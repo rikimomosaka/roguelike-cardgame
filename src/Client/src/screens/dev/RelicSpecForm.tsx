@@ -99,6 +99,10 @@ export function RelicSpecForm({
         allCardIds={allCardIds}
         label="効果"
         onChange={(e) => set({ effects: e })}
+        // Phase 10.5.L1-fix: relic は trigger を relic レベル (RelicDefinition.Trigger)
+        //   で 1 個固定。effect レベルの trigger / comboMin を出すと意味が二重になる
+        //   ので非表示にする (battle 中の card combo 文脈でしか機能しないため)。
+        excludeFields={['trigger', 'comboMin']}
       />
 
       <label className="card-spec-form__label card-spec-form__label--block">

@@ -227,7 +227,14 @@ export function relicSpecToJsonObject(spec: RelicSpec): Record<string, unknown> 
   }
   // description は relic では空文字でも書く (override 文字列として常に渡す)。
   out.description = spec.description
-  out.effects = spec.effects.map(effectToJsonObject)
+  // Phase 10.5.L1-fix: relic effect には effect-level の trigger / comboMin は不要。
+  //   stale データを持ち越さないよう除去して JSON 出力する。
+  out.effects = spec.effects.map((e) => {
+    const obj = effectToJsonObject(e)
+    delete obj.trigger
+    delete obj.comboMin
+    return obj
+  })
   out.implemented = spec.implemented
   return out
 }
