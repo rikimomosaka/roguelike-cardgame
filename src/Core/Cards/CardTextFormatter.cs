@@ -315,7 +315,7 @@ public static class CardTextFormatter
         "strength" => "筋力",
         "dexterity" => "敏捷",
         "poison" => "毒",
-        "omnistrike" => "全体攻撃",
+        "omnistrike" => "拡散",
         null or "" => "ステータス",
         _ => id,
     };

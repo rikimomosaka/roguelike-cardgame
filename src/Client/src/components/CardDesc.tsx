@@ -15,11 +15,11 @@ export const KEYWORD_DEFS: Record<string, { name: string; desc: string }> = {
   },
   wait: {
     name: '待機',
-    desc: 'このカードはプレイ後も捨札に行かず、次ターンに手札へ持ち越される。',
+    desc: '手札にある限り、次のターンに持ち越される。',
   },
   exhaust: {
-    name: '消費',
-    desc: 'プレイ後、このカードは捨札ではなく除外山札に送られる (戦闘終了まで戻らない)。',
+    name: '喪失',
+    desc: 'このカードを除外する。',
   },
 }
 
@@ -31,7 +31,7 @@ export const STATUS_DEFS: Record<string, { name: string; desc: string }> = {
   weak: { name: '脱力', desc: '与えるダメージが 0.75 倍になる (端数切捨)。X ターン残存。' },
   vulnerable: { name: '脆弱', desc: '受けるダメージが 1.5 倍になる。X ターン残存。' },
   poison: { name: '毒', desc: 'ターン開始時に X ダメージを受け、X が 1 減る。' },
-  omnistrike: { name: '全体攻撃', desc: '攻撃が敵全体に当たる。X ターン残存。' },
+  omnistrike: { name: '拡散', desc: '全ての攻撃を全体攻撃に変更する。X ターン残存。' },
 }
 
 // Why: パワーカードの発火タイミング ID → 日本語表示。
@@ -142,18 +142,21 @@ function CardDescLine({
       const naturalWidth = inner.scrollWidth
       if (naturalWidth <= containerWidth) return  // 余裕で収まる
 
-      // 1.3 倍超 → wrap モード (M4: 旧 1.5 から緩和。はみ出し防止)
+      // 1.3 倍超 → wrap モード (両端切れ防止)
       if (naturalWidth > containerWidth * 1.3) {
         wrapper.classList.add('card-desc-line--wrap')
         return
       }
 
-      // それ以外 → scaleX で横方向圧縮 (右端余白 4% 確保)
-      const SAFETY = 0.96
+      // それ以外 → scaleX で横方向圧縮。
+      // origin: center にしないと text-align: center の親で inline-block が
+      // 中央寄せされた結果、scaleX(ratio) origin: left が左にずれて視覚的に
+      // 左端が切れるバグになる (M4-1 修正)。
+      // SAFETY = 0.94 で両端 3% ずつ余白を確保する。
+      const SAFETY = 0.94
       const ratio = (containerWidth / naturalWidth) * SAFETY
       inner.style.transform = `scaleX(${ratio.toFixed(3)})`
-      inner.style.transformOrigin = 'left center'
-      inner.style.width = `${naturalWidth}px`
+      inner.style.transformOrigin = 'center center'
     }
 
     recompute()

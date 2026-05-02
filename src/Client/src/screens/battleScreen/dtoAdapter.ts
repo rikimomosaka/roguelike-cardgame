@@ -324,8 +324,8 @@ function statusMeta(id: string, amount: number): {
       return { kind: 'debuff', icon: '/icons/ui/poison.png', name: '毒',
                desc: `ターン開始時に${amount}ダメージ。スタック数が 1 減る。` }
     case 'omnistrike':
-      return { kind: 'buff', icon: '/icons/ui/attack_all.png', name: '全体攻撃',
-               desc: `攻撃が全敵に当たる。${amount}ターン残存。` }
+      return { kind: 'buff', icon: '/icons/ui/attack_all.png', name: '拡散',
+               desc: `全ての攻撃を全体攻撃に変更する。${amount}ターン残存。` }
     default:
       return { kind: 'buff', icon: '?', name: id, desc: '' }
   }

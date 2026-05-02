@@ -66,7 +66,7 @@ public sealed class DevMetaController : ControllerBase
                 new { id = "strength", jp = "筋力" },
                 new { id = "dexterity", jp = "敏捷" },
                 new { id = "poison", jp = "毒" },
-                new { id = "omnistrike", jp = "全体攻撃" },
+                new { id = "omnistrike", jp = "拡散" },
             },
         });
     }
