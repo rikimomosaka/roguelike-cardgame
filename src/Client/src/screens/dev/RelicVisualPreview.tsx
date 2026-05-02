@@ -1,14 +1,19 @@
-// Phase 10.5.L1: 既存 RelicIcon component を再利用してレリックの見た目をライブプレビュー。
-// description は手書き override が来ていればそのまま表示、無ければ preview API の自動生成テキスト。
+// Phase 10.5.L1: 既存 RelicIcon / インラインアイコンを使ったレリックビジュアルプレビュー。
+// Phase 10.5.L1.5+ (M6): description を effectText (CardDesc 経由 marker 翻訳) と
+//   flavor (フレーバーテキスト、点線で区切って小さめ font) の 2 段で描画する。
+//   旧: server combined description をそのまま表示 → marker が解釈されない問題
 
 import type { RelicSpec } from './DevSpecTypes'
+import { CardDesc } from '../../components/CardDesc'
 
 type Props = {
   relicId: string
   relicName: string
   spec: RelicSpec
-  /** preview API から得た description (override 無し時に使う) */
-  autoDescription: string
+  /** preview API から得た flavor (手動 description) */
+  flavor: string
+  /** preview API から得た effectText (effects 自動文章化、marker 含む) */
+  effectText: string
 }
 
 const RARITY_LABEL: Record<number, string> = {
@@ -20,15 +25,11 @@ const RARITY_LABEL: Record<number, string> = {
   5: 'Token',
 }
 
-export function RelicVisualPreview({ relicId, relicName, spec, autoDescription }: Props) {
+export function RelicVisualPreview({ relicId, relicName, spec, flavor, effectText }: Props) {
   const rarityLabel = RARITY_LABEL[spec.rarity] ?? 'Unknown'
-  // M5: server preview endpoint が「手動 description + effects 自動文章化」を結合
-  //   して返すため、autoDescription をそのまま信用して表示する。
-  //   spec.description (手動入力) のみ来た場合は server がそれだけ返す。
-  const desc = autoDescription
+  const hasEffect = effectText.length > 0
+  const hasFlavor = flavor.length > 0
 
-  // RelicIcon は run 中の catalog を必要とするため、ここではインライン軽量プレビューにする。
-  // /icons/relics/{id}.png を直接表示。画像が無ければ alt 表示。
   return (
     <div className="dev-relic-visual-preview">
       <div className="dev-relic-visual-preview__panel">
@@ -47,7 +48,21 @@ export function RelicVisualPreview({ relicId, relicName, spec, autoDescription }
           <div className="dev-relic-visual-preview__rarity">
             {rarityLabel}
           </div>
-          <div className="dev-relic-visual-preview__desc">{desc || '—'}</div>
+          {/* M6: 効果テキスト (CardDesc で marker → JP / 黄数字 解釈) */}
+          {hasEffect && (
+            <div className="dev-relic-visual-preview__desc">
+              <CardDesc text={effectText} />
+            </div>
+          )}
+          {/* M6: 効果とフレーバーの間に点線区切り (両方ある場合のみ) */}
+          {hasEffect && hasFlavor && <div className="dev-relic-visual-preview__sep" aria-hidden="true" />}
+          {/* M6: フレーバーは小さめ + 斜体 + 控えめな色 */}
+          {hasFlavor && (
+            <div className="dev-relic-visual-preview__flavor">{flavor}</div>
+          )}
+          {!hasEffect && !hasFlavor && (
+            <div className="dev-relic-visual-preview__desc">—</div>
+          )}
           {!spec.implemented && (
             <div className="dev-relic-visual-preview__unimpl">[未実装]</div>
           )}

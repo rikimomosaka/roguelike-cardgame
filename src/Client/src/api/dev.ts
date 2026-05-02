@@ -289,11 +289,21 @@ export async function createNewRelic(
   return (await resp.json()) as { id: string }
 }
 
+export type RelicPreviewResult = {
+  /** "{effectText}\n{flavor}" で結合した後方互換用テキスト */
+  description: string
+  /** 手動入力の flavor text (フレーバー部分のみ、空の可能性あり) */
+  flavor: string
+  /** effects から CardTextFormatter で自動生成した機械的説明 (空の可能性あり) */
+  effectText: string
+}
+
 /**
  * POST /api/dev/relics/preview — relic spec から description を返す。
- * description override があればそのまま、無ければ effects から CardTextFormatter で自動生成。
+ * Phase 10.5.L1.5+: flavor / effectText を分離して返すため、
+ *  Client 側は層別レイアウト (効果上、点線、フレーバー下) で描画できる。
  */
-export async function previewRelicDescription(spec: unknown): Promise<string> {
+export async function previewRelicDescription(spec: unknown): Promise<RelicPreviewResult> {
   const r = await fetch('/api/dev/relics/preview', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -303,8 +313,12 @@ export async function previewRelicDescription(spec: unknown): Promise<string> {
     const txt = await r.text().catch(() => '')
     throw new Error(`previewRelicDescription failed: ${r.status} ${txt}`)
   }
-  const j = (await r.json()) as { description: string }
-  return j.description
+  const j = (await r.json()) as Partial<RelicPreviewResult>
+  return {
+    description: j.description ?? '',
+    flavor: j.flavor ?? '',
+    effectText: j.effectText ?? '',
+  }
 }
 
 export async function deleteRelic(id: string, alsoBase: boolean): Promise<void> {

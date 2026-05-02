@@ -412,15 +412,23 @@ public sealed class DevRelicsController : ControllerBase
                     autoText = CardTextFormatter.FormatEffects(effects);
             }
 
+            // M5/M6: Client が層別レイアウト (effect 先頭、点線、flavor 小さめ) で描画
+            //  できるよう flavor / effectText を分離して返す。
+            //  description は後方互換のため "{auto}\n{manual}" で結合 (effect 上、flavor 下)。
             string combined;
             if (manual.Length > 0 && autoText.Length > 0)
-                combined = manual + "\n" + autoText;
+                combined = autoText + "\n" + manual;
             else if (manual.Length > 0)
                 combined = manual;
             else
                 combined = autoText;
 
-            return Ok(new { description = combined });
+            return Ok(new
+            {
+                description = combined,
+                flavor = manual,
+                effectText = autoText,
+            });
         }
         catch (RelicJsonException ex)
         {

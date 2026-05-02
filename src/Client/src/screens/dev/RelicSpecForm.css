@@ -57,11 +57,28 @@
   color: #888;
 }
 
+/* 効果テキスト (CardDesc で marker 翻訳。黄色数字 / トリガ JP 表示が活きる) */
 .dev-relic-visual-preview__desc {
   font-size: 12px;
   color: #ddd;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* M6: 効果とフレーバーの区切り (点線) */
+.dev-relic-visual-preview__sep {
+  margin: 4px 0;
+  border-top: 1px dashed rgba(255, 255, 255, 0.18);
+}
+
+/* M6: フレーバーテキスト — 小さめ + 斜体 + 控えめな色で「ストーリー描写」感を出す */
+.dev-relic-visual-preview__flavor {
+  font-size: 10px;
+  font-style: italic;
+  color: #999;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.4;
 }
 
 .dev-relic-visual-preview__unimpl {

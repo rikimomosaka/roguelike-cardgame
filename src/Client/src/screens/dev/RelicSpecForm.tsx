@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from 'react'
 import { previewRelicDescription } from '../../api/dev'
-import type { DevMeta } from '../../api/dev'
+import type { DevMeta, RelicPreviewResult } from '../../api/dev'
 import type { RelicSpec } from './DevSpecTypes'
 import { relicSpecToJsonObject } from './DevSpecTypes'
 import { EffectListEditor } from './EffectListEditor'
@@ -33,7 +33,11 @@ export function RelicSpecForm({
 }: Props) {
   const set = (patch: Partial<RelicSpec>) => onChange({ ...spec, ...patch })
 
-  const [autoDesc, setAutoDesc] = useState<string>('')
+  const [previewResult, setPreviewResult] = useState<RelicPreviewResult>({
+    description: '',
+    flavor: '',
+    effectText: '',
+  })
   const specKey = JSON.stringify(relicSpecToJsonObject(spec))
 
   useEffect(() => {
@@ -41,10 +45,10 @@ export function RelicSpecForm({
     const t = window.setTimeout(async () => {
       try {
         const obj = relicSpecToJsonObject(spec)
-        const d = await previewRelicDescription(obj)
-        if (!cancelled) setAutoDesc(d)
+        const r = await previewRelicDescription(obj)
+        if (!cancelled) setPreviewResult(r)
       } catch {
-        if (!cancelled) setAutoDesc('')
+        if (!cancelled) setPreviewResult({ description: '', flavor: '', effectText: '' })
       }
     }, 200)
     return () => {
@@ -110,7 +114,8 @@ export function RelicSpecForm({
           relicId={relicId}
           relicName={relicName}
           spec={spec}
-          autoDescription={autoDesc}
+          flavor={previewResult.flavor}
+          effectText={previewResult.effectText}
         />
       </div>
     </div>
