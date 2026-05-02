@@ -387,6 +387,31 @@ public class DevRelicsControllerMutationTests : IDisposable
         Assert.False(string.IsNullOrEmpty(desc));
     }
 
+    [Fact]
+    public async Task Preview_combines_manual_description_and_effects_text()
+    {
+        // M5: 手動 description + effects 自動文章化 を結合して返す。
+        var body = new
+        {
+            spec = new
+            {
+                rarity = 1,
+                trigger = "OnPickup",
+                description = "迷っても、心を留めるための小さな錨。",
+                effects = new[]
+                {
+                    new { action = "gainMaxHp", scope = "self", amount = 8 },
+                },
+            },
+        };
+        var resp = await _client.PostAsJsonAsync("/api/dev/relics/preview", body);
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var payload = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        var desc = payload.GetProperty("description").GetString() ?? "";
+        Assert.Contains("迷っても", desc);
+        Assert.Contains("最大HP +", desc);  // formatter 出力
+    }
+
     private static JsonElement FindRelic(JsonElement list, string id)
     {
         foreach (var entry in list.EnumerateArray())

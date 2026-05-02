@@ -387,16 +387,17 @@ public sealed class DevRelicsController : ControllerBase
             if (spec.ValueKind != JsonValueKind.Object)
                 return BadRequest(new { error = "spec must be an object." });
 
-            // override 文字列があれば優先。
+            // M5: 手動 description (フレーバーテキスト) と effects 自動文章化 を結合。
+            //  両方ある場合: "{manual}\n{autoEffects}" (フレーバー → 機械的説明 の順)
+            //  片方だけならそれを単独で返す
+            string manual = "";
             if (spec.TryGetProperty("description", out var descEl) &&
                 descEl.ValueKind == JsonValueKind.String)
             {
-                var s = descEl.GetString();
-                if (!string.IsNullOrEmpty(s))
-                    return Ok(new { description = s });
+                manual = descEl.GetString() ?? "";
             }
 
-            // empty なら effects を CardTextFormatter で自動文章化。
+            string autoText = "";
             if (spec.TryGetProperty("effects", out var effEl) &&
                 effEl.ValueKind == JsonValueKind.Array)
             {
@@ -407,11 +408,19 @@ public sealed class DevRelicsController : ControllerBase
                         new RelicJsonException(msg));
                     effects.Add(parsed);
                 }
-                var text = CardTextFormatter.FormatEffects(effects);
-                return Ok(new { description = text });
+                if (effects.Count > 0)
+                    autoText = CardTextFormatter.FormatEffects(effects);
             }
 
-            return Ok(new { description = string.Empty });
+            string combined;
+            if (manual.Length > 0 && autoText.Length > 0)
+                combined = manual + "\n" + autoText;
+            else if (manual.Length > 0)
+                combined = manual;
+            else
+                combined = autoText;
+
+            return Ok(new { description = combined });
         }
         catch (RelicJsonException ex)
         {

@@ -22,8 +22,10 @@ const RARITY_LABEL: Record<number, string> = {
 
 export function RelicVisualPreview({ relicId, relicName, spec, autoDescription }: Props) {
   const rarityLabel = RARITY_LABEL[spec.rarity] ?? 'Unknown'
-  const desc =
-    spec.description && spec.description.length > 0 ? spec.description : autoDescription
+  // M5: server preview endpoint が「手動 description + effects 自動文章化」を結合
+  //   して返すため、autoDescription をそのまま信用して表示する。
+  //   spec.description (手動入力) のみ来た場合は server がそれだけ返す。
+  const desc = autoDescription
 
   // RelicIcon は run 中の catalog を必要とするため、ここではインライン軽量プレビューにする。
   // /icons/relics/{id}.png を直接表示。画像が無ければ alt 表示。

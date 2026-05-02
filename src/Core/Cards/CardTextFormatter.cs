@@ -142,6 +142,13 @@ public static class CardTextFormatter
         "selfDamage" => $"{TargetPrefix(e.Scope, e.Side)}{AmountToken(e, context)} ダメージ",
         "addCard" => DescribeAddCard(e, context),
         "recoverFromDiscard" => DescribeRecoverFromDiscard(e, context),
+        // Phase 10.5.L1: relic 固有 action の自動文章化。formatter は battle 用と
+        // 共有のため、relic action もここに併記する。
+        "gainMaxHp" => $"最大HP +{AmountToken(e, context)}",
+        "gainGold" => $"ゴールド +{AmountToken(e, context)}",
+        "restHealBonus" => $"休憩での HP 回復 +{AmountToken(e, context)}",
+        "healPercent" => $"HP を {AmountToken(e, context)}% 回復",
+        "extraEnergyOnFirstTurn" => $"戦闘 1 ターン目のみエナジー +{AmountToken(e, context)}",
         _ => $"(未対応 action: {e.Action})",
     };
 
