@@ -151,43 +151,45 @@ public sealed class RunsController : ControllerBase
         }
 
         var rewardRng = new SystemRng(unchecked((int)s.RngSeed ^ (int)s.PlaySeconds ^ 0x5EED));
-        RewardRngState newRng;
-        RewardState reward;
 
+        RunState updated;
         if (isBoss)
         {
-            // ボス かつ 非最終アクト → BossReward フラグ付き報酬
-            var r = BossRewardFlow.GenerateBossReward(afterWin, _data, rewardRng)
-                ?? throw new InvalidOperationException(
-                    $"BossRewardFlow returned null for non-final act {afterWin.CurrentAct}.");
-            reward = r;
-            newRng = afterWin.RewardRngState;  // BossRewardFlow は RewardRngState を更新しない
+            // ボス かつ 非最終アクト → BossRewardFlow.Resolve で報酬生成 + OnRewardGenerated 発火
+            updated = BossRewardFlow.Resolve(afterWin, _data, rewardRng);
+            if (updated.ActiveReward is null)
+                throw new InvalidOperationException(
+                    $"BossRewardFlow.Resolve returned null reward for non-final act {afterWin.CurrentAct}.");
+            updated = updated with
+            {
+                ActiveBattle = null,
+                PlaySeconds = afterWin.PlaySeconds + elapsed,
+                SavedAtUtc = DateTimeOffset.UtcNow,
+            };
         }
         else
         {
             // 通常エンカウンター
-            var (r, nr) = RewardGenerator.Generate(
+            var (reward, newRng) = RewardGenerator.Generate(
                 new RewardContext.FromEnemy(enc.Pool),
                 afterWin.RewardRngState,
                 ImmutableArray.CreateRange(s.Relics),
                 _data.RewardTables.TryGetValue($"act{s.CurrentAct}", out var tbl) ? tbl : _data.RewardTables["act1"],
                 _data, rewardRng);
-            reward = r; newRng = nr;
+            updated = afterWin with
+            {
+                ActiveBattle = null,
+                ActiveReward = reward,
+                RewardRngState = newRng,
+                PlaySeconds = afterWin.PlaySeconds + elapsed,
+                SavedAtUtc = DateTimeOffset.UtcNow,
+            };
+            updated = NonBattleRelicEffects.ApplyOnRewardGenerated(updated, _data);
+            // Phase 8: プレイヤーに提示されたカード選択肢を SeenCardBaseIds に追加。
+            // ボス報酬は CardChoices が空のため、ガードで no-op 化する。
+            if (updated.ActiveReward!.CardChoices.Length > 0)
+                updated = BestiaryTracker.NoteCardsSeen(updated, updated.ActiveReward.CardChoices);
         }
-
-        var updated = afterWin with
-        {
-            ActiveBattle = null,
-            ActiveReward = reward,
-            RewardRngState = newRng,
-            PlaySeconds = afterWin.PlaySeconds + elapsed,
-            SavedAtUtc = DateTimeOffset.UtcNow,
-        };
-        updated = NonBattleRelicEffects.ApplyOnRewardGenerated(updated, _data);
-        // Phase 8: プレイヤーに提示されたカード選択肢を SeenCardBaseIds に追加。
-        // ボス報酬は CardChoices が空のため、ガードで no-op 化する。
-        if (reward.CardChoices.Length > 0)
-            updated = BestiaryTracker.NoteCardsSeen(updated, reward.CardChoices);
         await _saves.SaveAsync(accountId, updated, ct);
         var winMap = _runStart.RehydrateMap(updated.RngSeed, updated.CurrentAct);
         return Ok(RunSnapshotDtoMapper.From(updated, winMap, _data));

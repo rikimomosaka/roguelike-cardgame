@@ -163,11 +163,6 @@ public class EventResolverTests
                 "gainGold", EffectScope.Self, null, 7, Trigger: "OnRewardGenerated") });
         var inst = MakeInstance(new EventChoice("card",
             null, ImmutableArray.Create<EventEffect>(new EventEffect.GrantCardReward())));
-        var s0 = Base(gold: 100) with
-        {
-            ActiveEvent = inst,
-            Relics = new List<string> { "event_lucky" },
-        };
         // Use catalog-aware Base: rebuild with fake catalog
         var s0WithFakeCat = RunState.NewSoloRun(
             fake, 1UL, 0,

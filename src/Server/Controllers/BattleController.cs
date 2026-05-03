@@ -316,41 +316,37 @@ public sealed class BattleController : ControllerBase
             return Ok(RunSnapshotDtoMapper.ToResultDto(rec));
         }
 
-        RewardRngState newRng;
-        RewardState reward;
+        RunState updated;
         if (isBoss)
         {
-            // ボス かつ 非最終アクト → BossReward フラグ付き報酬
-            var r = BossRewardFlow.GenerateBossReward(afterFinalize, _data, rewardRng)
-                ?? throw new InvalidOperationException(
-                    $"BossRewardFlow returned null for non-final act {afterFinalize.CurrentAct}.");
-            reward = r;
-            newRng = afterFinalize.RewardRngState;  // BossRewardFlow は RewardRngState を更新しない
+            // ボス かつ 非最終アクト → BossRewardFlow.Resolve で報酬生成 + OnRewardGenerated 発火
+            updated = BossRewardFlow.Resolve(afterFinalize, _data, rewardRng);
+            if (updated.ActiveReward is null)
+                throw new InvalidOperationException(
+                    $"BossRewardFlow.Resolve returned null reward for non-final act {afterFinalize.CurrentAct}.");
+            updated = updated with { SavedAtUtc = DateTimeOffset.UtcNow };
         }
         else
         {
             // 通常エンカウンター
-            var (r, nr) = RewardGenerator.Generate(
+            var (reward, newRng) = RewardGenerator.Generate(
                 new RewardContext.FromEnemy(enc.Pool),
                 afterFinalize.RewardRngState,
                 ImmutableArray.CreateRange(beforeRun.Relics),
                 _data.RewardTables.TryGetValue($"act{beforeRun.CurrentAct}", out var tbl)
                     ? tbl : _data.RewardTables["act1"],
                 _data, rewardRng);
-            reward = r; newRng = nr;
+            updated = afterFinalize with
+            {
+                ActiveReward = reward,
+                RewardRngState = newRng,
+                SavedAtUtc = DateTimeOffset.UtcNow,
+            };
+            updated = NonBattleRelicEffects.ApplyOnRewardGenerated(updated, _data);
+            // Phase 8: プレイヤーに提示されたカード選択肢を SeenCardBaseIds に追加。
+            if (updated.ActiveReward!.CardChoices.Length > 0)
+                updated = BestiaryTracker.NoteCardsSeen(updated, updated.ActiveReward.CardChoices);
         }
-
-        var updated = afterFinalize with
-        {
-            ActiveReward = reward,
-            RewardRngState = newRng,
-            SavedAtUtc = DateTimeOffset.UtcNow,
-        };
-        updated = NonBattleRelicEffects.ApplyOnRewardGenerated(updated, _data);
-        // Phase 8: プレイヤーに提示されたカード選択肢を SeenCardBaseIds に追加。
-        // ボス報酬は CardChoices が空のため、ガードで no-op 化する。
-        if (reward.CardChoices.Length > 0)
-            updated = BestiaryTracker.NoteCardsSeen(updated, reward.CardChoices);
         await _saves.SaveAsync(accountId, updated, ct);
         var winMap = _runStart.RehydrateMap(updated.RngSeed, updated.CurrentAct);
         return Ok(RunSnapshotDtoMapper.From(updated, winMap, _data));
