@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using RoguelikeCardGame.Core.Battle.Definitions;
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Events;
 using RoguelikeCardGame.Core.Map;
 using RoguelikeCardGame.Core.Random;
+using RoguelikeCardGame.Core.Relics;
 using RoguelikeCardGame.Core.Rewards;
 using RoguelikeCardGame.Core.Run;
 using Xunit;
@@ -149,5 +151,61 @@ public class EventResolverTests
         var s0 = Base() with { ActiveEvent = inst };
         Assert.Throws<ArgumentOutOfRangeException>(() =>
             EventResolver.ApplyChoice(s0, 5, Catalog, new SequentialRng(1UL)));
+    }
+
+    [Fact]
+    public void ApplyChoice_GrantCardReward_FiresOnRewardGeneratedRelicTrigger()
+    {
+        // Arrange: fake relic that grants 7 gold OnRewardGenerated
+        var fake = BuildCatalogWithFakeRelic(
+            id: "event_lucky",
+            effects: new[] { new CardEffect(
+                "gainGold", EffectScope.Self, null, 7, Trigger: "OnRewardGenerated") });
+        var inst = MakeInstance(new EventChoice("card",
+            null, ImmutableArray.Create<EventEffect>(new EventEffect.GrantCardReward())));
+        var s0 = Base(gold: 100) with
+        {
+            ActiveEvent = inst,
+            Relics = new List<string> { "event_lucky" },
+        };
+        // Use catalog-aware Base: rebuild with fake catalog
+        var s0WithFakeCat = RunState.NewSoloRun(
+            fake, 1UL, 0,
+            ImmutableDictionary<int, TileKind>.Empty,
+            ImmutableArray<string>.Empty, ImmutableArray<string>.Empty,
+            ImmutableArray<string>.Empty, ImmutableArray<string>.Empty,
+            new DateTimeOffset(2026, 4, 22, 0, 0, 0, TimeSpan.Zero)
+        ) with
+        {
+            Gold = 100,
+            ActiveEvent = inst,
+            Relics = new List<string> { "event_lucky" },
+        };
+
+        // Act
+        var s1 = EventResolver.ApplyChoice(s0WithFakeCat, 0, fake, new SequentialRng(1UL));
+
+        // Assert: reward is set AND gold increased by 7 from relic trigger
+        Assert.NotNull(s1.ActiveReward);
+        Assert.Equal(107, s1.Gold);
+    }
+
+    private static DataCatalog BuildCatalogWithFakeRelic(
+        string id,
+        IReadOnlyList<CardEffect> effects,
+        bool implemented = true)
+    {
+        var fakeRelic = new RelicDefinition(
+            Id: id,
+            Name: $"fake_{id}",
+            Rarity: CardRarity.Common,
+            Effects: effects,
+            Description: "",
+            Implemented: implemented);
+
+        var orig = EmbeddedDataLoader.LoadCatalog();
+        var relics = orig.Relics.ToDictionary(kv => kv.Key, kv => kv.Value);
+        relics[id] = fakeRelic;
+        return orig with { Relics = relics };
     }
 }

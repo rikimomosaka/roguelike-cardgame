@@ -64,7 +64,8 @@ public static class NodeEffectResolver
     {
         var owned = ImmutableArray.CreateRange(s.Relics);
         var (reward, newRng) = RewardGenerator.GenerateTreasure(s.RewardRngState, owned, table, data, rng);
-        return s with { ActiveReward = reward, RewardRngState = newRng };
+        var s1 = s with { ActiveReward = reward, RewardRngState = newRng };
+        return NonBattleRelicEffects.ApplyOnRewardGenerated(s1, data);
     }
 
     private static RunState StartEvent(RunState s, DataCatalog data, IRng rng)

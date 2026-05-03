@@ -86,6 +86,7 @@ public static class EventResolver
             CardChoices: reward.CardChoices,
             CardStatus: CardRewardStatus.Pending);
         var next = s with { ActiveReward = cardOnly, RewardRngState = newRngState };
+        next = NonBattleRelicEffects.ApplyOnRewardGenerated(next, catalog);
         return BestiaryTracker.NoteCardsSeen(next, reward.CardChoices);
     }
 }

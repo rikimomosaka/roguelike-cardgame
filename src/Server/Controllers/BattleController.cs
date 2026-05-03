@@ -12,6 +12,7 @@ using RoguelikeCardGame.Core.Bestiary;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.History;
 using RoguelikeCardGame.Core.Random;
+using RoguelikeCardGame.Core.Relics;
 using RoguelikeCardGame.Core.Rewards;
 using RoguelikeCardGame.Core.Run;
 using RoguelikeCardGame.Server.Abstractions;
@@ -345,6 +346,7 @@ public sealed class BattleController : ControllerBase
             RewardRngState = newRng,
             SavedAtUtc = DateTimeOffset.UtcNow,
         };
+        updated = NonBattleRelicEffects.ApplyOnRewardGenerated(updated, _data);
         // Phase 8: プレイヤーに提示されたカード選択肢を SeenCardBaseIds に追加。
         // ボス報酬は CardChoices が空のため、ガードで no-op 化する。
         if (reward.CardChoices.Length > 0)

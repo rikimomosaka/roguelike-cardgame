@@ -201,6 +201,29 @@ public class NodeEffectResolverTests
         Assert.Equal(54, s1.Gold);
     }
 
+    [Fact]
+    public void Resolve_Treasure_FiresOnRewardGeneratedRelicTrigger()
+    {
+        // Arrange: fake relic that grants 11 gold OnRewardGenerated
+        var fake = BuildCatalogWithFakeRelic(
+            id: "lucky",
+            effects: new[] { new CardEffect(
+                "gainGold", EffectScope.Self, null, 11, Trigger: "OnRewardGenerated") });
+        var s0 = TestRunStates.FreshDefault(fake) with
+        {
+            Gold = 100,
+            Relics = new List<string> { "lucky" }
+        };
+        var rng = new SequentialRng(1UL);
+
+        // Act
+        var s1 = NodeEffectResolver.Resolve(s0, TileKind.Treasure, currentRow: 5, fake, rng);
+
+        // Assert: reward is set AND gold increased by 11
+        Assert.NotNull(s1.ActiveReward);
+        Assert.Equal(111, s1.Gold);
+    }
+
     private static DataCatalog BuildCatalogWithFakeRelic(
         string id,
         IReadOnlyList<CardEffect> effects,
