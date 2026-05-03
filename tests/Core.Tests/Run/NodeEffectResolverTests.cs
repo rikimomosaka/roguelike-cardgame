@@ -14,6 +14,8 @@ namespace RoguelikeCardGame.Core.Tests.Run;
 
 public class NodeEffectResolverTests
 {
+    private static readonly DataCatalog BaseCatalog = EmbeddedDataLoader.LoadCatalog();
+
     private static RunState FreshWithQueues(DataCatalog cat)
     {
         var s = TestRunStates.FreshDefault(cat);
@@ -227,19 +229,6 @@ public class NodeEffectResolverTests
     private static DataCatalog BuildCatalogWithFakeRelic(
         string id,
         IReadOnlyList<CardEffect> effects,
-        bool implemented = true)
-    {
-        var fake = new RelicDefinition(
-            Id: id,
-            Name: $"fake_{id}",
-            Rarity: CardRarity.Common,
-            Effects: effects,
-            Description: "",
-            Implemented: implemented);
-
-        var orig = EmbeddedDataLoader.LoadCatalog();
-        var relics = orig.Relics.ToDictionary(kv => kv.Key, kv => kv.Value);
-        relics[id] = fake;
-        return orig with { Relics = relics };
-    }
+        bool implemented = true) =>
+        RelicCatalogTestHelpers.BuildCatalogWithFakeRelic(BaseCatalog, id, effects, implemented);
 }

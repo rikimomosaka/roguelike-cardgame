@@ -18,26 +18,11 @@ public class RestActionsTests
 
     private static DataCatalog Catalog() => BaseCatalog;
 
-    /// <summary>
-    /// フェイクレリックを注入した DataCatalog を返すローカルヘルパ (T9 で TestHelpers/ に集約予定)。
-    /// </summary>
     private static DataCatalog BuildCatalogWithFakeRelic(
         string id,
         IReadOnlyList<CardEffect> effects,
-        bool implemented = true)
-    {
-        var fake = new RelicDefinition(
-            Id: id,
-            Name: $"fake_{id}",
-            Rarity: CardRarity.Common,
-            Effects: effects,
-            Description: "",
-            Implemented: implemented);
-
-        var relics = BaseCatalog.Relics.ToDictionary(kv => kv.Key, kv => kv.Value);
-        relics[id] = fake;
-        return BaseCatalog with { Relics = relics };
-    }
+        bool implemented = true) =>
+        RelicCatalogTestHelpers.BuildCatalogWithFakeRelic(BaseCatalog, id, effects, implemented);
 
     private static RunState PendingRunAt(int currentHp, int maxHp,
         ImmutableArray<CardInstance>? deck = null,

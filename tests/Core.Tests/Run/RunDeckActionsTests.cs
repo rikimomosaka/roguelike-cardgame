@@ -22,26 +22,11 @@ public class RunDeckActionsTests
             ImmutableArray<string>.Empty, ImmutableArray<string>.Empty,
             new System.DateTimeOffset(2026, 5, 3, 0, 0, 0, System.TimeSpan.Zero));
 
-    // BuildCatalogWithFakeRelic helper をローカルコピー (NonBattleRelicEffectsTests.cs と同じパターン)
-    // T9 で TestHelpers/ に集約予定
     private static DataCatalog BuildCatalogWithFakeRelic(
         string id,
         IReadOnlyList<CardEffect> effects,
-        bool implemented = true)
-    {
-        var fake = new RelicDefinition(
-            Id: id,
-            Name: $"fake_{id}",
-            Rarity: CardRarity.Common,
-            Effects: effects,
-            Description: "",
-            Implemented: implemented);
-
-        var orig = BaseCatalog;
-        var relics = orig.Relics.ToDictionary(kv => kv.Key, kv => kv.Value);
-        relics[id] = fake;
-        return orig with { Relics = relics };
-    }
+        bool implemented = true) =>
+        RelicCatalogTestHelpers.BuildCatalogWithFakeRelic(BaseCatalog, id, effects, implemented);
 
     [Fact]
     public void AddCardToDeck_AppendsCardInstance()

@@ -37,23 +37,11 @@ public class MerchantActionsTests
         DiscardSlotUsed: false,
         DiscardPrice: 75);
 
-    // BuildCatalogWithFakeRelic helper (ローカルコピー。T9 で TestHelpers/ に集約予定)
     private static DataCatalog BuildCatalogWithFakeRelic(
         string id,
         IReadOnlyList<CardEffect> effects,
-        bool implemented = true)
-    {
-        var fake = new RelicDefinition(
-            Id: id,
-            Name: $"fake_{id}",
-            Rarity: CardRarity.Common,
-            Effects: effects,
-            Description: "",
-            Implemented: implemented);
-        var relics = Catalog.Relics.ToDictionary(kv => kv.Key, kv => kv.Value);
-        relics[id] = fake;
-        return Catalog with { Relics = relics };
-    }
+        bool implemented = true) =>
+        RelicCatalogTestHelpers.BuildCatalogWithFakeRelic(Catalog, id, effects, implemented);
 
     // MakeBuyCardState: 指定 cardId / price で商人在庫を組み立てた RunState を返す
     private static RunState MakeBuyCardState(DataCatalog catalog, string cardId, int price)

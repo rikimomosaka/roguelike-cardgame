@@ -13,24 +13,11 @@ public class RewardApplierTests
 {
     private static readonly DataCatalog Cat = EmbeddedDataLoader.LoadCatalog();
 
-    // BuildCatalogWithFakeRelic helper (ローカルコピー。T9 で TestHelpers/ に集約予定)
     private static DataCatalog BuildCatalogWithFakeRelic(
         string id,
         IReadOnlyList<CardEffect> effects,
-        bool implemented = true)
-    {
-        var fake = new RelicDefinition(
-            Id: id,
-            Name: $"fake_{id}",
-            Rarity: CardRarity.Common,
-            Effects: effects,
-            Description: "",
-            Implemented: implemented);
-
-        var relics = Cat.Relics.ToDictionary(kv => kv.Key, kv => kv.Value);
-        relics[id] = fake;
-        return Cat with { Relics = relics };
-    }
+        bool implemented = true) =>
+        RelicCatalogTestHelpers.BuildCatalogWithFakeRelic(Cat, id, effects, implemented);
 
     private static RunState StateWithReward(RewardState r)
     {
