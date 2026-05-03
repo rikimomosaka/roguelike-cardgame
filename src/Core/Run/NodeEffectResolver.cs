@@ -9,6 +9,7 @@ using RoguelikeCardGame.Core.Events;
 using RoguelikeCardGame.Core.Map;
 using RoguelikeCardGame.Core.Merchant;
 using RoguelikeCardGame.Core.Random;
+using RoguelikeCardGame.Core.Relics;
 using RoguelikeCardGame.Core.Rewards;
 
 namespace RoguelikeCardGame.Core.Run;
@@ -79,6 +80,7 @@ public static class NodeEffectResolver
             throw new InvalidOperationException("DataCatalog.MerchantPrices is not configured");
         var inv = MerchantInventoryGenerator.Generate(data, data.MerchantPrices, s, rng);
         var next = s with { ActiveMerchant = inv };
-        return BestiaryTracker.NoteCardsSeen(next, inv.Cards.Select(o => o.Id));
+        next = BestiaryTracker.NoteCardsSeen(next, inv.Cards.Select(o => o.Id));
+        return NonBattleRelicEffects.ApplyOnEnterShop(next, data);
     }
 }

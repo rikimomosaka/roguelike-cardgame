@@ -1,9 +1,12 @@
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using RoguelikeCardGame.Core.Battle;
+using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Battle.Definitions;
 using RoguelikeCardGame.Core.Map;
 using RoguelikeCardGame.Core.Random;
+using RoguelikeCardGame.Core.Relics;
 using RoguelikeCardGame.Core.Run;
 using Xunit;
 
@@ -152,5 +155,46 @@ public class NodeEffectResolverTests
         var pool = cat.ActStartRelicPools![2];
         foreach (var id in next.ActiveActStartRelicChoice!.RelicIds)
             Assert.Contains(id, pool);
+    }
+
+    [Fact]
+    public void Resolve_Merchant_FiresOnEnterShopRelicTrigger()
+    {
+        // Arrange: fake catalog with a "shopper" relic that grants 7 gold OnEnterShop
+        var cat = BuildCatalogWithFakeRelic(
+            id: "shopper",
+            effects: new[] { new CardEffect(
+                "gainGold", EffectScope.Self, null, 7, Trigger: "OnEnterShop") });
+        var s = TestRunStates.FreshDefault(cat) with
+        {
+            Gold = 100,
+            Relics = new List<string> { "shopper" },
+        };
+
+        // Act
+        var next = NodeEffectResolver.Resolve(s, TileKind.Merchant, currentRow: 5, cat, new SystemRng(1));
+
+        // Assert: merchant opened AND gold increased by 7
+        Assert.NotNull(next.ActiveMerchant);
+        Assert.Equal(107, next.Gold);
+    }
+
+    private static DataCatalog BuildCatalogWithFakeRelic(
+        string id,
+        IReadOnlyList<CardEffect> effects,
+        bool implemented = true)
+    {
+        var fake = new RelicDefinition(
+            Id: id,
+            Name: $"fake_{id}",
+            Rarity: CardRarity.Common,
+            Effects: effects,
+            Description: "",
+            Implemented: implemented);
+
+        var orig = EmbeddedDataLoader.LoadCatalog();
+        var relics = orig.Relics.ToDictionary(kv => kv.Key, kv => kv.Value);
+        relics[id] = fake;
+        return orig with { Relics = relics };
     }
 }
