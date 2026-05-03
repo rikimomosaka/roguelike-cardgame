@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Map;
+using RoguelikeCardGame.Core.Relics;
 using RoguelikeCardGame.Core.Rest;
 using RoguelikeCardGame.Core.Run;
 using Xunit;
@@ -11,7 +14,30 @@ namespace RoguelikeCardGame.Core.Tests.Rest;
 
 public class RestActionsTests
 {
-    private static DataCatalog Catalog() => EmbeddedDataLoader.LoadCatalog();
+    private static readonly DataCatalog BaseCatalog = EmbeddedDataLoader.LoadCatalog();
+
+    private static DataCatalog Catalog() => BaseCatalog;
+
+    /// <summary>
+    /// フェイクレリックを注入した DataCatalog を返すローカルヘルパ (T9 で TestHelpers/ に集約予定)。
+    /// </summary>
+    private static DataCatalog BuildCatalogWithFakeRelic(
+        string id,
+        IReadOnlyList<CardEffect> effects,
+        bool implemented = true)
+    {
+        var fake = new RelicDefinition(
+            Id: id,
+            Name: $"fake_{id}",
+            Rarity: CardRarity.Common,
+            Effects: effects,
+            Description: "",
+            Implemented: implemented);
+
+        var relics = BaseCatalog.Relics.ToDictionary(kv => kv.Key, kv => kv.Value);
+        relics[id] = fake;
+        return BaseCatalog with { Relics = relics };
+    }
 
     private static RunState PendingRunAt(int currentHp, int maxHp,
         ImmutableArray<CardInstance>? deck = null,
@@ -137,5 +163,46 @@ public class RestActionsTests
         var s = PendingRunAt(80, 80, deck: deck) with { ActiveRestPending = false };
         Assert.Throws<InvalidOperationException>(() =>
             RestActions.UpgradeCard(s, 0, Catalog()));
+    }
+
+    // Phase 10.6.A Task 4: OnRest は Heal 専用、UpgradeCard では発火しない
+
+    [Fact]
+    public void Heal_WithOnRestRelic_FiresGainMaxHpAfterHealing()
+    {
+        // base 30% of 80 = ceil(24) = 24 heal → 50+24=74. Then OnRest fires +1/+1 → 75/81.
+        var fake = BuildCatalogWithFakeRelic(
+            id: "rest_grower",
+            effects: new[] { new CardEffect(
+                "gainMaxHp", EffectScope.Self, null, 1, Trigger: "OnRest") });
+        var s0 = PendingRunAt(currentHp: 50, maxHp: 80,
+            relics: ImmutableArray.Create("rest_grower")) with { };
+        // PendingRunAt uses fake catalog; switch to fake catalog by reconstructing
+        var s0f = s0; // state is correct; catalog passed to Heal is the fake one
+
+        var s1 = RestActions.Heal(s0f, fake);
+
+        Assert.True(s1.ActiveRestCompleted);
+        Assert.Equal(81, s1.MaxHp);
+        Assert.Equal(75, s1.CurrentHp);
+    }
+
+    [Fact]
+    public void UpgradeCard_DoesNotFireOnRestTrigger()
+    {
+        // OnRest は Heal 専用。UpgradeCard で発火しないことを確認。
+        var fake = BuildCatalogWithFakeRelic(
+            id: "rest_grower_upgrade",
+            effects: new[] { new CardEffect(
+                "gainMaxHp", EffectScope.Self, null, 99, Trigger: "OnRest") });
+        var deck = ImmutableArray.Create(new CardInstance("strike", Upgraded: false));
+        var s0 = PendingRunAt(80, 80, deck: deck,
+            relics: ImmutableArray.Create("rest_grower_upgrade"));
+        int origMaxHp = s0.MaxHp;
+
+        var s1 = RestActions.UpgradeCard(s0, deckIndex: 0, fake);
+
+        Assert.True(s1.ActiveRestCompleted);
+        Assert.Equal(origMaxHp, s1.MaxHp); // OnRest は Heal 専用、UpgradeCard では発火しない
     }
 }

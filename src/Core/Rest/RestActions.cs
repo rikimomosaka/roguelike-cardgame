@@ -20,7 +20,8 @@ public static class RestActions
         int baseAmount = (int)Math.Ceiling(s.MaxHp * 0.30);
         int total = NonBattleRelicEffects.ApplyPassiveRestHealBonus(baseAmount, s, catalog);
         int newHp = Math.Min(s.MaxHp, s.CurrentHp + total);
-        return s with { CurrentHp = newHp, ActiveRestCompleted = true };
+        var s1 = s with { CurrentHp = newHp, ActiveRestCompleted = true };
+        return NonBattleRelicEffects.ApplyOnRest(s1, catalog);
     }
 
     public static RunState UpgradeCard(RunState s, int deckIndex, DataCatalog catalog)
