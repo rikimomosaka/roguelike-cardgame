@@ -163,6 +163,95 @@ public class NonBattleRelicEffectsTests
         Assert.Equal(0, s1.Gold);
     }
 
+    // Phase 10.6.A Task 1: run-flow trigger メソッド追加テスト
+
+    [Fact]
+    public void ApplyOnEnterShop_GainGoldEffect_AddsGold()
+    {
+        var fake = BuildCatalogWithFakeRelic(
+            id: "fake_shop",
+            effects: new[] { new CardEffect(
+                "gainGold", EffectScope.Self, null, 5, Trigger: "OnEnterShop") });
+        var s0 = Sample(gold: 100) with { Relics = new List<string> { "fake_shop" } };
+        var s1 = NonBattleRelicEffects.ApplyOnEnterShop(s0, fake);
+        Assert.Equal(105, s1.Gold);
+    }
+
+    [Fact]
+    public void ApplyOnEnterShop_ImplementedFalseRelic_NoOp()
+    {
+        var fake = BuildCatalogWithFakeRelic(
+            id: "fake_shop_unimpl",
+            effects: new[] { new CardEffect(
+                "gainGold", EffectScope.Self, null, 5, Trigger: "OnEnterShop") },
+            implemented: false);
+        var s0 = Sample(gold: 100) with { Relics = new List<string> { "fake_shop_unimpl" } };
+        var s1 = NonBattleRelicEffects.ApplyOnEnterShop(s0, fake);
+        Assert.Equal(100, s1.Gold);
+    }
+
+    [Fact]
+    public void ApplyOnEnterRestSite_HealHpEffect_HealsCurrentHpClampedByMaxHp()
+    {
+        var fake = BuildCatalogWithFakeRelic(
+            id: "fake_rest_site",
+            effects: new[] { new CardEffect(
+                "healHp", EffectScope.Self, null, 30, Trigger: "OnEnterRestSite") });
+        var s0 = Sample(hp: 60, maxHp: 80) with { Relics = new List<string> { "fake_rest_site" } };
+        var s1 = NonBattleRelicEffects.ApplyOnEnterRestSite(s0, fake);
+        Assert.Equal(80, s1.CurrentHp); // clamped to max
+    }
+
+    [Fact]
+    public void ApplyOnRest_GainMaxHpEffect_IncreasesMaxAndCurrentHp()
+    {
+        var fake = BuildCatalogWithFakeRelic(
+            id: "fake_rest",
+            effects: new[] { new CardEffect(
+                "gainMaxHp", EffectScope.Self, null, 1, Trigger: "OnRest") });
+        var s0 = Sample(hp: 50, maxHp: 80) with { Relics = new List<string> { "fake_rest" } };
+        var s1 = NonBattleRelicEffects.ApplyOnRest(s0, fake);
+        Assert.Equal(81, s1.MaxHp);
+        Assert.Equal(51, s1.CurrentHp);
+    }
+
+    [Fact]
+    public void ApplyOnRewardGenerated_GainGoldEffect_GrantsBonus()
+    {
+        var fake = BuildCatalogWithFakeRelic(
+            id: "fake_reward",
+            effects: new[] { new CardEffect(
+                "gainGold", EffectScope.Self, null, 3, Trigger: "OnRewardGenerated") });
+        var s0 = Sample(gold: 50) with { Relics = new List<string> { "fake_reward" } };
+        var s1 = NonBattleRelicEffects.ApplyOnRewardGenerated(s0, fake);
+        Assert.Equal(53, s1.Gold);
+    }
+
+    [Fact]
+    public void ApplyOnCardAddedToDeck_GainGoldEffect_GrantsBonus()
+    {
+        var fake = BuildCatalogWithFakeRelic(
+            id: "fake_card_added",
+            effects: new[] { new CardEffect(
+                "gainGold", EffectScope.Self, null, 2, Trigger: "OnCardAddedToDeck") });
+        var s0 = Sample(gold: 10) with { Relics = new List<string> { "fake_card_added" } };
+        var s1 = NonBattleRelicEffects.ApplyOnCardAddedToDeck(s0, fake);
+        Assert.Equal(12, s1.Gold);
+    }
+
+    [Fact]
+    public void ApplyOnRest_NonOnRestTriggerEffect_NoOp()
+    {
+        var fake = BuildCatalogWithFakeRelic(
+            id: "fake_other",
+            effects: new[] { new CardEffect(
+                "gainMaxHp", EffectScope.Self, null, 5, Trigger: "OnPickup") });
+        var s0 = Sample(hp: 50, maxHp: 80) with { Relics = new List<string> { "fake_other" } };
+        var s1 = NonBattleRelicEffects.ApplyOnRest(s0, fake);
+        Assert.Equal(80, s1.MaxHp);
+        Assert.Equal(50, s1.CurrentHp);
+    }
+
     private static DataCatalog BuildCatalogWithFakeRelic(
         string id,
         IReadOnlyList<CardEffect> effects,

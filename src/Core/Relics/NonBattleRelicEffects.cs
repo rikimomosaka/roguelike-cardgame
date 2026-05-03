@@ -5,13 +5,10 @@ using RoguelikeCardGame.Core.Run;
 namespace RoguelikeCardGame.Core.Relics;
 
 /// <summary>
-/// 戦闘外（マップ／休憩／取得時）でのレリック効果を適用する純粋関数群。
-/// Phase 10 設計書 第 2-7 章参照。Action 文字列で効果を識別する。
+/// 戦闘外（マップ／休憩／取得時／ショップ／報酬生成／デッキ追加時）でのレリック効果を適用する純粋関数群。
+/// Phase 10 設計書 第 2-7 章 / Phase 10.5.L1.5 unified-triggers / Phase 10.6.A run-flow triggers 参照。
+/// Action 文字列 (gainMaxHp / gainGold / healHp) で効果を識別する。
 /// </summary>
-/// <remarks>
-/// Phase 10.5.L1.5: relic-level Trigger フィールド廃止に伴い per-effect filter に変更。
-/// 各 relic の effects[] をループして eff.Trigger == 対象 trigger のものだけを適用する。
-/// </remarks>
 public static class NonBattleRelicEffects
 {
     public static RunState ApplyOnPickup(RunState s, string relicId, DataCatalog catalog)
@@ -22,15 +19,22 @@ public static class NonBattleRelicEffects
     }
 
     public static RunState ApplyOnMapTileResolved(RunState s, DataCatalog catalog)
-    {
-        foreach (var id in s.Relics)
-        {
-            if (!catalog.TryGetRelic(id, out var def)) continue;
-            if (!def.Implemented) continue;
-            s = ApplyEffectsForTrigger(s, def, "OnMapTileResolved");
-        }
-        return s;
-    }
+        => ApplyForAllOwnedRelics(s, catalog, "OnMapTileResolved");
+
+    public static RunState ApplyOnEnterShop(RunState s, DataCatalog catalog)
+        => ApplyForAllOwnedRelics(s, catalog, "OnEnterShop");
+
+    public static RunState ApplyOnEnterRestSite(RunState s, DataCatalog catalog)
+        => ApplyForAllOwnedRelics(s, catalog, "OnEnterRestSite");
+
+    public static RunState ApplyOnRest(RunState s, DataCatalog catalog)
+        => ApplyForAllOwnedRelics(s, catalog, "OnRest");
+
+    public static RunState ApplyOnRewardGenerated(RunState s, DataCatalog catalog)
+        => ApplyForAllOwnedRelics(s, catalog, "OnRewardGenerated");
+
+    public static RunState ApplyOnCardAddedToDeck(RunState s, DataCatalog catalog)
+        => ApplyForAllOwnedRelics(s, catalog, "OnCardAddedToDeck");
 
     public static int ApplyPassiveRestHealBonus(int baseBonus, RunState s, DataCatalog catalog)
     {
@@ -48,6 +52,17 @@ public static class NonBattleRelicEffects
         return bonus;
     }
 
+    private static RunState ApplyForAllOwnedRelics(RunState s, DataCatalog catalog, string trigger)
+    {
+        foreach (var id in s.Relics)
+        {
+            if (!catalog.TryGetRelic(id, out var def)) continue;
+            if (!def.Implemented) continue;
+            s = ApplyEffectsForTrigger(s, def, trigger);
+        }
+        return s;
+    }
+
     private static RunState ApplyEffectsForTrigger(RunState s, RelicDefinition def, string trigger)
     {
         foreach (var eff in def.Effects)
@@ -57,6 +72,7 @@ public static class NonBattleRelicEffects
             {
                 "gainMaxHp" => s with { MaxHp = s.MaxHp + eff.Amount, CurrentHp = s.CurrentHp + eff.Amount },
                 "gainGold"  => s with { Gold = s.Gold + eff.Amount },
+                "healHp"    => s with { CurrentHp = System.Math.Min(s.MaxHp, s.CurrentHp + eff.Amount) },
                 _           => s,
             };
         }
