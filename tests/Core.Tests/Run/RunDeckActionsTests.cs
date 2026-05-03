@@ -80,4 +80,27 @@ public class RunDeckActionsTests
         Assert.Throws<System.ArgumentException>(() =>
             RunDeckActions.AddCardToDeck(s0, "no_such_card", BaseCatalog));
     }
+
+    [Fact]
+    public void AddCardToDeck_NullState_Throws()
+    {
+        Assert.Throws<System.ArgumentNullException>(() =>
+            RunDeckActions.AddCardToDeck(null!, "strike", BaseCatalog));
+    }
+
+    [Fact]
+    public void AddCardToDeck_NullCardId_Throws()
+    {
+        var s0 = Sample();
+        Assert.Throws<System.ArgumentNullException>(() =>
+            RunDeckActions.AddCardToDeck(s0, null!, BaseCatalog));
+    }
+
+    [Fact]
+    public void AddCardToDeck_NullCatalog_Throws()
+    {
+        var s0 = Sample();
+        Assert.Throws<System.ArgumentNullException>(() =>
+            RunDeckActions.AddCardToDeck(s0, "strike", null!));
+    }
 }
