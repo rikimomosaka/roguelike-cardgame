@@ -19,12 +19,14 @@ public static class MerchantActions
         if (!catalog.TryGetCard(cardId, out _))
             throw new ArgumentException($"unknown card id \"{cardId}\"", nameof(cardId));
         var soldOffer = offer with { Sold = true };
-        return s with
+        // Gold 消費 + Sold フラグを先に適用してから AddCardToDeck 経由でデッキ追加。
+        // AddCardToDeck が OnCardAddedToDeck トリガーを持つレリック効果も発火する。
+        var s1 = s with
         {
             Gold = s.Gold - offer.Price,
-            Deck = s.Deck.Add(new CardInstance(cardId, false)),
             ActiveMerchant = inv with { Cards = inv.Cards.SetItem(idx, soldOffer) },
         };
+        return Run.RunDeckActions.AddCardToDeck(s1, cardId, catalog);
     }
 
     public static RunState BuyRelic(RunState s, string relicId, DataCatalog catalog)

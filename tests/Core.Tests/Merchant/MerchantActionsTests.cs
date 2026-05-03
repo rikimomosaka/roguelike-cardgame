@@ -1,9 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Map;
 using RoguelikeCardGame.Core.Merchant;
+using RoguelikeCardGame.Core.Relics;
 using RoguelikeCardGame.Core.Run;
 using Xunit;
 
@@ -33,6 +36,42 @@ public class MerchantActionsTests
             new MerchantOffer("potion", "health_potion", 50, false)),
         DiscardSlotUsed: false,
         DiscardPrice: 75);
+
+    // BuildCatalogWithFakeRelic helper (ローカルコピー。T9 で TestHelpers/ に集約予定)
+    private static DataCatalog BuildCatalogWithFakeRelic(
+        string id,
+        IReadOnlyList<CardEffect> effects,
+        bool implemented = true)
+    {
+        var fake = new RelicDefinition(
+            Id: id,
+            Name: $"fake_{id}",
+            Rarity: CardRarity.Common,
+            Effects: effects,
+            Description: "",
+            Implemented: implemented);
+        var relics = Catalog.Relics.ToDictionary(kv => kv.Key, kv => kv.Value);
+        relics[id] = fake;
+        return Catalog with { Relics = relics };
+    }
+
+    // MakeBuyCardState: 指定 cardId / price で商人在庫を組み立てた RunState を返す
+    private static RunState MakeBuyCardState(DataCatalog catalog, string cardId, int price)
+    {
+        var inv = new MerchantInventory(
+            Cards: ImmutableArray.Create(new MerchantOffer("card", cardId, price, false)),
+            Relics: ImmutableArray<MerchantOffer>.Empty,
+            Potions: ImmutableArray<MerchantOffer>.Empty,
+            DiscardSlotUsed: false,
+            DiscardPrice: 75);
+        return RunState.NewSoloRun(
+            catalog, 1UL, 0,
+            ImmutableDictionary<int, TileKind>.Empty,
+            ImmutableArray<string>.Empty, ImmutableArray<string>.Empty,
+            ImmutableArray<string>.Empty, ImmutableArray<string>.Empty,
+            new DateTimeOffset(2026, 4, 22, 0, 0, 0, TimeSpan.Zero))
+            with { ActiveMerchant = inv };
+    }
 
     [Fact]
     public void BuyCard_SufficientGold_AddsCardDeductsGoldMarksSold()
@@ -67,6 +106,27 @@ public class MerchantActionsTests
         var s0 = BaseWithInventory(500);
         Assert.Throws<ArgumentException>(() =>
             MerchantActions.BuyCard(s0, "no_such_card", Catalog));
+    }
+
+    [Fact]
+    public void BuyCard_FiresOnCardAddedToDeckTrigger()
+    {
+        // card_collector relic: OnCardAddedToDeck で gainGold +3
+        var fake = BuildCatalogWithFakeRelic(
+            id: "card_collector",
+            effects: new[] { new CardEffect(
+                "gainGold", EffectScope.Self, null, 3, Trigger: "OnCardAddedToDeck") });
+        var s0 = MakeBuyCardState(fake, cardId: "strike", price: 50) with
+        {
+            Gold = 100,
+            Relics = new List<string> { "card_collector" }
+        };
+
+        var s1 = MerchantActions.BuyCard(s0, "strike", fake);
+
+        // 100 - 50 (price) + 3 (relic gainGold on OnCardAddedToDeck) = 53
+        Assert.Equal(53, s1.Gold);
+        Assert.Contains(s1.Deck, c => c.Id == "strike");
     }
 
     [Fact]
