@@ -18,7 +18,7 @@ public static class RestActions
             throw new InvalidOperationException("Rest already completed");
 
         int baseAmount = (int)Math.Ceiling(s.MaxHp * 0.30);
-        int total = NonBattleRelicEffects.ApplyPassiveRestHealBonus(baseAmount, s, catalog);
+        int total = PassiveModifiers.ApplyPassiveRestHealBonus(baseAmount, s, catalog);
         int newHp = Math.Min(s.MaxHp, s.CurrentHp + total);
         var s1 = s with { CurrentHp = newHp, ActiveRestCompleted = true };
         return NonBattleRelicEffects.ApplyOnRest(s1, catalog);

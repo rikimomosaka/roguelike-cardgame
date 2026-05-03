@@ -36,22 +36,6 @@ public static class NonBattleRelicEffects
     public static RunState ApplyOnCardAddedToDeck(RunState s, DataCatalog catalog)
         => ApplyForAllOwnedRelics(s, catalog, "OnCardAddedToDeck");
 
-    public static int ApplyPassiveRestHealBonus(int baseBonus, RunState s, DataCatalog catalog)
-    {
-        int bonus = baseBonus;
-        foreach (var id in s.Relics)
-        {
-            if (!catalog.TryGetRelic(id, out var def)) continue;
-            if (!def.Implemented) continue;
-            foreach (var eff in def.Effects)
-            {
-                if (eff.Trigger != "Passive") continue;
-                if (eff.Action == "restHealBonus") bonus += eff.Amount;
-            }
-        }
-        return bonus;
-    }
-
     private static RunState ApplyForAllOwnedRelics(RunState s, DataCatalog catalog, string trigger)
     {
         foreach (var id in s.Relics)

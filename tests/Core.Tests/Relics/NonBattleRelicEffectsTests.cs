@@ -94,7 +94,7 @@ public class NonBattleRelicEffectsTests
             effects: new[] { new CardEffect(
                 "restHealBonus", EffectScope.Self, null, 10, Trigger: "Passive") });
         var s0 = Sample() with { Relics = new List<string> { "fake_warm" } };
-        int bonus = NonBattleRelicEffects.ApplyPassiveRestHealBonus(0, s0, fake);
+        int bonus = PassiveModifiers.ApplyPassiveRestHealBonus(0, s0, fake);
         Assert.Equal(10, bonus);
     }
 
@@ -102,7 +102,7 @@ public class NonBattleRelicEffectsTests
     public void ApplyPassiveRestHealBonus_NoRelic_ReturnsBase()
     {
         var s0 = Sample();
-        int bonus = NonBattleRelicEffects.ApplyPassiveRestHealBonus(5, s0, Catalog);
+        int bonus = PassiveModifiers.ApplyPassiveRestHealBonus(5, s0, Catalog);
         Assert.Equal(5, bonus);
     }
 
@@ -141,7 +141,7 @@ public class NonBattleRelicEffectsTests
             effects: new[] { new CardEffect(
                 "restHealBonus", EffectScope.Self, null, 10, Trigger: "Passive") },
             implemented: false);
-        int bonus = NonBattleRelicEffects.ApplyPassiveRestHealBonus(0, s0, fake);
+        int bonus = PassiveModifiers.ApplyPassiveRestHealBonus(0, s0, fake);
         Assert.Equal(0, bonus);
     }
 
