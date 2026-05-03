@@ -176,11 +176,9 @@ public class RestActionsTests
             effects: new[] { new CardEffect(
                 "gainMaxHp", EffectScope.Self, null, 1, Trigger: "OnRest") });
         var s0 = PendingRunAt(currentHp: 50, maxHp: 80,
-            relics: ImmutableArray.Create("rest_grower")) with { };
-        // PendingRunAt uses fake catalog; switch to fake catalog by reconstructing
-        var s0f = s0; // state is correct; catalog passed to Heal is the fake one
+            relics: ImmutableArray.Create("rest_grower"));
 
-        var s1 = RestActions.Heal(s0f, fake);
+        var s1 = RestActions.Heal(s0, fake);
 
         Assert.True(s1.ActiveRestCompleted);
         Assert.Equal(81, s1.MaxHp);
