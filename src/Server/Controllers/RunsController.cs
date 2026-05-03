@@ -240,7 +240,7 @@ public sealed class RunsController : ControllerBase
         RunState updated;
         try
         {
-            updated = skip ? RewardApplier.SkipCard(s) : RewardApplier.PickCard(s, body.CardId!);
+            updated = skip ? RewardApplier.SkipCard(s) : RewardApplier.PickCard(s, body.CardId!, _data);
         }
         catch (ArgumentException ex)
         { return Problem(statusCode: StatusCodes.Status400BadRequest, title: ex.Message); }

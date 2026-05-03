@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
-using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Run;
 
@@ -39,7 +38,7 @@ public static class RewardApplier
         return Bestiary.BestiaryTracker.NotePotionsAcquired(next, new[] { r.PotionId });
     }
 
-    public static RunState PickCard(RunState s, string cardId)
+    public static RunState PickCard(RunState s, string cardId, DataCatalog catalog)
     {
         var r = Require(s);
         if (r.CardStatus == CardRewardStatus.Claimed)
@@ -47,11 +46,11 @@ public static class RewardApplier
         if (!r.CardChoices.Contains(cardId))
             throw new ArgumentException($"cardId \"{cardId}\" is not in CardChoices", nameof(cardId));
 
-        return s with
+        var s1 = s with
         {
-            Deck = s.Deck.Add(new CardInstance(cardId, false)),
             ActiveReward = r with { CardStatus = CardRewardStatus.Claimed },
         };
+        return RunDeckActions.AddCardToDeck(s1, cardId, catalog);
     }
 
     public static RunState SkipCard(RunState s)
