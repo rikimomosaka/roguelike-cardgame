@@ -179,6 +179,28 @@ public class NodeEffectResolverTests
         Assert.Equal(107, next.Gold);
     }
 
+    [Fact]
+    public void Resolve_Rest_FiresOnEnterRestSiteRelicTrigger()
+    {
+        // Arrange
+        var fake = BuildCatalogWithFakeRelic(
+            id: "rest_camper",
+            effects: new[] { new CardEffect(
+                "gainGold", EffectScope.Self, null, 4, Trigger: "OnEnterRestSite") });
+        var s0 = TestRunStates.FreshDefault(fake) with {
+            Gold = 50,
+            Relics = new List<string> { "rest_camper" }
+        };
+        var rng = new SequentialRng(1UL);
+
+        // Act
+        var s1 = NodeEffectResolver.Resolve(s0, TileKind.Rest, currentRow: 5, fake, rng);
+
+        // Assert
+        Assert.True(s1.ActiveRestPending);
+        Assert.Equal(54, s1.Gold);
+    }
+
     private static DataCatalog BuildCatalogWithFakeRelic(
         string id,
         IReadOnlyList<CardEffect> effects,

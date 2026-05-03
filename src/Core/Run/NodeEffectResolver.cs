@@ -42,7 +42,8 @@ public static class NodeEffectResolver
                 new EnemyPool(state.CurrentAct, EnemyTier.Elite), data, rng),
             TileKind.Boss => BattlePlaceholder.Start(state,
                 new EnemyPool(state.CurrentAct, EnemyTier.Boss), data, rng),
-            TileKind.Rest => state with { ActiveRestPending = true },
+            TileKind.Rest => NonBattleRelicEffects.ApplyOnEnterRestSite(
+                state with { ActiveRestPending = true }, data),
             TileKind.Merchant => StartMerchant(state, data, rng),
             TileKind.Treasure => StartTreasure(state, table, data, rng),
             TileKind.Event => StartEvent(state, data, rng),
