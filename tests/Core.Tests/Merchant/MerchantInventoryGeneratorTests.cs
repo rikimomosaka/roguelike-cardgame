@@ -126,4 +126,88 @@ public class MerchantInventoryGeneratorTests
             Assert.DoesNotContain("reward_token_test", inv.Cards.Select(o => o.Id));
         }
     }
+
+    // ---- Phase 10.6.B T4: shopPriceMultiplier helpers ----
+
+    /// <summary>
+    /// フェイクレリックを所持した RunState を生成する。
+    /// Relics リストに relicId を追加するだけ。ベース状態は Base() に準ずる。
+    /// </summary>
+    private static RunState MakeRunStateWithRelics(DataCatalog catalog, string relicId) =>
+        RunState.NewSoloRun(
+            catalog, 1UL, 0,
+            ImmutableDictionary<int, TileKind>.Empty,
+            ImmutableArray<string>.Empty, ImmutableArray<string>.Empty,
+            ImmutableArray<string>.Empty, ImmutableArray<string>.Empty,
+            new DateTimeOffset(2026, 4, 22, 0, 0, 0, TimeSpan.Zero))
+        with { Relics = new[] { relicId } };
+
+    /// <summary>
+    /// 全レアリティ → <paramref name="perItem"/> gold、DiscardSlotPrice = <paramref name="discardSlot"/> の
+    /// フラットな MerchantPrices を生成する。
+    /// </summary>
+    private static MerchantPrices MakeFlatMerchantPrices(int perItem, int discardSlot)
+    {
+        var rarities = new[] {
+            CardRarity.Promo, CardRarity.Common, CardRarity.Rare,
+            CardRarity.Epic, CardRarity.Legendary
+        };
+        var dict = rarities.ToImmutableDictionary(r => r, _ => perItem);
+        return new MerchantPrices(
+            Cards:  dict,
+            Relics: dict,
+            Potions: dict,
+            DiscardSlotPrice: discardSlot);
+    }
+
+    // ---- Phase 10.6.B T4: shopPriceMultiplier tests ----
+
+    [Fact]
+    public void Generate_WithShopPriceMultiplier_DiscountsAllOffersAndDiscardPrice()
+    {
+        // -20% relic で全 offer + DiscardPrice が base * 80 / 100 になる
+        var fake = RelicCatalogTestHelpers.BuildCatalogWithFakeRelic(Catalog,
+            "loyalty",
+            new[] { new CardEffect("shopPriceMultiplier", EffectScope.Self, null, -20, Trigger: "Passive") });
+        var s = MakeRunStateWithRelics(fake, "loyalty");
+        var prices = MakeFlatMerchantPrices(perItem: 100, discardSlot: 50);
+        var rng = new SequentialRng(1UL);
+
+        var inv = MerchantInventoryGenerator.Generate(fake, prices, s, rng);
+
+        foreach (var offer in inv.Cards)   Assert.Equal(80, offer.Price);
+        foreach (var offer in inv.Relics)  Assert.Equal(80, offer.Price);
+        foreach (var offer in inv.Potions) Assert.Equal(80, offer.Price);
+        Assert.Equal(40, inv.DiscardPrice); // 50 * 80 / 100
+    }
+
+    [Fact]
+    public void Generate_WithExtremeNegativeMultiplier_FloorPriceAtOne()
+    {
+        var fake = RelicCatalogTestHelpers.BuildCatalogWithFakeRelic(Catalog,
+            "extreme",
+            new[] { new CardEffect("shopPriceMultiplier", EffectScope.Self, null, -200, Trigger: "Passive") });
+        var s = MakeRunStateWithRelics(fake, "extreme");
+        var prices = MakeFlatMerchantPrices(perItem: 100, discardSlot: 50);
+
+        var inv = MerchantInventoryGenerator.Generate(fake, prices, s, new SequentialRng(1UL));
+
+        foreach (var offer in inv.Cards)  Assert.Equal(1, offer.Price);
+        Assert.Equal(1, inv.DiscardPrice);
+    }
+
+    [Fact]
+    public void Generate_WithPositiveMultiplier_IncreasesPrice()
+    {
+        var fake = RelicCatalogTestHelpers.BuildCatalogWithFakeRelic(Catalog,
+            "cursed_premium",
+            new[] { new CardEffect("shopPriceMultiplier", EffectScope.Self, null, 30, Trigger: "Passive") });
+        var s = MakeRunStateWithRelics(fake, "cursed_premium");
+        var prices = MakeFlatMerchantPrices(perItem: 100, discardSlot: 50);
+
+        var inv = MerchantInventoryGenerator.Generate(fake, prices, s, new SequentialRng(1UL));
+
+        foreach (var offer in inv.Cards) Assert.Equal(130, offer.Price);
+        Assert.Equal(65, inv.DiscardPrice); // 50 * 130 / 100
+    }
 }

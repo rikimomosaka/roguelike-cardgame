@@ -23,7 +23,20 @@ public static class MerchantInventoryGenerator
         var cards = PickCards(catalog, prices, s, rng, CardCount);
         var relics = PickRelics(catalog, prices, s, rng, RelicCount);
         var potions = PickPotions(catalog, prices, rng, PotionCount);
-        int discardPrice = prices.DiscardSlotPrice + DiscardPriceIncrement * s.DiscardUsesSoFar;
+        int rawDiscard = prices.DiscardSlotPrice + DiscardPriceIncrement * s.DiscardUsesSoFar;
+
+        // Phase 10.6.B T4: shopPriceMultiplier を全 offer と DiscardPrice に適用 (relic 経由の値引き / 値上げ)
+        cards = cards.Select(o => o with {
+            Price = Relics.PassiveModifiers.ApplyShopPriceMultiplier(o.Price, s, catalog)
+        }).ToImmutableArray();
+        relics = relics.Select(o => o with {
+            Price = Relics.PassiveModifiers.ApplyShopPriceMultiplier(o.Price, s, catalog)
+        }).ToImmutableArray();
+        potions = potions.Select(o => o with {
+            Price = Relics.PassiveModifiers.ApplyShopPriceMultiplier(o.Price, s, catalog)
+        }).ToImmutableArray();
+        int discardPrice = Relics.PassiveModifiers.ApplyShopPriceMultiplier(rawDiscard, s, catalog);
+
         return new MerchantInventory(
             cards, relics, potions,
             DiscardSlotUsed: false,
