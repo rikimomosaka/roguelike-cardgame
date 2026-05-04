@@ -154,6 +154,8 @@ public static class CardTextFormatter
         // 共有のため、relic action もここに併記する。
         "gainMaxHp" => $"最大HP+{AmountToken(e, context)}",
         "gainGold" => $"ゴールド+{AmountToken(e, context)}",
+        // Phase 10.6.B: Trigger=="Passive" の場合は DescribePassiveEffect (上で early-return) が
+        // 「休憩所での回復 +N」と書くので、こちらの legacy 文言は非 Passive 経路用。
         "restHealBonus" => $"休憩でのHP回復+{AmountToken(e, context)}",
         "healPercent" => $"HPを{AmountToken(e, context)}%回復",
         "extraEnergyOnFirstTurn" => $"戦闘1ターン目のみエナジー+{AmountToken(e, context)}",

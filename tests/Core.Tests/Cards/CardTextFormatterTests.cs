@@ -688,11 +688,38 @@ public class CardTextFormatterTests
     [Fact]
     public void FormatEffects_Passive_NoTriggerPrefix()
     {
-        // Passive trigger には trigger プレフィックスが付かない
+        // Passive trigger には trigger プレフィックスマーカ ([T:...]) や接尾「の度に」が付かない
         var effects = new[] {
             new CardEffect("energyPerTurnBonus", EffectScope.Self, null, 1, Trigger: "Passive")
         };
         var text = CardTextFormatter.FormatEffects(effects);
-        Assert.DoesNotContain("バトル開始時", text);
+        Assert.DoesNotContain("[T:", text);
+        Assert.DoesNotContain("の度に", text);
+        Assert.DoesNotContain("。", text);
+    }
+
+    [Fact]
+    public void FormatEffects_Passive_ShopPriceMultiplier_Positive()
+    {
+        var effects = new[] {
+            new CardEffect("shopPriceMultiplier", EffectScope.Self, null, 30, Trigger: "Passive")
+        };
+        var text = CardTextFormatter.FormatEffects(effects);
+        Assert.Contains("ショップ価格 +[N:30]%", text);
+    }
+
+    [Theory]
+    [InlineData("unknownEnemyWeightDelta", "敵戦闘出現率")]
+    [InlineData("unknownEliteWeightDelta", "エリート戦闘出現率")]
+    [InlineData("unknownMerchantWeightDelta", "ショップ出現率")]
+    [InlineData("unknownRestWeightDelta", "休憩所出現率")]
+    [InlineData("unknownTreasureWeightDelta", "宝箱出現率")]
+    public void FormatEffects_Passive_UnknownWeightDelta_AllFiveKinds(string action, string label)
+    {
+        var effects = new[] {
+            new CardEffect(action, EffectScope.Self, null, 4, Trigger: "Passive")
+        };
+        var text = CardTextFormatter.FormatEffects(effects);
+        Assert.Contains($"ハテナマスの{label} +[N:4]", text);
     }
 }
