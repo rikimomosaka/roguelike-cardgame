@@ -582,4 +582,117 @@ public class CardTextFormatterTests
         var s = CardTextFormatter.FormatEffects(new[] { e }, ctx);
         Assert.Equal("敵単体に[V:X|手札の数]アタック。", s);
     }
+
+    // --- Phase 10.6.B: Passive trigger action descriptions ---
+
+    [Fact]
+    public void FormatEffects_Passive_EnergyPerTurnBonus_RendersJapaneseText()
+    {
+        var effects = new[] {
+            new CardEffect("energyPerTurnBonus", EffectScope.Self, null, 1, Trigger: "Passive")
+        };
+        var text = CardTextFormatter.FormatEffects(effects);
+        Assert.Contains("エナジー最大値 +[N:1]", text);
+    }
+
+    [Fact]
+    public void FormatEffects_Passive_CardsDrawnPerTurnBonus_RendersText()
+    {
+        var effects = new[] {
+            new CardEffect("cardsDrawnPerTurnBonus", EffectScope.Self, null, 1, Trigger: "Passive")
+        };
+        var text = CardTextFormatter.FormatEffects(effects);
+        Assert.Contains("ターン開始時の手札枚数 +[N:1]", text);
+    }
+
+    [Fact]
+    public void FormatEffects_Passive_GoldRewardMultiplier_Positive()
+    {
+        var effects = new[] {
+            new CardEffect("goldRewardMultiplier", EffectScope.Self, null, 50, Trigger: "Passive")
+        };
+        var text = CardTextFormatter.FormatEffects(effects);
+        Assert.Contains("戦闘ゴールド報酬 +[N:50]%", text);
+    }
+
+    [Fact]
+    public void FormatEffects_Passive_GoldRewardMultiplier_Negative()
+    {
+        var effects = new[] {
+            new CardEffect("goldRewardMultiplier", EffectScope.Self, null, -20, Trigger: "Passive")
+        };
+        var text = CardTextFormatter.FormatEffects(effects);
+        Assert.Contains("戦闘ゴールド報酬 -[N:20]%", text);
+    }
+
+    [Fact]
+    public void FormatEffects_Passive_ShopPriceMultiplier_Negative()
+    {
+        var effects = new[] {
+            new CardEffect("shopPriceMultiplier", EffectScope.Self, null, -20, Trigger: "Passive")
+        };
+        var text = CardTextFormatter.FormatEffects(effects);
+        Assert.Contains("ショップ価格 -[N:20]%", text);
+    }
+
+    [Fact]
+    public void FormatEffects_Passive_RewardCardChoicesBonus()
+    {
+        var effects = new[] {
+            new CardEffect("rewardCardChoicesBonus", EffectScope.Self, null, 1, Trigger: "Passive")
+        };
+        var text = CardTextFormatter.FormatEffects(effects);
+        Assert.Contains("カード報酬選択肢 +[N:1] 枚", text);
+    }
+
+    [Fact]
+    public void FormatEffects_Passive_RewardRerollAvailable()
+    {
+        var effects = new[] {
+            new CardEffect("rewardRerollAvailable", EffectScope.Self, null, 1, Trigger: "Passive")
+        };
+        var text = CardTextFormatter.FormatEffects(effects);
+        Assert.Contains("カード報酬を [N:1] 回リロール可能", text);
+    }
+
+    [Fact]
+    public void FormatEffects_Passive_UnknownEnemyWeightDelta()
+    {
+        var effects = new[] {
+            new CardEffect("unknownEnemyWeightDelta", EffectScope.Self, null, 5, Trigger: "Passive")
+        };
+        var text = CardTextFormatter.FormatEffects(effects);
+        Assert.Contains("ハテナマスの敵戦闘出現率 +[N:5]", text);
+    }
+
+    [Fact]
+    public void FormatEffects_Passive_UnknownTreasureWeightDelta_Negative()
+    {
+        var effects = new[] {
+            new CardEffect("unknownTreasureWeightDelta", EffectScope.Self, null, -3, Trigger: "Passive")
+        };
+        var text = CardTextFormatter.FormatEffects(effects);
+        Assert.Contains("ハテナマスの宝箱出現率 -[N:3]", text);
+    }
+
+    [Fact]
+    public void FormatEffects_Passive_RestHealBonus()
+    {
+        var effects = new[] {
+            new CardEffect("restHealBonus", EffectScope.Self, null, 5, Trigger: "Passive")
+        };
+        var text = CardTextFormatter.FormatEffects(effects);
+        Assert.Contains("休憩所での回復 +[N:5]", text);
+    }
+
+    [Fact]
+    public void FormatEffects_Passive_NoTriggerPrefix()
+    {
+        // Passive trigger には trigger プレフィックスが付かない
+        var effects = new[] {
+            new CardEffect("energyPerTurnBonus", EffectScope.Self, null, 1, Trigger: "Passive")
+        };
+        var text = CardTextFormatter.FormatEffects(effects);
+        Assert.DoesNotContain("バトル開始時", text);
+    }
 }

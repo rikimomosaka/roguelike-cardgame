@@ -111,6 +111,12 @@ public static class CardTextFormatter
 
     private static string DescribeGroup(CardEffect e, int count, CardActorContext context)
     {
+        // Phase 10.6.B: Trigger == "Passive" の effect は専用文言テーブルで処理
+        if (e.Trigger == "Passive")
+        {
+            return DescribePassiveEffect(e);
+        }
+
         var head = DescribeOne(e, context);
         var triggerPrefix = !string.IsNullOrEmpty(e.Trigger) ? $"[T:{e.Trigger}]の度に" : "";
         if (count <= 1) return triggerPrefix + head + "。";
@@ -331,4 +337,34 @@ public static class CardTextFormatter
         null or "" => "ステータス",
         _ => id,
     };
+
+    /// <summary>
+    /// Phase 10.6.B: Passive trigger 用の専用文言テーブル。
+    /// trigger プレフィックスなしでプレイヤー視点の意味のある表記を生成する。
+    /// 正の値には "+" プレフィックス、負の値には "-" プレフィックスを付け、絶対値を [N:abs] で表示。
+    /// </summary>
+    private static string DescribePassiveEffect(CardEffect eff)
+    {
+        int amount = eff.Amount;
+        string sign = amount >= 0 ? "+" : "-";
+        int abs = System.Math.Abs(amount);
+        string n = $"[N:{abs}]";
+
+        return eff.Action switch
+        {
+            "energyPerTurnBonus"          => $"エナジー最大値 {sign}{n}",
+            "cardsDrawnPerTurnBonus"      => $"ターン開始時の手札枚数 {sign}{n}",
+            "goldRewardMultiplier"        => $"戦闘ゴールド報酬 {sign}{n}%",
+            "shopPriceMultiplier"         => $"ショップ価格 {sign}{n}%",
+            "rewardCardChoicesBonus"      => $"カード報酬選択肢 {sign}{n} 枚",
+            "rewardRerollAvailable"       => $"カード報酬を {n} 回リロール可能",
+            "unknownEnemyWeightDelta"     => $"ハテナマスの敵戦闘出現率 {sign}{n}",
+            "unknownEliteWeightDelta"     => $"ハテナマスのエリート戦闘出現率 {sign}{n}",
+            "unknownMerchantWeightDelta"  => $"ハテナマスのショップ出現率 {sign}{n}",
+            "unknownRestWeightDelta"      => $"ハテナマスの休憩所出現率 {sign}{n}",
+            "unknownTreasureWeightDelta"  => $"ハテナマスの宝箱出現率 {sign}{n}",
+            "restHealBonus"               => $"休憩所での回復 {sign}{n}",
+            _                             => $"(未対応 Passive action: {eff.Action})",
+        };
+    }
 }
