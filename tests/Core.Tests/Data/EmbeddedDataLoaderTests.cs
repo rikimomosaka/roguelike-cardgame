@@ -76,11 +76,11 @@ public class EmbeddedDataLoaderTests
     public void All_relic_JSONs_load_with_implemented_field()
     {
         var catalog = EmbeddedDataLoader.LoadCatalog();
-        Assert.Equal(36, catalog.Relics.Count);
-        // 19 ファイルが Implemented: true、17 ファイルが Implemented: false の想定
+        Assert.Equal(37, catalog.Relics.Count);  // +1 lucky_die (Phase 10.6.B T7)
+        // 20 ファイルが Implemented: true、17 ファイルが Implemented: false の想定
         var trueCount = catalog.Relics.Values.Count(r => r.Implemented);
         var falseCount = catalog.Relics.Values.Count(r => !r.Implemented);
-        Assert.Equal(19, trueCount);
+        Assert.Equal(20, trueCount);
         Assert.Equal(17, falseCount);
     }
 }

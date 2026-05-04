@@ -20,6 +20,7 @@ type Props = {
   onProceed: () => void
   onDiscardPotion: (slotIndex: number) => Promise<void>
   onClaimRelic: () => Promise<void>
+  onRerollCard?: () => Promise<void>  // Phase 10.6.B T7: relic 所持時のみ提供される
 }
 
 export function RewardPopup(p: Props) {
@@ -32,6 +33,8 @@ export function RewardPopup(p: Props) {
   const cardLabel = (id: string) => cardNames[id] ?? id
   const potionLabel = (id: string) => potionNames[id] ?? id
 
+  const canReroll = !cardResolved && !r.rerollUsed && r.rerollAvailable && p.onRerollCard !== undefined
+
   if (cardView && !cardResolved) {
     return (
       <Popup
@@ -42,16 +45,29 @@ export function RewardPopup(p: Props) {
         width={680}
         footerAlign="center"
         footer={
-          <Button
-            variant="secondary"
-            onClick={async () => {
-              if (r.cardStatus === 'Pending') await p.onSkipCard()
-              setCardView(false)
-            }}
-            aria-label="閉じる"
-          >
-            閉じる
-          </Button>
+          <div className="rw-picker__footer-actions">
+            {canReroll && (
+              <Button
+                variant="secondary"
+                onClick={async () => {
+                  await p.onRerollCard!()
+                }}
+                aria-label="リロール"
+              >
+                リロール
+              </Button>
+            )}
+            <Button
+              variant="secondary"
+              onClick={async () => {
+                if (r.cardStatus === 'Pending') await p.onSkipCard()
+                setCardView(false)
+              }}
+              aria-label="閉じる"
+            >
+              閉じる
+            </Button>
+          </div>
         }
       >
         <div className="rw-picker">

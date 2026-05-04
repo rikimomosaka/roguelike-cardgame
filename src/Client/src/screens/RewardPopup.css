@@ -159,8 +159,14 @@
   justify-content: flex-start;
 }
 
-/* ---------- Skip button (themed, centered in footer) ---------- */
+/* ---------- Picker footer button row (reroll + skip) ---------- */
 .popup__panel--picker .popup__foot { justify-content: center; }
+
+.rw-picker__footer-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
 
 .rw-picker__skip {
   background: rgba(10, 6, 4, 0.35);

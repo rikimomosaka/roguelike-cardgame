@@ -4,6 +4,7 @@ using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.History;
 using RoguelikeCardGame.Core.Map;
 using RoguelikeCardGame.Core.Merchant;
+using RoguelikeCardGame.Core.Relics;
 using RoguelikeCardGame.Core.Run;
 using RoguelikeCardGame.Server.Services;
 
@@ -68,8 +69,12 @@ public static class RunSnapshotDtoMapper
 
         RewardStateDto? reward = null;
         if (s.ActiveReward is { } r)
+        {
+            bool rerollAvailable = PassiveModifiers.HasPassiveCapability("rewardRerollAvailable", s, data);
             reward = new RewardStateDto(r.Gold, r.GoldClaimed, r.PotionId, r.PotionClaimed,
-                r.CardChoices, r.CardStatus.ToString(), r.RelicId, r.RelicClaimed, r.IsBossReward);
+                r.CardChoices, r.CardStatus.ToString(), r.RelicId, r.RelicClaimed, r.IsBossReward,
+                r.RerollUsed, rerollAvailable);  // Phase 10.6.B T7
+        }
 
         MerchantInventoryDto? merchant = null;
         if (s.ActiveMerchant is { } m)

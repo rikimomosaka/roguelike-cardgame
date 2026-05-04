@@ -8,6 +8,7 @@ import {
   discardPotion,
   pickCard,
   proceedReward,
+  rerollCardChoices,
   skipCard,
 } from '../api/rewards'
 import { buyFromMerchant, discardAtMerchant, leaveMerchant } from '../api/merchant'
@@ -455,6 +456,12 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
     await refresh()
   }
 
+  async function handleRerollCard() {
+    if (!accountId) return
+    const next = await rerollCardChoices(accountId)
+    setSnap(next)
+  }
+
   async function handleBuy(kind: 'card' | 'relic' | 'potion', id: string) {
     if (!accountId) return
     await buyFromMerchant(accountId, { kind, id })
@@ -786,6 +793,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
             onProceed={handleProceed}
             onDiscardPotion={handleDiscardPotion}
             onClaimRelic={handleClaimRelic}
+            onRerollCard={handleRerollCard}
           />
         )}
 

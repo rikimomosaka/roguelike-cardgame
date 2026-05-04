@@ -87,6 +87,8 @@ export type RewardStateDto = {
   relicId: string | null
   relicClaimed: boolean
   isBossReward: boolean
+  rerollUsed: boolean       // Phase 10.6.B T7
+  rerollAvailable: boolean  // Phase 10.6.B T7: server-derived capability flag
 }
 
 export type ActStartRelicChoiceDto = {

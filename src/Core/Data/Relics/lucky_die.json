@@ -1,0 +1,27 @@
+{
+    "id":  "lucky_die",
+    "name":  "ラッキーダイス",
+    "displayName":  null,
+    "activeVersion":  "v1",
+    "versions":  [
+                     {
+                         "version":  "v1",
+                         "createdAt":  "2026-05-04T00:00:00Z",
+                         "label":  "original",
+                         "spec":  {
+                                      "rarity":  1,
+                                      "description":  "カード報酬を 1 回リロールできる不思議なサイコロ。",
+                                      "effects":  [
+                                                      {
+                                                          "action":  "rewardRerollAvailable",
+                                                          "scope":   "self",
+                                                          "target":  null,
+                                                          "amount":  1,
+                                                          "trigger": "Passive"
+                                                      }
+                                                  ],
+                                      "implemented":  true
+                                  }
+                     }
+                 ]
+}

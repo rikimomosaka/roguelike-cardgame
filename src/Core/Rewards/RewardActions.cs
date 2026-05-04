@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Immutable;
+using RoguelikeCardGame.Core.Battle.Definitions;
 using RoguelikeCardGame.Core.Data;
+using RoguelikeCardGame.Core.Random;
 using RoguelikeCardGame.Core.Relics;
 using RoguelikeCardGame.Core.Run;
 
@@ -26,5 +29,42 @@ public static class RewardActions
 
         var s1 = s with { ActiveReward = rewardWithGold, RewardRngState = newRng };
         return NonBattleRelicEffects.ApplyOnRewardGenerated(s1, catalog);
+    }
+
+    /// <summary>
+    /// Phase 10.6.B T7: 報酬カード選択肢を 1 reward につき 1 度リロールする。
+    /// Relic が "rewardRerollAvailable" Passive capability を持つ場合のみ有効。
+    /// CardStatus == Pending かつ RerollUsed == false のときのみ実行可能。
+    /// </summary>
+    public static RunState Reroll(
+        RunState s, DataCatalog catalog, IRng rng,
+        EnemyPool sourcePool, RewardTable table)
+    {
+        ArgumentNullException.ThrowIfNull(s);
+        ArgumentNullException.ThrowIfNull(catalog);
+        ArgumentNullException.ThrowIfNull(rng);
+        ArgumentNullException.ThrowIfNull(table);
+
+        var r = s.ActiveReward
+            ?? throw new InvalidOperationException("No ActiveReward to reroll");
+        if (r.CardStatus != CardRewardStatus.Pending)
+            throw new InvalidOperationException("Card already resolved, cannot reroll");
+        if (r.RerollUsed)
+            throw new InvalidOperationException("Reroll already used for this reward");
+        if (!PassiveModifiers.HasPassiveCapability("rewardRerollAvailable", s, catalog))
+            throw new InvalidOperationException("No relic grants reward reroll");
+
+        var newPicks = RewardGenerator.RegenerateCardChoicesForReward(
+            sourcePool, s.RewardRngState, ImmutableArray<string>.Empty,
+            table, catalog, rng, s);
+
+        return s with
+        {
+            ActiveReward = r with
+            {
+                CardChoices = newPicks,
+                RerollUsed = true,
+            }
+        };
     }
 }

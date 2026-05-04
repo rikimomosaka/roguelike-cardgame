@@ -319,6 +319,56 @@ public sealed class RunsController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("current/reward/reroll-card-choices")]
+    public async Task<IActionResult> PostRerollCardChoices(CancellationToken ct)
+    {
+        if (!TryGetAccountId(out var accountId, out var err)) return err!;
+        if (!await _accounts.ExistsAsync(accountId, ct))
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: $"アカウントが見つかりません: {accountId}");
+
+        var s = await _saves.TryLoadAsync(accountId, ct);
+        if (s is null || s.Progress != RunProgress.InProgress || s.ActiveReward is null)
+            return Problem(statusCode: StatusCodes.Status409Conflict, title: "報酬画面がありません。");
+
+        // EnemyPool の reconstruct: 現在ノードのタイル種別・行から再構築する。
+        // (battle 終了後は ActiveBattle == null なので EncounterId 参照不可。
+        //  CurrentNodeId = 戦闘ノード。MapNode.Row と TileKind から pool tier を復元する。)
+        var map = _runStart.RehydrateMap(s.RngSeed, s.CurrentAct);
+        var node = map.GetNode(s.CurrentNodeId);
+        var effectiveKind = s.UnknownResolutions.TryGetValue(node.Id, out var resolved) ? resolved : node.Kind;
+        var table = _data.RewardTables.TryGetValue($"act{s.CurrentAct}", out var tbl) ? tbl : _data.RewardTables["act1"];
+
+        EnemyPool pool;
+        if (effectiveKind == TileKind.Elite)
+            pool = new EnemyPool(s.CurrentAct, EnemyTier.Elite);
+        else if (effectiveKind == TileKind.Boss)
+            pool = new EnemyPool(s.CurrentAct, EnemyTier.Boss);
+        else
+        {
+            // TileKind.Enemy: row によって Weak / Strong を判定
+            var tier = node.Row < table.EnemyPoolRouting.WeakRowsThreshold ? EnemyTier.Weak : EnemyTier.Strong;
+            pool = new EnemyPool(s.CurrentAct, tier);
+        }
+
+        // IRng: reward 生成時と同じ xor パターンで seed を derive する (reroll 専用の xor 定数付き)。
+        var rerollRng = new SystemRng(unchecked((int)s.RngSeed ^ (int)s.PlaySeconds ^ 0x5EED ^ 0x4E11));
+
+        RunState updated;
+        try
+        {
+            updated = RewardActions.Reroll(s, _data, rerollRng, pool, table);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Problem(statusCode: StatusCodes.Status409Conflict, title: ex.Message);
+        }
+
+        updated = updated with { SavedAtUtc = DateTimeOffset.UtcNow };
+        await _saves.SaveAsync(accountId, updated, ct);
+        var rerollMap = _runStart.RehydrateMap(updated.RngSeed, updated.CurrentAct);
+        return Ok(RunSnapshotDtoMapper.From(updated, rerollMap, _data));
+    }
+
     [HttpPost("current/potion/discard")]
     public async Task<IActionResult> PostPotionDiscard([FromBody] PotionDiscardRequestDto body, CancellationToken ct)
     {

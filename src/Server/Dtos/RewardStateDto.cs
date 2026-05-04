@@ -9,4 +9,6 @@ public sealed record RewardStateDto(
     string CardStatus,
     string? RelicId,
     bool RelicClaimed,
-    bool IsBossReward);
+    bool IsBossReward,
+    bool RerollUsed,           // Phase 10.6.B T7
+    bool RerollAvailable);     // Phase 10.6.B T7: derived from PassiveCapability check

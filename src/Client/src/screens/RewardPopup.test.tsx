@@ -14,6 +14,8 @@ function baseReward(overrides: Partial<RewardStateDto> = {}): RewardStateDto {
     relicId: null,
     relicClaimed: false,
     isBossReward: false,
+    rerollUsed: false,
+    rerollAvailable: false,
     ...overrides,
   }
 }
@@ -254,5 +256,72 @@ describe('RewardPopup', () => {
     // onSkipCard は呼ばれてはならない（サーバ側 SkipCard は Pending 以外で 409）
     await waitFor(() => expect(screen.queryByText('カードを選ぶ')).toBeNull())
     expect(handlers.onSkipCard).not.toHaveBeenCalled()
+  })
+
+  // ── Reroll テスト (Phase 10.6.B T7) ─────────────────────────────────
+
+  it('リロールボタンは rerollAvailable=true && !rerollUsed のとき card view に表示される', () => {
+    const handlers = baseHandlers()
+    const onRerollCard = vi.fn().mockResolvedValue(undefined)
+    render(
+      <RewardPopup
+        reward={baseReward({ rerollAvailable: true, rerollUsed: false })}
+        potions={['', '', '']}
+        potionSlotCount={3}
+        {...handlers}
+        onRerollCard={onRerollCard}
+      />,
+    )
+    fireEvent.click(screen.getByText('カード報酬'))
+    expect(screen.getByText('リロール')).toBeDefined()
+  })
+
+  it('リロールボタンは rerollAvailable=false のとき表示されない', () => {
+    const handlers = baseHandlers()
+    const onRerollCard = vi.fn().mockResolvedValue(undefined)
+    render(
+      <RewardPopup
+        reward={baseReward({ rerollAvailable: false, rerollUsed: false })}
+        potions={['', '', '']}
+        potionSlotCount={3}
+        {...handlers}
+        onRerollCard={onRerollCard}
+      />,
+    )
+    fireEvent.click(screen.getByText('カード報酬'))
+    expect(screen.queryByText('リロール')).toBeNull()
+  })
+
+  it('リロールボタンは rerollUsed=true のとき表示されない', () => {
+    const handlers = baseHandlers()
+    const onRerollCard = vi.fn().mockResolvedValue(undefined)
+    render(
+      <RewardPopup
+        reward={baseReward({ rerollAvailable: true, rerollUsed: true })}
+        potions={['', '', '']}
+        potionSlotCount={3}
+        {...handlers}
+        onRerollCard={onRerollCard}
+      />,
+    )
+    fireEvent.click(screen.getByText('カード報酬'))
+    expect(screen.queryByText('リロール')).toBeNull()
+  })
+
+  it('リロールボタンをクリックすると onRerollCard が呼ばれる', async () => {
+    const handlers = baseHandlers()
+    const onRerollCard = vi.fn().mockResolvedValue(undefined)
+    render(
+      <RewardPopup
+        reward={baseReward({ rerollAvailable: true, rerollUsed: false })}
+        potions={['', '', '']}
+        potionSlotCount={3}
+        {...handlers}
+        onRerollCard={onRerollCard}
+      />,
+    )
+    fireEvent.click(screen.getByText('カード報酬'))
+    fireEvent.click(screen.getByText('リロール'))
+    await waitFor(() => expect(onRerollCard).toHaveBeenCalledTimes(1))
   })
 })

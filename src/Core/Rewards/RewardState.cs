@@ -22,7 +22,8 @@ public sealed record RewardState(
     CardRewardStatus CardStatus,
     string? RelicId = null,
     bool RelicClaimed = true,
-    bool IsBossReward = false);
+    bool IsBossReward = false,
+    bool RerollUsed = false);  // Phase 10.6.B T7
 
 public sealed record RewardRngState(
     int PotionChancePercent,

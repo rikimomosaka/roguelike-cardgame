@@ -40,3 +40,10 @@ export async function discardPotion(accountId: string, slotIndex: number): Promi
 export async function claimRelic(accountId: string): Promise<void> {
   await apiRequest<void>('POST', '/runs/current/reward/claim-relic', { accountId })
 }
+
+// Phase 10.6.B T7: リロール — カード報酬を再抽選する (relic 所持時のみ有効)
+export async function rerollCardChoices(accountId: string): Promise<RunSnapshotDto> {
+  return await apiRequest<RunSnapshotDto>('POST', '/runs/current/reward/reroll-card-choices', {
+    accountId,
+  })
+}
