@@ -34,4 +34,6 @@ public sealed record BattleState(
     /// true のあいだ、後続の wild / superwild キーワードはコンボ継続効果を発揮しない。
     /// コンボ切断 (newCombo = 1) で false にリセット。
     /// </summary>
-    bool WildUsedInCurrentCombo = false);
+    bool WildUsedInCurrentCombo = false,
+    /// <summary>Phase 10.6.B: cardsDrawnPerTurnBonus modifier 適用済の毎ターンドロー枚数 (battle 開始時 snapshot)。</summary>
+    int DrawPerTurn = 5);

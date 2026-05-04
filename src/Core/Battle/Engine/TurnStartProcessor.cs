@@ -65,7 +65,7 @@ internal static class TurnStartProcessor
 
         // Step 6-7: Energy reset / Draw
         s = s with { Energy = s.EnergyMax };
-        s = DrawHelper.Draw(s, DrawPerTurn, rng, out _);
+        s = DrawHelper.Draw(s, s.DrawPerTurn, rng, out _);
 
         // Step 8: OnTurnStart レリック発動 (10.2.E / 10.5.L1.5: 文字列 trigger に変更)
         var (afterRelic, evsRelic) = RelicTriggerProcessor.Fire(
