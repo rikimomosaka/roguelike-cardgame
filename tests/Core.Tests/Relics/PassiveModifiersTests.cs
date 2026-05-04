@@ -117,6 +117,26 @@ public class PassiveModifiersTests
     }
 
     [Fact]
+    public void ApplyShopPriceMultiplier_PositiveDelta_IncreasesPrice()
+    {
+        var fake = Cat("s2", new[] { new CardEffect("shopPriceMultiplier", EffectScope.Self, null, 30, Trigger: "Passive") });
+        var s = Sample(relics: new List<string> { "s2" });
+        Assert.Equal(130, PassiveModifiers.ApplyShopPriceMultiplier(100, s, fake));
+    }
+
+    [Fact]
+    public void ApplyShopPriceMultiplier_DiscountStacking()
+    {
+        // -20% + -20% = -40%、合計 60% の価格
+        var fake = RelicCatalogTestHelpers.BuildCatalogWithFakeRelic(BaseCatalog,
+            "s_a", new[] { new CardEffect("shopPriceMultiplier", EffectScope.Self, null, -20, Trigger: "Passive") });
+        fake = RelicCatalogTestHelpers.BuildCatalogWithFakeRelic(fake,
+            "s_b", new[] { new CardEffect("shopPriceMultiplier", EffectScope.Self, null, -20, Trigger: "Passive") });
+        var s = Sample(relics: new List<string> { "s_a", "s_b" });
+        Assert.Equal(60, PassiveModifiers.ApplyShopPriceMultiplier(100, s, fake));
+    }
+
+    [Fact]
     public void ApplyRewardCardChoicesBonus_AddsAmount()
     {
         var fake = Cat("r1", new[] { new CardEffect("rewardCardChoicesBonus", EffectScope.Self, null, 1, Trigger: "Passive") });
@@ -178,6 +198,34 @@ public class PassiveModifiersTests
             }));
         var weights = PassiveModifiers.ApplyUnknownWeightDeltas(config, s, fake);
         Assert.Equal(0.0, weights[TileKind.Enemy]);
+    }
+
+    [Fact]
+    public void ApplyUnknownWeightDeltas_AllFiveTileKinds_AppliedCorrectly()
+    {
+        // 5 tile kind 全部の action 名 typo を catch するための網羅テスト
+        var fake = Cat("u_all", new[] {
+            new CardEffect("unknownEnemyWeightDelta",    EffectScope.Self, null, 1, Trigger: "Passive"),
+            new CardEffect("unknownEliteWeightDelta",    EffectScope.Self, null, 2, Trigger: "Passive"),
+            new CardEffect("unknownMerchantWeightDelta", EffectScope.Self, null, 3, Trigger: "Passive"),
+            new CardEffect("unknownRestWeightDelta",     EffectScope.Self, null, 4, Trigger: "Passive"),
+            new CardEffect("unknownTreasureWeightDelta", EffectScope.Self, null, 5, Trigger: "Passive"),
+        });
+        var s = Sample(relics: new List<string> { "u_all" });
+        var config = new UnknownResolutionConfig(
+            ImmutableDictionary.CreateRange(new[] {
+                new System.Collections.Generic.KeyValuePair<TileKind, double>(TileKind.Enemy,    10.0),
+                new System.Collections.Generic.KeyValuePair<TileKind, double>(TileKind.Elite,    10.0),
+                new System.Collections.Generic.KeyValuePair<TileKind, double>(TileKind.Merchant, 10.0),
+                new System.Collections.Generic.KeyValuePair<TileKind, double>(TileKind.Rest,     10.0),
+                new System.Collections.Generic.KeyValuePair<TileKind, double>(TileKind.Treasure, 10.0),
+            }));
+        var weights = PassiveModifiers.ApplyUnknownWeightDeltas(config, s, fake);
+        Assert.Equal(11.0, weights[TileKind.Enemy]);
+        Assert.Equal(12.0, weights[TileKind.Elite]);
+        Assert.Equal(13.0, weights[TileKind.Merchant]);
+        Assert.Equal(14.0, weights[TileKind.Rest]);
+        Assert.Equal(15.0, weights[TileKind.Treasure]);
     }
 
     [Fact]

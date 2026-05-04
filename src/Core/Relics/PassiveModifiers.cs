@@ -21,27 +21,47 @@ public static class PassiveModifiers
     // ---- 加算系 modifier ----
 
     public static int ApplyEnergyPerTurnBonus(int @base, RunState s, DataCatalog catalog)
-        => Math.Max(0, @base + SumPassiveBonus("energyPerTurnBonus", s, catalog));
+    {
+        ArgumentNullException.ThrowIfNull(s);
+        ArgumentNullException.ThrowIfNull(catalog);
+        return Math.Max(0, @base + SumPassiveBonus("energyPerTurnBonus", s, catalog));
+    }
 
     public static int ApplyCardsDrawnPerTurnBonus(int @base, RunState s, DataCatalog catalog)
-        => Math.Max(0, @base + SumPassiveBonus("cardsDrawnPerTurnBonus", s, catalog));
+    {
+        ArgumentNullException.ThrowIfNull(s);
+        ArgumentNullException.ThrowIfNull(catalog);
+        return Math.Max(0, @base + SumPassiveBonus("cardsDrawnPerTurnBonus", s, catalog));
+    }
 
     public static int ApplyRewardCardChoicesBonus(int @base, RunState s, DataCatalog catalog)
-        => Math.Max(1, @base + SumPassiveBonus("rewardCardChoicesBonus", s, catalog));
+    {
+        ArgumentNullException.ThrowIfNull(s);
+        ArgumentNullException.ThrowIfNull(catalog);
+        return Math.Max(1, @base + SumPassiveBonus("rewardCardChoicesBonus", s, catalog));
+    }
 
     public static int ApplyPassiveRestHealBonus(int @base, RunState s, DataCatalog catalog)
-        => @base + SumPassiveBonus("restHealBonus", s, catalog);
+    {
+        ArgumentNullException.ThrowIfNull(s);
+        ArgumentNullException.ThrowIfNull(catalog);
+        return @base + SumPassiveBonus("restHealBonus", s, catalog);
+    }
 
     // ---- ×系 modifier (delta from 100, additive stacking) ----
 
     public static int ApplyGoldRewardMultiplier(int @base, RunState s, DataCatalog catalog)
     {
+        ArgumentNullException.ThrowIfNull(s);
+        ArgumentNullException.ThrowIfNull(catalog);
         int delta = SumPassiveMultiplierDelta("goldRewardMultiplier", s, catalog);
         return Math.Max(0, (int)((long)@base * (100 + delta) / 100));
     }
 
     public static int ApplyShopPriceMultiplier(int @base, RunState s, DataCatalog catalog)
     {
+        ArgumentNullException.ThrowIfNull(s);
+        ArgumentNullException.ThrowIfNull(catalog);
         int delta = SumPassiveMultiplierDelta("shopPriceMultiplier", s, catalog);
         return Math.Max(1, (int)((long)@base * (100 + delta) / 100));
     }
@@ -49,7 +69,12 @@ public static class PassiveModifiers
     // ---- Capability flag ----
 
     public static bool HasPassiveCapability(string action, RunState s, DataCatalog catalog)
-        => SumPassiveBonus(action, s, catalog) > 0;
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        ArgumentNullException.ThrowIfNull(s);
+        ArgumentNullException.ThrowIfNull(catalog);
+        return SumPassiveBonus(action, s, catalog) > 0;
+    }
 
     // ---- Unknown 重み補正 (5 種別を 1 関数で処理、床 0) ----
 
@@ -96,6 +121,8 @@ public static class PassiveModifiers
         return sum;
     }
 
+    // SumPassiveBonus と算法は同一だが、将来 multiplier の合成方式が
+    // additive (現状) から compound に変わる場合の hook ポイントとして API を分離。
     private static int SumPassiveMultiplierDelta(string action, RunState s, DataCatalog catalog)
         => SumPassiveBonus(action, s, catalog);
 }
