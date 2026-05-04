@@ -192,7 +192,9 @@ public class MerchantInventoryGeneratorTests
 
         var inv = MerchantInventoryGenerator.Generate(fake, prices, s, new SequentialRng(1UL));
 
-        foreach (var offer in inv.Cards)  Assert.Equal(1, offer.Price);
+        foreach (var offer in inv.Cards)   Assert.Equal(1, offer.Price);
+        foreach (var offer in inv.Relics)  Assert.Equal(1, offer.Price);
+        foreach (var offer in inv.Potions) Assert.Equal(1, offer.Price);
         Assert.Equal(1, inv.DiscardPrice);
     }
 
@@ -207,7 +209,9 @@ public class MerchantInventoryGeneratorTests
 
         var inv = MerchantInventoryGenerator.Generate(fake, prices, s, new SequentialRng(1UL));
 
-        foreach (var offer in inv.Cards) Assert.Equal(130, offer.Price);
+        foreach (var offer in inv.Cards)   Assert.Equal(130, offer.Price);
+        foreach (var offer in inv.Relics)  Assert.Equal(130, offer.Price);
+        foreach (var offer in inv.Potions) Assert.Equal(130, offer.Price);
         Assert.Equal(65, inv.DiscardPrice); // 50 * 130 / 100
     }
 }
