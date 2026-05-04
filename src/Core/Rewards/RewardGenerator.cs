@@ -6,6 +6,8 @@ using RoguelikeCardGame.Core.Battle.Definitions;
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Random;
+using RoguelikeCardGame.Core.Relics;
+using RoguelikeCardGame.Core.Run;
 
 namespace RoguelikeCardGame.Core.Rewards;
 
@@ -17,11 +19,12 @@ public static class RewardGenerator
         ImmutableArray<string> cardExclusions,
         RewardTable table,
         DataCatalog data,
-        IRng rng)
+        IRng rng,
+        RunState runState)  // Phase 10.6.B T5
     {
         return context switch
         {
-            RewardContext.FromEnemy fe => GenerateFromEnemy(fe.Pool, rngState, cardExclusions, table, data, rng),
+            RewardContext.FromEnemy fe => GenerateFromEnemy(fe.Pool, rngState, cardExclusions, table, data, rng, runState),
             RewardContext.FromNonBattle nb when nb.Kind == NonBattleRewardKind.Treasure
                 => GenerateTreasure(rngState, ImmutableArray<string>.Empty, table, data, rng),
             RewardContext.FromNonBattle
@@ -76,7 +79,8 @@ public static class RewardGenerator
 
     private static (RewardState, RewardRngState) GenerateFromEnemy(
         EnemyPool pool, RewardRngState rngState,
-        ImmutableArray<string> excl, RewardTable table, DataCatalog data, IRng rng)
+        ImmutableArray<string> excl, RewardTable table, DataCatalog data, IRng rng,
+        RunState runState)  // Phase 10.6.B T5
     {
         var entry = table.Pools[pool.Tier];
 
@@ -116,19 +120,47 @@ public static class RewardGenerator
             }
         }
 
+        // Phase 10.6.B T5: card 抽選を切り出し helper 経由に
+        var picks = RegenerateCardChoicesForReward(pool, newRng, excl, table, data, rng, runState);
+
+        bool hasRare = picks.Any(id => data.Cards[id].Rarity == CardRarity.Rare);
+        newRng = newRng with
+        {
+            RareChanceBonusPercent = hasRare ? 0 : rngState.RareChanceBonusPercent + table.EpicChance.PerBattleIncrement
+        };
+
+        var reward = new RewardState(
+            Gold: gold, GoldClaimed: false,
+            PotionId: potionId, PotionClaimed: potionId is null,
+            CardChoices: picks,
+            CardStatus: CardRewardStatus.Pending);
+        return (reward, newRng);
+    }
+
+    /// <summary>
+    /// Phase 10.6.B T5/T7: reward の card choices だけを (再) 抽選する純関数。
+    /// T5 では GenerateFromEnemy の card 抽選部分として利用、T7 (reroll) では既存 reward の
+    /// card choices を別 RNG で再抽選するエントリポイント。
+    /// rewardCardChoicesBonus modifier を考慮した枚数で抽選。
+    /// </summary>
+    public static ImmutableArray<string> RegenerateCardChoicesForReward(
+        EnemyPool pool, RewardRngState rngState,
+        ImmutableArray<string> exclusions,
+        RewardTable table, DataCatalog data, IRng rng,
+        RunState runState)
+    {
+        int targetCount = PassiveModifiers.ApplyRewardCardChoicesBonus(3, runState, data);
+        var entry = table.Pools[pool.Tier];
         int commonPct = entry.CommonPercent;
         int rarePct = entry.RarePercent;
-        int epicPct = entry.EpicPercent;
         int bonus = rngState.RareChanceBonusPercent;
-
         int rareFinal = Math.Min(100, rarePct + bonus);
         int take = rareFinal - rarePct;
         int commonFinal = Math.Max(0, commonPct - take);
-        int epicFinal = Math.Max(0, 100 - rareFinal - commonFinal);
 
         var picks = new List<string>();
         var seen = new HashSet<string>();
-        while (picks.Count < 3)
+        while (picks.Count < targetCount)
         {
             var r = rng.NextInt(0, 100);
             CardRarity rarity;
@@ -142,7 +174,7 @@ public static class RewardGenerator
             var pool2 = data.Cards.Values
                 .Where(c => c.Rarity != CardRarity.Token)
                 .Where(c => c.Rarity == rarity && c.Id.StartsWith("reward_"))
-                .Where(c => !excl.Contains(c.Id) && !seen.Contains(c.Id))
+                .Where(c => !exclusions.Contains(c.Id) && !seen.Contains(c.Id))
                 .Select(c => c.Id)
                 .ToList();
             if (pool2.Count == 0) continue;
@@ -150,19 +182,7 @@ public static class RewardGenerator
             picks.Add(pick);
             seen.Add(pick);
         }
-
-        bool hasRare = picks.Any(id => data.Cards[id].Rarity == CardRarity.Rare);
-        newRng = newRng with
-        {
-            RareChanceBonusPercent = hasRare ? 0 : rngState.RareChanceBonusPercent + table.EpicChance.PerBattleIncrement
-        };
-
-        var reward = new RewardState(
-            Gold: gold, GoldClaimed: false,
-            PotionId: potionId, PotionClaimed: potionId is null,
-            CardChoices: picks.ToImmutableArray(),
-            CardStatus: CardRewardStatus.Pending);
-        return (reward, newRng);
+        return picks.ToImmutableArray();
     }
 
     private static string PickRandomPotion(DataCatalog data, IRng rng)

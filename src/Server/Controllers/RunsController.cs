@@ -175,7 +175,7 @@ public sealed class RunsController : ControllerBase
                 afterWin.RewardRngState,
                 ImmutableArray.CreateRange(s.Relics),
                 _data.RewardTables.TryGetValue($"act{s.CurrentAct}", out var tbl) ? tbl : _data.RewardTables["act1"],
-                _data, rewardRng);
+                _data, rewardRng, afterWin);
             updated = afterWin with
             {
                 ActiveBattle = null,

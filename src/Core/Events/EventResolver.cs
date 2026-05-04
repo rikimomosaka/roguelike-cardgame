@@ -78,7 +78,7 @@ public static class EventResolver
         var excl = ImmutableArray.CreateRange(s.Deck.Select(c => c.Id));
         var (reward, newRngState) = RewardGenerator.Generate(
             new RewardContext.FromEnemy(new EnemyPool(s.CurrentAct, EnemyTier.Weak)),
-            s.RewardRngState, excl, rt, catalog, rng);
+            s.RewardRngState, excl, rt, catalog, rng, s);
         // Event からのカード報酬は Gold / Potion を含めない（CardChoices のみ提示）
         var cardOnly = new RewardState(
             Gold: 0, GoldClaimed: true,

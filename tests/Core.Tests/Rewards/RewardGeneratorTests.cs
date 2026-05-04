@@ -1,10 +1,14 @@
+using System;
 using System.Collections.Immutable;
 using System.Linq;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Battle.Definitions;
+using RoguelikeCardGame.Core.Map;
 using RoguelikeCardGame.Core.Random;
 using RoguelikeCardGame.Core.Cards;
+using RoguelikeCardGame.Core.Relics;
 using RoguelikeCardGame.Core.Rewards;
+using RoguelikeCardGame.Core.Run;
 using Xunit;
 
 namespace RoguelikeCardGame.Core.Tests.Rewards;
@@ -14,7 +18,28 @@ public class RewardGeneratorTests
     private static readonly ImmutableArray<string> StarterExclusions =
         ImmutableArray.Create("strike", "defend");
 
+    private static readonly DataCatalog BaseCatalog = EmbeddedDataLoader.LoadCatalog();
+
     private static DataCatalog Cat() => EmbeddedDataLoader.LoadCatalog();
+
+    /// <summary>relic 無しの基本 RunState (Phase 10.6.B T5 用)。</summary>
+    private static RunState Sample() =>
+        RunState.NewSoloRun(
+            BaseCatalog, 1UL, 0,
+            ImmutableDictionary<int, TileKind>.Empty,
+            ImmutableArray<string>.Empty, ImmutableArray<string>.Empty,
+            ImmutableArray<string>.Empty, ImmutableArray<string>.Empty,
+            new DateTimeOffset(2026, 5, 4, 0, 0, 0, TimeSpan.Zero));
+
+    /// <summary>フェイクレリックを所持した RunState を生成する (Phase 10.6.B T5 用)。</summary>
+    private static RunState MakeRunStateWithRelics(DataCatalog catalog, string relicId) =>
+        RunState.NewSoloRun(
+            catalog, 1UL, 0,
+            ImmutableDictionary<int, TileKind>.Empty,
+            ImmutableArray<string>.Empty, ImmutableArray<string>.Empty,
+            ImmutableArray<string>.Empty, ImmutableArray<string>.Empty,
+            new DateTimeOffset(2026, 5, 4, 0, 0, 0, TimeSpan.Zero))
+        with { Relics = new[] { relicId } };
 
     [Fact]
     public void Generate_FromWeakPool_GoldInRange()
@@ -23,7 +48,7 @@ public class RewardGeneratorTests
         var rt = cat.RewardTables["act1"];
         var ctx = new RewardContext.FromEnemy(new EnemyPool(1, EnemyTier.Weak));
         var (reward, _) = RewardGenerator.Generate(ctx, new RewardRngState(40, 0),
-            StarterExclusions, rt, cat, new SystemRng(1));
+            StarterExclusions, rt, cat, new SystemRng(1), Sample());
         Assert.InRange(reward.Gold, rt.Pools[EnemyTier.Weak].GoldMin, rt.Pools[EnemyTier.Weak].GoldMax);
     }
 
@@ -36,7 +61,7 @@ public class RewardGeneratorTests
         for (int seed = 0; seed < 20; seed++)
         {
             var (r, _) = RewardGenerator.Generate(ctx, new RewardRngState(40, 0),
-                StarterExclusions, rt, cat, new SystemRng(seed));
+                StarterExclusions, rt, cat, new SystemRng(seed), Sample());
             Assert.NotNull(r.PotionId);
         }
     }
@@ -50,7 +75,7 @@ public class RewardGeneratorTests
         for (int seed = 0; seed < 20; seed++)
         {
             var (r, _) = RewardGenerator.Generate(ctx, new RewardRngState(40, 0),
-                StarterExclusions, rt, cat, new SystemRng(seed));
+                StarterExclusions, rt, cat, new SystemRng(seed), Sample());
             Assert.Null(r.PotionId);
         }
     }
@@ -64,7 +89,7 @@ public class RewardGeneratorTests
         for (int seed = 0; seed < 10; seed++)
         {
             var (r, _) = RewardGenerator.Generate(ctx, new RewardRngState(40, 0),
-                StarterExclusions, rt, cat, new SystemRng(seed));
+                StarterExclusions, rt, cat, new SystemRng(seed), Sample());
             Assert.Equal(3, r.CardChoices.Length);
             Assert.DoesNotContain("strike", r.CardChoices);
             Assert.DoesNotContain("defend", r.CardChoices);
@@ -79,7 +104,7 @@ public class RewardGeneratorTests
         var rt = cat.RewardTables["act1"];
         var ctx = new RewardContext.FromNonBattle(NonBattleRewardKind.Event);
         var (r, _) = RewardGenerator.Generate(ctx, new RewardRngState(40, 0),
-            StarterExclusions, rt, cat, new SystemRng(1));
+            StarterExclusions, rt, cat, new SystemRng(1), Sample());
         Assert.Empty(r.CardChoices);
         Assert.Equal(CardRewardStatus.Claimed, r.CardStatus);
     }
@@ -92,11 +117,11 @@ public class RewardGeneratorTests
         var ctx = new RewardContext.FromEnemy(new EnemyPool(1, EnemyTier.Weak));
 
         var (_, next1) = RewardGenerator.Generate(ctx, new RewardRngState(100, 0),
-            StarterExclusions, rt, cat, new SystemRng(0));
+            StarterExclusions, rt, cat, new SystemRng(0), Sample());
         Assert.Equal(90, next1.PotionChancePercent);
 
         var (_, next2) = RewardGenerator.Generate(ctx, new RewardRngState(0, 0),
-            StarterExclusions, rt, cat, new SystemRng(0));
+            StarterExclusions, rt, cat, new SystemRng(0), Sample());
         Assert.Equal(10, next2.PotionChancePercent);
     }
 
@@ -111,7 +136,7 @@ public class RewardGeneratorTests
         for (int seed = 0; seed < 50; seed++)
         {
             var (r, next) = RewardGenerator.Generate(ctx, new RewardRngState(40, 0),
-                StarterExclusions, rt, cat, new SystemRng(seed));
+                StarterExclusions, rt, cat, new SystemRng(seed), Sample());
             bool hasRare = r.CardChoices.Any(id => cat.Cards[id].Rarity == CardRarity.Rare);
             if (hasRare) { Assert.Equal(0, next.RareChanceBonusPercent); sawAny = true; }
             else { Assert.Equal(1, next.RareChanceBonusPercent); }
@@ -130,7 +155,7 @@ public class RewardGeneratorTests
         {
             var (reward, _) = RewardGenerator.Generate(
                 new RewardContext.FromEnemy(new EnemyPool(1, EnemyTier.Elite)),
-                rngState, ImmutableArray.Create("strike", "defend"), rt, catalog, rng);
+                rngState, ImmutableArray.Create("strike", "defend"), rt, catalog, rng, Sample());
             foreach (var id in reward.CardChoices)
             {
                 var def = catalog.Cards[id];
@@ -148,7 +173,7 @@ public class RewardGeneratorTests
         var rngState = new RewardRngState(0, 0);
         var (reward, _) = RewardGenerator.Generate(
             new RewardContext.FromEnemy(new EnemyPool(1, EnemyTier.Boss)),
-            rngState, ImmutableArray<string>.Empty, rt, catalog, rng);
+            rngState, ImmutableArray<string>.Empty, rt, catalog, rng, Sample());
         foreach (var id in reward.CardChoices)
         {
             Assert.Equal(CardRarity.Epic, catalog.Cards[id].Rarity);
@@ -164,7 +189,7 @@ public class RewardGeneratorTests
         var rngState = new RewardRngState(40, 0);
         var (reward, _) = RewardGenerator.Generate(
             new RewardContext.FromNonBattle(NonBattleRewardKind.Treasure),
-            rngState, ImmutableArray<string>.Empty, rt, catalog, rng);
+            rngState, ImmutableArray<string>.Empty, rt, catalog, rng, Sample());
         var treasureEntry = rt.NonBattle["treasure"];
         Assert.InRange(reward.Gold, treasureEntry.GoldMin, treasureEntry.GoldMax);
         Assert.False(reward.GoldClaimed);
@@ -232,8 +257,66 @@ public class RewardGeneratorTests
         for (int seed = 0; seed < 50; seed++)
         {
             var (reward, _) = RewardGenerator.Generate(ctx, new RewardRngState(40, 0),
-                StarterExclusions, rt, catalog, new SystemRng(seed));
+                StarterExclusions, rt, catalog, new SystemRng(seed), Sample());
             Assert.DoesNotContain("reward_token_test", reward.CardChoices);
         }
+    }
+
+    // ---- Phase 10.6.B T5: rewardCardChoicesBonus modifier tests ----
+
+    [Fact]
+    public void GenerateFromEnemy_WithRewardCardChoicesBonus_ProducesMoreChoices()
+    {
+        var fake = RelicCatalogTestHelpers.BuildCatalogWithFakeRelic(BaseCatalog,
+            "extra_choices",
+            new[] { new CardEffect("rewardCardChoicesBonus", EffectScope.Self, null, 1, Trigger: "Passive") });
+        var s = MakeRunStateWithRelics(fake, "extra_choices");
+
+        var (reward, _) = RewardGenerator.Generate(
+            new RewardContext.FromEnemy(new EnemyPool(1, EnemyTier.Weak)),
+            s.RewardRngState,
+            ImmutableArray<string>.Empty,
+            fake.RewardTables["act1"],
+            fake,
+            new SequentialRng(1UL),
+            s);  // 新規引数 (RunState)
+
+        Assert.Equal(4, reward.CardChoices.Length); // 3 + 1 = 4
+    }
+
+    [Fact]
+    public void GenerateFromEnemy_WithNegativeBonus_FloorAtOneChoice()
+    {
+        var fake = RelicCatalogTestHelpers.BuildCatalogWithFakeRelic(BaseCatalog,
+            "fewer_choices",
+            new[] { new CardEffect("rewardCardChoicesBonus", EffectScope.Self, null, -10, Trigger: "Passive") });
+        var s = MakeRunStateWithRelics(fake, "fewer_choices");
+
+        var (reward, _) = RewardGenerator.Generate(
+            new RewardContext.FromEnemy(new EnemyPool(1, EnemyTier.Weak)),
+            s.RewardRngState,
+            ImmutableArray<string>.Empty,
+            fake.RewardTables["act1"],
+            fake,
+            new SequentialRng(1UL),
+            s);
+
+        Assert.Single(reward.CardChoices); // 床 1
+    }
+
+    [Fact]
+    public void RegenerateCardChoicesForReward_ProducesExpectedCount()
+    {
+        // T7 用に切り出した helper の単体動作確認
+        var s = Sample(); // relic 無し
+        var picks = RewardGenerator.RegenerateCardChoicesForReward(
+            new EnemyPool(1, EnemyTier.Weak),
+            s.RewardRngState,
+            ImmutableArray<string>.Empty,
+            BaseCatalog.RewardTables["act1"],
+            BaseCatalog,
+            new SequentialRng(99UL),
+            s);
+        Assert.Equal(3, picks.Length); // bonus 無しなので 3 枚
     }
 }

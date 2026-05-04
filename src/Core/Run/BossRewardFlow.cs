@@ -35,7 +35,7 @@ public static class BossRewardFlow
             new RewardContext.FromEnemy(new EnemyPool(state.CurrentAct, EnemyTier.Boss)),
             state.RewardRngState,
             ImmutableArray.Create("strike", "defend"),
-            table, catalog, rng);
+            table, catalog, rng, state);
         return reward with { IsBossReward = true };
     }
 }

@@ -335,7 +335,7 @@ public sealed class BattleController : ControllerBase
                 ImmutableArray.CreateRange(beforeRun.Relics),
                 _data.RewardTables.TryGetValue($"act{beforeRun.CurrentAct}", out var tbl)
                     ? tbl : _data.RewardTables["act1"],
-                _data, rewardRng);
+                _data, rewardRng, afterFinalize);
             updated = afterFinalize with
             {
                 ActiveReward = reward,
