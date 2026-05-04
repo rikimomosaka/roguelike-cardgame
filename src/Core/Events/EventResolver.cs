@@ -85,8 +85,7 @@ public static class EventResolver
             PotionId: null, PotionClaimed: true,
             CardChoices: reward.CardChoices,
             CardStatus: CardRewardStatus.Pending);
-        var next = s with { ActiveReward = cardOnly, RewardRngState = newRngState };
-        next = NonBattleRelicEffects.ApplyOnRewardGenerated(next, catalog);
+        var next = RewardActions.AssignReward(s, cardOnly, newRngState, catalog);
         return BestiaryTracker.NoteCardsSeen(next, reward.CardChoices);
     }
 }

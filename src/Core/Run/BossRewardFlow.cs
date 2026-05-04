@@ -2,7 +2,6 @@ using System.Collections.Immutable;
 using RoguelikeCardGame.Core.Battle.Definitions;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Random;
-using RoguelikeCardGame.Core.Relics;
 using RoguelikeCardGame.Core.Rewards;
 
 namespace RoguelikeCardGame.Core.Run;
@@ -18,8 +17,7 @@ public static class BossRewardFlow
     {
         var reward = GenerateBossReward(state, catalog, rng);
         if (reward is null) return state;
-        var s1 = state with { ActiveReward = reward, RewardRngState = state.RewardRngState };
-        return NonBattleRelicEffects.ApplyOnRewardGenerated(s1, catalog);
+        return RewardActions.AssignReward(state, reward, state.RewardRngState, catalog);
     }
 
     public static RewardState? GenerateBossReward(

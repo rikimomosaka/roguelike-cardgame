@@ -12,7 +12,6 @@ using RoguelikeCardGame.Core.Bestiary;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.History;
 using RoguelikeCardGame.Core.Random;
-using RoguelikeCardGame.Core.Relics;
 using RoguelikeCardGame.Core.Rewards;
 using RoguelikeCardGame.Core.Run;
 using RoguelikeCardGame.Server.Abstractions;
@@ -336,13 +335,8 @@ public sealed class BattleController : ControllerBase
                 _data.RewardTables.TryGetValue($"act{beforeRun.CurrentAct}", out var tbl)
                     ? tbl : _data.RewardTables["act1"],
                 _data, rewardRng, afterFinalize);
-            updated = afterFinalize with
-            {
-                ActiveReward = reward,
-                RewardRngState = newRng,
-                SavedAtUtc = DateTimeOffset.UtcNow,
-            };
-            updated = NonBattleRelicEffects.ApplyOnRewardGenerated(updated, _data);
+            updated = RewardActions.AssignReward(afterFinalize, reward, newRng, _data)
+                with { SavedAtUtc = DateTimeOffset.UtcNow };
             // Phase 8: プレイヤーに提示されたカード選択肢を SeenCardBaseIds に追加。
             if (updated.ActiveReward!.CardChoices.Length > 0)
                 updated = BestiaryTracker.NoteCardsSeen(updated, updated.ActiveReward.CardChoices);
