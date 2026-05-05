@@ -12,7 +12,13 @@
                                       "rarity":  1,
                                       "description":  "迷っても、心を留めるための小さな錨。胸の奥で「ここに帰ればいい」と囁く。",
                                       "effects":  [
-
+                                                      {
+                                                          "action":  "restHealBonus",
+                                                          "scope":   "self",
+                                                          "target":  null,
+                                                          "amount":  5,
+                                                          "trigger": "Passive"
+                                                      }
                                                   ],
                                       "implemented":  true
                                   }

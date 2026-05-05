@@ -12,7 +12,13 @@
                                       "rarity":  1,
                                       "description":  "じっと佇む石の蛙。眺めているだけで、不思議と疲れが抜けていく。",
                                       "effects":  [
-
+                                                      {
+                                                          "action":  "cardsDrawnPerTurnBonus",
+                                                          "scope":   "self",
+                                                          "target":  null,
+                                                          "amount":  1,
+                                                          "trigger": "Passive"
+                                                      }
                                                   ],
                                       "implemented":  true
                                   }

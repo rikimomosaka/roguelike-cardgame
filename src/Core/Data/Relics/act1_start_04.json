@@ -12,7 +12,13 @@
                                       "rarity":  1,
                                       "description":  "ずいぶんと短い剣。だが旅人の懐に忍ばせるには十分すぎる。",
                                       "effects":  [
-
+                                                      {
+                                                          "action":  "energyPerTurnBonus",
+                                                          "scope":   "self",
+                                                          "target":  null,
+                                                          "amount":  1,
+                                                          "trigger": "Passive"
+                                                      }
                                                   ],
                                       "implemented":  true
                                   }
