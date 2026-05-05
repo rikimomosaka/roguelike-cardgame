@@ -365,6 +365,7 @@ public static class CardTextFormatter
             "unknownMerchantWeightDelta"  => $"ハテナマスのショップ出現率 {sign}{n}",
             "unknownRestWeightDelta"      => $"ハテナマスの休憩所出現率 {sign}{n}",
             "unknownTreasureWeightDelta"  => $"ハテナマスの宝箱出現率 {sign}{n}",
+        "unknownEventWeightDelta"     => $"ハテナマスのイベント出現率 {sign}{n}",
             "restHealBonus"               => $"休憩所での回復 {sign}{n}",
             _                             => $"(未対応 Passive action: {eff.Action})",
         };

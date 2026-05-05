@@ -714,7 +714,8 @@ public class CardTextFormatterTests
     [InlineData("unknownMerchantWeightDelta", "ショップ出現率")]
     [InlineData("unknownRestWeightDelta", "休憩所出現率")]
     [InlineData("unknownTreasureWeightDelta", "宝箱出現率")]
-    public void FormatEffects_Passive_UnknownWeightDelta_AllFiveKinds(string action, string label)
+    [InlineData("unknownEventWeightDelta", "イベント出現率")]
+    public void FormatEffects_Passive_UnknownWeightDelta_AllSixKinds(string action, string label)
     {
         var effects = new[] {
             new CardEffect(action, EffectScope.Self, null, 4, Trigger: "Passive")

@@ -92,6 +92,7 @@ public static class PassiveModifiers
             [TileKind.Merchant] = SumPassiveBonus("unknownMerchantWeightDelta", s, catalog),
             [TileKind.Rest]     = SumPassiveBonus("unknownRestWeightDelta",     s, catalog),
             [TileKind.Treasure] = SumPassiveBonus("unknownTreasureWeightDelta", s, catalog),
+            [TileKind.Event]    = SumPassiveBonus("unknownEventWeightDelta",    s, catalog),
         };
 
         var builder = ImmutableDictionary.CreateBuilder<TileKind, double>();

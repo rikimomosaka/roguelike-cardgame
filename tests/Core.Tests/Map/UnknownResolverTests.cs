@@ -98,4 +98,38 @@ public class UnknownResolverTests
         var res = UnknownResolver.ResolveAll(map, cfg, rng);
         Assert.Contains(res.Values, v => v == TileKind.Event);
     }
+
+    // ---- ResolveOne (Phase 10.6.B T8 で追加) ----
+
+    [Fact]
+    public void ResolveOne_NullWeights_Throws()
+    {
+        Assert.Throws<System.ArgumentNullException>(() =>
+            UnknownResolver.ResolveOne(null!, new SystemRng(1)));
+    }
+
+    [Fact]
+    public void ResolveOne_NullRng_Throws()
+    {
+        var weights = ImmutableDictionary<TileKind, double>.Empty.Add(TileKind.Enemy, 1.0);
+        Assert.Throws<System.ArgumentNullException>(() =>
+            UnknownResolver.ResolveOne(weights, null!));
+    }
+
+    [Fact]
+    public void ResolveOne_AllZeroWeights_ThrowsMapGenerationConfigException()
+    {
+        var weights = ImmutableDictionary<TileKind, double>.Empty
+            .Add(TileKind.Enemy, 0.0)
+            .Add(TileKind.Merchant, 0.0);
+        Assert.Throws<MapGenerationConfigException>(() =>
+            UnknownResolver.ResolveOne(weights, new SystemRng(1)));
+    }
+
+    [Fact]
+    public void ResolveOne_SingleWeight_ReturnsThatKind()
+    {
+        var weights = ImmutableDictionary<TileKind, double>.Empty.Add(TileKind.Treasure, 1.0);
+        Assert.Equal(TileKind.Treasure, UnknownResolver.ResolveOne(weights, new SystemRng(1)));
+    }
 }

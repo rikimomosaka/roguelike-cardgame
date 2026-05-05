@@ -65,19 +65,19 @@ public class NodeEffectResolverLazyUnknownTests
     [Fact]
     public void Resolve_Unknown_WithRelicWeightDelta_BiasesOutcome()
     {
-        // unknownMerchantWeightDelta +1000000000 で Merchant に強制傾倒し、他の 4 種を -10000 で 0 以下にする。
-        // Event (PassiveModifiers 非管理) は base weight 25 のまま残るが、
-        // Merchant の総重みが圧倒的なため SequentialRng(1UL) の最初値 (≈5.78e-8 * total ≈ 57) は
-        // Event 範囲 [0,25) を超え Merchant が選択される。
+        // 全 5+1 種 (Enemy/Elite/Merchant/Rest/Treasure/Event) を -100000 で 0 以下にし、
+        // Merchant のみ +100 で唯一の正値にすることで決定的に Merchant が選択されるようにする。
+        // (T8 review fix: dictionary 反復順序に依存しない決定論テストに強化)
         var fake = RelicCatalogTestHelpers.BuildCatalogWithFakeRelic(BaseCatalog,
             "merchant_magnet",
             new CardEffect[]
             {
-                new CardEffect("unknownMerchantWeightDelta", EffectScope.Self, null, 1000000000, Trigger: "Passive"),
-                new CardEffect("unknownEnemyWeightDelta",    EffectScope.Self, null, -10000,     Trigger: "Passive"),
-                new CardEffect("unknownEliteWeightDelta",    EffectScope.Self, null, -10000,     Trigger: "Passive"),
-                new CardEffect("unknownRestWeightDelta",     EffectScope.Self, null, -10000,     Trigger: "Passive"),
-                new CardEffect("unknownTreasureWeightDelta", EffectScope.Self, null, -10000,     Trigger: "Passive"),
+                new CardEffect("unknownMerchantWeightDelta", EffectScope.Self, null, +100,    Trigger: "Passive"),
+                new CardEffect("unknownEnemyWeightDelta",    EffectScope.Self, null, -100000, Trigger: "Passive"),
+                new CardEffect("unknownEliteWeightDelta",    EffectScope.Self, null, -100000, Trigger: "Passive"),
+                new CardEffect("unknownRestWeightDelta",     EffectScope.Self, null, -100000, Trigger: "Passive"),
+                new CardEffect("unknownTreasureWeightDelta", EffectScope.Self, null, -100000, Trigger: "Passive"),
+                new CardEffect("unknownEventWeightDelta",    EffectScope.Self, null, -100000, Trigger: "Passive"),
             });
         var state = SampleStateAtUnknownNode(fake) with
         {
@@ -92,7 +92,8 @@ public class NodeEffectResolverLazyUnknownTests
     [Fact]
     public void Resolve_Unknown_AllWeightsZeroByDelta_FallsBackToConfig()
     {
-        // 全 weight を -10000 で 0 以下にすると fallback で元 config を使う
+        // 全 6 種を -10000 で 0 以下にすると fallback で元 config を使う
+        // (Event delta も含めて全 weight を真に 0 化することで fallback path を実際に exercise)
         var fake = RelicCatalogTestHelpers.BuildCatalogWithFakeRelic(BaseCatalog,
             "anti_everything",
             new CardEffect[]
@@ -102,6 +103,7 @@ public class NodeEffectResolverLazyUnknownTests
                 new CardEffect("unknownMerchantWeightDelta", EffectScope.Self, null, -10000, Trigger: "Passive"),
                 new CardEffect("unknownRestWeightDelta",     EffectScope.Self, null, -10000, Trigger: "Passive"),
                 new CardEffect("unknownTreasureWeightDelta", EffectScope.Self, null, -10000, Trigger: "Passive"),
+                new CardEffect("unknownEventWeightDelta",    EffectScope.Self, null, -10000, Trigger: "Passive"),
             });
         var state = SampleStateAtUnknownNode(fake) with
         {
