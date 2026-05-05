@@ -61,6 +61,20 @@ public class DevMetaControllerTests : IClassFixture<DevWebApplicationFactory>
         Assert.Contains("OnCardExhausted", json);
         Assert.Contains("OnEnterShop", json);
         Assert.Contains("OnCardAddedToDeck", json);
+        // Phase 10.6.B Passive modifier action 12 件
+        Assert.Contains("energyPerTurnBonus", json);
+        Assert.Contains("cardsDrawnPerTurnBonus", json);
+        Assert.Contains("goldRewardMultiplier", json);
+        Assert.Contains("shopPriceMultiplier", json);
+        Assert.Contains("rewardCardChoicesBonus", json);
+        Assert.Contains("rewardRerollAvailable", json);
+        Assert.Contains("unknownEnemyWeightDelta", json);
+        Assert.Contains("unknownEliteWeightDelta", json);
+        Assert.Contains("unknownMerchantWeightDelta", json);
+        Assert.Contains("unknownRestWeightDelta", json);
+        Assert.Contains("unknownTreasureWeightDelta", json);
+        Assert.Contains("unknownEventWeightDelta", json);
+        Assert.Contains("restHealBonus", json);
     }
 }
 
