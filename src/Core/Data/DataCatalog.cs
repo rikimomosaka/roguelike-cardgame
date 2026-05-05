@@ -8,6 +8,7 @@ using RoguelikeCardGame.Core.Battle.Definitions;
 using RoguelikeCardGame.Core.Battle.Definitions.Loaders;
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Events;
+using RoguelikeCardGame.Core.Map;
 using RoguelikeCardGame.Core.Merchant;
 using RoguelikeCardGame.Core.Potions;
 using RoguelikeCardGame.Core.Relics;
@@ -30,7 +31,8 @@ public sealed record DataCatalog(
     IReadOnlyDictionary<string, EventDefinition> Events,
     MerchantPrices? MerchantPrices = null,
     IReadOnlyDictionary<int, ImmutableArray<string>>? ActStartRelicPools = null,
-    IReadOnlyDictionary<string, UnitDefinition>? Units = null)   // 10.2.D: 召喚キャラ
+    IReadOnlyDictionary<string, UnitDefinition>? Units = null,   // 10.2.D: 召喚キャラ
+    UnknownResolutionConfig? UnknownConfig = null)  // Phase 10.6.B T8: lazy Unknown resolve 用
 {
     public static DataCatalog LoadFromStrings(
         IEnumerable<string> cards,
@@ -43,7 +45,8 @@ public sealed record DataCatalog(
         IEnumerable<string>? events = null,
         IEnumerable<string>? actStartRelicPools = null,
         string? merchantPricesJson = null,
-        IEnumerable<string>? units = null)
+        IEnumerable<string>? units = null,
+        UnknownResolutionConfig? unknownConfig = null)
     {
         var cardMap = new Dictionary<string, CardDefinition>();
         foreach (var json in cards)
@@ -150,7 +153,7 @@ public sealed record DataCatalog(
             }
         }
 
-        return new DataCatalog(cardMap, relicMap, potionMap, enemyMap, encMap, rtMap, chMap, eventMap, mp, pools, unitMap);
+        return new DataCatalog(cardMap, relicMap, potionMap, enemyMap, encMap, rtMap, chMap, eventMap, mp, pools, unitMap, unknownConfig);
     }
 
     public bool TryGetCard(string id, [MaybeNullWhen(false)] out CardDefinition def) => Cards.TryGetValue(id, out def);

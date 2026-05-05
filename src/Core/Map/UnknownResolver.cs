@@ -41,4 +41,30 @@ public static class UnknownResolver
         }
         return builder.ToImmutable();
     }
+
+    /// <summary>
+    /// Phase 10.6.B T8: 1 ノードだけを与えられた重みで決定的に抽選する。
+    /// NodeEffectResolver から lazy resolve 時に呼ばれる。
+    /// 全 weight が 0 の場合は MapGenerationConfigException を投げる
+    /// (caller 側で fallback 処理)。
+    /// </summary>
+    public static TileKind ResolveOne(ImmutableDictionary<TileKind, double> weights, IRng rng)
+    {
+        System.ArgumentNullException.ThrowIfNull(weights);
+        System.ArgumentNullException.ThrowIfNull(rng);
+
+        var entries = weights.Where(kv => kv.Value > 0).ToArray();
+        double totalWeight = entries.Sum(kv => kv.Value);
+        if (totalWeight <= 0)
+            throw new MapGenerationConfigException("ResolveOne: all weights are zero");
+
+        double r = rng.NextDouble() * totalWeight;
+        double acc = 0;
+        foreach (var kv in entries)
+        {
+            acc += kv.Value;
+            if (r < acc) return kv.Key;
+        }
+        return entries[^1].Key;
+    }
 }

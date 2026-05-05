@@ -206,12 +206,13 @@ public class RewardProceedActTransitionTests : IClassFixture<TempDataFactory>
     }
 
     /// <summary>
-    /// Regression: On act transition the new map's Unknown tiles must be resolved and
-    /// exposed via unknownResolutions. Previously AdvanceAct wiped the dict to empty,
-    /// causing PostMove to throw when entering an Unknown tile on act 2+.
+    /// Phase 10.6.B T8: アクト遷移後の unknownResolutions は空 (lazy resolve に切替)。
+    /// Unknown タイルへの入場時に NodeEffectResolver が PassiveModifiers を適用して解決する。
+    /// 以前のテストは pre-resolve を前提としていたが、lazy resolve 方式では
+    /// 遷移直後は Empty で正しい動作であることを確認する。
     /// </summary>
     [Fact]
-    public async Task Proceed_OnBossReward_NewActHasUnknownResolutions()
+    public async Task Proceed_OnBossReward_NewActHasEmptyUnknownResolutions_LazyResolveMode()
     {
         const string AccountId = "proc-boss-unknowns";
         var client = await SetupRunWithBossRewardAsync(AccountId, act: 1);
@@ -223,19 +224,11 @@ public class RewardProceedActTransitionTests : IClassFixture<TempDataFactory>
         var body = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
         var run = body.RootElement.GetProperty("run");
         var resolutions = run.GetProperty("unknownResolutions");
-        Assert.Equal(JsonValueKind.Object, resolutions.ValueKind);
 
-        // Any Unknown node in the new map must have a concrete resolution.
-        var unknownIds = new System.Collections.Generic.List<int>();
-        foreach (var n in body.RootElement.GetProperty("map").GetProperty("nodes").EnumerateArray())
-        {
-            if (n.GetProperty("kind").GetString() == "Unknown")
-                unknownIds.Add(n.GetProperty("id").GetInt32());
-        }
-        foreach (var id in unknownIds)
-        {
-            Assert.True(resolutions.TryGetProperty(id.ToString(System.Globalization.CultureInfo.InvariantCulture), out _),
-                $"Unknown node {id} has no resolution entry");
-        }
+        // Phase 10.6.B T8: lazy resolve により遷移直後は空 dict で正常
+        Assert.Equal(JsonValueKind.Object, resolutions.ValueKind);
+        int count = 0;
+        foreach (var _ in resolutions.EnumerateObject()) count++;
+        Assert.Equal(0, count);
     }
 }

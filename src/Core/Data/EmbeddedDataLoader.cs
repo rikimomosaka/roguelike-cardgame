@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using RoguelikeCardGame.Core.Cards;
+using RoguelikeCardGame.Core.Map;
 using RoguelikeCardGame.Core.Relics;
 
 namespace RoguelikeCardGame.Core.Data;
@@ -26,6 +27,7 @@ public static class EmbeddedDataLoader
     {
         var asm = typeof(EmbeddedDataLoader).Assembly;
         string? merchantPricesJson = ReadSingle(asm, MerchantPricesResourceName);
+        var unknownConfig = MapGenerationConfigLoader.LoadAct1().UnknownResolutionWeights;
         return DataCatalog.LoadFromStrings(
             cards: ReadAllWithPrefix(asm, CardsPrefix),
             relics: ReadAllWithPrefix(asm, RelicsPrefix),
@@ -37,7 +39,8 @@ public static class EmbeddedDataLoader
             events: ReadAllWithPrefix(asm, EventsPrefix),
             actStartRelicPools: ReadAllWithPrefix(asm, RelicsActStartPrefix),
             merchantPricesJson: merchantPricesJson,
-            units: ReadAllWithPrefix(asm, UnitsPrefix));
+            units: ReadAllWithPrefix(asm, UnitsPrefix),
+            unknownConfig: unknownConfig);
     }
 
     /// <summary>
@@ -62,6 +65,7 @@ public static class EmbeddedDataLoader
             : MergeWith(baseRelics, relicOverrides, RelicOverrideMerger.Merge);
 
         string? merchantPricesJson = ReadSingle(asm, MerchantPricesResourceName);
+        var unknownConfig = MapGenerationConfigLoader.LoadAct1().UnknownResolutionWeights;
         return DataCatalog.LoadFromStrings(
             cards: mergedCards,
             relics: mergedRelics,
@@ -73,7 +77,8 @@ public static class EmbeddedDataLoader
             events: ReadAllWithPrefix(asm, EventsPrefix),
             actStartRelicPools: ReadAllWithPrefix(asm, RelicsActStartPrefix),
             merchantPricesJson: merchantPricesJson,
-            units: ReadAllWithPrefix(asm, UnitsPrefix));
+            units: ReadAllWithPrefix(asm, UnitsPrefix),
+            unknownConfig: unknownConfig);
     }
 
     /// <summary>

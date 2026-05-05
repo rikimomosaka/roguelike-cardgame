@@ -61,11 +61,12 @@ public sealed class RunStartService
             }
         }
         if (map is null) throw last!;
-        var resolutions = UnknownResolver.ResolveAll(
-            map, _mapConfig.UnknownResolutionWeights, new SystemRng(unchecked(seed + 1)));
+        // Phase 10.6.B T8: lazy resolve に切替。ここでは pre-resolve しない。
+        // NodeEffectResolver.Resolve が Unknown マスに踏み込んだ時点で解決し cache に追記する。
+        var resolutions = ImmutableDictionary<int, TileKind>.Empty;
         var catalog = EmbeddedDataLoader.LoadCatalog();
 
-        // seed+1 は UnknownResolver が使用。Encounter 用に seed+2..+5 を割り当てる。
+        // Encounter 用に seed+2..+5 を割り当てる (seed+1 は以前 UnknownResolver で使用していたが不要になった)。
         var queueWeak = EncounterQueue.Initialize(
             new EnemyPool(Act: 1, Tier: EnemyTier.Weak), catalog, new SystemRng(unchecked(seed + 2)));
         var queueStrong = EncounterQueue.Initialize(
@@ -107,14 +108,14 @@ public sealed class RunStartService
 
     /// <summary>
     /// アクト遷移時に新マップの Unknown ノードを解決する。
-    /// 同じ (rngSeed, act, map) に対して決定的に同じ結果を返す。
+    /// Phase 10.6.B T8: lazy resolve に切替、ここでは pre-resolve しない。
+    /// 戻り値の Empty を RunState.UnknownResolutions に設定し、ノード入場時に lazy 解決する。
     /// </summary>
     public ImmutableDictionary<int, TileKind> ResolveUnknownsForAct(
         DungeonMap map, ulong rngSeed, int act)
     {
-        var derived = ActMapSeedHelper.Derive(rngSeed, act);
-        int seed = unchecked((int)(uint)derived);
-        var rng = new SystemRng(unchecked(seed ^ 0x11E50));
-        return UnknownResolver.ResolveAll(map, _mapConfig.UnknownResolutionWeights, rng);
+        // Phase 10.6.B T8: lazy resolve に切替。Empty を返すことで NodeEffectResolver が
+        // Unknown マス踏み込み時に PassiveModifiers 適用後に解決する。
+        return ImmutableDictionary<int, TileKind>.Empty;
     }
 }

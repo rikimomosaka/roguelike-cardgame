@@ -47,9 +47,43 @@ public static class NodeEffectResolver
             TileKind.Merchant => StartMerchant(state, data, rng),
             TileKind.Treasure => StartTreasure(state, table, data, rng),
             TileKind.Event => StartEvent(state, data, rng),
-            TileKind.Unknown => throw new ArgumentException("Unknown tile should be pre-resolved"),
+            TileKind.Unknown => ResolveUnknownAndDispatch(state, currentRow, data, rng),
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
         };
+    }
+
+    /// <summary>
+    /// Phase 10.6.B T8: Unknown タイルを lazy 解決してから種別に応じた処理を委譲する。
+    /// cache hit なら既存の解決値を使い、未解決なら relic modifier を適用して抽選。
+    /// 全 weight 0 の fallback は元 config の weights を使う (defensive)。
+    /// </summary>
+    private static RunState ResolveUnknownAndDispatch(
+        RunState state, int currentRow, DataCatalog data, IRng rng)
+    {
+        int nodeId = state.CurrentNodeId;
+
+        // cache hit: 既に解決済みならその値で再 dispatch
+        if (state.UnknownResolutions.TryGetValue(nodeId, out var cached))
+            return Resolve(state, cached, currentRow, data, rng);
+
+        // 未解決 → modifier 適用後に lazy resolve
+        // UnknownConfig が null の場合 (テスト用途等) は MapGenerationConfigLoader からロード
+        var config = data.UnknownConfig ?? MapGenerationConfigLoader.LoadAct1().UnknownResolutionWeights;
+        var weights = PassiveModifiers.ApplyUnknownWeightDeltas(config, state, data);
+
+        // 全 weight 0 fallback: 元 config に戻す (defensive)
+        if (weights.Values.Sum() <= 0)
+            weights = config.Weights;
+
+        var resolved = UnknownResolver.ResolveOne(weights, rng);
+
+        // 解決結果を cache に追記
+        var newState = state with {
+            UnknownResolutions = state.UnknownResolutions.SetItem(nodeId, resolved)
+        };
+
+        // resolved kind で再 dispatch (1 段再帰、resolved は Unknown 以外なので無限ループなし)
+        return Resolve(newState, resolved, currentRow, data, rng);
     }
 
     private static EnemyPool RouteEnemyPool(RewardTable table, int act, int row)
