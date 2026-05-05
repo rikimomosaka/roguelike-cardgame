@@ -33,7 +33,9 @@ export function RewardPopup(p: Props) {
   const cardLabel = (id: string) => cardNames[id] ?? id
   const potionLabel = (id: string) => potionNames[id] ?? id
 
-  const canReroll = !cardResolved && !r.rerollUsed && r.rerollAvailable && p.onRerollCard !== undefined
+  // Reroll は Pending 限定 (server も同条件で 400)。cardResolved (Claimed) のチェックでは
+  // soft-skip 後の Skipped 状態を捉えられないため、cardStatus を直接見る。
+  const canReroll = r.cardStatus === 'Pending' && !r.rerollUsed && r.rerollAvailable && p.onRerollCard !== undefined
 
   if (cardView && !cardResolved) {
     return (

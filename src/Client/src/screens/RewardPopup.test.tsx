@@ -324,4 +324,24 @@ describe('RewardPopup', () => {
     fireEvent.click(screen.getByText('リロール'))
     await waitFor(() => expect(onRerollCard).toHaveBeenCalledTimes(1))
   })
+
+  it('リロールボタンは cardStatus=Skipped のとき表示されない (resolved 扱い)', () => {
+    const handlers = baseHandlers()
+    const onRerollCard = vi.fn().mockResolvedValue(undefined)
+    render(
+      <RewardPopup
+        reward={baseReward({
+          rerollAvailable: true,
+          rerollUsed: false,
+          cardStatus: 'Skipped',
+        })}
+        potions={['', '', '']}
+        potionSlotCount={3}
+        {...handlers}
+        onRerollCard={onRerollCard}
+      />,
+    )
+    // Skipped 状態では cardView に入れないが、念のためボタン非表示確認
+    expect(screen.queryByText('リロール')).toBeNull()
+  })
 })

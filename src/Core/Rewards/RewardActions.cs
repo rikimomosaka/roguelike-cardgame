@@ -36,6 +36,11 @@ public static class RewardActions
     /// Relic が "rewardRerollAvailable" Passive capability を持つ場合のみ有効。
     /// CardStatus == Pending かつ RerollUsed == false のときのみ実行可能。
     /// </summary>
+    /// <remarks>
+    /// 設計判断: リロールは reward を「再表示」するだけで「再生成」ではないため、
+    /// RewardRngState (RareChanceBonusPercent / PotionChancePercent) は更新しない。
+    /// これにより同じ戦闘の reward が累積カウンタに二重計上されない。
+    /// </remarks>
     public static RunState Reroll(
         RunState s, DataCatalog catalog, IRng rng,
         EnemyPool sourcePool, RewardTable table)
@@ -43,6 +48,7 @@ public static class RewardActions
         ArgumentNullException.ThrowIfNull(s);
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(rng);
+        ArgumentNullException.ThrowIfNull(sourcePool);
         ArgumentNullException.ThrowIfNull(table);
 
         var r = s.ActiveReward
