@@ -100,6 +100,13 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
   const relicDescriptions = relicCatalog
     ? Object.fromEntries(Object.entries(relicCatalog).map(([k, v]) => [k, v.description]))
     : undefined
+  // Phase 10.6.B フォローアップ: ActStartRelicScreen tooltip で effectText / flavor を分離表示するため
+  const relicEffectTexts = relicCatalog
+    ? Object.fromEntries(Object.entries(relicCatalog).map(([k, v]) => [k, v.effectText]))
+    : undefined
+  const relicFlavors = relicCatalog
+    ? Object.fromEntries(Object.entries(relicCatalog).map(([k, v]) => [k, v.flavor]))
+    : undefined
   const [menuOpen, setMenuOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [shopMessage, setShopMessage] = useState<string | null>(null)
@@ -833,6 +840,8 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
             choices={activeActStartRelicChoice.relicIds}
             relicNames={relicNames}
             relicDescriptions={relicDescriptions}
+            relicEffectTexts={relicEffectTexts}
+            relicFlavors={relicFlavors}
             onChoose={async (relicId) => {
               if (!accountId) return
               await chooseActStartRelic(accountId, relicId)

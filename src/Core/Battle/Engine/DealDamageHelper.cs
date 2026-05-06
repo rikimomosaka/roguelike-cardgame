@@ -22,6 +22,9 @@ internal static class DealDamageHelper
         int weak     = attacker.GetStatus("weak");
         long boosted = (long)baseSum + (long)addCount * strength;
         int totalAttack = weak > 0 ? (int)(boosted * 3 / 4) : (int)boosted;
+        // Phase 10.6.B フォローアップ: strength が負で総攻撃が 0 未満になる場合は 0 で clamp
+        // (Block.Consume に負値を渡すと block が増えてしまう副作用を防ぐ)
+        if (totalAttack < 0) totalAttack = 0;
 
         // 2. Block 消費（敏捷遡及込み）
         int dex = target.GetStatus("dexterity");

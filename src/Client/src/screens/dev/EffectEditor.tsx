@@ -119,20 +119,27 @@ export function EffectEditor({ effect, meta, allCardIds, onChange, onRemove, exc
           </label>
         )}
         {fields.includes('name') && effect.action === 'unknownTileWeightDelta' && (
-          <label className="effect-editor__label">
-            タイル種別
-            <select
-              value={effect.name ?? ''}
-              onChange={(e) => set({ name: e.target.value || null })}
-            >
-              <option value="">(なし)</option>
-              {UNKNOWN_TILE_KINDS.map((k) => (
-                <option key={k} value={k}>
-                  {tileKindJp(k)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <>
+            <label className="effect-editor__label">
+              タイル種別
+              <select
+                value={effect.name ?? ''}
+                onChange={(e) => set({ name: e.target.value || null })}
+              >
+                <option value="">(なし)</option>
+                {UNKNOWN_TILE_KINDS.map((k) => (
+                  <option key={k} value={k}>
+                    {tileKindJp(k)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="effect-editor__hint">
+              <div><strong>Act 1 ベース重み</strong> (合計 100): 敵 25 / エリート 10 / ショップ 15 / 休憩 25 / 宝箱 <strong>0</strong> / イベント 25</div>
+              <div>delta +N で重み加算。<strong>確率 = (base + delta) / (100 + Σdelta)</strong></div>
+              <div>例: 宝箱 +20 → 20/120 ≈ <strong>16.7%</strong>、宝箱 +100 → 100/200 = <strong>50%</strong>、敵 +50 → 75/150 = <strong>50%</strong></div>
+            </div>
+          </>
         )}
         {fields.includes('name') && effect.action !== 'unknownTileWeightDelta' && (
           <label className="effect-editor__label">

@@ -13,8 +13,11 @@ public readonly record struct BlockPool(int Sum, int AddCount)
 
     public BlockPool Add(int amount) => new(Sum + amount, AddCount + 1);
 
-    /// <summary>敏捷を遡及反映（×AddCount）した表示・吸収用 Block 量。</summary>
-    public int Display(int dexterity) => Sum + AddCount * dexterity;
+    /// <summary>
+    /// 敏捷を遡及反映（×AddCount）した表示・吸収用 Block 量。
+    /// Phase 10.6.B フォローアップ: dexterity 負値で計算結果が負になる場合は 0 で clamp。
+    /// </summary>
+    public int Display(int dexterity) => Math.Max(0, Sum + AddCount * dexterity);
 
     /// <summary>
     /// 攻撃の総量を受けて Block を消費。`incomingAttack` は「ブロック適用前の攻撃値」を渡す。

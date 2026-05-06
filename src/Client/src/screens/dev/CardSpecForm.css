@@ -227,6 +227,22 @@
   align-self: center;
 }
 
+/* Phase 10.6.B フォローアップ: action 別の解説テキスト (例: unknownTileWeightDelta の重み計算式) */
+.effect-editor__hint {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  color: #aaa;
+  line-height: 1.5;
+  margin-top: 4px;
+  padding: 6px 8px;
+  background: #181818;
+  border-left: 2px solid #444;
+}
+
+.effect-editor__hint strong {
+  color: #d8c66e;
+}
+
 .effect-editor__remove:hover {
   background: #663030;
 }

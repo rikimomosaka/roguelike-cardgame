@@ -88,15 +88,30 @@ public class EffectApplierBuffDebuffTests
         Assert.Equal(5, next.Allies[0].GetStatus("strength"));
     }
 
-    [Fact] public void Negative_delta_below_zero_removes_status_and_emits_RemoveStatus()
+    [Fact] public void Negative_delta_on_strength_keeps_signed_value()
     {
+        // Phase 10.6.B フォローアップ: strength は signed なので合計が負でも保持される。
+        // (旧仕様: 0 以下で remove だったが、Heart 系のデバフを表現するため signed 化)
         var hero = BattleFixtures.WithStrength(BattleFixtures.Hero(), 2);
         var s = State(hero, BattleFixtures.Goblin());
         var eff = new CardEffect("debuff", EffectScope.Self, null, -5, Name: "strength");
         var (next, evs) = EffectApplier.Apply(s, hero, eff, Rng(), BattleFixtures.MinimalCatalog());
-        Assert.False(next.Allies[0].Statuses.ContainsKey("strength"));
+        Assert.Equal(-3, next.Allies[0].GetStatus("strength"));
+        Assert.Single(evs);
+        Assert.Equal(BattleEventKind.ApplyStatus, evs[0].Kind);
+    }
+
+    [Fact] public void Negative_delta_on_weak_below_zero_removes_status()
+    {
+        // weak は signed ではないので 0 以下で remove (従来通り)
+        var hero = BattleFixtures.Hero() with {
+            Statuses = ImmutableDictionary<string, int>.Empty.Add("weak", 2)
+        };
+        var s = State(hero, BattleFixtures.Goblin());
+        var eff = new CardEffect("buff", EffectScope.Self, null, -5, Name: "weak");
+        var (next, evs) = EffectApplier.Apply(s, hero, eff, Rng(), BattleFixtures.MinimalCatalog());
+        Assert.False(next.Allies[0].Statuses.ContainsKey("weak"));
         Assert.Equal(BattleEventKind.RemoveStatus, evs[0].Kind);
-        Assert.Equal("strength", evs[0].Note);
     }
 
     [Fact] public void Buff_single_with_null_side_throws()
@@ -170,5 +185,65 @@ public class EffectApplierBuffDebuffTests
         var eff = new CardEffect("buff", EffectScope.All, EffectSide.Ally, 1, Name: "strength");
         var (next, _) = EffectApplier.Apply(s, hero, eff, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(1, next.Allies[0].GetStatus("strength"));
+    }
+
+    // ---- Phase 10.6.B follow-up: signed strength / dexterity ----
+
+    [Fact] public void Debuff_negative_strength_to_self_stores_negative_value()
+    {
+        var hero = BattleFixtures.Hero();
+        var s = State(hero, BattleFixtures.Goblin());
+        // 「自分に筋力 -2 を付与」 (例: ショートショートソード OnBattleStart)
+        var eff = new CardEffect("debuff", EffectScope.Self, null, -2, Name: "strength");
+        var (next, evs) = EffectApplier.Apply(s, hero, eff, Rng(), BattleFixtures.MinimalCatalog());
+        Assert.Equal(-2, next.Allies[0].GetStatus("strength"));
+        Assert.Single(evs);
+        Assert.Equal(BattleEventKind.ApplyStatus, evs[0].Kind);
+    }
+
+    [Fact] public void Buff_offsets_negative_strength_back_to_zero_removes_status()
+    {
+        var hero = BattleFixtures.Hero() with {
+            Statuses = ImmutableDictionary<string, int>.Empty.Add("strength", -3)
+        };
+        var s = State(hero, BattleFixtures.Goblin());
+        // 既存 -3 に対して buff strength +3 → 0 → status remove
+        var eff = new CardEffect("buff", EffectScope.Self, null, 3, Name: "strength");
+        var (next, evs) = EffectApplier.Apply(s, hero, eff, Rng(), BattleFixtures.MinimalCatalog());
+        Assert.Equal(0, next.Allies[0].GetStatus("strength"));
+        Assert.False(next.Allies[0].Statuses.ContainsKey("strength"));
+        Assert.Single(evs);
+        Assert.Equal(BattleEventKind.RemoveStatus, evs[0].Kind);
+    }
+
+    [Fact] public void Stacking_negative_strength_accumulates()
+    {
+        var hero = BattleFixtures.Hero() with {
+            Statuses = ImmutableDictionary<string, int>.Empty.Add("strength", -2)
+        };
+        var s = State(hero, BattleFixtures.Goblin());
+        var eff = new CardEffect("debuff", EffectScope.Self, null, -3, Name: "strength");
+        var (next, _) = EffectApplier.Apply(s, hero, eff, Rng(), BattleFixtures.MinimalCatalog());
+        Assert.Equal(-5, next.Allies[0].GetStatus("strength"));
+    }
+
+    [Fact] public void Negative_dexterity_can_be_applied_to_self()
+    {
+        var hero = BattleFixtures.Hero();
+        var s = State(hero, BattleFixtures.Goblin());
+        var eff = new CardEffect("debuff", EffectScope.Self, null, -1, Name: "dexterity");
+        var (next, _) = EffectApplier.Apply(s, hero, eff, Rng(), BattleFixtures.MinimalCatalog());
+        Assert.Equal(-1, next.Allies[0].GetStatus("dexterity"));
+    }
+
+    [Fact] public void Negative_weak_is_clamped_to_zero_remove()
+    {
+        // weak は signed ではなく (turn count)、負値は許容しない (従来通り 0 以下で remove)
+        var hero = BattleFixtures.Hero();
+        var s = State(hero, BattleFixtures.Goblin());
+        var eff = new CardEffect("debuff", EffectScope.Self, null, -1, Name: "weak");
+        var (next, _) = EffectApplier.Apply(s, hero, eff, Rng(), BattleFixtures.MinimalCatalog());
+        Assert.Equal(0, next.Allies[0].GetStatus("weak"));
+        Assert.False(next.Allies[0].Statuses.ContainsKey("weak"));
     }
 }

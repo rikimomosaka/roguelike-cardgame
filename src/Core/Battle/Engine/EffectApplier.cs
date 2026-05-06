@@ -20,6 +20,12 @@ namespace RoguelikeCardGame.Core.Battle.Engine;
 /// </summary>
 internal static class EffectApplier
 {
+    /// <summary>
+    /// 負値も意味を持つ「permanent stat」系ステータス。0 のみ remove、それ以外は signed 値で保持。
+    /// それ以外 (weak / vulnerable / poison 等の ailment) は 0 以下で remove する従来挙動。
+    /// </summary>
+    private static readonly System.Collections.Generic.HashSet<string> SignedStatuses = new() { "strength", "dexterity" };
+
     public static (BattleState, IReadOnlyList<BattleEvent>) Apply(
         BattleState state, CombatActor caster, CardEffect effect, IRng rng,
         DataCatalog catalog)                        // 10.2.D
@@ -374,14 +380,38 @@ internal static class EffectApplier
             int currentAmount = current.GetStatus(effect.Name);
             int newAmount = currentAmount + effect.Amount;
 
-            ImmutableDictionary<string, int> newStatuses = newAmount <= 0
-                ? current.Statuses.Remove(effect.Name)
-                : current.Statuses.SetItem(effect.Name, newAmount);
+            // Phase 10.6.B フォローアップ: strength / dexterity は signed (負値も保持)。
+            // weak / vulnerable / poison 等の ailment は従来どおり 0 以下で remove。
+            bool isSigned = SignedStatuses.Contains(effect.Name);
+            ImmutableDictionary<string, int> newStatuses;
+            if (isSigned)
+            {
+                // signed: 0 のみ remove、それ以外 (正/負) は保持
+                newStatuses = newAmount == 0
+                    ? current.Statuses.Remove(effect.Name)
+                    : current.Statuses.SetItem(effect.Name, newAmount);
+            }
+            else
+            {
+                // unsigned: 0 以下で remove (既存挙動)
+                newStatuses = newAmount <= 0
+                    ? current.Statuses.Remove(effect.Name)
+                    : current.Statuses.SetItem(effect.Name, newAmount);
+            }
 
             var updated = current with { Statuses = newStatuses };
             s = ReplaceActor(s, tid, updated);
 
-            if (newAmount > 0 && currentAmount != newAmount)
+            // signed 系は値変化時に常に ApplyStatus 発火 (負値含む)
+            // unsigned 系は newAmount > 0 のときのみ ApplyStatus
+            bool didApply = isSigned
+                ? (newAmount != 0 && currentAmount != newAmount)
+                : (newAmount > 0 && currentAmount != newAmount);
+            bool didRemove = isSigned
+                ? (newAmount == 0 && currentAmount != 0)
+                : (newAmount <= 0 && currentAmount > 0);
+
+            if (didApply)
             {
                 events.Add(new BattleEvent(
                     BattleEventKind.ApplyStatus, Order: order++,
@@ -390,7 +420,7 @@ internal static class EffectApplier
                     Amount: effect.Amount,
                     Note: effect.Name));
             }
-            else if (newAmount <= 0 && currentAmount > 0)
+            else if (didRemove)
             {
                 events.Add(new BattleEvent(
                     BattleEventKind.RemoveStatus, Order: order++,
