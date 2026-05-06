@@ -261,4 +261,19 @@ export const EFFECT_ACTION_FIELDS: Record<string, (keyof CardEffect)[]> = {
   selfDamage: ['amount', 'trigger'],
   addCard: ['cardRefId', 'amount', 'pile', 'trigger'],
   recoverFromDiscard: ['amount', 'pile', 'select', 'trigger'],
+
+  // Phase 10.6.B passive modifier actions: amount + trigger ("Passive" を選択する必要)
+  energyPerTurnBonus: ['amount', 'trigger'],
+  cardsDrawnPerTurnBonus: ['amount', 'trigger'],
+  goldRewardMultiplier: ['amount', 'trigger'],
+  shopPriceMultiplier: ['amount', 'trigger'],
+  rewardCardChoicesBonus: ['amount', 'trigger'],
+  rewardRerollAvailable: ['amount', 'trigger'],
+  unknownEnemyWeightDelta: ['amount', 'trigger'],
+  unknownEliteWeightDelta: ['amount', 'trigger'],
+  unknownMerchantWeightDelta: ['amount', 'trigger'],
+  unknownRestWeightDelta: ['amount', 'trigger'],
+  unknownTreasureWeightDelta: ['amount', 'trigger'],
+  unknownEventWeightDelta: ['amount', 'trigger'],
+  restHealBonus: ['amount', 'trigger'],
 }
