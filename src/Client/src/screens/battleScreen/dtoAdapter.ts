@@ -287,8 +287,11 @@ export function toBuffs(actor: CombatActorDto): BuffDemo[] {
   const buffs: BuffDemo[] = []
   // Why: ブロック値 (block) は HP バー右端に専用 UI で表示するため
   // (ユーザ要望)、buffs から分離。CharacterDemo.blockValue 経由で別出し。
+  // Phase 10.6.B follow-up: strength / dexterity は signed なので負値も表示する。
+  // weak / vulnerable / poison 等は engine 側で 0 以下なら remove されているため、
+  // ここに到達した時点で amount > 0 (= 表示すべき)。
   for (const [statusId, amount] of Object.entries(actor.statuses)) {
-    if (amount <= 0) continue
+    if (amount === 0) continue
     const meta = statusMeta(statusId, amount)
     buffs.push({
       kind: meta.kind,
@@ -309,11 +312,22 @@ function statusMeta(id: string, amount: number): {
 } {
   switch (id) {
     case 'strength':
-      return { kind: 'buff', icon: '/icons/ui/strength.png', name: '筋力',
-               desc: `与えるダメージが${amount}増加する。` }
+      // Phase 10.6.B follow-up: signed なので負値で「減少」表示に切替
+      return {
+        kind: amount < 0 ? 'debuff' : 'buff',
+        icon: '/icons/ui/strength.png', name: '筋力',
+        desc: amount < 0
+          ? `与えるダメージが${-amount}減少する。`
+          : `与えるダメージが${amount}増加する。`,
+      }
     case 'dexterity':
-      return { kind: 'buff', icon: '/icons/ui/dexterity.png', name: '敏捷',
-               desc: `ブロック値が${amount}増加する。` }
+      return {
+        kind: amount < 0 ? 'debuff' : 'buff',
+        icon: '/icons/ui/dexterity.png', name: '敏捷',
+        desc: amount < 0
+          ? `ブロック値が${-amount}減少する。`
+          : `ブロック値が${amount}増加する。`,
+      }
     case 'vulnerable':
       return { kind: 'debuff', icon: '/icons/ui/vulnerable.png', name: '脆弱',
                desc: `受けるダメージが 1.5 倍。${amount}ターン残存。` }
