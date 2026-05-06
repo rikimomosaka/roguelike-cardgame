@@ -39,7 +39,7 @@ public class BattleEngineEnergyDrawSnapshotTests
         var run = SampleRun();
         var (state, _) = BattleEngine.Start(run, FirstEncounterId(BaseCatalog), new SequentialRng(1UL), BaseCatalog);
         Assert.Equal(BattleEngine.InitialEnergy, state.EnergyMax);
-        Assert.Equal(TurnStartProcessor.DrawPerTurn, state.DrawPerTurn);
+        Assert.Equal(TurnStartProcessor.BaseDrawPerTurn, state.DrawPerTurn);
     }
 
     [Fact]
@@ -61,6 +61,6 @@ public class BattleEngineEnergyDrawSnapshotTests
             new[] { new CardEffect("cardsDrawnPerTurnBonus", EffectScope.Self, null, 2, Trigger: "Passive") });
         var run = SampleRun("draw_charm");
         var (state, _) = BattleEngine.Start(run, FirstEncounterId(fake), new SequentialRng(1UL), fake);
-        Assert.Equal(TurnStartProcessor.DrawPerTurn + 2, state.DrawPerTurn);
+        Assert.Equal(TurnStartProcessor.BaseDrawPerTurn + 2, state.DrawPerTurn);
     }
 }

@@ -69,7 +69,7 @@ public static partial class BattleEngine
         // 4. 初期 BattleState（Turn=0、TurnStartProcessor で +1 して Turn=1 へ）
         // Phase 10.6.B: 所持 relic から passive modifier を適用した EnergyMax / DrawPerTurn を snapshot
         int energyMaxFinal = Relics.PassiveModifiers.ApplyEnergyPerTurnBonus(InitialEnergy, run, catalog);
-        int drawPerTurnFinal = Relics.PassiveModifiers.ApplyCardsDrawnPerTurnBonus(TurnStartProcessor.DrawPerTurn, run, catalog);
+        int drawPerTurnFinal = Relics.PassiveModifiers.ApplyCardsDrawnPerTurnBonus(TurnStartProcessor.BaseDrawPerTurn, run, catalog);
         var initial = new BattleState(
             Turn: 0,
             Phase: BattlePhase.PlayerInput,

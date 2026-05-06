@@ -328,10 +328,14 @@ public sealed class BattleController : ControllerBase
         else
         {
             // 通常エンカウンター
+            // Phase 10.6.B フォローアップ: cardExclusions に s.Relics (relic IDs) を渡していた
+            // バグ修正。card IDs を期待する引数なので relic IDs では一致せず exclusion 機能無効
+            // だった。STS 慣例どおり battle reward は deck 重複も許容するので Empty を渡す
+            // (EventResolver は別途 deck IDs を渡して event 報酬では dupe 防止する設計)。
             var (reward, newRng) = RewardGenerator.Generate(
                 new RewardContext.FromEnemy(enc.Pool),
                 afterFinalize.RewardRngState,
-                ImmutableArray.CreateRange(beforeRun.Relics),
+                ImmutableArray<string>.Empty,
                 _data.RewardTables.TryGetValue($"act{beforeRun.CurrentAct}", out var tbl)
                     ? tbl : _data.RewardTables["act1"],
                 _data, rewardRng, afterFinalize);

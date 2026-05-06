@@ -169,10 +169,12 @@ public sealed class RunsController : ControllerBase
         else
         {
             // 通常エンカウンター
+            // Phase 10.6.B フォローアップ: cardExclusions に s.Relics (relic IDs) を渡していた
+            // バグ修正 (BattleController と同様)。Empty に変更し STS 慣例どおり deck 重複を許容。
             var (reward, newRng) = RewardGenerator.Generate(
                 new RewardContext.FromEnemy(enc.Pool),
                 afterWin.RewardRngState,
-                ImmutableArray.CreateRange(s.Relics),
+                ImmutableArray<string>.Empty,
                 _data.RewardTables.TryGetValue($"act{s.CurrentAct}", out var tbl) ? tbl : _data.RewardTables["act1"],
                 _data, rewardRng, afterWin);
             updated = RewardActions.AssignReward(afterWin, reward, newRng, _data)

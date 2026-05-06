@@ -410,7 +410,8 @@ public class DevRelicsControllerMutationTests : IDisposable
         var payload = await resp.Content.ReadFromJsonAsync<JsonElement>();
         var desc = payload.GetProperty("description").GetString() ?? "";
         Assert.Contains("迷っても", desc);
-        Assert.Contains("最大HP +", desc);  // formatter 出力
+        // Phase 10.5.M6.4: 数字 marker 前後 space 全削除
+        Assert.Contains("最大HP+", desc);  // formatter 出力
     }
 
     private static JsonElement FindRelic(JsonElement list, string id)

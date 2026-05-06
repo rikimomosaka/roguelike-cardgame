@@ -69,7 +69,8 @@ public class RunsControllerRerollTests : IClassFixture<TempDataFactory>
         var rewardUsed = s.ActiveReward! with { RerollUsed = true };
         var injected = s with
         {
-            Relics = new[] { "lucky_die" },
+            // Phase 10.6.B follow-up: lucky_die を削除して gamble_dice に reroll 効果を移管したため
+            Relics = new[] { "gamble_dice" },
             ActiveReward = rewardUsed,
         };
         await repo.SaveAsync("reroll-already-used", injected, CancellationToken.None);
@@ -107,7 +108,8 @@ public class RunsControllerRerollTests : IClassFixture<TempDataFactory>
             : s.ActiveReward with { CardStatus = CardRewardStatus.Pending };
         var injected = s with
         {
-            Relics = new[] { "lucky_die" },
+            // Phase 10.6.B follow-up: lucky_die を削除して gamble_dice に reroll 効果を移管したため
+            Relics = new[] { "gamble_dice" },
             ActiveReward = pendingReward,
         };
         await repo.SaveAsync("reroll-success", injected, CancellationToken.None);
@@ -136,7 +138,8 @@ public class RunsControllerRerollTests : IClassFixture<TempDataFactory>
             : s.ActiveReward with { CardStatus = CardRewardStatus.Pending };
         var injected = s with
         {
-            Relics = new[] { "lucky_die" },
+            // Phase 10.6.B follow-up: lucky_die を削除して gamble_dice に reroll 効果を移管したため
+            Relics = new[] { "gamble_dice" },
             ActiveReward = pendingReward,
         };
         await repo.SaveAsync("reroll-double", injected, CancellationToken.None);

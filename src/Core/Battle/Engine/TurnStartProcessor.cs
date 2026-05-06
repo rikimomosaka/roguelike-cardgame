@@ -16,7 +16,11 @@ namespace RoguelikeCardGame.Core.Battle.Engine;
 /// </summary>
 internal static class TurnStartProcessor
 {
-    public const int DrawPerTurn = 5;
+    /// <summary>
+    /// 1 ターンに引く基本枚数 (Phase 10.6.B 以降は relic で modifier 加算可)。
+    /// 命名: BattleState.DrawPerTurn (snapshot field) との混同を避けるため Base prefix。
+    /// </summary>
+    public const int BaseDrawPerTurn = 5;
 
     public static (BattleState, IReadOnlyList<BattleEvent>) Process(BattleState state, IRng rng, DataCatalog catalog)
     {

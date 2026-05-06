@@ -90,7 +90,8 @@ public class BattleStateDtoMapperTests : IClassFixture<TempDataFactory>
             var strike = allCards.FirstOrDefault(c => c.CardDefinitionId == "strike");
             Assert.NotNull(strike);
             // 6 + 2 = 8、base 6 と異なるので up 修飾。
-            Assert.Equal("敵単体に [N:8|up] アタック。", strike!.AdjustedDescription);
+            // Phase 10.5.M6.4: 数字 marker 前後 space 全削除
+            Assert.Equal("敵単体に[N:8|up]アタック。", strike!.AdjustedDescription);
         }
         finally
         {
@@ -120,7 +121,8 @@ public class BattleStateDtoMapperTests : IClassFixture<TempDataFactory>
             var strike = allCards.FirstOrDefault(c => c.CardDefinitionId == "strike");
             Assert.NotNull(strike);
             // 6 * 0.75 = 4.5 → floor 4、base 6 と異なるので down 修飾。
-            Assert.Equal("敵単体に [N:4|down] アタック。", strike!.AdjustedDescription);
+            // Phase 10.5.M6.4: 数字 marker 前後 space 全削除
+            Assert.Equal("敵単体に[N:4|down]アタック。", strike!.AdjustedDescription);
         }
         finally
         {
