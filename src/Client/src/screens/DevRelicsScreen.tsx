@@ -4,7 +4,7 @@
 //   - versions タブ + RelicSpecForm + 各種 mutation ボタン
 //   - 新規レリック / 削除レリック モーダル
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { DevMeta, DevRelicDto } from '../api/dev'
 import {
   createNewRelic,
@@ -16,6 +16,9 @@ import {
   saveRelicVersion,
   switchActiveRelicVersion,
 } from '../api/dev'
+import { useRelicCatalog } from '../hooks/useRelicCatalog'
+import { useTooltipTarget } from '../components/Tooltip'
+import type { TooltipContent } from '../components/Tooltip'
 import { RelicSpecForm } from './dev/RelicSpecForm'
 import type { RelicSpec } from './dev/DevSpecTypes'
 import { parseRelicSpec, relicSpecToJsonObject } from './dev/DevSpecTypes'
@@ -103,17 +106,15 @@ export function DevRelicsScreen({ onBack }: Props = {}) {
         </button>
         <ul>
           {relics.map((c) => (
-            <li
+            <RelicListItem
               key={c.id}
-              className={c.id === selectedId ? 'is-active' : ''}
+              relic={c}
+              isActive={c.id === selectedId}
               onClick={() => {
                 setSelectedId(c.id)
                 setSelectedVer(c.activeVersion)
               }}
-            >
-              {c.id}
-              <span className="dev-cards__active-tag">({c.activeVersion})</span>
-            </li>
+            />
           ))}
         </ul>
       </aside>
@@ -156,6 +157,43 @@ export function DevRelicsScreen({ onBack }: Props = {}) {
         />
       )}
     </div>
+  )
+}
+
+// ---- Phase 10.6.B follow-up: list 行 hover で in-game tooltip を出す ----
+
+type RelicListItemProps = {
+  relic: DevRelicDto
+  isActive: boolean
+  onClick: () => void
+}
+
+function RelicListItem({ relic, isActive, onClick }: RelicListItemProps) {
+  const { catalog } = useRelicCatalog()
+  const tooltipContent = useMemo<TooltipContent | null>(() => {
+    const entry = catalog?.[relic.id]
+    if (!entry) return null
+    // relic は effectText / flavor を分離して tooltip 表示 (Phase 10.5.M6.3 の慣習に合わせる)
+    return {
+      name: entry.name,
+      desc: entry.effectText,
+      flavor: entry.flavor || undefined,
+    }
+  }, [catalog, relic.id])
+  const tip = useTooltipTarget(tooltipContent)
+  const displayName = relic.displayName ?? relic.name
+  return (
+    <li
+      className={isActive ? 'is-active' : ''}
+      onClick={onClick}
+      onMouseEnter={tip.onMouseEnter}
+      onMouseMove={tip.onMouseMove}
+      onMouseLeave={tip.onMouseLeave}
+    >
+      <span className="dev-cards__list-name">{displayName}</span>
+      <span className="dev-cards__list-id">({relic.id})</span>
+      <span className="dev-cards__active-tag">({relic.activeVersion})</span>
+    </li>
   )
 }
 

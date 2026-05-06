@@ -4,7 +4,7 @@
 // Phase 10.5.M: textarea 撤去 → CardSpecForm (構造化フォーム + ライブテキスト + ライブビジュアル
 //               プレビュー)。Delete Card ボタンで override only / alsoBase 削除可能。
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { DevCardDto, DevMeta } from '../api/dev'
 import {
   createNewCard,
@@ -16,6 +16,9 @@ import {
   saveCardVersion,
   switchActiveVersion,
 } from '../api/dev'
+import { useCardCatalog } from '../hooks/useCardCatalog'
+import { useTooltipTarget } from '../components/Tooltip'
+import type { TooltipContent } from '../components/Tooltip'
 import { CardSpecForm } from './dev/CardSpecForm'
 import type { CardSpec } from './dev/DevSpecTypes'
 import { parseSpec, specToJsonObject } from './dev/DevSpecTypes'
@@ -94,6 +97,7 @@ export function DevCardsScreen({ onBack }: Props = {}) {
   for (const c of cards) {
     cardNames[c.id] = c.displayName ?? c.name
   }
+  // Phase 10.6.B follow-up: catalog から description を取得して list hover で in-game tooltip を表示
 
   return (
     <div className="dev-cards">
@@ -108,17 +112,15 @@ export function DevCardsScreen({ onBack }: Props = {}) {
         </button>
         <ul>
           {cards.map((c) => (
-            <li
+            <CardListItem
               key={c.id}
-              className={c.id === selectedId ? 'is-active' : ''}
+              card={c}
+              isActive={c.id === selectedId}
               onClick={() => {
                 setSelectedId(c.id)
                 setSelectedVer(c.activeVersion)
               }}
-            >
-              {c.id}
-              <span className="dev-cards__active-tag">({c.activeVersion})</span>
-            </li>
+            />
           ))}
         </ul>
       </aside>
@@ -162,6 +164,41 @@ export function DevCardsScreen({ onBack }: Props = {}) {
         />
       )}
     </div>
+  )
+}
+
+// ---- Phase 10.6.B follow-up: list 行 hover で in-game tooltip を出す ----
+
+type CardListItemProps = {
+  card: DevCardDto
+  isActive: boolean
+  onClick: () => void
+}
+
+function CardListItem({ card, isActive, onClick }: CardListItemProps) {
+  const { catalog } = useCardCatalog()
+  const tooltipContent = useMemo<TooltipContent | null>(() => {
+    const entry = catalog?.[card.id]
+    if (!entry) return null
+    return {
+      name: entry.displayName ?? entry.name,
+      desc: entry.description,
+    }
+  }, [catalog, card.id])
+  const tip = useTooltipTarget(tooltipContent)
+  const displayName = card.displayName ?? card.name
+  return (
+    <li
+      className={isActive ? 'is-active' : ''}
+      onClick={onClick}
+      onMouseEnter={tip.onMouseEnter}
+      onMouseMove={tip.onMouseMove}
+      onMouseLeave={tip.onMouseLeave}
+    >
+      <span className="dev-cards__list-name">{displayName}</span>
+      <span className="dev-cards__list-id">({card.id})</span>
+      <span className="dev-cards__active-tag">({card.activeVersion})</span>
+    </li>
   )
 }
 

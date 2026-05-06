@@ -56,6 +56,17 @@
   margin-left: 4px;
 }
 
+/* Phase 10.6.B follow-up: list 行に name + (id) + (version) で表示 */
+.dev-cards__list-name {
+  font-weight: 600;
+}
+
+.dev-cards__list-id {
+  color: #888;
+  font-size: 11px;
+  margin-left: 4px;
+}
+
 .dev-cards__detail {
   flex: 1;
   overflow-y: auto;
