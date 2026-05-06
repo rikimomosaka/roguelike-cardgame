@@ -1,6 +1,7 @@
 // Phase 10.5.M: action 連動の動的 field を持つ単一 effect エディタ。
 // EFFECT_ACTION_FIELDS で action ごとに表示する field を切り替える。
 
+import { useEffect } from 'react'
 import type { CardEffect } from './DevSpecTypes'
 import { EFFECT_ACTION_FIELDS, PASSIVE_ONLY_ACTIONS, UNKNOWN_TILE_KINDS } from './DevSpecTypes'
 import type { DevMeta } from '../../api/dev'
@@ -24,6 +25,24 @@ export function EffectEditor({ effect, meta, allCardIds, onChange, onRemove, exc
 
   const set = (patch: Partial<CardEffect>) => onChange({ ...effect, ...patch })
 
+  // Phase 10.6.B follow-up: 既存 effect が壊れたデータ (scope や trigger が新ルールで正しくない)
+  // で読み込まれた場合に自動修正。例: gainEnergy の scope='single' (default のまま) を 'self' に直す。
+  useEffect(() => {
+    const patch: Partial<CardEffect> = {}
+    let needsUpdate = false
+    if (!allFields.includes('scope') && effect.scope !== 'self') {
+      patch.scope = 'self'
+      patch.side = null
+      needsUpdate = true
+    }
+    if (PASSIVE_ONLY_ACTIONS.has(effect.action) && effect.trigger !== 'Passive') {
+      patch.trigger = 'Passive'
+      needsUpdate = true
+    }
+    if (needsUpdate) onChange({ ...effect, ...patch })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effect.action])
+
   return (
     <div className="effect-editor">
       <div className="effect-editor__row effect-editor__row--header">
@@ -37,6 +56,14 @@ export function EffectEditor({ effect, meta, allCardIds, onChange, onRemove, exc
               // Phase 10.6.B: passive-only action を選んだ時は trigger を自動的に "Passive" にセット
               if (PASSIVE_ONLY_ACTIONS.has(newAction)) {
                 patch.trigger = 'Passive'
+              }
+              // Phase 10.6.B follow-up: 'scope' を edit field に持たない action は
+              // engine 側で Self を要求するため (例: gainEnergy / draw / summon 等)、
+              // scope='self' を強制セットして 400 エラーを防ぐ。
+              const newFields = EFFECT_ACTION_FIELDS[newAction] ?? []
+              if (!newFields.includes('scope')) {
+                patch.scope = 'self'
+                patch.side = null
               }
               set(patch)
             }}
