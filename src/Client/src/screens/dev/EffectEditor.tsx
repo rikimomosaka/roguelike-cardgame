@@ -36,7 +36,7 @@ export function EffectEditor({ effect, meta, allCardIds, onChange, onRemove, exc
           >
             {meta.effectActions.map((a) => (
               <option key={a} value={a}>
-                {a}
+                {actionJp(a)}
               </option>
             ))}
           </select>
@@ -281,6 +281,42 @@ function triggerJp(t: string): string {
     case 'OnCardAddedToDeck': return 'デッキ追加時'
     case 'Passive': return '常時'
     default: return t
+  }
+}
+
+function actionJp(a: string): string {
+  switch (a) {
+    // バトル系 (card / power / relic 共通)
+    case 'attack':            return `アタック (${a})`
+    case 'block':             return `ブロック (${a})`
+    case 'buff':              return `バフ付与 (${a})`
+    case 'debuff':            return `デバフ付与 (${a})`
+    case 'heal':              return `回復 (${a})`
+    case 'draw':              return `ドロー (${a})`
+    case 'discard':           return `カード捨て (${a})`
+    case 'gainEnergy':        return `エナジー獲得 (${a})`
+    case 'gainMaxEnergy':     return `最大エナジー増 (${a})`
+    case 'exhaustCard':       return `カード消去 (${a})`
+    case 'upgrade':           return `カード強化 (${a})`
+    case 'summon':            return `召喚 (${a})`
+    case 'selfDamage':        return `自傷 (${a})`
+    case 'addCard':           return `カード追加 (${a})`
+    case 'recoverFromDiscard':return `捨札から戻す (${a})`
+    // Phase 10.6.B Passive modifier 系
+    case 'energyPerTurnBonus':       return `エナジー最大値 + (${a})`
+    case 'cardsDrawnPerTurnBonus':   return `毎ターン手札枚数 + (${a})`
+    case 'goldRewardMultiplier':     return `戦闘ゴールド報酬 % (${a})`
+    case 'shopPriceMultiplier':      return `ショップ価格 % (${a})`
+    case 'rewardCardChoicesBonus':   return `カード報酬選択肢 + (${a})`
+    case 'rewardRerollAvailable':    return `カード報酬リロール可 (${a})`
+    case 'unknownEnemyWeightDelta':  return `ハテナ:敵戦闘重み + (${a})`
+    case 'unknownEliteWeightDelta':  return `ハテナ:エリート重み + (${a})`
+    case 'unknownMerchantWeightDelta': return `ハテナ:商店重み + (${a})`
+    case 'unknownRestWeightDelta':   return `ハテナ:休憩所重み + (${a})`
+    case 'unknownTreasureWeightDelta': return `ハテナ:宝箱重み + (${a})`
+    case 'unknownEventWeightDelta':  return `ハテナ:イベント重み + (${a})`
+    case 'restHealBonus':            return `休憩所での回復 + (${a})`
+    default: return a
   }
 }
 
