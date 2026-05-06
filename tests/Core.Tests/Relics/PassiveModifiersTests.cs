@@ -171,8 +171,8 @@ public class PassiveModifiersTests
     public void ApplyUnknownWeightDeltas_AddsToBaseWeights()
     {
         var fake = Cat("u1", new[] {
-            new CardEffect("unknownEnemyWeightDelta", EffectScope.Self, null, -3, Trigger: "Passive"),
-            new CardEffect("unknownTreasureWeightDelta", EffectScope.Self, null, 5, Trigger: "Passive"),
+            new CardEffect("unknownTileWeightDelta", EffectScope.Self, null, -3, Name: "enemy", Trigger: "Passive"),
+            new CardEffect("unknownTileWeightDelta", EffectScope.Self, null, 5, Name: "treasure", Trigger: "Passive"),
         });
         var s = Sample(relics: new List<string> { "u1" });
         var config = new UnknownResolutionConfig(
@@ -189,7 +189,7 @@ public class PassiveModifiersTests
     public void ApplyUnknownWeightDeltas_NegativeWouldGoBelowZero_FloorAtZero()
     {
         var fake = Cat("u1", new[] {
-            new CardEffect("unknownEnemyWeightDelta", EffectScope.Self, null, -100, Trigger: "Passive"),
+            new CardEffect("unknownTileWeightDelta", EffectScope.Self, null, -100, Name: "enemy", Trigger: "Passive"),
         });
         var s = Sample(relics: new List<string> { "u1" });
         var config = new UnknownResolutionConfig(
@@ -205,11 +205,11 @@ public class PassiveModifiersTests
     {
         // 5 tile kind 全部の action 名 typo を catch するための網羅テスト
         var fake = Cat("u_all", new[] {
-            new CardEffect("unknownEnemyWeightDelta",    EffectScope.Self, null, 1, Trigger: "Passive"),
-            new CardEffect("unknownEliteWeightDelta",    EffectScope.Self, null, 2, Trigger: "Passive"),
-            new CardEffect("unknownMerchantWeightDelta", EffectScope.Self, null, 3, Trigger: "Passive"),
-            new CardEffect("unknownRestWeightDelta",     EffectScope.Self, null, 4, Trigger: "Passive"),
-            new CardEffect("unknownTreasureWeightDelta", EffectScope.Self, null, 5, Trigger: "Passive"),
+            new CardEffect("unknownTileWeightDelta", EffectScope.Self, null, 1, Name: "enemy",    Trigger: "Passive"),
+            new CardEffect("unknownTileWeightDelta", EffectScope.Self, null, 2, Name: "elite",    Trigger: "Passive"),
+            new CardEffect("unknownTileWeightDelta", EffectScope.Self, null, 3, Name: "merchant", Trigger: "Passive"),
+            new CardEffect("unknownTileWeightDelta", EffectScope.Self, null, 4, Name: "rest",     Trigger: "Passive"),
+            new CardEffect("unknownTileWeightDelta", EffectScope.Self, null, 5, Name: "treasure", Trigger: "Passive"),
         });
         var s = Sample(relics: new List<string> { "u_all" });
         var config = new UnknownResolutionConfig(

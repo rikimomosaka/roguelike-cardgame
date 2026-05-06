@@ -2,7 +2,7 @@
 // EFFECT_ACTION_FIELDS で action ごとに表示する field を切り替える。
 
 import type { CardEffect } from './DevSpecTypes'
-import { EFFECT_ACTION_FIELDS } from './DevSpecTypes'
+import { EFFECT_ACTION_FIELDS, PASSIVE_ONLY_ACTIONS, UNKNOWN_TILE_KINDS } from './DevSpecTypes'
 import type { DevMeta } from '../../api/dev'
 
 type Props = {
@@ -31,7 +31,15 @@ export function EffectEditor({ effect, meta, allCardIds, onChange, onRemove, exc
           アクション
           <select
             value={effect.action}
-            onChange={(e) => set({ action: e.target.value })}
+            onChange={(e) => {
+              const newAction = e.target.value
+              const patch: Partial<CardEffect> = { action: newAction }
+              // Phase 10.6.B: passive-only action を選んだ時は trigger を自動的に "Passive" にセット
+              if (PASSIVE_ONLY_ACTIONS.has(newAction)) {
+                patch.trigger = 'Passive'
+              }
+              set(patch)
+            }}
             aria-label="effect action"
           >
             {meta.effectActions.map((a) => (
@@ -110,7 +118,23 @@ export function EffectEditor({ effect, meta, allCardIds, onChange, onRemove, exc
             </select>
           </label>
         )}
-        {fields.includes('name') && (
+        {fields.includes('name') && effect.action === 'unknownTileWeightDelta' && (
+          <label className="effect-editor__label">
+            タイル種別
+            <select
+              value={effect.name ?? ''}
+              onChange={(e) => set({ name: e.target.value || null })}
+            >
+              <option value="">(なし)</option>
+              {UNKNOWN_TILE_KINDS.map((k) => (
+                <option key={k} value={k}>
+                  {tileKindJp(k)}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {fields.includes('name') && effect.action !== 'unknownTileWeightDelta' && (
           <label className="effect-editor__label">
             ステータス
             <select
@@ -309,14 +333,21 @@ function actionJp(a: string): string {
     case 'shopPriceMultiplier':      return `ショップ価格 % (${a})`
     case 'rewardCardChoicesBonus':   return `カード報酬選択肢 + (${a})`
     case 'rewardRerollAvailable':    return `カード報酬リロール可 (${a})`
-    case 'unknownEnemyWeightDelta':  return `ハテナ:敵戦闘重み + (${a})`
-    case 'unknownEliteWeightDelta':  return `ハテナ:エリート重み + (${a})`
-    case 'unknownMerchantWeightDelta': return `ハテナ:商店重み + (${a})`
-    case 'unknownRestWeightDelta':   return `ハテナ:休憩所重み + (${a})`
-    case 'unknownTreasureWeightDelta': return `ハテナ:宝箱重み + (${a})`
-    case 'unknownEventWeightDelta':  return `ハテナ:イベント重み + (${a})`
+    case 'unknownTileWeightDelta':   return `ハテナマス重み補正 (${a})`
     case 'restHealBonus':            return `休憩所での回復 + (${a})`
     default: return a
+  }
+}
+
+function tileKindJp(k: string): string {
+  switch (k) {
+    case 'enemy':    return '敵戦闘 (enemy)'
+    case 'elite':    return 'エリート戦闘 (elite)'
+    case 'merchant': return 'ショップ (merchant)'
+    case 'rest':     return '休憩所 (rest)'
+    case 'treasure': return '宝箱 (treasure)'
+    case 'event':    return 'イベント (event)'
+    default: return k
   }
 }
 

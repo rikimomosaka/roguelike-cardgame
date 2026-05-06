@@ -360,14 +360,20 @@ public static class CardTextFormatter
             "shopPriceMultiplier"         => $"ショップ価格 {sign}{n}%",
             "rewardCardChoicesBonus"      => $"カード報酬選択肢 {sign}{n} 枚",
             "rewardRerollAvailable"       => $"カード報酬を {n} 回リロール可能",
-            "unknownEnemyWeightDelta"     => $"ハテナマスの敵戦闘出現率 {sign}{n}",
-            "unknownEliteWeightDelta"     => $"ハテナマスのエリート戦闘出現率 {sign}{n}",
-            "unknownMerchantWeightDelta"  => $"ハテナマスのショップ出現率 {sign}{n}",
-            "unknownRestWeightDelta"      => $"ハテナマスの休憩所出現率 {sign}{n}",
-            "unknownTreasureWeightDelta"  => $"ハテナマスの宝箱出現率 {sign}{n}",
-        "unknownEventWeightDelta"     => $"ハテナマスのイベント出現率 {sign}{n}",
+            "unknownTileWeightDelta"      => $"ハテナマスの{UnknownTileLabel(eff.Name)}出現率 {sign}{n}",
             "restHealBonus"               => $"休憩所での回復 {sign}{n}",
             _                             => $"(未対応 Passive action: {eff.Action})",
         };
     }
+
+    private static string UnknownTileLabel(string? name) => name switch
+    {
+        "enemy"    => "敵戦闘",
+        "elite"    => "エリート戦闘",
+        "merchant" => "ショップ",
+        "rest"     => "休憩所",
+        "treasure" => "宝箱",
+        "event"    => "イベント",
+        _          => "(タイル未指定)",
+    };
 }

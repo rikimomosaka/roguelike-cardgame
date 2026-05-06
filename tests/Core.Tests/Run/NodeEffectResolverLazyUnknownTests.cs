@@ -72,12 +72,12 @@ public class NodeEffectResolverLazyUnknownTests
             "merchant_magnet",
             new CardEffect[]
             {
-                new CardEffect("unknownMerchantWeightDelta", EffectScope.Self, null, +100,    Trigger: "Passive"),
-                new CardEffect("unknownEnemyWeightDelta",    EffectScope.Self, null, -100000, Trigger: "Passive"),
-                new CardEffect("unknownEliteWeightDelta",    EffectScope.Self, null, -100000, Trigger: "Passive"),
-                new CardEffect("unknownRestWeightDelta",     EffectScope.Self, null, -100000, Trigger: "Passive"),
-                new CardEffect("unknownTreasureWeightDelta", EffectScope.Self, null, -100000, Trigger: "Passive"),
-                new CardEffect("unknownEventWeightDelta",    EffectScope.Self, null, -100000, Trigger: "Passive"),
+                new CardEffect("unknownTileWeightDelta", EffectScope.Self, null, +100,    Name: "merchant", Trigger: "Passive"),
+                new CardEffect("unknownTileWeightDelta", EffectScope.Self, null, -100000, Name: "enemy",    Trigger: "Passive"),
+                new CardEffect("unknownTileWeightDelta", EffectScope.Self, null, -100000, Name: "elite",    Trigger: "Passive"),
+                new CardEffect("unknownTileWeightDelta", EffectScope.Self, null, -100000, Name: "rest",     Trigger: "Passive"),
+                new CardEffect("unknownTileWeightDelta", EffectScope.Self, null, -100000, Name: "treasure", Trigger: "Passive"),
+                new CardEffect("unknownTileWeightDelta", EffectScope.Self, null, -100000, Name: "event",    Trigger: "Passive"),
             });
         var state = SampleStateAtUnknownNode(fake) with
         {
@@ -98,12 +98,12 @@ public class NodeEffectResolverLazyUnknownTests
             "anti_everything",
             new CardEffect[]
             {
-                new CardEffect("unknownEnemyWeightDelta",    EffectScope.Self, null, -10000, Trigger: "Passive"),
-                new CardEffect("unknownEliteWeightDelta",    EffectScope.Self, null, -10000, Trigger: "Passive"),
-                new CardEffect("unknownMerchantWeightDelta", EffectScope.Self, null, -10000, Trigger: "Passive"),
-                new CardEffect("unknownRestWeightDelta",     EffectScope.Self, null, -10000, Trigger: "Passive"),
-                new CardEffect("unknownTreasureWeightDelta", EffectScope.Self, null, -10000, Trigger: "Passive"),
-                new CardEffect("unknownEventWeightDelta",    EffectScope.Self, null, -10000, Trigger: "Passive"),
+                new CardEffect("unknownTileWeightDelta", EffectScope.Self, null, -10000, Name: "enemy",    Trigger: "Passive"),
+                new CardEffect("unknownTileWeightDelta", EffectScope.Self, null, -10000, Name: "elite",    Trigger: "Passive"),
+                new CardEffect("unknownTileWeightDelta", EffectScope.Self, null, -10000, Name: "merchant", Trigger: "Passive"),
+                new CardEffect("unknownTileWeightDelta", EffectScope.Self, null, -10000, Name: "rest",     Trigger: "Passive"),
+                new CardEffect("unknownTileWeightDelta", EffectScope.Self, null, -10000, Name: "treasure", Trigger: "Passive"),
+                new CardEffect("unknownTileWeightDelta", EffectScope.Self, null, -10000, Name: "event",    Trigger: "Passive"),
             });
         var state = SampleStateAtUnknownNode(fake) with
         {

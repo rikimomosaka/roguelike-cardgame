@@ -262,18 +262,32 @@ export const EFFECT_ACTION_FIELDS: Record<string, (keyof CardEffect)[]> = {
   addCard: ['cardRefId', 'amount', 'pile', 'trigger'],
   recoverFromDiscard: ['amount', 'pile', 'select', 'trigger'],
 
-  // Phase 10.6.B passive modifier actions: amount + trigger ("Passive" を選択する必要)
+  // Phase 10.6.B passive modifier actions: amount + trigger ("Passive" 自動セット)
+  // unknownTileWeightDelta は name (タイル種別) も使う
   energyPerTurnBonus: ['amount', 'trigger'],
   cardsDrawnPerTurnBonus: ['amount', 'trigger'],
   goldRewardMultiplier: ['amount', 'trigger'],
   shopPriceMultiplier: ['amount', 'trigger'],
   rewardCardChoicesBonus: ['amount', 'trigger'],
   rewardRerollAvailable: ['amount', 'trigger'],
-  unknownEnemyWeightDelta: ['amount', 'trigger'],
-  unknownEliteWeightDelta: ['amount', 'trigger'],
-  unknownMerchantWeightDelta: ['amount', 'trigger'],
-  unknownRestWeightDelta: ['amount', 'trigger'],
-  unknownTreasureWeightDelta: ['amount', 'trigger'],
-  unknownEventWeightDelta: ['amount', 'trigger'],
+  unknownTileWeightDelta: ['name', 'amount', 'trigger'],
   restHealBonus: ['amount', 'trigger'],
 }
+
+/** Phase 10.6.B: 必ず Trigger == "Passive" でしか機能しない action 一覧。
+ *  EffectEditor で action を選択した時に trigger を自動的に "Passive" に設定するために使う。 */
+export const PASSIVE_ONLY_ACTIONS: ReadonlySet<string> = new Set([
+  'energyPerTurnBonus',
+  'cardsDrawnPerTurnBonus',
+  'goldRewardMultiplier',
+  'shopPriceMultiplier',
+  'rewardCardChoicesBonus',
+  'rewardRerollAvailable',
+  'unknownTileWeightDelta',
+  'restHealBonus',
+])
+
+/** unknownTileWeightDelta の name field に入れる tile kind 一覧。 */
+export const UNKNOWN_TILE_KINDS: ReadonlyArray<string> = [
+  'enemy', 'elite', 'merchant', 'rest', 'treasure', 'event',
+]

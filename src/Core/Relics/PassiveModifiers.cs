@@ -76,7 +76,7 @@ public static class PassiveModifiers
         return SumPassiveBonus(action, s, catalog) > 0;
     }
 
-    // ---- Unknown 重み補正 (5 種別を 1 関数で処理、床 0) ----
+    // ---- Unknown 重み補正 (1 action `unknownTileWeightDelta` + name で 6 種別を分岐、床 0) ----
 
     public static ImmutableDictionary<TileKind, double> ApplyUnknownWeightDeltas(
         UnknownResolutionConfig config, RunState s, DataCatalog catalog)
@@ -85,14 +85,15 @@ public static class PassiveModifiers
         ArgumentNullException.ThrowIfNull(s);
         ArgumentNullException.ThrowIfNull(catalog);
 
+        // unknownTileWeightDelta action で eff.Name == tile kind name のものを集計
         var deltaMap = new System.Collections.Generic.Dictionary<TileKind, int>
         {
-            [TileKind.Enemy]    = SumPassiveBonus("unknownEnemyWeightDelta",    s, catalog),
-            [TileKind.Elite]    = SumPassiveBonus("unknownEliteWeightDelta",    s, catalog),
-            [TileKind.Merchant] = SumPassiveBonus("unknownMerchantWeightDelta", s, catalog),
-            [TileKind.Rest]     = SumPassiveBonus("unknownRestWeightDelta",     s, catalog),
-            [TileKind.Treasure] = SumPassiveBonus("unknownTreasureWeightDelta", s, catalog),
-            [TileKind.Event]    = SumPassiveBonus("unknownEventWeightDelta",    s, catalog),
+            [TileKind.Enemy]    = SumPassiveBonusByName("unknownTileWeightDelta", "enemy",    s, catalog),
+            [TileKind.Elite]    = SumPassiveBonusByName("unknownTileWeightDelta", "elite",    s, catalog),
+            [TileKind.Merchant] = SumPassiveBonusByName("unknownTileWeightDelta", "merchant", s, catalog),
+            [TileKind.Rest]     = SumPassiveBonusByName("unknownTileWeightDelta", "rest",     s, catalog),
+            [TileKind.Treasure] = SumPassiveBonusByName("unknownTileWeightDelta", "treasure", s, catalog),
+            [TileKind.Event]    = SumPassiveBonusByName("unknownTileWeightDelta", "event",    s, catalog),
         };
 
         var builder = ImmutableDictionary.CreateBuilder<TileKind, double>();
@@ -117,6 +118,26 @@ public static class PassiveModifiers
             {
                 if (eff.Trigger != "Passive") continue;
                 if (eff.Action == action) sum += eff.Amount;
+            }
+        }
+        return sum;
+    }
+
+    /// <summary>action + name (tile kind 等) の組み合わせで集計する。
+    /// Phase 10.6.B Q3 改修: unknownTileWeightDelta 等 1 action × 多 sub-kind の用途。</summary>
+    private static int SumPassiveBonusByName(string action, string name, RunState s, DataCatalog catalog)
+    {
+        int sum = 0;
+        foreach (var id in s.Relics)
+        {
+            if (!catalog.TryGetRelic(id, out var def)) continue;
+            if (!def.Implemented) continue;
+            foreach (var eff in def.Effects)
+            {
+                if (eff.Trigger != "Passive") continue;
+                if (eff.Action != action) continue;
+                if (eff.Name != name) continue;
+                sum += eff.Amount;
             }
         }
         return sum;

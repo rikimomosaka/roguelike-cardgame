@@ -68,12 +68,7 @@ public class DevMetaControllerTests : IClassFixture<DevWebApplicationFactory>
         Assert.Contains("shopPriceMultiplier", json);
         Assert.Contains("rewardCardChoicesBonus", json);
         Assert.Contains("rewardRerollAvailable", json);
-        Assert.Contains("unknownEnemyWeightDelta", json);
-        Assert.Contains("unknownEliteWeightDelta", json);
-        Assert.Contains("unknownMerchantWeightDelta", json);
-        Assert.Contains("unknownRestWeightDelta", json);
-        Assert.Contains("unknownTreasureWeightDelta", json);
-        Assert.Contains("unknownEventWeightDelta", json);
+        Assert.Contains("unknownTileWeightDelta", json);
         Assert.Contains("restHealBonus", json);
     }
 }

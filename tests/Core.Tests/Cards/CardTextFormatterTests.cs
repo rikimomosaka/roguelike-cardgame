@@ -659,7 +659,7 @@ public class CardTextFormatterTests
     public void FormatEffects_Passive_UnknownEnemyWeightDelta()
     {
         var effects = new[] {
-            new CardEffect("unknownEnemyWeightDelta", EffectScope.Self, null, 5, Trigger: "Passive")
+            new CardEffect("unknownTileWeightDelta", EffectScope.Self, null, 5, Name: "enemy", Trigger: "Passive")
         };
         var text = CardTextFormatter.FormatEffects(effects);
         Assert.Contains("ハテナマスの敵戦闘出現率 +[N:5]", text);
@@ -669,7 +669,7 @@ public class CardTextFormatterTests
     public void FormatEffects_Passive_UnknownTreasureWeightDelta_Negative()
     {
         var effects = new[] {
-            new CardEffect("unknownTreasureWeightDelta", EffectScope.Self, null, -3, Trigger: "Passive")
+            new CardEffect("unknownTileWeightDelta", EffectScope.Self, null, -3, Name: "treasure", Trigger: "Passive")
         };
         var text = CardTextFormatter.FormatEffects(effects);
         Assert.Contains("ハテナマスの宝箱出現率 -[N:3]", text);
@@ -709,18 +709,18 @@ public class CardTextFormatterTests
     }
 
     [Theory]
-    [InlineData("unknownEnemyWeightDelta", "敵戦闘出現率")]
-    [InlineData("unknownEliteWeightDelta", "エリート戦闘出現率")]
-    [InlineData("unknownMerchantWeightDelta", "ショップ出現率")]
-    [InlineData("unknownRestWeightDelta", "休憩所出現率")]
-    [InlineData("unknownTreasureWeightDelta", "宝箱出現率")]
-    [InlineData("unknownEventWeightDelta", "イベント出現率")]
-    public void FormatEffects_Passive_UnknownWeightDelta_AllSixKinds(string action, string label)
+    [InlineData("enemy",    "敵戦闘")]
+    [InlineData("elite",    "エリート戦闘")]
+    [InlineData("merchant", "ショップ")]
+    [InlineData("rest",     "休憩所")]
+    [InlineData("treasure", "宝箱")]
+    [InlineData("event",    "イベント")]
+    public void FormatEffects_Passive_UnknownTileWeightDelta_AllSixKinds(string kind, string label)
     {
         var effects = new[] {
-            new CardEffect(action, EffectScope.Self, null, 4, Trigger: "Passive")
+            new CardEffect("unknownTileWeightDelta", EffectScope.Self, null, 4, Name: kind, Trigger: "Passive")
         };
         var text = CardTextFormatter.FormatEffects(effects);
-        Assert.Contains($"ハテナマスの{label} +[N:4]", text);
+        Assert.Contains($"ハテナマスの{label}出現率 +[N:4]", text);
     }
 }
