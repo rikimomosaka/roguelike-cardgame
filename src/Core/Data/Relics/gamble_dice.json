@@ -2,7 +2,7 @@
     "id":  "gamble_dice",
     "name":  "ギャンブルダイス",
     "displayName":  null,
-    "activeVersion":  "v1",
+    "activeVersion":  "v2",
     "versions":  [
                      {
                          "version":  "v1",
@@ -12,9 +12,27 @@
                                       "rarity":  1,
                                       "description":  "[未実装] 角の削れたサイコロ。投げる前から、なぜか勝った気分になる不思議な代物。",
                                       "effects":  [
-
                                                   ],
                                       "implemented":  false
+                                  }
+                     },
+                     {
+                         "version":  "v2",
+                         "createdAt":  "2026-05-06T00:00:00Z",
+                         "label":  "phase 10.6.B reroll",
+                         "spec":  {
+                                      "rarity":  1,
+                                      "description":  "投げる前から、なぜか勝った気分になる不思議な代物。",
+                                      "effects":  [
+                                                      {
+                                                          "action":  "rewardRerollAvailable",
+                                                          "scope":   "self",
+                                                          "target":  null,
+                                                          "amount":  1,
+                                                          "trigger": "Passive"
+                                                      }
+                                                  ],
+                                      "implemented":  true
                                   }
                      }
                  ]
