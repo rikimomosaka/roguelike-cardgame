@@ -24,6 +24,7 @@ import {
   finalizeBattle,
   getBattle,
   playCard,
+  resolveCardChoice,
   setBattleTarget,
   startBattle,
   usePotion,
@@ -47,6 +48,7 @@ import {
   toCharacterDemo,
   toHandCardDemo,
 } from './battleScreen/dtoAdapter'
+import { CardChoiceModal } from './battleScreen/CardChoiceModal'
 import './BattleScreen.css'
 
 // -------------------- Exported intermediate types --------------------
@@ -1642,7 +1644,10 @@ export function BattleScreen({
   )
   const fan = fanLayout(handDemos.length)
 
-  const interactionsDisabled = animating || busy
+  // Phase 10.5.M2-Choose T7: pendingCardPlay 中は modal 以外の全操作 (手札クリック /
+  //  ターゲット切替 / end-turn / potion) を disable し、Server 側 RejectIfPending と
+  //  二重防御する。
+  const interactionsDisabled = animating || busy || state.pendingCardPlay !== null
 
   return (
     <div className="battle-screen">
@@ -1659,7 +1664,11 @@ export function BattleScreen({
         deck={snapshot.run.deck}
         relics={state.ownedRelicIds}
         onDiscardPotion={() => { /* battle 中は discard 不可 */ }}
-        onUsePotion={(i) => void handleUsePotion(i)}
+        onUsePotion={
+          interactionsDisabled
+            ? () => { /* lockdown: pendingCardPlay / busy / animating 中は無視 */ }
+            : (i) => void handleUsePotion(i)
+        }
         onOpenMenu={onOpenMenu ?? (() => {})}
         menuActive={menuOpen ?? false}
         onTogglePeek={onTogglePeek}
@@ -1858,6 +1867,34 @@ export function BattleScreen({
           onClose={() => setPileOpen(null)}
         />
       ) : null}
+      {/* Phase 10.5.M2-Choose T7: pendingCardPlay 中の choose modal。
+          T7 では pile=hand のみ実装、draw / discard は T8 で List モード追加。 */}
+      {state.pendingCardPlay && (
+        <CardChoiceModal
+          pending={state.pendingCardPlay}
+          hand={state.hand}
+          drawPile={state.drawPile}
+          discardPile={state.discardPile}
+          cardNames={Object.fromEntries(
+            Object.entries(cardCatalog ?? {}).map(([id, e]) => [
+              id,
+              e.displayName ?? e.name,
+            ]),
+          )}
+          cardTypeOf={(id) =>
+            ((cardCatalog?.[id]?.cardType ?? 'skill').toLowerCase()) as CardType
+          }
+          cardRarityOf={(id) =>
+            ((['c', 'r', 'e', 'l'][cardCatalog?.[id]?.rarity ?? 0]) ?? 'c') as CardRarity
+          }
+          onConfirm={async (selectedInstanceIds) => {
+            const resp = await withBusy(() =>
+              resolveCardChoice(accountId, { selectedInstanceIds }),
+            )
+            if (resp) await playSteps(resp)
+          }}
+        />
+      )}
       {/* Why: 戦闘フェーズ banner。Map の ACT START と同じ 2 秒帯を画面中央に
           オーバーレイ。表示中は他の input/anim が await でブロックされている。
           phaseBanner の key に text を使うことで、連続表示時にアニメーションが
