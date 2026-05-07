@@ -156,7 +156,10 @@ public static partial class BattleEngine
         {
             if (s.Hand[i].InstanceId == card.InstanceId) { handIdx = i; break; }
         }
-        if (handIdx >= 0) s = s with { Hand = s.Hand.RemoveAt(handIdx) };
+        if (handIdx < 0)
+            throw new InvalidOperationException(
+                $"FinalizeCardPlay: card '{card.InstanceId}' not in Hand at finalize time");
+        s = s with { Hand = s.Hand.RemoveAt(handIdx) };
 
         if (hasExhaustSelf)
         {
@@ -182,10 +185,8 @@ public static partial class BattleEngine
         }
         else if (hasRetainSelf)
         {
-            // hand の元の位置に戻す。元位置不明 (resume で見つからない) なら末尾追加。
-            s = handIdx >= 0
-                ? s with { Hand = s.Hand.Insert(handIdx, card) }
-                : s with { Hand = s.Hand.Add(card) };
+            // hand の元の位置に戻す。handIdx は上の throw で >= 0 が保証されている。
+            s = s with { Hand = s.Hand.Insert(handIdx, card) };
         }
         else
         {

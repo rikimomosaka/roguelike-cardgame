@@ -948,7 +948,7 @@ internal static class EffectApplier
 
     /// <summary>
     /// 各 action の choose 候補 (BattleCardInstance.InstanceId 一覧) を返す。
-    /// upgrade のみ「強化可能 (IsUpgradable &amp;&amp; !IsUpgraded)」フィルタ適用。
+    /// upgrade のみ「強化可能 (UpgradedCost or UpgradedEffects あり &amp;&amp; !IsUpgraded)」フィルタ適用。
     /// 候補なしのときも default ではなく ImmutableArray&lt;string&gt;.Empty を返す。
     /// </summary>
     internal static ImmutableArray<string> GetChooseCandidates(
@@ -964,7 +964,9 @@ internal static class EffectApplier
             {
                 if (c.IsUpgraded) continue;
                 if (!catalog.TryGetCard(c.CardDefinitionId, out var def)) continue;
-                if (!def.IsUpgradable) continue;
+                // Phase 10.5.M2-Choose: 既存 ApplyUpgrade と同じ「真の強化候補」フィルタを使う
+                // (UpgradedKeywords のみのカードは ApplyUpgrade が rejection するため、modal にも出さない)。
+                if (def.UpgradedCost is null && def.UpgradedEffects is null) continue;
                 builder.Add(c.InstanceId);
             }
             return builder.ToImmutable();
@@ -1103,10 +1105,9 @@ internal static class EffectApplier
     /// <summary>
     /// 選択済 ids で effect.Pile (hand/discard/draw) のカードを強化。
     /// Note: effect.Pile (既存 ApplyUpgrade と同じ)。trigger fire なし。
-    /// 強化可能フィルタは既存 ApplyUpgrade と同じ条件 (UpgradedCost or UpgradedEffects あり)
-    /// を使用する。これは GetChooseCandidates の def.IsUpgradable 判定 (UpgradedKeywords も含む)
-    /// よりわずかに狭いが、random/all 経路との一貫性を優先する。validate-time で弾かれて
-    /// いない選択 (UpgradedKeywords-only) があった場合は silently skip する (defensive)。
+    /// 強化可能フィルタは既存 ApplyUpgrade / GetChooseCandidates と同じ条件
+    /// (UpgradedCost or UpgradedEffects あり) を使用するため、validate-time で弾かれた
+    /// 候補のみが届く想定。defensive な skip 分岐は残しているが通常経路では発火しない。
     /// </summary>
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyUpgradeChosen(
         BattleState state, CombatActor caster, CardEffect effect,

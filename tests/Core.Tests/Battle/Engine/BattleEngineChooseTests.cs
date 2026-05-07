@@ -58,13 +58,45 @@ public class BattleEngineChooseTests
         Assert.Contains(next.Hand, c => c.InstanceId == "ec1");
     }
 
-    /// <summary>"recoverFromDiscard" + Select=choose を持つ最小カード定義。Pile=hand に戻す。</summary>
-    private static CardDefinition RecoverChooseCard(string id = "recover_choose", int amount = 1) =>
+    /// <summary>"recoverFromDiscard" + Select=choose を持つ最小カード定義。Pile (移動先) は省略時 hand。</summary>
+    private static CardDefinition RecoverChooseCard(string id = "recover_choose", int amount = 1, string destPile = "hand") =>
         new(id, id, null, CardRarity.Common, CardType.Skill,
             Cost: 0, UpgradedCost: null,
             Effects: new[] {
                 new CardEffect("recoverFromDiscard", EffectScope.Self, null, amount,
+                               Pile: destPile, Select: "choose")
+            },
+            UpgradedEffects: null, Keywords: null);
+
+    /// <summary>"discard" + Select=choose を持つ最小カード定義。</summary>
+    private static CardDefinition DiscardChooseCard(string id = "discard_choose", int amount = 1) =>
+        new(id, id, null, CardRarity.Common, CardType.Skill,
+            Cost: 0, UpgradedCost: null,
+            Effects: new[] {
+                new CardEffect("discard", EffectScope.Self, null, amount,
                                Pile: "hand", Select: "choose")
+            },
+            UpgradedEffects: null, Keywords: null);
+
+    /// <summary>"upgrade" + Select=choose を持つ最小カード定義。</summary>
+    private static CardDefinition UpgradeChooseCard(string id = "upgrade_choose", int amount = 1) =>
+        new(id, id, null, CardRarity.Common, CardType.Skill,
+            Cost: 0, UpgradedCost: null,
+            Effects: new[] {
+                new CardEffect("upgrade", EffectScope.Self, null, amount,
+                               Pile: "hand", Select: "choose")
+            },
+            UpgradedEffects: null, Keywords: null);
+
+    /// <summary>2 つの choose effect を持つカード (sequential pause 検証用)。</summary>
+    private static CardDefinition DoubleChooseCard(string id = "double_choose") =>
+        new(id, id, null, CardRarity.Common, CardType.Skill,
+            Cost: 0, UpgradedCost: null,
+            Effects: new[] {
+                new CardEffect("exhaustCard", EffectScope.Self, null, 1,
+                               Pile: "hand", Select: "choose"),
+                new CardEffect("exhaustCard", EffectScope.Self, null, 1,
+                               Pile: "discard", Select: "choose"),
             },
             UpgradedEffects: null, Keywords: null);
 
@@ -189,5 +221,149 @@ public class BattleEngineChooseTests
         Assert.Contains(final.Hand, c => c.InstanceId == "d1");
         // events include exhaust (relic events not asserted: fixture has no relics)
         Assert.Contains(events, e => e.Kind == BattleEventKind.Exhaust);
+    }
+
+    [Fact]
+    public void ResolveCardChoice_DiscardChosen_MovesSelectedToDiscard()
+    {
+        var chooseDef = DiscardChooseCard(amount: 1);
+        var hand = ImmutableArray.Create(
+            BattleFixtures.MakeBattleCard("strike", "s1"),
+            BattleFixtures.MakeBattleCard("defend", "d1"),
+            BattleFixtures.MakeBattleCard(chooseDef.Id, "dc1"));
+        var state = BattleFixtures.MinimalState(hand: hand);
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { BattleFixtures.Strike(), BattleFixtures.Defend(), chooseDef });
+        var (paused, _) = BattleEngine.PlayCard(state, handIndex: 2, null, null, Rng(), catalog);
+        Assert.NotNull(paused.PendingCardPlay);
+        Assert.Equal("discard", paused.PendingCardPlay!.Choice.Action);
+
+        var (final, events) = BattleEngine.ResolveCardChoice(paused,
+            ImmutableArray.Create("d1"), Rng(), catalog);
+
+        Assert.Null(final.PendingCardPlay);
+        // d1 (defend) discarded
+        Assert.Contains(final.DiscardPile, c => c.InstanceId == "d1");
+        Assert.DoesNotContain(final.Hand, c => c.InstanceId == "d1");
+        // s1 still in hand
+        Assert.Contains(final.Hand, c => c.InstanceId == "s1");
+        // dc1 (choose card) → discard
+        Assert.Contains(final.DiscardPile, c => c.InstanceId == "dc1");
+        // Discard event emitted
+        Assert.Contains(events, e => e.Kind == BattleEventKind.Discard);
+    }
+
+    [Fact]
+    public void ResolveCardChoice_UpgradeChosen_UpgradesSelectedCard()
+    {
+        // Strike has UpgradedCost or UpgradedEffects? Cost 1, UpgradedCost null, UpgradedEffects null
+        // → IsUpgradable false. So Strike is NOT a candidate.
+        // Define a custom upgradable card for the test. We need >= 2 upgradable instances in hand
+        // (excluding the choose card) so that candidates > Amount (=1) and pause fires.
+        var upgradable = new CardDefinition(
+            "upcard", "upcard", null, CardRarity.Common, CardType.Attack,
+            Cost: 1, UpgradedCost: null,
+            Effects: new[] { new CardEffect("attack", EffectScope.Single, EffectSide.Enemy, 6) },
+            UpgradedEffects: new[] { new CardEffect("attack", EffectScope.Single, EffectSide.Enemy, 9) },
+            Keywords: null);
+        var chooseDef = UpgradeChooseCard(amount: 1);
+        var hand = ImmutableArray.Create(
+            BattleFixtures.MakeBattleCard(upgradable.Id, "u1"),
+            BattleFixtures.MakeBattleCard(upgradable.Id, "u2"),
+            BattleFixtures.MakeBattleCard(chooseDef.Id, "uc1"));
+        var state = BattleFixtures.MinimalState(hand: hand);
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { upgradable, chooseDef });
+        var (paused, _) = BattleEngine.PlayCard(state, handIndex: 2, null, null, Rng(), catalog);
+        Assert.NotNull(paused.PendingCardPlay);
+        Assert.Equal("upgrade", paused.PendingCardPlay!.Choice.Action);
+        // u1 / u2 should be candidates (upgradable, not yet upgraded). uc1 (choose card) is NOT
+        // a candidate after C1 fix (no UpgradedCost / UpgradedEffects).
+        Assert.Contains("u1", paused.PendingCardPlay.Choice.CandidateInstanceIds);
+        Assert.Contains("u2", paused.PendingCardPlay.Choice.CandidateInstanceIds);
+        Assert.DoesNotContain("uc1", paused.PendingCardPlay.Choice.CandidateInstanceIds);
+
+        var (final, events) = BattleEngine.ResolveCardChoice(paused,
+            ImmutableArray.Create("u1"), Rng(), catalog);
+
+        Assert.Null(final.PendingCardPlay);
+        // u1 still in hand but now IsUpgraded
+        var u1Final = final.Hand.FirstOrDefault(c => c.InstanceId == "u1");
+        Assert.NotNull(u1Final);
+        Assert.True(u1Final!.IsUpgraded);
+        // u2 still in hand, not upgraded
+        var u2Final = final.Hand.FirstOrDefault(c => c.InstanceId == "u2");
+        Assert.NotNull(u2Final);
+        Assert.False(u2Final!.IsUpgraded);
+        Assert.Contains(events, e => e.Kind == BattleEventKind.Upgrade);
+    }
+
+    [Fact]
+    public void ResolveCardChoice_RecoverFromDiscardChosen_MovesSelectedToHand()
+    {
+        var chooseDef = RecoverChooseCard(amount: 1, destPile: "hand");
+        // Hand has the choose card. Discard pile has 2 candidates.
+        var hand = ImmutableArray.Create(BattleFixtures.MakeBattleCard(chooseDef.Id, "rc1"));
+        var discardPile = ImmutableArray.Create(
+            BattleFixtures.MakeBattleCard("strike", "s_disc1"),
+            BattleFixtures.MakeBattleCard("defend", "d_disc1"));
+        var state = BattleFixtures.MinimalState(hand: hand, discard: discardPile);
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { BattleFixtures.Strike(), BattleFixtures.Defend(), chooseDef });
+        var (paused, _) = BattleEngine.PlayCard(state, handIndex: 0, null, null, Rng(), catalog);
+        Assert.NotNull(paused.PendingCardPlay);
+        Assert.Equal("recoverFromDiscard", paused.PendingCardPlay!.Choice.Action);
+        Assert.Equal("discard", paused.PendingCardPlay.Choice.Pile); // source for UI
+
+        var (final, _) = BattleEngine.ResolveCardChoice(paused,
+            ImmutableArray.Create("s_disc1"), Rng(), catalog);
+
+        Assert.Null(final.PendingCardPlay);
+        // s_disc1 moved from DiscardPile → Hand
+        Assert.Contains(final.Hand, c => c.InstanceId == "s_disc1");
+        Assert.DoesNotContain(final.DiscardPile, c => c.InstanceId == "s_disc1");
+        // d_disc1 still in discard
+        Assert.Contains(final.DiscardPile, c => c.InstanceId == "d_disc1");
+        // Choose card itself → discard (post-resolve)
+        Assert.Contains(final.DiscardPile, c => c.InstanceId == "rc1");
+    }
+
+    [Fact]
+    public void ResolveCardChoice_SequentialPause_PausesAgainAfterFirstChoice()
+    {
+        // DoubleChooseCard has 2 choose effects. After resolving the first, ApplyEffectsFrom
+        // should hit the second and pause again (PendingCardPlay set with EffectIndex=1).
+        var chooseDef = DoubleChooseCard();
+        // First choose: exhaustCard from hand; needs hand candidates > 1.
+        // Second choose: exhaustCard from discard; needs discard candidates > 1.
+        // We need >= 2 cards in hand AND >= 2 cards in discard so both pauses fire.
+        var hand = ImmutableArray.Create(
+            BattleFixtures.MakeBattleCard("strike", "s1"),
+            BattleFixtures.MakeBattleCard("defend", "d1"),
+            BattleFixtures.MakeBattleCard(chooseDef.Id, "dc1"));
+        var discardPile = ImmutableArray.Create(
+            BattleFixtures.MakeBattleCard("strike", "ds1"),
+            BattleFixtures.MakeBattleCard("defend", "dd1"));
+        var state = BattleFixtures.MinimalState(hand: hand, discard: discardPile);
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { BattleFixtures.Strike(), BattleFixtures.Defend(), chooseDef });
+
+        // Play card → first pause
+        var (paused1, _) = BattleEngine.PlayCard(state, handIndex: 2, null, null, Rng(), catalog);
+        Assert.NotNull(paused1.PendingCardPlay);
+        Assert.Equal(0, paused1.PendingCardPlay!.EffectIndex);
+        Assert.Equal("hand", paused1.PendingCardPlay.Choice.Pile);
+
+        // Resolve first choice (exhaust s1 from hand) → second pause should emit
+        var (paused2, _) = BattleEngine.ResolveCardChoice(paused1,
+            ImmutableArray.Create("s1"), Rng(), catalog);
+        Assert.NotNull(paused2.PendingCardPlay);
+        Assert.Equal(1, paused2.PendingCardPlay!.EffectIndex);
+        Assert.Equal("discard", paused2.PendingCardPlay.Choice.Pile);
+
+        // Resolve second choice (exhaust ds1 from discard) → fully complete
+        var (final, _) = BattleEngine.ResolveCardChoice(paused2,
+            ImmutableArray.Create("ds1"), Rng(), catalog);
+        Assert.Null(final.PendingCardPlay);
+        // s1 exhausted, ds1 exhausted, dc1 (choose card) → discard
+        Assert.Contains(final.ExhaustPile, c => c.InstanceId == "s1");
+        Assert.Contains(final.ExhaustPile, c => c.InstanceId == "ds1");
+        Assert.Contains(final.DiscardPile, c => c.InstanceId == "dc1");
     }
 }
