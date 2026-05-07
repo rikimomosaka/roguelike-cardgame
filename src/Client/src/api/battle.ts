@@ -75,3 +75,13 @@ export async function finalizeBattle(accountId: string): Promise<RunSnapshotDto 
     body: {},
   })
 }
+
+export async function resolveCardChoice(
+  accountId: string,
+  body: { selectedInstanceIds: string[] },
+): Promise<BattleActionResponseDto> {
+  return await apiRequest<BattleActionResponseDto>('POST', '/runs/current/battle/resolve-card-choice', {
+    accountId,
+    body,
+  })
+}

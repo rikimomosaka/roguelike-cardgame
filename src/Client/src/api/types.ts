@@ -266,6 +266,23 @@ export type BattleEventDto = {
   note: string | null
 }
 
+/**
+ * Phase 10.5.M2-Choose: choose modal の表示中の保留状態。
+ * pile=hand なら手札 UI、それ以外 (draw/discard) はリスト UI で選択させる。
+ */
+export type PendingChoiceDto = {
+  action: 'discard' | 'exhaustCard' | 'upgrade' | 'recoverFromDiscard'
+  pile: 'hand' | 'draw' | 'discard'
+  count: number
+  candidateInstanceIds: string[]
+}
+
+export type PendingCardPlayDto = {
+  cardInstanceId: string
+  effectIndex: number
+  choice: PendingChoiceDto
+}
+
 export type BattleStateDto = {
   turn: number
   phase: BattlePhase
@@ -288,6 +305,8 @@ export type BattleStateDto = {
   ownedRelicIds: string[]
   potions: string[]
   encounterId: string
+  /** Phase 10.5.M2-Choose: choose 中なら non-null。modal を表示。 */
+  pendingCardPlay: PendingCardPlayDto | null
 }
 
 export type BattleEventStepDto = {
