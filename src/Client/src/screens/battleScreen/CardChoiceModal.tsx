@@ -1,7 +1,8 @@
 // src/Client/src/screens/battleScreen/CardChoiceModal.tsx
 //
-// Phase 10.5.M2-Choose T7: choose 中の手札選択 UI (pile=hand のみ)。
-// pile=draw / discard は T8 で List モードを追加予定 (現状は null を返す)。
+// Phase 10.5.M2-Choose T7: choose 中の手札選択 UI (pile=hand)。
+// Phase 10.5.M2-Choose T8: pile=draw / discard の List モードを追加。
+//   List モードはカード名のみの縦リスト (full-card 描画は重いため)。
 //
 // Server 側 RejectIfPending と組み合わせて二重防御するため、modal は
 // closeOnEsc=false / closeOnBackdrop=false で「確定」のみ抜け道。
@@ -18,9 +19,9 @@ import './CardChoiceModal.css'
 type Props = {
   pending: PendingCardPlayDto
   hand: BattleCardInstanceDto[]
-  /** T8 で利用予定 (pile=draw)。 */
+  /** pile=draw 用 (List モード)。 */
   drawPile?: BattleCardInstanceDto[]
-  /** T8 で利用予定 (pile=discard)。 */
+  /** pile=discard 用 (List モード)。 */
   discardPile?: BattleCardInstanceDto[]
   cardNames: Record<string, string>
   /** カード定義から CardType を解決 (catalog 未ロード時の default を含めて呼出側で吸収)。 */
@@ -36,6 +37,8 @@ type Props = {
 export function CardChoiceModal({
   pending,
   hand,
+  drawPile,
+  discardPile,
   cardNames,
   cardTypeOf,
   cardRarityOf,
@@ -73,23 +76,86 @@ export function CardChoiceModal({
     }
   }
 
-  // T7: pile=hand のみ実装。pile=draw / discard は T8 で追加予定。
-  if (choice.pile !== 'hand') return null
+  // pile に応じて source pile を選択。draw / discard は props 未指定なら空配列。
+  const sourcePile: BattleCardInstanceDto[] =
+    choice.pile === 'hand'
+      ? hand
+      : choice.pile === 'draw'
+        ? (drawPile ?? [])
+        : choice.pile === 'discard'
+          ? (discardPile ?? [])
+          : []
+
+  // Why (Minor #6, T7): hand モードでは「プレイ中のカード自身」を表示から除外し、
+  //  視覚的混乱 (選べないカードがグレーで残る) を防ぐ。
+  //  draw / discard では played card は別パイル (hand) に居るため filter 不要。
+  const visibleSource =
+    choice.pile === 'hand'
+      ? sourcePile.filter((c) => c.instanceId !== pending.cardInstanceId)
+      : sourcePile
 
   const title = `${actionTitle(choice.action)} (${selected.length}/${choice.count})`
 
-  // Why (Minor #6): 候補表示から「プレイ中のカード自身」を除外し、
-  //  視覚的混乱 (選べないカードがグレーで残る) を防ぐ。Server 側の
-  //  candidateInstanceIds には依然として played card が含まれるが、
-  //  filter は表示のみで validation には影響しない。
-  const visibleHand = hand.filter((c) => c.instanceId !== pending.cardInstanceId)
+  // Hand モード: full-card 描画 (Card コンポーネント、flex-wrap グリッド)。
+  if (choice.pile === 'hand') {
+    return (
+      <Popup
+        open
+        variant="modal"
+        title={title}
+        width={1200}
+        closeOnEsc={false}
+        closeOnBackdrop={false}
+        footerAlign="center"
+        footer={
+          <Button
+            onClick={() => void handleConfirm()}
+            disabled={selected.length !== choice.count || busy}
+          >
+            確定
+          </Button>
+        }
+      >
+        {errorMessage ? <div className="ccm-error">{errorMessage}</div> : null}
+        <div className="ccm-hand">
+          {visibleSource.map((c) => {
+            const cand = isCandidate(c.instanceId)
+            const sel = isSelected(c.instanceId)
+            const cls = [
+              'ccm-hand__card',
+              cand ? 'is-candidate' : 'is-disabled',
+              sel ? 'is-selected' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')
+            return (
+              <div
+                key={c.instanceId}
+                className={cls}
+                onClick={cand && !busy ? () => toggle(c.instanceId) : undefined}
+              >
+                <Card
+                  name={cardNames[c.cardDefinitionId] ?? c.cardDefinitionId}
+                  cost={c.costOverride ?? cardCostOf(c.cardDefinitionId)}
+                  type={cardTypeOf(c.cardDefinitionId)}
+                  rarity={cardRarityOf(c.cardDefinitionId)}
+                  upgraded={c.isUpgraded}
+                />
+              </div>
+            )
+          })}
+        </div>
+      </Popup>
+    )
+  }
 
+  // List モード (draw / discard): カード名のみの縦リスト。
   return (
     <Popup
       open
       variant="modal"
       title={title}
-      width={1200}
+      width={720}
       closeOnEsc={false}
       closeOnBackdrop={false}
       footerAlign="center"
@@ -103,12 +169,12 @@ export function CardChoiceModal({
       }
     >
       {errorMessage ? <div className="ccm-error">{errorMessage}</div> : null}
-      <div className="ccm-hand">
-        {visibleHand.map((c) => {
+      <div className="ccm-list">
+        {visibleSource.map((c) => {
           const cand = isCandidate(c.instanceId)
           const sel = isSelected(c.instanceId)
           const cls = [
-            'ccm-hand__card',
+            'ccm-list__row',
             cand ? 'is-candidate' : 'is-disabled',
             sel ? 'is-selected' : '',
           ]
@@ -120,13 +186,10 @@ export function CardChoiceModal({
               className={cls}
               onClick={cand && !busy ? () => toggle(c.instanceId) : undefined}
             >
-              <Card
-                name={cardNames[c.cardDefinitionId] ?? c.cardDefinitionId}
-                cost={c.costOverride ?? cardCostOf(c.cardDefinitionId)}
-                type={cardTypeOf(c.cardDefinitionId)}
-                rarity={cardRarityOf(c.cardDefinitionId)}
-                upgraded={c.isUpgraded}
-              />
+              <span className="ccm-list__name">
+                {cardNames[c.cardDefinitionId] ?? c.cardDefinitionId}
+                {c.isUpgraded ? '+' : ''}
+              </span>
             </div>
           )
         })}

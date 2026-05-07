@@ -35,3 +35,45 @@
   font-size: 14px;
   text-align: center;
 }
+
+/* Phase 10.5.M2-Choose T8: List モード (pile=draw / discard) — カード名のみの縦リスト。 */
+.ccm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.ccm-list__row {
+  padding: 8px 12px;
+  border: 1px solid #444;
+  background: #1a1a1a;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: background 0.15s, border 0.15s;
+}
+
+.ccm-list__row.is-candidate {
+  cursor: pointer;
+}
+
+.ccm-list__row.is-candidate:hover {
+  background: #2a2a2a;
+}
+
+.ccm-list__row.is-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ccm-list__row.is-selected {
+  background: #3a3a1a;
+  border-color: #ffd23f;
+  color: #ffd23f;
+}
+
+.ccm-list__name {
+  display: block;
+}

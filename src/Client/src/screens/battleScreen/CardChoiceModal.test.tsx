@@ -140,3 +140,73 @@ describe('CardChoiceModal Hand mode', () => {
     expect(btn.disabled).toBe(true)
   })
 })
+
+// Phase 10.5.M2-Choose T8: pile=draw / discard 用 List モード。
+//  カード名のみの縦リスト。upgraded は名前末尾に "+" を付ける。
+const drawPending: PendingCardPlayDto = {
+  cardInstanceId: 'play_card',
+  effectIndex: 0,
+  choice: {
+    action: 'exhaustCard',
+    pile: 'draw',
+    count: 1,
+    candidateInstanceIds: ['d1', 'd2'],
+  },
+}
+const drawPile: BattleCardInstanceDto[] = [
+  {
+    instanceId: 'd1',
+    cardDefinitionId: 'fire',
+    isUpgraded: false,
+    costOverride: null,
+    adjustedDescription: null,
+    adjustedUpgradedDescription: null,
+  },
+  {
+    instanceId: 'd2',
+    cardDefinitionId: 'ice',
+    isUpgraded: true,
+    costOverride: null,
+    adjustedDescription: null,
+    adjustedUpgradedDescription: null,
+  },
+]
+
+describe('CardChoiceModal List mode', () => {
+  it('shows draw pile cards as list rows', () => {
+    render(
+      <CardChoiceModal
+        pending={drawPending}
+        hand={[]}
+        drawPile={drawPile}
+        cardNames={{ fire: '炎', ice: '氷' }}
+        cardTypeOf={typeOf}
+        cardRarityOf={rarityOf}
+        cardCostOf={costOf}
+        onConfirm={vi.fn()}
+      />,
+    )
+    expect(screen.getByText('炎')).toBeTruthy()
+    // upgraded → 名前末尾に "+"
+    expect(screen.getByText('氷+')).toBeTruthy()
+  })
+
+  it('clicking row selects, confirm sends id', async () => {
+    const onConfirm = vi.fn().mockResolvedValue(undefined)
+    render(
+      <CardChoiceModal
+        pending={drawPending}
+        hand={[]}
+        drawPile={drawPile}
+        cardNames={{ fire: '炎', ice: '氷' }}
+        cardTypeOf={typeOf}
+        cardRarityOf={rarityOf}
+        cardCostOf={costOf}
+        onConfirm={onConfirm}
+      />,
+    )
+    fireEvent.click(screen.getByText('炎'))
+    fireEvent.click(screen.getByText('確定'))
+    await waitFor(() => expect(onConfirm).toHaveBeenCalledWith(['d1']))
+  })
+})
