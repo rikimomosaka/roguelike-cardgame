@@ -95,34 +95,12 @@ public static partial class BattleEngine
             ? def.UpgradedEffects
             : def.Effects;
 
-        // 10.2.D: summon 成功フラグを追跡
-        bool summonSucceeded = false;
-
-        foreach (var eff in effects)
-        {
-            // 10.5.E: Trigger 指定 effect は即時実行ではなく、PowerTriggerProcessor 経由で対応
-            //  イベント発生時に fire される。ここでは skip。
-            if (!string.IsNullOrEmpty(eff.Trigger))
-                continue;
-
-            // 10.2.C: per-effect comboMin filter（PlayCard 経路のみ）
-            if (eff.ComboMin is { } min && newCombo < min)
-                continue;
-
-            int beforeAlliesLength = s.Allies.Length;
-            var (afterEffect, evs) = EffectApplier.Apply(s, caster, eff, rng, catalog);
-            s = afterEffect;
-            foreach (var ev in evs)
-            {
-                events.Add(ev with { Order = order });
-                order++;
-            }
-            caster = s.Allies[0];
-
-            // 10.2.D: summon 成功検出
-            if (eff.Action == "summon" && s.Allies.Length > beforeAlliesLength)
-                summonSucceeded = true;
-        }
+        var (afterEffects, effectEvents, summonSucceeded, _) = ApplyEffectsFrom(
+            s, caster, card, effects, startIndex: 0, newCombo, summonSucceededIn: false,
+            ref order, rng, catalog);
+        s = afterEffects;
+        events.AddRange(effectEvents);
+        caster = s.Allies[0];
 
         // 10.2.E 追加: OnPlayCard レリック発動（effect 適用後・カード移動前）
         // Phase 10.5.L1.5: trigger ID を power 側と統一 ("OnCardPlay" → "OnPlayCard")。
@@ -189,5 +167,44 @@ public static partial class BattleEngine
         foreach (var ev in evsCombo) { events.Add(ev with { Order = order++ }); }
 
         return (s, events);
+    }
+
+    /// <summary>
+    /// Phase 10.5.M2-Choose: effect ループを resume 可能な形に切り出した内部 helper。
+    /// startIndex から effects[i] を順次適用、summonSucceeded は in-out で受け渡す。
+    /// PlayCard 初回呼出時は startIndex=0 / summonSucceededIn=false から、
+    /// 後の T3-T4 で ResolveCardChoice からの resume では pending.EffectIndex+1 / pending.SummonSucceededBefore から呼ぶ予定。
+    /// T2 時点では behavior 変更なし、PlayCard からのみ呼ばれる。
+    /// </summary>
+    /// <returns>(更新後 state, 発火 events, 最終 summonSucceeded フラグ, 次に処理する effect index = effects.Count なら全完了)</returns>
+    private static (BattleState state, List<BattleEvent> events, bool summonSucceeded, int nextIndex) ApplyEffectsFrom(
+        BattleState state, CombatActor caster, BattleCardInstance card,
+        IReadOnlyList<CardEffect> effects, int startIndex, int newCombo,
+        bool summonSucceededIn, ref int order,
+        IRng rng, DataCatalog catalog)
+    {
+        var s = state;
+        var events = new List<BattleEvent>();
+        bool summonSucceeded = summonSucceededIn;
+        for (int i = startIndex; i < effects.Count; i++)
+        {
+            var eff = effects[i];
+            if (!string.IsNullOrEmpty(eff.Trigger)) continue;
+            if (eff.ComboMin is { } min && newCombo < min) continue;
+
+            int beforeAlliesLength = s.Allies.Length;
+            var (afterEffect, evs) = EffectApplier.Apply(s, caster, eff, rng, catalog);
+            s = afterEffect;
+            foreach (var ev in evs)
+            {
+                events.Add(ev with { Order = order });
+                order++;
+            }
+            caster = s.Allies[0];
+
+            if (eff.Action == "summon" && s.Allies.Length > beforeAlliesLength)
+                summonSucceeded = true;
+        }
+        return (s, events, summonSucceeded, effects.Count);
     }
 }
