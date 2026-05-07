@@ -237,13 +237,14 @@ public static partial class BattleEngine
             if (eff.ComboMin is { } min && newCombo < min) continue;
 
             // Phase 10.5.M2-Choose: choose effect で pause が必要なら early return
-            if (EffectApplier.NeedsPlayerChoice(s, eff, catalog))
+            // I-1 fix: プレイ中のカード自身を candidate から除外するため card.InstanceId を渡す。
+            if (EffectApplier.NeedsPlayerChoice(s, eff, catalog, card.InstanceId))
             {
                 var pending = new PendingCardPlay(
                     CardInstanceId: card.InstanceId,
                     EffectIndex: i,
                     SummonSucceededBefore: summonSucceeded,
-                    Choice: EffectApplier.BuildPendingChoice(s, eff, catalog));
+                    Choice: EffectApplier.BuildPendingChoice(s, eff, catalog, card.InstanceId));
                 var paused = s with { PendingCardPlay = pending };
                 return (paused, events, summonSucceeded, i);  // i を nextIndex として返す (== pause 位置)
             }

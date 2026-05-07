@@ -934,11 +934,16 @@ internal static class EffectApplier
     /// candidates &lt;= Amount の場合は auto-skip (existing random/all path で全自動処理)。
     /// 4 action (discard / exhaustCard / upgrade / recoverFromDiscard) のみ対応。
     /// </summary>
-    internal static bool NeedsPlayerChoice(BattleState state, CardEffect effect, DataCatalog catalog)
+    /// <param name="playingCardInstanceId">
+    /// 現在プレイ中のカードの InstanceId (pause emit 時に渡す)。candidate set から除外される。
+    /// 後方互換のため null default。null の場合は除外しない。
+    /// </param>
+    internal static bool NeedsPlayerChoice(BattleState state, CardEffect effect, DataCatalog catalog,
+        string? playingCardInstanceId = null)
     {
         if (effect.Select != "choose") return false;
         if (!IsChooseSupportedAction(effect.Action)) return false;
-        var candidates = GetChooseCandidates(state, effect, catalog);
+        var candidates = GetChooseCandidates(state, effect, catalog, playingCardInstanceId);
         return candidates.Length > effect.Amount;
     }
 
@@ -951,8 +956,14 @@ internal static class EffectApplier
     /// upgrade のみ「強化可能 (UpgradedCost or UpgradedEffects あり &amp;&amp; !IsUpgraded)」フィルタ適用。
     /// 候補なしのときも default ではなく ImmutableArray&lt;string&gt;.Empty を返す。
     /// </summary>
+    /// <param name="playingCardInstanceId">
+    /// 現在プレイ中のカードの InstanceId。候補から除外する (FinalizeCardPlay が hand から
+    /// 取り出す前提で動いているため、自分自身を選ばれると確定時に Hand 不在エラーになる)。
+    /// 後方互換のため null default。null の場合は除外しない。
+    /// </param>
     internal static ImmutableArray<string> GetChooseCandidates(
-        BattleState state, CardEffect effect, DataCatalog catalog)
+        BattleState state, CardEffect effect, DataCatalog catalog,
+        string? playingCardInstanceId = null)
     {
         var pile = ResolveChoosePile(state, effect);
         if (pile.IsDefaultOrEmpty) return ImmutableArray<string>.Empty;
@@ -962,6 +973,8 @@ internal static class EffectApplier
             var builder = ImmutableArray.CreateBuilder<string>();
             foreach (var c in pile)
             {
+                // Phase 10.5.M2-Choose final review (I-1): プレイ中のカード自身を除外。
+                if (c.InstanceId == playingCardInstanceId) continue;
                 if (c.IsUpgraded) continue;
                 if (!catalog.TryGetCard(c.CardDefinitionId, out var def)) continue;
                 // Phase 10.5.M2-Choose: 既存 ApplyUpgrade と同じ「真の強化候補」フィルタを使う
@@ -971,8 +984,15 @@ internal static class EffectApplier
             }
             return builder.ToImmutable();
         }
-        // discard / exhaustCard / recoverFromDiscard は pile 全カード
-        return pile.Select(c => c.InstanceId).ToImmutableArray();
+        // discard / exhaustCard / recoverFromDiscard は pile 全カード (プレイ中のカードを除く)
+        var nonUpgradeBuilder = ImmutableArray.CreateBuilder<string>();
+        foreach (var c in pile)
+        {
+            // Phase 10.5.M2-Choose final review (I-1): プレイ中のカード自身を除外。
+            if (c.InstanceId == playingCardInstanceId) continue;
+            nonUpgradeBuilder.Add(c.InstanceId);
+        }
+        return nonUpgradeBuilder.ToImmutable();
     }
 
     private static ImmutableArray<BattleCardInstance> ResolveChoosePile(
@@ -992,7 +1012,12 @@ internal static class EffectApplier
     }
 
     /// <summary>Pause 時の PendingChoice 情報を構築する (Pile を文字列で正規化)。</summary>
-    internal static PendingChoice BuildPendingChoice(BattleState state, CardEffect effect, DataCatalog catalog)
+    /// <param name="playingCardInstanceId">
+    /// 現在プレイ中のカードの InstanceId。候補から除外される (詳細は GetChooseCandidates)。
+    /// 後方互換のため null default。
+    /// </param>
+    internal static PendingChoice BuildPendingChoice(BattleState state, CardEffect effect, DataCatalog catalog,
+        string? playingCardInstanceId = null)
     {
         string pile = effect.Action switch
         {
@@ -1004,7 +1029,7 @@ internal static class EffectApplier
             Action: effect.Action,
             Pile: pile,
             Count: effect.Amount,
-            CandidateInstanceIds: GetChooseCandidates(state, effect, catalog));
+            CandidateInstanceIds: GetChooseCandidates(state, effect, catalog, playingCardInstanceId));
     }
 
     // ---- Phase 10.5.M2-Choose T4: ApplyChoseEffect (resume 経路) ----

@@ -52,8 +52,10 @@ public class BattleEngineChooseTests
         Assert.Equal("exhaustCard", pending.Choice.Action);
         Assert.Equal("hand", pending.Choice.Pile);
         Assert.Equal(1, pending.Choice.Count);
-        // Hand 4 cards (including the choose card itself) all candidates
-        Assert.Equal(4, pending.Choice.CandidateInstanceIds.Length);
+        // Final review I-1 fix: プレイ中のカード自身 (ec1) は candidate から除外されるため、
+        //   hand 4 枚中 candidate は他 3 枚 (s1 / d1 / s2) のみ。
+        Assert.Equal(3, pending.Choice.CandidateInstanceIds.Length);
+        Assert.DoesNotContain("ec1", pending.Choice.CandidateInstanceIds);
         // Card not yet exhausted (still in hand) and not moved (pause emit before card-move logic)
         Assert.Contains(next.Hand, c => c.InstanceId == "ec1");
     }

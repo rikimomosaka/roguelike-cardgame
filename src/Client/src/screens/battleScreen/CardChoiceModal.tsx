@@ -89,6 +89,9 @@ export function CardChoiceModal({
   // Why (Minor #6, T7): hand モードでは「プレイ中のカード自身」を表示から除外し、
   //  視覚的混乱 (選べないカードがグレーで残る) を防ぐ。
   //  draw / discard では played card は別パイル (hand) に居るため filter 不要。
+  // Phase 10.5.M2-Choose final review (I-1): Server 側 GetChooseCandidates でも
+  //  playing card を候補から除外済 (CandidateInstanceIds に含まれない) ため、
+  //  この filter は冗長になったが、defense-in-depth として残す。
   const visibleSource =
     choice.pile === 'hand'
       ? sourcePile.filter((c) => c.instanceId !== pending.cardInstanceId)
