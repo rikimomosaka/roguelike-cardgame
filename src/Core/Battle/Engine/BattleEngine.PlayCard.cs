@@ -176,6 +176,7 @@ public static partial class BattleEngine
     /// 後の T3-T4 で ResolveCardChoice からの resume では pending.EffectIndex+1 / pending.SummonSucceededBefore から呼ぶ予定。
     /// T2 時点では behavior 変更なし、PlayCard からのみ呼ばれる。
     /// </summary>
+    /// <param name="card">T2 では未使用。T3 で choose effect 検出時に PendingCardPlay.CardInstanceId として参照される。</param>
     /// <returns>(更新後 state, 発火 events, 最終 summonSucceeded フラグ, 次に処理する effect index = effects.Count なら全完了)</returns>
     private static (BattleState state, List<BattleEvent> events, bool summonSucceeded, int nextIndex) ApplyEffectsFrom(
         BattleState state, CombatActor caster, BattleCardInstance card,
@@ -189,7 +190,10 @@ public static partial class BattleEngine
         for (int i = startIndex; i < effects.Count; i++)
         {
             var eff = effects[i];
+            // 10.5.E: Trigger 指定 effect は即時実行ではなく、PowerTriggerProcessor 経由で対応
             if (!string.IsNullOrEmpty(eff.Trigger)) continue;
+
+            // 10.2.C: per-effect comboMin filter（PlayCard 経路のみ）
             if (eff.ComboMin is { } min && newCombo < min) continue;
 
             int beforeAlliesLength = s.Allies.Length;
@@ -202,6 +206,7 @@ public static partial class BattleEngine
             }
             caster = s.Allies[0];
 
+            // 10.2.D: summon 成功検出
             if (eff.Action == "summon" && s.Allies.Length > beforeAlliesLength)
                 summonSucceeded = true;
         }
