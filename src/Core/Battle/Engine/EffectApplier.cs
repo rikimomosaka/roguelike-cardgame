@@ -926,4 +926,82 @@ internal static class EffectApplier
         }
         return state;
     }
+
+    // ---- Phase 10.5.M2-Choose: choose detection + 候補構築 ----
+
+    /// <summary>
+    /// Choose effect で実際にプレイヤー選択 modal を出すべきかを判定。
+    /// candidates &lt;= Amount の場合は auto-skip (existing random/all path で全自動処理)。
+    /// 4 action (discard / exhaustCard / upgrade / recoverFromDiscard) のみ対応。
+    /// </summary>
+    internal static bool NeedsPlayerChoice(BattleState state, CardEffect effect, DataCatalog catalog)
+    {
+        if (effect.Select != "choose") return false;
+        if (!IsChooseSupportedAction(effect.Action)) return false;
+        var candidates = GetChooseCandidates(state, effect, catalog);
+        return candidates.Length > effect.Amount;
+    }
+
+    /// <summary>Choose 対応 4 action 一覧。</summary>
+    private static bool IsChooseSupportedAction(string action)
+        => action is "discard" or "exhaustCard" or "upgrade" or "recoverFromDiscard";
+
+    /// <summary>
+    /// 各 action の choose 候補 (BattleCardInstance.InstanceId 一覧) を返す。
+    /// upgrade のみ「強化可能 (IsUpgradable &amp;&amp; !IsUpgraded)」フィルタ適用。
+    /// 候補なしのときも default ではなく ImmutableArray&lt;string&gt;.Empty を返す。
+    /// </summary>
+    internal static ImmutableArray<string> GetChooseCandidates(
+        BattleState state, CardEffect effect, DataCatalog catalog)
+    {
+        var pile = ResolveChoosePile(state, effect);
+        if (pile.IsDefaultOrEmpty) return ImmutableArray<string>.Empty;
+
+        if (effect.Action == "upgrade")
+        {
+            var builder = ImmutableArray.CreateBuilder<string>();
+            foreach (var c in pile)
+            {
+                if (c.IsUpgraded) continue;
+                if (!catalog.TryGetCard(c.CardDefinitionId, out var def)) continue;
+                if (!def.IsUpgradable) continue;
+                builder.Add(c.InstanceId);
+            }
+            return builder.ToImmutable();
+        }
+        // discard / exhaustCard / recoverFromDiscard は pile 全カード
+        return pile.Select(c => c.InstanceId).ToImmutableArray();
+    }
+
+    private static ImmutableArray<BattleCardInstance> ResolveChoosePile(
+        BattleState state, CardEffect effect)
+    {
+        // discard と recoverFromDiscard は pile 固定
+        if (effect.Action == "discard") return state.Hand;
+        if (effect.Action == "recoverFromDiscard") return state.DiscardPile;
+        // exhaustCard / upgrade は effect.Pile 指定 (null/empty/"hand" → hand)
+        return (effect.Pile ?? "hand") switch
+        {
+            "" or "hand" => state.Hand,
+            "draw" => state.DrawPile,
+            "discard" => state.DiscardPile,
+            _ => ImmutableArray<BattleCardInstance>.Empty,
+        };
+    }
+
+    /// <summary>Pause 時の PendingChoice 情報を構築する (Pile を文字列で正規化)。</summary>
+    internal static PendingChoice BuildPendingChoice(BattleState state, CardEffect effect, DataCatalog catalog)
+    {
+        string pile = effect.Action switch
+        {
+            "discard" => "hand",
+            "recoverFromDiscard" => "discard",
+            _ => string.IsNullOrEmpty(effect.Pile) ? "hand" : effect.Pile!,
+        };
+        return new PendingChoice(
+            Action: effect.Action,
+            Pile: pile,
+            Count: effect.Amount,
+            CandidateInstanceIds: GetChooseCandidates(state, effect, catalog));
+    }
 }

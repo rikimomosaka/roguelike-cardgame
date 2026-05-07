@@ -21,6 +21,11 @@ public static partial class BattleEngine
         if (handIndex < 0 || handIndex >= state.Hand.Length)
             throw new InvalidOperationException($"handIndex {handIndex} out of range [0, {state.Hand.Length})");
 
+        // Phase 10.5.M2-Choose: 既存 pending を resolve しないと PlayCard 不可
+        if (state.PendingCardPlay is not null)
+            throw new InvalidOperationException(
+                "Cannot play card while PendingCardPlay is set; resolve via ResolveCardChoice first");
+
         var card = state.Hand[handIndex];
         if (!catalog.TryGetCard(card.CardDefinitionId, out var def))
             throw new InvalidOperationException($"card '{card.CardDefinitionId}' not in catalog");
@@ -100,6 +105,11 @@ public static partial class BattleEngine
             ref order, rng, catalog);
         s = afterEffects;
         events.AddRange(effectEvents);
+
+        // Phase 10.5.M2-Choose: pause 中は OnPlayCard / カード移動 / Power トリガを発火せず即返却
+        if (s.PendingCardPlay is not null)
+            return (s, events);
+
         caster = s.Allies[0];
 
         // 10.2.E 追加: OnPlayCard レリック発動（effect 適用後・カード移動前）
@@ -195,6 +205,18 @@ public static partial class BattleEngine
 
             // 10.2.C: per-effect comboMin filter（PlayCard 経路のみ）
             if (eff.ComboMin is { } min && newCombo < min) continue;
+
+            // Phase 10.5.M2-Choose: choose effect で pause が必要なら early return
+            if (EffectApplier.NeedsPlayerChoice(s, eff, catalog))
+            {
+                var pending = new PendingCardPlay(
+                    CardInstanceId: card.InstanceId,
+                    EffectIndex: i,
+                    SummonSucceededBefore: summonSucceeded,
+                    Choice: EffectApplier.BuildPendingChoice(s, eff, catalog));
+                var paused = s with { PendingCardPlay = pending };
+                return (paused, events, summonSucceeded, i);  // i を nextIndex として返す (== pause 位置)
+            }
 
             int beforeAlliesLength = s.Allies.Length;
             var (afterEffect, evs) = EffectApplier.Apply(s, caster, eff, rng, catalog);
