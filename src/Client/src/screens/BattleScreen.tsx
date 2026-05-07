@@ -13,7 +13,7 @@
 // 中間型 (RelicDemo / CharacterDemo / HandCardDemo / BuffDemo / IntentDemo /
 // HpLv) は dtoAdapter から参照できるよう export している。
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { Card } from '../components/Card'
 import type { CardRarity, CardType } from '../components/Card'
@@ -876,6 +876,40 @@ export function BattleScreen({
   const { catalog: enemyCatalog } = useEnemyCatalog()
   const { catalog: unitCatalog } = useUnitCatalog()
   const { catalog: characterCatalog } = useCharacterCatalog()
+
+  // Phase 10.5.M2-Choose T7 follow-up (I3): catalog 由来の resolver / map を memoize し、
+  //  CardChoiceModal の不要な re-render を抑制する。
+  const cardNamesMemo = useMemo<Record<string, string>>(() => {
+    if (!cardCatalog) return {}
+    const out: Record<string, string> = {}
+    for (const [id, def] of Object.entries(cardCatalog)) {
+      out[id] = def.displayName ?? def.name ?? id
+    }
+    return out
+  }, [cardCatalog])
+
+  const cardTypeOf = useCallback(
+    (id: string): CardType =>
+      ((cardCatalog?.[id]?.cardType ?? 'skill').toLowerCase()) as CardType,
+    [cardCatalog],
+  )
+  const cardRarityOf = useCallback(
+    (id: string): CardRarity =>
+      ((['c', 'r', 'e', 'l'][cardCatalog?.[id]?.rarity ?? 0]) ?? 'c') as CardRarity,
+    [cardCatalog],
+  )
+  const cardCostOf = useCallback(
+    (id: string): number => {
+      const def = cardCatalog?.[id]
+      if (!def) return 0
+      return def.cost ?? 0
+    },
+    [cardCatalog],
+  )
+
+  // Phase 10.5.M2-Choose T7 follow-up (I1): resolveCardChoice 失敗時のエラーを
+  //  CardChoiceModal 内 banner として表示するための state。
+  const [chooseError, setChooseError] = useState<string | null>(null)
 
   // Why: state が更新されるたび親 (MapScreen) に通知。peek 中も TopBar が live
   // battle state (HP / potions) を表示し続けるための仕組み (ユーザ要望)。
@@ -1875,23 +1909,32 @@ export function BattleScreen({
           hand={state.hand}
           drawPile={state.drawPile}
           discardPile={state.discardPile}
-          cardNames={Object.fromEntries(
-            Object.entries(cardCatalog ?? {}).map(([id, e]) => [
-              id,
-              e.displayName ?? e.name,
-            ]),
-          )}
-          cardTypeOf={(id) =>
-            ((cardCatalog?.[id]?.cardType ?? 'skill').toLowerCase()) as CardType
-          }
-          cardRarityOf={(id) =>
-            ((['c', 'r', 'e', 'l'][cardCatalog?.[id]?.rarity ?? 0]) ?? 'c') as CardRarity
-          }
+          cardNames={cardNamesMemo}
+          cardTypeOf={cardTypeOf}
+          cardRarityOf={cardRarityOf}
+          cardCostOf={cardCostOf}
+          errorMessage={chooseError}
           onConfirm={async (selectedInstanceIds) => {
-            const resp = await withBusy(() =>
-              resolveCardChoice(accountId, { selectedInstanceIds }),
-            )
-            if (resp) await playSteps(resp)
+            // Why (I1): withBusy は throw を catch して null を返すが、
+            //  念のため try/catch も入れて両ルートをカバー。失敗時は banner を出す。
+            setChooseError(null)
+            try {
+              const resp = await withBusy(() =>
+                resolveCardChoice(accountId, { selectedInstanceIds }),
+              )
+              if (!resp) {
+                console.error('resolveCardChoice failed: withBusy returned null')
+                setChooseError('カード選択の確定に失敗しました。再度お試しください。')
+                return
+              }
+              await playSteps(resp)
+            } catch (err) {
+              console.error('resolveCardChoice failed:', err)
+              setChooseError(
+                'カード選択の確定に失敗しました: ' +
+                  String(err instanceof Error ? err.message : err),
+              )
+            }
           }}
         />
       )}

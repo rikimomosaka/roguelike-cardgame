@@ -25,3 +25,13 @@
   transform: translateY(-8px);
   box-shadow: 0 0 0 4px #ffd23f, 0 8px 16px rgba(0, 0, 0, 0.5);
 }
+
+.ccm-error {
+  background: #5a1a1a;
+  color: #ff8a8a;
+  padding: 8px 16px;
+  margin: 0 16px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  text-align: center;
+}

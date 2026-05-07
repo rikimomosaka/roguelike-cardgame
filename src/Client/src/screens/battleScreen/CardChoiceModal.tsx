@@ -26,6 +26,10 @@ type Props = {
   /** カード定義から CardType を解決 (catalog 未ロード時の default を含めて呼出側で吸収)。 */
   cardTypeOf: (defId: string) => CardType
   cardRarityOf: (defId: string) => CardRarity
+  /** カード定義から base cost を解決 (costOverride が無い場合の fallback)。 */
+  cardCostOf: (defId: string) => number
+  /** 解決失敗時に modal 内 banner として表示するエラーメッセージ。 */
+  errorMessage?: string | null
   onConfirm: (selectedIds: string[]) => Promise<void>
 }
 
@@ -35,6 +39,8 @@ export function CardChoiceModal({
   cardNames,
   cardTypeOf,
   cardRarityOf,
+  cardCostOf,
+  errorMessage,
   onConfirm,
 }: Props) {
   const [selected, setSelected] = useState<string[]>([])
@@ -72,6 +78,12 @@ export function CardChoiceModal({
 
   const title = `${actionTitle(choice.action)} (${selected.length}/${choice.count})`
 
+  // Why (Minor #6): 候補表示から「プレイ中のカード自身」を除外し、
+  //  視覚的混乱 (選べないカードがグレーで残る) を防ぐ。Server 側の
+  //  candidateInstanceIds には依然として played card が含まれるが、
+  //  filter は表示のみで validation には影響しない。
+  const visibleHand = hand.filter((c) => c.instanceId !== pending.cardInstanceId)
+
   return (
     <Popup
       open
@@ -90,8 +102,9 @@ export function CardChoiceModal({
         </Button>
       }
     >
+      {errorMessage ? <div className="ccm-error">{errorMessage}</div> : null}
       <div className="ccm-hand">
-        {hand.map((c) => {
+        {visibleHand.map((c) => {
           const cand = isCandidate(c.instanceId)
           const sel = isSelected(c.instanceId)
           const cls = [
@@ -109,7 +122,7 @@ export function CardChoiceModal({
             >
               <Card
                 name={cardNames[c.cardDefinitionId] ?? c.cardDefinitionId}
-                cost={c.costOverride ?? 0}
+                cost={c.costOverride ?? cardCostOf(c.cardDefinitionId)}
                 type={cardTypeOf(c.cardDefinitionId)}
                 rarity={cardRarityOf(c.cardDefinitionId)}
                 upgraded={c.isUpgraded}
