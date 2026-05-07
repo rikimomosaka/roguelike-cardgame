@@ -36,4 +36,6 @@ public sealed record BattleState(
     /// </summary>
     bool WildUsedInCurrentCombo = false,
     /// <summary>Phase 10.6.B: cardsDrawnPerTurnBonus modifier 適用済の毎ターンドロー枚数 (battle 開始時 snapshot)。</summary>
-    int DrawPerTurn = 5);
+    int DrawPerTurn = 5,
+    /// <summary>Phase 10.5.M2-Choose: choose 中の保留状態。null=非保留。</summary>
+    PendingCardPlay? PendingCardPlay = null);
