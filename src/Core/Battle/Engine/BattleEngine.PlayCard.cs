@@ -110,7 +110,25 @@ public static partial class BattleEngine
         if (s.PendingCardPlay is not null)
             return (s, events);
 
-        caster = s.Allies[0];
+        // Phase 10.5.M2-Choose T4: 終盤共通処理 (relic / カード移動 / power triggers) を切り出し。
+        // 同じ helper を ResolveCardChoice からも呼ぶ。move 対象 card は handIndex ではなく
+        // InstanceId で検索 (resume で hand 順序が変わっている可能性に対応)。
+        return FinalizeCardPlay(s, card, def, summonSucceeded, events, ref order, rng, catalog);
+    }
+
+    /// <summary>
+    /// Phase 10.5.M2-Choose: PlayCard / ResolveCardChoice 両方から呼ばれる、
+    /// effect 適用完了後の共通処理。OnPlayCard relic 発火 → 5 段カード移動 →
+    /// PowerTriggerProcessor (OnPlayCard / OnCombo) を順次実行する。
+    /// 移動対象 card は handIndex ではなく InstanceId で検索する (resume 経路で
+    /// hand 順序が変わっている可能性があるため)。
+    /// </summary>
+    private static (BattleState, IReadOnlyList<BattleEvent>) FinalizeCardPlay(
+        BattleState state, BattleCardInstance card, CardDefinition def,
+        bool summonSucceeded, List<BattleEvent> events, ref int order,
+        IRng rng, DataCatalog catalog)
+    {
+        var s = state;
 
         // 10.2.E 追加: OnPlayCard レリック発動（effect 適用後・カード移動前）
         // Phase 10.5.L1.5: trigger ID を power 側と統一 ("OnCardPlay" → "OnPlayCard")。
@@ -122,6 +140,9 @@ public static partial class BattleEngine
         // 10.2.D: 5 段優先順位（exhaustSelf → Power → Unit+success → retainSelf → Discard）
         // 10.5.M2/M3: retainSelf / exhaustSelf は keyword "wait" / "exhaust" で代替可能化。
         // 後方互換のため action と keyword の両方をチェック。
+        var effects = (card.IsUpgraded && def.UpgradedEffects is not null)
+            ? def.UpgradedEffects
+            : def.Effects;
         bool hasExhaustSelf = effects.Any(e => e.Action == "exhaustSelf")
             || (def.EffectiveKeywords(card.IsUpgraded)?.Contains("exhaust") ?? false);
         bool hasRetainSelf = effects.Any(e => e.Action == "retainSelf")
@@ -129,7 +150,13 @@ public static partial class BattleEngine
         bool isPower = def.CardType == CardType.Power;
         bool isUnit = def.CardType == CardType.Unit;
 
-        s = s with { Hand = s.Hand.RemoveAt(handIndex) };
+        // InstanceId で hand から探す (resume 経路で順序が変わっている可能性に対応)
+        int handIdx = -1;
+        for (int i = 0; i < s.Hand.Length; i++)
+        {
+            if (s.Hand[i].InstanceId == card.InstanceId) { handIdx = i; break; }
+        }
+        if (handIdx >= 0) s = s with { Hand = s.Hand.RemoveAt(handIdx) };
 
         if (hasExhaustSelf)
         {
@@ -155,8 +182,10 @@ public static partial class BattleEngine
         }
         else if (hasRetainSelf)
         {
-            // hand の元の位置に戻す
-            s = s with { Hand = s.Hand.Insert(handIndex, card) };
+            // hand の元の位置に戻す。元位置不明 (resume で見つからない) なら末尾追加。
+            s = handIdx >= 0
+                ? s with { Hand = s.Hand.Insert(handIdx, card) }
+                : s with { Hand = s.Hand.Add(card) };
         }
         else
         {

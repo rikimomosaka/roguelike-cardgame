@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Linq;
 using RoguelikeCardGame.Core.Battle.Engine;
+using RoguelikeCardGame.Core.Battle.Events;
 using RoguelikeCardGame.Core.Battle.State;
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Random;
@@ -112,5 +113,81 @@ public class BattleEngineChooseTests
         var catalog = BattleFixtures.MinimalCatalog();
         Assert.Throws<System.InvalidOperationException>(() =>
             BattleEngine.PlayCard(state, handIndex: 0, null, null, Rng(), catalog));
+    }
+
+    // ===== Phase 10.5.M2-Choose T4: ResolveCardChoice tests =====
+
+    [Fact]
+    public void ResolveCardChoice_NoPending_Throws()
+    {
+        var state = BattleFixtures.MinimalState(
+            hand: ImmutableArray.Create(BattleFixtures.MakeBattleCard("strike", "s1")));
+        var catalog = BattleFixtures.MinimalCatalog();
+        Assert.Throws<System.InvalidOperationException>(() =>
+            BattleEngine.ResolveCardChoice(state, ImmutableArray.Create("any"), Rng(), catalog));
+    }
+
+    [Fact]
+    public void ResolveCardChoice_WrongCount_Throws()
+    {
+        var chooseDef = ExhaustChooseCard(amount: 1);
+        var hand = ImmutableArray.Create(
+            BattleFixtures.MakeBattleCard("strike", "s1"),
+            BattleFixtures.MakeBattleCard("defend", "d1"),
+            BattleFixtures.MakeBattleCard(chooseDef.Id, "ec1"));
+        var state = BattleFixtures.MinimalState(hand: hand);
+        var catalog = BattleFixtures.MinimalCatalog(
+            cards: new[] { BattleFixtures.Strike(), BattleFixtures.Defend(), chooseDef });
+        var (paused, _) = BattleEngine.PlayCard(state, handIndex: 2, null, null, Rng(), catalog);
+        Assert.NotNull(paused.PendingCardPlay);
+
+        Assert.Throws<System.InvalidOperationException>(() =>
+            BattleEngine.ResolveCardChoice(paused,
+                ImmutableArray.Create("s1", "d1"), Rng(), catalog));
+    }
+
+    [Fact]
+    public void ResolveCardChoice_NotInCandidates_Throws()
+    {
+        var chooseDef = ExhaustChooseCard(amount: 1);
+        var hand = ImmutableArray.Create(
+            BattleFixtures.MakeBattleCard("strike", "s1"),
+            BattleFixtures.MakeBattleCard("defend", "d1"),
+            BattleFixtures.MakeBattleCard(chooseDef.Id, "ec1"));
+        var state = BattleFixtures.MinimalState(hand: hand);
+        var catalog = BattleFixtures.MinimalCatalog(
+            cards: new[] { BattleFixtures.Strike(), BattleFixtures.Defend(), chooseDef });
+        var (paused, _) = BattleEngine.PlayCard(state, handIndex: 2, null, null, Rng(), catalog);
+
+        Assert.Throws<System.InvalidOperationException>(() =>
+            BattleEngine.ResolveCardChoice(paused, ImmutableArray.Create("nonexistent_inst"), Rng(), catalog));
+    }
+
+    [Fact]
+    public void ResolveCardChoice_Success_AppliesAndCompletes()
+    {
+        var chooseDef = ExhaustChooseCard(amount: 1);
+        var hand = ImmutableArray.Create(
+            BattleFixtures.MakeBattleCard("strike", "s1"),
+            BattleFixtures.MakeBattleCard("defend", "d1"),
+            BattleFixtures.MakeBattleCard(chooseDef.Id, "ec1"));
+        var state = BattleFixtures.MinimalState(hand: hand);
+        var catalog = BattleFixtures.MinimalCatalog(
+            cards: new[] { BattleFixtures.Strike(), BattleFixtures.Defend(), chooseDef });
+        var (paused, _) = BattleEngine.PlayCard(state, handIndex: 2, null, null, Rng(), catalog);
+
+        var (final, events) = BattleEngine.ResolveCardChoice(paused,
+            ImmutableArray.Create("s1"), Rng(), catalog);
+
+        Assert.Null(final.PendingCardPlay);
+        // s1 (strike) was exhausted
+        Assert.Contains(final.ExhaustPile, c => c.InstanceId == "s1");
+        Assert.DoesNotContain(final.Hand, c => c.InstanceId == "s1");
+        // ec1 (the choose card itself, Skill type, no exhaustSelf) → discard
+        Assert.Contains(final.DiscardPile, c => c.InstanceId == "ec1");
+        // d1 still in hand
+        Assert.Contains(final.Hand, c => c.InstanceId == "d1");
+        // events include exhaust (relic events not asserted: fixture has no relics)
+        Assert.Contains(events, e => e.Kind == BattleEventKind.Exhaust);
     }
 }

@@ -1004,4 +1004,188 @@ internal static class EffectApplier
             Count: effect.Amount,
             CandidateInstanceIds: GetChooseCandidates(state, effect, catalog));
     }
+
+    // ---- Phase 10.5.M2-Choose T4: ApplyChoseEffect (resume 経路) ----
+
+    /// <summary>
+    /// Phase 10.5.M2-Choose: 選択済 instance ids で choose effect を適用する (resume 経路)。
+    /// 4 actions (discard / exhaustCard / upgrade / recoverFromDiscard) のみ対応。
+    /// random / all モード用 helpers と同じ event 形式を踏襲する。
+    /// </summary>
+    internal static (BattleState, IReadOnlyList<BattleEvent>) ApplyChoseEffect(
+        BattleState state, CombatActor caster, CardEffect effect,
+        ImmutableArray<string> selectedInstanceIds,
+        IRng rng, DataCatalog catalog)
+    {
+        return effect.Action switch
+        {
+            "discard" => ApplyDiscardChosen(state, caster, selectedInstanceIds, rng, catalog),
+            "exhaustCard" => ApplyExhaustCardChosen(state, caster, effect, selectedInstanceIds, rng, catalog),
+            "upgrade" => ApplyUpgradeChosen(state, caster, effect, selectedInstanceIds, catalog),
+            "recoverFromDiscard" => ApplyRecoverFromDiscardChosen(state, caster, effect, selectedInstanceIds),
+            _ => throw new InvalidOperationException(
+                $"ApplyChoseEffect: action '{effect.Action}' does not support choose"),
+        };
+    }
+
+    /// <summary>
+    /// 選択済 ids で hand から discard へ。Note: "choose"。OnCardDiscarded 発火。
+    /// </summary>
+    private static (BattleState, IReadOnlyList<BattleEvent>) ApplyDiscardChosen(
+        BattleState state, CombatActor caster,
+        ImmutableArray<string> selectedInstanceIds,
+        IRng rng, DataCatalog catalog)
+    {
+        if (state.Hand.Length == 0 || selectedInstanceIds.Length == 0)
+            return (state, Array.Empty<BattleEvent>());
+
+        var handBuilder = state.Hand.ToBuilder();
+        var discardBuilder = state.DiscardPile.ToBuilder();
+        int moved = 0;
+        foreach (var id in selectedInstanceIds)
+        {
+            int idx = -1;
+            for (int i = 0; i < handBuilder.Count; i++)
+            {
+                if (handBuilder[i].InstanceId == id) { idx = i; break; }
+            }
+            if (idx < 0) continue;  // defensive: 想定外 (validate-time に弾かれているはず)
+            var card = handBuilder[idx];
+            handBuilder.RemoveAt(idx);
+            discardBuilder.Add(card);
+            moved++;
+        }
+
+        if (moved == 0) return (state, Array.Empty<BattleEvent>());
+
+        return BuildResult(state, caster, handBuilder, discardBuilder, moved, "choose", rng, catalog);
+    }
+
+    /// <summary>
+    /// 選択済 ids で effect.Pile (hand/discard/draw) から exhaust へ。
+    /// Note: effect.Pile (既存 ApplyExhaustCard と同じ)。OnCardExhausted 発火。
+    /// </summary>
+    private static (BattleState, IReadOnlyList<BattleEvent>) ApplyExhaustCardChosen(
+        BattleState state, CombatActor caster, CardEffect effect,
+        ImmutableArray<string> selectedInstanceIds,
+        IRng rng, DataCatalog catalog)
+    {
+        var (sourceBuilder, exhaustBuilder, applyResult) = OpenPile(state, effect.Pile);
+
+        int moved = 0;
+        foreach (var id in selectedInstanceIds)
+        {
+            int idx = -1;
+            for (int i = 0; i < sourceBuilder.Count; i++)
+            {
+                if (sourceBuilder[i].InstanceId == id) { idx = i; break; }
+            }
+            if (idx < 0) continue;  // defensive
+            var card = sourceBuilder[idx];
+            sourceBuilder.RemoveAt(idx);
+            exhaustBuilder.Add(card);
+            moved++;
+        }
+
+        if (moved == 0) return (state, Array.Empty<BattleEvent>());
+
+        var next = applyResult(sourceBuilder, exhaustBuilder);
+        var events = new List<BattleEvent>
+        {
+            new BattleEvent(
+                BattleEventKind.Exhaust, Order: 0,
+                CasterInstanceId: caster.InstanceId,
+                Amount: moved, Note: effect.Pile),
+        };
+        return FireOnCardExhausted(next, events, rng, catalog);
+    }
+
+    /// <summary>
+    /// 選択済 ids で effect.Pile (hand/discard/draw) のカードを強化。
+    /// Note: effect.Pile (既存 ApplyUpgrade と同じ)。trigger fire なし。
+    /// 強化可能フィルタは既存 ApplyUpgrade と同じ条件 (UpgradedCost or UpgradedEffects あり)
+    /// を使用する。これは GetChooseCandidates の def.IsUpgradable 判定 (UpgradedKeywords も含む)
+    /// よりわずかに狭いが、random/all 経路との一貫性を優先する。validate-time で弾かれて
+    /// いない選択 (UpgradedKeywords-only) があった場合は silently skip する (defensive)。
+    /// </summary>
+    private static (BattleState, IReadOnlyList<BattleEvent>) ApplyUpgradeChosen(
+        BattleState state, CombatActor caster, CardEffect effect,
+        ImmutableArray<string> selectedInstanceIds,
+        DataCatalog catalog)
+    {
+        var (sourceBuilder, applyResult) = OpenSourcePile(state, effect.Pile);
+
+        int upgradedCount = 0;
+        foreach (var id in selectedInstanceIds)
+        {
+            int idx = -1;
+            for (int i = 0; i < sourceBuilder.Count; i++)
+            {
+                if (sourceBuilder[i].InstanceId == id) { idx = i; break; }
+            }
+            if (idx < 0) continue;  // defensive
+            var card = sourceBuilder[idx];
+            // 既存 ApplyUpgrade と同じ「強化可能」判定
+            if (card.IsUpgraded) continue;
+            if (!catalog.TryGetCard(card.CardDefinitionId, out var def)) continue;
+            if (def.UpgradedCost is null && def.UpgradedEffects is null) continue;
+            sourceBuilder[idx] = card with { IsUpgraded = true };
+            upgradedCount++;
+        }
+
+        if (upgradedCount == 0) return (state, Array.Empty<BattleEvent>());
+
+        var next = applyResult(sourceBuilder);
+        var ev = new BattleEvent(
+            BattleEventKind.Upgrade, Order: 0,
+            CasterInstanceId: caster.InstanceId,
+            Amount: upgradedCount, Note: effect.Pile);
+        return (next, new[] { ev });
+    }
+
+    /// <summary>
+    /// 選択済 ids で discard pile から effect.Pile (hand/exhaust) へ移動。
+    /// Note: $"choose:{effect.Pile}" (既存 ApplyRecoverFromDiscard 形式に合わせる)。
+    /// hand 上限超過時は discard に戻す (AddInstanceToPile と同じ動き)。
+    /// </summary>
+    private static (BattleState, IReadOnlyList<BattleEvent>) ApplyRecoverFromDiscardChosen(
+        BattleState state, CombatActor caster, CardEffect effect,
+        ImmutableArray<string> selectedInstanceIds)
+    {
+        if (effect.Pile != "hand" && effect.Pile != "exhaust")
+            throw new InvalidOperationException(
+                $"recoverFromDiscard requires Pile='hand' or 'exhaust', got '{effect.Pile}'");
+
+        if (state.DiscardPile.Length == 0 || selectedInstanceIds.Length == 0)
+            return (state, Array.Empty<BattleEvent>());
+
+        var discardBuilder = state.DiscardPile.ToBuilder();
+        var picked = new List<BattleCardInstance>();
+        foreach (var id in selectedInstanceIds)
+        {
+            int idx = -1;
+            for (int i = 0; i < discardBuilder.Count; i++)
+            {
+                if (discardBuilder[i].InstanceId == id) { idx = i; break; }
+            }
+            if (idx < 0) continue;  // defensive
+            picked.Add(discardBuilder[idx]);
+            discardBuilder.RemoveAt(idx);
+        }
+
+        if (picked.Count == 0) return (state, Array.Empty<BattleEvent>());
+
+        var s = state with { DiscardPile = discardBuilder.ToImmutable() };
+        foreach (var card in picked)
+        {
+            s = AddInstanceToPile(s, card, effect.Pile!);
+        }
+
+        var ev = new BattleEvent(
+            BattleEventKind.RecoverFromDiscard, Order: 0,
+            CasterInstanceId: caster.InstanceId,
+            Amount: picked.Count,
+            Note: $"choose:{effect.Pile}");
+        return (s, new[] { ev });
+    }
 }
