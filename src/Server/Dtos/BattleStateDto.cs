@@ -23,4 +23,5 @@ public sealed record BattleStateDto(
     bool NextCardComboFreePass,
     IReadOnlyList<string> OwnedRelicIds,
     IReadOnlyList<string> Potions,
-    string EncounterId);
+    string EncounterId,
+    PendingCardPlayDto? PendingCardPlay = null);

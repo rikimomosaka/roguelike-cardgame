@@ -44,7 +44,16 @@ internal static class BattleStateDtoMapper
             NextCardComboFreePass: state.NextCardComboFreePass,
             OwnedRelicIds: state.OwnedRelicIds.ToList(),
             Potions: state.Potions.ToList(),
-            EncounterId: state.EncounterId);
+            EncounterId: state.EncounterId,
+            // Phase 10.5.M2-Choose: choose modal 待ち状態を DTO 化。null の場合はそのまま null。
+            PendingCardPlay: state.PendingCardPlay is null ? null : new PendingCardPlayDto(
+                CardInstanceId: state.PendingCardPlay.CardInstanceId,
+                EffectIndex: state.PendingCardPlay.EffectIndex,
+                Choice: new PendingChoiceDto(
+                    Action: state.PendingCardPlay.Choice.Action,
+                    Pile: state.PendingCardPlay.Choice.Pile,
+                    Count: state.PendingCardPlay.Choice.Count,
+                    CandidateInstanceIds: state.PendingCardPlay.Choice.CandidateInstanceIds.ToArray())));
     }
 
     /// <summary>

@@ -133,11 +133,47 @@ public sealed class BattleController : ControllerBase
         if (!_sessions.TryGet(accountId, out var session))
             return Problem(statusCode: StatusCodes.Status409Conflict,
                 title: "戦闘セッションが存在しません。");
+        if (RejectIfPending(session) is { } pendingResp) return pendingResp;
 
         try
         {
             var (newState, events) = BattleEngine.PlayCard(
                 session.State, body.HandIndex, body.TargetEnemyIndex, body.TargetAllyIndex,
+                session.Rng, _data);
+            _sessions.Set(accountId, session with { State = newState });
+            return Ok(BattleStateDtoMapper.ToActionResponse(newState, events, _data));
+        }
+        catch (Exception ex) when (ex is InvalidOperationException
+                                      or ArgumentException
+                                      or IndexOutOfRangeException)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, title: ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Phase 10.5.M2-Choose: choose modal の選択結果で pending を resolve する。
+    /// session.Rng を再利用し決定論を維持する。BattleEngine.ResolveCardChoice を呼び、
+    /// 残り effect を適用 → 必要に応じて再 pause、または FinalizeCardPlay まで進める。
+    /// 選択数 / 候補不一致 / pending 未設定などはすべて 400 に変換 (broad catch)。
+    /// </summary>
+    [HttpPost("resolve-card-choice")]
+    public async Task<IActionResult> ResolveCardChoice(
+        [FromBody] ResolveCardChoiceRequestDto body, CancellationToken ct)
+    {
+        if (body is null) return BadRequest();
+        var (accountId, err) = await ResolveAccountAsync(ct);
+        if (err is not null) return err;
+
+        if (!_sessions.TryGet(accountId, out var session))
+            return Problem(statusCode: StatusCodes.Status409Conflict,
+                title: "戦闘セッションが存在しません。");
+
+        try
+        {
+            var (newState, events) = BattleEngine.ResolveCardChoice(
+                session.State,
+                (body.SelectedInstanceIds ?? Array.Empty<string>()).ToImmutableArray(),
                 session.Rng, _data);
             _sessions.Set(accountId, session with { State = newState });
             return Ok(BattleStateDtoMapper.ToActionResponse(newState, events, _data));
@@ -164,6 +200,7 @@ public sealed class BattleController : ControllerBase
         if (!_sessions.TryGet(accountId, out var session))
             return Problem(statusCode: StatusCodes.Status409Conflict,
                 title: "戦闘セッションが存在しません。");
+        if (RejectIfPending(session) is { } pendingResp) return pendingResp;
 
         var run = await _saves.TryLoadAsync(accountId, ct);
         if (run is null)
@@ -200,6 +237,7 @@ public sealed class BattleController : ControllerBase
         if (!_sessions.TryGet(accountId, out var session))
             return Problem(statusCode: StatusCodes.Status409Conflict,
                 title: "戦闘セッションが存在しません。");
+        if (RejectIfPending(session) is { } pendingResp) return pendingResp;
 
         if (!Enum.TryParse<ActorSide>(body.Side, out var side))
             return Problem(statusCode: StatusCodes.Status400BadRequest,
@@ -235,6 +273,7 @@ public sealed class BattleController : ControllerBase
         if (!_sessions.TryGet(accountId, out var session))
             return Problem(statusCode: StatusCodes.Status409Conflict,
                 title: "戦闘セッションが存在しません。");
+        if (RejectIfPending(session) is { } pendingResp) return pendingResp;
 
         try
         {
@@ -267,6 +306,7 @@ public sealed class BattleController : ControllerBase
         if (!_sessions.TryGet(accountId, out var session))
             return Problem(statusCode: StatusCodes.Status409Conflict,
                 title: "戦闘セッションが存在しません。");
+        if (RejectIfPending(session) is { } pendingResp) return pendingResp;
 
         if (session.State.Phase != BattlePhase.Resolved)
             return Problem(statusCode: StatusCodes.Status409Conflict,
@@ -409,4 +449,19 @@ public sealed class BattleController : ControllerBase
     /// </summary>
     private static IRng MakeBattleRng(RunState run) =>
         new SystemRng(unchecked((int)run.RngSeed ^ (int)run.PlaySeconds ^ 0xBA771E));
+
+    /// <summary>
+    /// Phase 10.5.M2-Choose: PendingCardPlay (choose modal 待ち) 中は
+    /// 他 player action を全て reject する共通 guard。409 Conflict + locale-friendly error。
+    /// PlayCard / EndTurn / SetTarget / UsePotion / Finalize の各 endpoint で
+    /// session 取得直後に呼ぶ。ResolveCardChoice はこの guard を適用しない (それ自体が unlock 操作)。
+    /// </summary>
+    private IActionResult? RejectIfPending(BattleSession session)
+    {
+        if (session.State.PendingCardPlay is not null)
+            return Problem(statusCode: StatusCodes.Status409Conflict,
+                title: "card_choice_pending",
+                detail: "Resolve the pending card choice before performing other actions.");
+        return null;
+    }
 }
