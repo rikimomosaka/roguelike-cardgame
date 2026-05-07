@@ -460,8 +460,9 @@ public sealed class BattleController : ControllerBase
     {
         if (session.State.PendingCardPlay is not null)
             return Problem(statusCode: StatusCodes.Status409Conflict,
-                title: "card_choice_pending",
-                detail: "Resolve the pending card choice before performing other actions.");
+                title: "保留中のカード選択を先に解決してください。",
+                detail: "Resolve the pending card choice before performing other actions.",
+                type: "/errors/card-choice-pending");
         return null;
     }
 }

@@ -160,9 +160,12 @@ public class BattleControllerPendingLockdownTests : IClassFixture<TempDataFactor
         }
     }
 
-    // 11. pending クリア後は /play-card が 409 ではなくなる (200 や他 4xx になる)
+    // 11. pending を「手動」クリア後は /play-card が 409 ではなくなる (200 や他 4xx になる)。
+    //     注: resolve endpoint 経由の unlock 検証は BattleControllerResolveChoiceTests
+    //     (resolve+follow-up action の integration) でカバーされており、ここでは guard そのものが
+    //     PendingCardPlay==null で解除されることだけを最小コストで確認する。
     [Fact]
-    public async Task PlayCard_after_pending_cleared_no_longer_returns_409()
+    public async Task PlayCard_after_pending_manually_cleared_no_longer_returns_409()
     {
         // 注: 完全な resolve flow を回す代わりに、plan が許容する「直接 store で pending クリア」
         // approach を採用 (BattleControllerResolveChoiceTests T5 で実 resolve 経路は別途検証済)。
