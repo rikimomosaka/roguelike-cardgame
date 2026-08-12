@@ -63,7 +63,9 @@ async function createRunAndEnterFirstBattle(page: Page): Promise<BattleActionRes
   await page.getByRole('button', { name: 'アカウント作成' }).click()
   await page.getByRole('button', { name: 'はじめから' }).click()
 
-  await page.locator('[data-start-entry="true"]').click()
+  // The current-location marker intentionally pulses, so Playwright's
+  // stability check can otherwise wait forever while the button is usable.
+  await page.locator('[data-start-entry="true"]').click({ force: true })
   const relicDialog = page.getByRole('dialog', { name: 'レリックを選ぶ' })
   await expect(relicDialog).toBeVisible()
   await relicDialog.locator('button[aria-pressed]').first().click()
