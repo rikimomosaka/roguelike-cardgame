@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Merchant;
+using RoguelikeCardGame.Core.Relics;
 using RoguelikeCardGame.Core.Run;
 using Xunit;
 
@@ -14,7 +15,7 @@ public class MerchantActionsBestiaryTests
     [Fact]
     public void BuyRelic_TracksRelic()
     {
-        var relicId = Cat.Relics.Keys.First();
+        var relicId = RelicPoolHelper.GetNormalAcquisitionRelics(Cat).First().Id;
         var inv = new MerchantInventory(
             Cards: ImmutableArray<MerchantOffer>.Empty,
             Relics: ImmutableArray.Create(new MerchantOffer("relic", relicId, Price: 0, Sold: false)),

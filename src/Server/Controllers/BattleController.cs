@@ -222,6 +222,62 @@ public sealed class BattleController : ControllerBase
     }
 
     /// <summary>
+    /// コンボゲージを消費してタクティカルスキルを使用する。
+    /// 使用可否（ゲージ量、phase、outcome、保留中選択）は Core が検証する。
+    /// </summary>
+    [HttpPost("use-tactical-skill")]
+    public async Task<IActionResult> UseTacticalSkill(CancellationToken ct)
+    {
+        var (accountId, err) = await ResolveAccountAsync(ct);
+        if (err is not null) return err;
+
+        if (!_sessions.TryGet(accountId, out var session))
+            return Problem(statusCode: StatusCodes.Status409Conflict,
+                title: "戦闘セッションが存在しません。");
+
+        try
+        {
+            var (newState, events) = BattleEngine.UseTacticalSkill(session.State);
+            _sessions.Set(accountId, session with { State = newState });
+            return Ok(BattleStateDtoMapper.ToActionResponse(newState, events, _data));
+        }
+        catch (Exception ex) when (ex is InvalidOperationException
+                                      or ArgumentException
+                                      or IndexOutOfRangeException)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, title: ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// コンボゲージを消費してアルティメットスキルを使用する。
+    /// 使用可否（ゲージ量、phase、outcome、保留中選択）は Core が検証する。
+    /// </summary>
+    [HttpPost("use-ultimate-skill")]
+    public async Task<IActionResult> UseUltimateSkill(CancellationToken ct)
+    {
+        var (accountId, err) = await ResolveAccountAsync(ct);
+        if (err is not null) return err;
+
+        if (!_sessions.TryGet(accountId, out var session))
+            return Problem(statusCode: StatusCodes.Status409Conflict,
+                title: "戦闘セッションが存在しません。");
+
+        try
+        {
+            var (newState, events) = BattleEngine.UseUltimateSkill(session.State, _data);
+            _sessions.Set(accountId, session with { State = newState });
+            return Ok(BattleStateDtoMapper.ToActionResponse(newState, events, _data));
+        }
+        catch (Exception ex) when (ex is InvalidOperationException
+                                      or ArgumentException
+                                      or IndexOutOfRangeException)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, title: ex.Message);
+        }
+    }
+
+    /// <summary>
     /// spec §2-7: ターゲット切替。BattleEngine.SetTarget 呼出。events 発火なしのため、
     /// レスポンスは <see cref="BattleStateDto"/> のみ (steps 配列なし)。
     /// 不正な Side / 範囲外 / 死亡スロットなどはすべて 400 に変換 (broad catch)。
@@ -294,7 +350,7 @@ public sealed class BattleController : ControllerBase
     /// <summary>
     /// spec §2-8 / §4-6: 戦闘終了確定。BattleEngine.Finalize 呼出 → Victory なら Reward
     /// 生成 (boss + last act は Cleared)、Defeat なら GameOver 履歴記録 + save 削除。
-    /// session を必ず削除し、ActiveBattle も null にしてから分岐する。
+    /// ActiveBattle を null にして永続化し、成功後に session を削除する。
     /// Victory/Defeat の経路は <see cref="RunsController.PostBattleWin"/> + Abandon を流用。
     /// </summary>
     [HttpPost("finalize")]
@@ -320,12 +376,16 @@ public sealed class BattleController : ControllerBase
         var (afterFinalize, summary) = BattleEngine.Finalize(session.State, run);
         // BattleEngine.Finalize 内で ActiveBattle=null は既に設定済だが念のため明示。
         afterFinalize = afterFinalize with { ActiveBattle = null };
-        _sessions.Remove(accountId);
 
+        IActionResult response;
         if (summary.Outcome == RoguelikeCardGame.Core.Battle.State.BattleOutcome.Victory)
-            return await HandleVictoryAsync(accountId, afterFinalize, run, ct);
+            response = await HandleVictoryAsync(accountId, afterFinalize, run, ct);
         else
-            return await HandleDefeatAsync(accountId, afterFinalize, ct);
+            response = await HandleDefeatAsync(accountId, afterFinalize, ct);
+
+        // 永続化が失敗・キャンセルされた場合は Resolved session を残し、再試行可能にする。
+        _sessions.Remove(accountId);
+        return response;
     }
 
     /// <summary>
@@ -339,8 +399,11 @@ public sealed class BattleController : ControllerBase
         var enc = _data.Encounters[beforeRun.ActiveBattle!.EncounterId];
         bool isBoss = enc.Pool.Tier == EnemyTier.Boss;
 
-        var rewardRng = new SystemRng(unchecked(
-            (int)beforeRun.RngSeed ^ (int)beforeRun.PlaySeconds ^ 0x5EED));
+        var rewardRng = new SystemRng(RunRngSeed.Derive(
+            beforeRun.RngSeed,
+            beforeRun.CurrentAct,
+            beforeRun.CurrentNodeId,
+            RunRngPurpose.BattleReward));
 
         // ボス かつ 最終アクト → クリア処理
         if (isBoss && afterFinalize.CurrentAct == RunConstants.MaxAct)
@@ -348,8 +411,8 @@ public sealed class BattleController : ControllerBase
             var finished = ActTransition.FinishRun(afterFinalize, RunProgress.Cleared);
             var clearMap = _runStart.RehydrateMap(finished.RngSeed, finished.CurrentAct);
             var rec = RunHistoryBuilder.From(accountId, finished, clearMap,
-                finished.VisitedNodeIds.Length, RunProgress.Cleared);
-            await _history.AppendAsync(accountId, rec, ct);
+                RunProgress.Cleared);
+            rec = await _history.AppendAsync(accountId, rec, ct);
             await _bestiary.MergeAsync(accountId, rec, ct);
             await _saves.DeleteAsync(accountId, ct);
             return Ok(RunSnapshotDtoMapper.ToResultDto(rec));
@@ -399,8 +462,8 @@ public sealed class BattleController : ControllerBase
     {
         var defeatedMap = _runStart.RehydrateMap(afterFinalize.RngSeed, afterFinalize.CurrentAct);
         var rec = RunHistoryBuilder.From(accountId, afterFinalize, defeatedMap,
-            afterFinalize.VisitedNodeIds.Length, RunProgress.GameOver);
-        await _history.AppendAsync(accountId, rec, ct);
+            RunProgress.GameOver);
+        rec = await _history.AppendAsync(accountId, rec, ct);
         await _bestiary.MergeAsync(accountId, rec, ct);
         await _saves.DeleteAsync(accountId, ct);
         return Ok(RunSnapshotDtoMapper.ToResultDto(rec));
@@ -442,13 +505,13 @@ public sealed class BattleController : ControllerBase
     }
 
     /// <summary>
-    /// 戦闘用 RNG。run の RngSeed / PlaySeconds / 戦闘マジック (0xBA771E) を XOR して
-    /// 同じ run / 同じ進行から同じ shuffle を再現できるようにする。
+    /// 戦闘用 RNG。同じ run / act / node から同じ shuffle を再現できるようにする。
     /// 注意: この関数は Start でしか呼ばない。PlayCard / EndTurn 等は session.Rng を
     /// 再利用する (spec §4-1 / Issue 1 review)。
     /// </summary>
     private static IRng MakeBattleRng(RunState run) =>
-        new SystemRng(unchecked((int)run.RngSeed ^ (int)run.PlaySeconds ^ 0xBA771E));
+        new SystemRng(RunRngSeed.Derive(
+            run.RngSeed, run.CurrentAct, run.CurrentNodeId, RunRngPurpose.Battle));
 
     /// <summary>
     /// Phase 10.5.M2-Choose: PendingCardPlay (choose modal 待ち) 中は

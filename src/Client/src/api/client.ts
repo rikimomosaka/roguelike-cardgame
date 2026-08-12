@@ -3,10 +3,48 @@ export class ApiError extends Error {
   readonly body: string
 
   constructor(status: number, body: string) {
-    super(`HTTP ${status}`)
+    super(problemDetailsMessage(status, body))
     this.name = 'ApiError'
     this.status = status
     this.body = body
+  }
+}
+
+const MAX_PROBLEM_TEXT_LENGTH = 500
+
+function readableProblemText(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const withoutControlCharacters = [...value]
+    .map(character => {
+      const code = character.charCodeAt(0)
+      return code <= 0x1f || code === 0x7f ? ' ' : character
+    })
+    .join('')
+  const normalized = withoutControlCharacters
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (normalized.length === 0) return null
+  return normalized.slice(0, MAX_PROBLEM_TEXT_LENGTH)
+}
+
+/**
+ * RFC 9457/7807 title/detail are safe to surface for client errors. Server
+ * errors deliberately keep the generic status so internal details cannot leak.
+ */
+function problemDetailsMessage(status: number, body: string): string {
+  const fallback = `HTTP ${status}`
+  if (status < 400 || status >= 500 || body.trim().length === 0) return fallback
+
+  try {
+    const parsed: unknown = JSON.parse(body)
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return fallback
+    const problem = parsed as Record<string, unknown>
+    const title = readableProblemText(problem.title)
+    const detail = readableProblemText(problem.detail)
+    if (title && detail && title !== detail) return `${title}：${detail}`
+    return title ?? detail ?? fallback
+  } catch {
+    return fallback
   }
 }
 

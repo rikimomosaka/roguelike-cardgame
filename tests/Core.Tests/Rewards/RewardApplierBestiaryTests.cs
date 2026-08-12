@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Linq;
 using RoguelikeCardGame.Core.Data;
+using RoguelikeCardGame.Core.Relics;
 using RoguelikeCardGame.Core.Rewards;
 using RoguelikeCardGame.Core.Run;
 using Xunit;
@@ -30,7 +31,7 @@ public class RewardApplierBestiaryTests
     [Fact]
     public void ClaimRelic_TracksRelic()
     {
-        var relicId = Cat.Relics.Keys.First();
+        var relicId = RelicPoolHelper.GetNormalAcquisitionRelics(Cat).First().Id;
         var s = TestRunStates.FreshDefault(Cat) with
         {
             ActiveReward = new RewardState(

@@ -11,7 +11,9 @@ public class TurnEndProcessorComboResetTests
 {
     private static FakeRng MakeRng() => new FakeRng(new int[10], System.Array.Empty<double>());
 
-    private static BattleState Make(int combo, int? lastOrigCost, bool freePass) =>
+    private static BattleState Make(
+        int combo, int? lastOrigCost, bool freePass, bool wildUsed = false,
+        int? maxCombo = null) =>
         new(
             Turn: 1, Phase: BattlePhase.PlayerInput, Outcome: BattleOutcome.Pending,
             Allies: ImmutableArray.Create(BattleFixtures.Hero()),
@@ -29,7 +31,11 @@ public class TurnEndProcessorComboResetTests
             NextCardComboFreePass: freePass,
             OwnedRelicIds: ImmutableArray<string>.Empty,
             Potions: ImmutableArray<string>.Empty,
-            EncounterId: "enc_test");
+            EncounterId: "enc_test",
+            WildUsedInCurrentCombo: wildUsed)
+        {
+            MaxComboThisTurn = maxCombo ?? combo,
+        };
 
     [Fact] public void Resets_combo_count_to_zero()
     {
@@ -54,10 +60,12 @@ public class TurnEndProcessorComboResetTests
 
     [Fact] public void All_combo_fields_reset_simultaneously()
     {
-        var s = Make(combo: 4, lastOrigCost: 6, freePass: true);
+        var s = Make(combo: 4, lastOrigCost: 6, freePass: true, wildUsed: true, maxCombo: 8);
         var (next, _) = TurnEndProcessor.Process(s, MakeRng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(0, next.ComboCount);
+        Assert.Equal(0, next.MaxComboThisTurn);
         Assert.Null(next.LastPlayedOrigCost);
         Assert.False(next.NextCardComboFreePass);
+        Assert.False(next.WildUsedInCurrentCombo);
     }
 }

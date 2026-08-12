@@ -4,32 +4,13 @@ import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import type { CardRarity } from '../components/Card'
 import { cardDisplay } from '../components/cardDisplay'
+import { optionalRarityCodeFromNumber, rarityCodeFromName } from '../components/rarity'
 import { Popup } from '../components/Popup'
 import { useTooltipTarget } from '../components/Tooltip'
 import type { TooltipContent } from '../components/Tooltip'
 import { useCardCatalog, usePotionCatalog } from '../hooks/useCardCatalog'
 import { useRelicCatalog } from '../hooks/useRelicCatalog'
 import './MerchantScreen.css'
-
-function relicRarityCode(rarity: string | undefined): CardRarity | undefined {
-  if (!rarity) return undefined
-  const r = rarity.toLowerCase()
-  if (r === 'rare' || r === 'r') return 'r'
-  if (r === 'epic' || r === 'e') return 'e'
-  if (r === 'legendary' || r === 'l') return 'l'
-  return 'c'
-}
-
-function potionRarityCode(n: number | undefined): CardRarity | undefined {
-  if (n === undefined) return undefined
-  switch (n) {
-    case 0: return 'c'
-    case 1: return 'r'
-    case 2: return 'e'
-    case 3: return 'l'
-    default: return 'c'
-  }
-}
 
 type Props = {
   gold: number
@@ -96,7 +77,6 @@ export function MerchantScreen(p: Props) {
                       description={disp.description}
                       upgradedDescription={disp.upgradedDescription}
                       upgraded={c.upgraded}
-                      width={128}
                     />
                     <span className="mc-picker-card__overlay" aria-hidden="true">
                       <span className="mc-picker-card__overlay-label">削除</span>
@@ -181,7 +161,6 @@ export function MerchantScreen(p: Props) {
             rarity={disp.rarity}
             description={disp.description}
             upgradedDescription={disp.upgradedDescription}
-            width={128}
           />
           <span className="mc-card-slot__price">
             <span className="mc-num">{offer.price}</span> ゴールド
@@ -238,7 +217,7 @@ export function MerchantScreen(p: Props) {
               offer={o}
               name={relicNames[o.id] ?? o.id}
               description={relicCatalog?.[o.id]?.description ?? null}
-              rarity={relicRarityCode(relicCatalog?.[o.id]?.rarity)}
+              rarity={rarityCodeFromName(relicCatalog?.[o.id]?.rarity)}
               gold={p.gold}
               onBuy={handleBuy}
             />
@@ -256,7 +235,7 @@ export function MerchantScreen(p: Props) {
               offer={o}
               name={potionNames[o.id] ?? o.id}
               description={potionCatalog?.[o.id]?.description ?? null}
-              rarity={potionRarityCode(potionCatalog?.[o.id]?.rarity)}
+              rarity={optionalRarityCodeFromNumber(potionCatalog?.[o.id]?.rarity)}
               gold={p.gold}
               onBuy={handleBuy}
             />

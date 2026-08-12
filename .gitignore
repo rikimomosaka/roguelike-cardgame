@@ -1,6 +1,7 @@
 # .NET
 bin/
 obj/
+.artifacts/
 *.user
 *.suo
 *.DotSettings.user
@@ -29,6 +30,9 @@ Thumbs.db
 .claude/settings.local.json
 .superpowers/
 .playwright-mcp/
+.e2e-data/
+test-results/
+playwright-report/
 .worktrees/
 
 # Playwright verification screenshots (repo-root)

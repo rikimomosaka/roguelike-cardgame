@@ -5,31 +5,12 @@ import type { BestiaryDto, RunResultDto } from '../api/types'
 import { Card } from '../components/Card'
 import type { CardRarity } from '../components/Card'
 import { cardDisplay } from '../components/cardDisplay'
+import { optionalRarityCodeFromNumber, rarityCodeFromName } from '../components/rarity'
 import { useTooltipTarget } from '../components/Tooltip'
 import type { TooltipContent } from '../components/Tooltip'
 import { useRelicCatalog } from '../hooks/useRelicCatalog'
 import { useCardCatalog, usePotionCatalog } from '../hooks/useCardCatalog'
 import './AchievementsScreen.css'
-
-function relicRarityCode(rarity: string | undefined): CardRarity | undefined {
-  if (!rarity) return undefined
-  const r = rarity.toLowerCase()
-  if (r === 'rare' || r === 'r') return 'r'
-  if (r === 'epic' || r === 'e') return 'e'
-  if (r === 'legendary' || r === 'l') return 'l'
-  return 'c'
-}
-
-function potionRarityCode(n: number | undefined): CardRarity | undefined {
-  if (n === undefined) return undefined
-  switch (n) {
-    case 0: return 'c'
-    case 1: return 'r'
-    case 2: return 'e'
-    case 3: return 'l'
-    default: return 'c'
-  }
-}
 
 // Why: Token rarity (Phase 10.5.G) は achievements (図鑑) の通常コレクション
 //   対象外なので RARITY_ORDER には含めない。RARITY_LABEL は CardRarity 全
@@ -316,8 +297,8 @@ function TilesTab({ title, kind, allIds, discovered }: {
       : kind === 'potion' ? (potionCatalog?.[id]?.description ?? null)
       : null
     const rarity =
-      kind === 'relic' ? relicRarityCode(relicCatalog?.[id]?.rarity)
-      : kind === 'potion' ? potionRarityCode(potionCatalog?.[id]?.rarity)
+      kind === 'relic' ? rarityCodeFromName(relicCatalog?.[id]?.rarity)
+      : kind === 'potion' ? optionalRarityCodeFromNumber(potionCatalog?.[id]?.rarity)
       : undefined
     return { id, isDiscovered, displayName, description, rarity }
   }), [allIds, discovered, kind, relicCatalog, relicNames, potionCatalog, potionNames])

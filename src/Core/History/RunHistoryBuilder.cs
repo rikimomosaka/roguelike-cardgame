@@ -10,7 +10,7 @@ public static class RunHistoryBuilder
 {
     public static RunHistoryRecord From(
         string accountId, RunState state, DungeonMap currentMap,
-        int nodesVisited, RunProgress outcome)
+        RunProgress outcome)
     {
         ArgumentNullException.ThrowIfNull(accountId);
         ArgumentNullException.ThrowIfNull(state);
@@ -28,7 +28,7 @@ public static class RunHistoryBuilder
             RunId: state.RunId,
             Outcome: outcome,
             ActReached: state.CurrentAct,
-            NodesVisited: nodesVisited,
+            NodesVisited: fullJourney.Length,
             PlaySeconds: state.PlaySeconds,
             CharacterId: state.CharacterId,
             FinalHp: state.CurrentHp,

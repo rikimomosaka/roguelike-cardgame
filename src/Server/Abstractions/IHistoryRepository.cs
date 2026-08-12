@@ -7,6 +7,11 @@ namespace RoguelikeCardGame.Server.Abstractions;
 
 public interface IHistoryRepository
 {
-    Task AppendAsync(string accountId, RunHistoryRecord record, CancellationToken ct);
+    /// <summary>
+    /// Appends a run once and returns the canonical persisted record. A retry with the
+    /// same RunId returns the first record, including its original EndedAtUtc.
+    /// </summary>
+    Task<RunHistoryRecord> AppendAsync(
+        string accountId, RunHistoryRecord record, CancellationToken ct);
     Task<IReadOnlyList<RunHistoryRecord>> ListAsync(string accountId, CancellationToken ct);
 }

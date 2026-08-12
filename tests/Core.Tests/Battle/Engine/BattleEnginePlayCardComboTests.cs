@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using RoguelikeCardGame.Core.Battle.Engine;
 using RoguelikeCardGame.Core.Battle.State;
 using RoguelikeCardGame.Core.Cards;
+using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Random;
 using RoguelikeCardGame.Core.Tests.Battle.Fixtures;
 using Xunit;
@@ -23,6 +24,7 @@ public class BattleEnginePlayCardComboTests
         int? lastOrigCost = null,
         int combo = 0,
         bool freePass = false,
+        bool wildUsed = false,
         int energy = 10) =>
         new(
             Turn: 1, Phase: BattlePhase.PlayerInput, Outcome: BattleOutcome.Pending,
@@ -41,7 +43,8 @@ public class BattleEnginePlayCardComboTests
             NextCardComboFreePass: freePass,
             OwnedRelicIds: ImmutableArray<string>.Empty,
             Potions: ImmutableArray<string>.Empty,
-            EncounterId: "enc_test");
+            EncounterId: "enc_test",
+            WildUsedInCurrentCombo: wildUsed);
 
     [Fact] public void Example1_normal_staircase()
     {
@@ -53,6 +56,7 @@ public class BattleEnginePlayCardComboTests
         var (next, _) = BattleEngine.PlayCard(s, 0, 0, 0, Rng(), cat);
         Assert.Equal(4, next.Energy);
         Assert.Equal(2, next.ComboCount);
+        Assert.Equal(2, next.MaxComboThisTurn);
         Assert.Equal(2, next.LastPlayedOrigCost);
         Assert.False(next.NextCardComboFreePass);
     }
@@ -66,8 +70,42 @@ public class BattleEnginePlayCardComboTests
         var cat = BattleFixtures.MinimalCatalog(cards: new[] { def });
         var (next, _) = BattleEngine.PlayCard(s, 0, 0, 0, Rng(), cat);
         Assert.Equal(1, next.ComboCount);
+        Assert.Equal(2, next.MaxComboThisTurn);
         Assert.Equal(5, next.LastPlayedOrigCost);
         Assert.Equal(5, next.Energy);
+    }
+
+    [Fact]
+    public void Continuing_combo_updates_turn_maximum()
+    {
+        var def = CardWithCost("c2", 2);
+        var state = Make(
+            ImmutableArray.Create(new BattleCardInstance("inst1", "c2", false, null)),
+            lastOrigCost: 1,
+            combo: 4);
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { def });
+
+        var (next, _) = BattleEngine.PlayCard(state, 0, 0, 0, Rng(), catalog);
+
+        Assert.Equal(5, next.ComboCount);
+        Assert.Equal(5, next.MaxComboThisTurn);
+    }
+
+    [Fact]
+    public void Breaking_combo_keeps_earlier_turn_maximum()
+    {
+        var def = CardWithCost("c5", 5);
+        var state = Make(
+                ImmutableArray.Create(new BattleCardInstance("inst1", "c5", false, null)),
+                lastOrigCost: 1,
+                combo: 4)
+            with { MaxComboThisTurn = 7 };
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { def });
+
+        var (next, _) = BattleEngine.PlayCard(state, 0, 0, 0, Rng(), catalog);
+
+        Assert.Equal(1, next.ComboCount);
+        Assert.Equal(7, next.MaxComboThisTurn);
     }
 
     [Fact] public void Example2_wild_no_match_continues_no_reduction()
@@ -81,7 +119,8 @@ public class BattleEnginePlayCardComboTests
         Assert.Equal(5, next.Energy);
         Assert.Equal(2, next.ComboCount);
         Assert.Equal(5, next.LastPlayedOrigCost);
-        Assert.False(next.NextCardComboFreePass);
+        Assert.True(next.NextCardComboFreePass);
+        Assert.True(next.WildUsedInCurrentCombo);
     }
 
     [Fact] public void Example3_wild_with_match_reduces_normally()
@@ -95,6 +134,8 @@ public class BattleEnginePlayCardComboTests
         Assert.Equal(9, next.Energy);
         Assert.Equal(2, next.ComboCount);
         Assert.Equal(2, next.LastPlayedOrigCost);
+        Assert.True(next.NextCardComboFreePass);
+        Assert.True(next.WildUsedInCurrentCombo);
     }
 
     [Fact] public void Example4_superwild_sets_free_pass()
@@ -109,6 +150,7 @@ public class BattleEnginePlayCardComboTests
         Assert.Equal(2, next.ComboCount);
         Assert.Equal(7, next.LastPlayedOrigCost);
         Assert.True(next.NextCardComboFreePass);
+        Assert.False(next.WildUsedInCurrentCombo);
     }
 
     [Fact] public void Example4_cont_next_card_bypasses_via_free_pass()
@@ -119,22 +161,58 @@ public class BattleEnginePlayCardComboTests
         var s = Make(hand, lastOrigCost: 7, combo: 2, freePass: true);
         var cat = BattleFixtures.MinimalCatalog(cards: new[] { def });
         var (next, _) = BattleEngine.PlayCard(s, 0, 0, 0, Rng(), cat);
-        Assert.Equal(7, next.Energy);
+        Assert.Equal(8, next.Energy);
         Assert.Equal(3, next.ComboCount);
         Assert.Equal(3, next.LastPlayedOrigCost);
         Assert.False(next.NextCardComboFreePass);
     }
 
-    [Fact] public void Wild_and_superwild_both_present_superwild_wins()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Wild_and_superwild_both_present_superwild_wins(bool wildUsed)
     {
         var def = CardWithCost("ws", 4, keywords: new[] { "wild", "superwild" });
         var card = new BattleCardInstance("inst1", "ws", false, null);
         var hand = ImmutableArray.Create(card);
-        var s = Make(hand, lastOrigCost: 1, combo: 1);
+        var s = Make(hand, lastOrigCost: 1, combo: 1, wildUsed: wildUsed);
         var cat = BattleFixtures.MinimalCatalog(cards: new[] { def });
         var (next, _) = BattleEngine.PlayCard(s, 0, 0, 0, Rng(), cat);
         Assert.Equal(2, next.ComboCount);
         Assert.True(next.NextCardComboFreePass);
+        Assert.Equal(wildUsed, next.WildUsedInCurrentCombo);
+        Assert.Equal(6, next.Energy);
+    }
+
+    [Fact]
+    public void Embedded_upgraded_wisp_summon_uses_its_superwild_keyword()
+    {
+        var catalog = EmbeddedDataLoader.LoadCatalog();
+        var hand = ImmutableArray.Create(
+            new BattleCardInstance("wisp_card", "starter_summon_3", true, null));
+        var state = Make(hand, lastOrigCost: 1, combo: 1);
+
+        var (afterFirst, _) = BattleEngine.PlayCard(state, 0, 0, 0, Rng(), catalog);
+
+        Assert.Equal(2, afterFirst.ComboCount);
+        Assert.True(afterFirst.NextCardComboFreePass);
+        Assert.False(afterFirst.WildUsedInCurrentCombo);
+        Assert.Equal(7, afterFirst.Energy);
+        Assert.Contains(afterFirst.SummonHeld, card => card.CardDefinitionId == "starter_summon_3");
+
+        var (afterSecond, _) = BattleEngine.PlayCard(
+            afterFirst with
+            {
+                Hand = ImmutableArray.Create(
+                    new BattleCardInstance("wisp_card_2", "starter_summon_3", true, null)),
+            },
+            0, 0, 0, Rng(), catalog);
+
+        Assert.Equal(3, afterSecond.ComboCount);
+        Assert.True(afterSecond.NextCardComboFreePass);
+        Assert.False(afterSecond.WildUsedInCurrentCombo);
+        // 1 枚目の SuperWild が予約した保護により、2 枚目も 1 軽減。
+        Assert.Equal(5, afterSecond.Energy);
     }
 
     [Fact] public void Example5_wild_after_reset_starts_at_combo_one()
@@ -147,7 +225,9 @@ public class BattleEnginePlayCardComboTests
         var (next, _) = BattleEngine.PlayCard(s, 0, 0, 0, Rng(), cat);
         Assert.Equal(1, next.ComboCount);
         Assert.Equal(5, next.LastPlayedOrigCost);
-        Assert.False(next.NextCardComboFreePass);
+        Assert.True(next.NextCardComboFreePass);
+        Assert.True(next.WildUsedInCurrentCombo);
+        Assert.Equal(5, next.Energy);
     }
 
     [Fact] public void Example6_superwild_then_zero_cost()
@@ -184,5 +264,333 @@ public class BattleEnginePlayCardComboTests
         var (next, _) = BattleEngine.PlayCard(s, 0, 0, 0, Rng(), cat);
         Assert.Equal(1, next.ComboCount);
         Assert.Equal(5, next.LastPlayedOrigCost);
+    }
+
+    [Fact]
+    public void Wild_protects_its_next_card_then_disables_a_later_wild_in_the_same_combo()
+    {
+        var firstWild = CardWithCost("wild4", 4, keywords: new[] { "wild" });
+        var normal = CardWithCost("normal1", 1);
+        var laterWild = CardWithCost("wild3", 3, keywords: new[] { "wild" });
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { firstWild, normal, laterWild });
+
+        var state = Make(
+            ImmutableArray.Create(new BattleCardInstance("w1", "wild4", false, null)),
+            lastOrigCost: 1,
+            combo: 1);
+
+        var (afterWild, _) = BattleEngine.PlayCard(state, 0, 0, 0, Rng(), catalog);
+        Assert.Equal(2, afterWild.ComboCount);
+        Assert.True(afterWild.NextCardComboFreePass);
+        Assert.True(afterWild.WildUsedInCurrentCombo);
+
+        var (afterProtected, _) = BattleEngine.PlayCard(
+            afterWild with
+            {
+                Hand = ImmutableArray.Create(
+                    new BattleCardInstance("n1", "normal1", false, null)),
+            },
+            0, 0, 0, Rng(), catalog);
+        Assert.Equal(3, afterProtected.ComboCount);
+        Assert.False(afterProtected.NextCardComboFreePass);
+        Assert.True(afterProtected.WildUsedInCurrentCombo);
+        Assert.Equal(6, afterProtected.Energy);
+
+        var (afterDisabledWild, _) = BattleEngine.PlayCard(
+            afterProtected with
+            {
+                Hand = ImmutableArray.Create(
+                    new BattleCardInstance("w2", "wild3", false, null)),
+            },
+            0, 0, 0, Rng(), catalog);
+        Assert.Equal(1, afterDisabledWild.ComboCount);
+        Assert.False(afterDisabledWild.NextCardComboFreePass);
+        Assert.False(afterDisabledWild.WildUsedInCurrentCombo);
+    }
+
+    [Fact]
+    public void Wild_that_was_disabled_when_breaking_a_combo_can_activate_again_on_a_later_play()
+    {
+        var disabledWild = CardWithCost("wild4", 4, keywords: new[] { "wild" });
+        var nextWild = CardWithCost("wild0", 0, keywords: new[] { "wild" });
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { disabledWild, nextWild });
+        var state = Make(
+            ImmutableArray.Create(new BattleCardInstance("w1", "wild4", false, null)),
+            lastOrigCost: 1,
+            combo: 3,
+            wildUsed: true);
+
+        var (afterBreak, _) = BattleEngine.PlayCard(state, 0, 0, 0, Rng(), catalog);
+        Assert.Equal(1, afterBreak.ComboCount);
+        Assert.False(afterBreak.NextCardComboFreePass);
+        Assert.False(afterBreak.WildUsedInCurrentCombo);
+
+        var (afterReactivation, _) = BattleEngine.PlayCard(
+            afterBreak with
+            {
+                Hand = ImmutableArray.Create(
+                    new BattleCardInstance("w2", "wild0", false, null)),
+            },
+            0, 0, 0, Rng(), catalog);
+        Assert.Equal(2, afterReactivation.ComboCount);
+        Assert.True(afterReactivation.NextCardComboFreePass);
+        Assert.True(afterReactivation.WildUsedInCurrentCombo);
+    }
+
+    [Fact]
+    public void Adjacent_consumed_wild_uses_incoming_protection_but_does_not_renew_it()
+    {
+        var firstWild = CardWithCost("wild4", 4, keywords: new[] { "wild" });
+        var secondWild = CardWithCost("wild1", 1, keywords: new[] { "wild" });
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { firstWild, secondWild });
+        var state = Make(
+            ImmutableArray.Create(new BattleCardInstance("w1", "wild4", false, null)),
+            lastOrigCost: 1,
+            combo: 1);
+
+        var (afterFirst, _) = BattleEngine.PlayCard(state, 0, 0, 0, Rng(), catalog);
+        var (afterSecond, _) = BattleEngine.PlayCard(
+            afterFirst with
+            {
+                Hand = ImmutableArray.Create(
+                    new BattleCardInstance("w2", "wild1", false, null)),
+            },
+            0, 0, 0, Rng(), catalog);
+
+        Assert.Equal(3, afterSecond.ComboCount);
+        Assert.False(afterSecond.NextCardComboFreePass);
+        Assert.True(afterSecond.WildUsedInCurrentCombo);
+        // 直前の Wild の保護で 1 軽減されるが、この Wild の効果は無効なので保護は更新しない。
+        Assert.Equal(6, afterSecond.Energy);
+    }
+
+    [Fact]
+    public void Consumed_wild_can_continue_normally_and_reduce_cost_without_renewing_protection()
+    {
+        var def = CardWithCost("wild2", 2, keywords: new[] { "wild" });
+        var state = Make(
+            ImmutableArray.Create(new BattleCardInstance("w1", "wild2", false, null)),
+            lastOrigCost: 1,
+            combo: 3,
+            wildUsed: true,
+            energy: 5);
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { def });
+
+        var (next, _) = BattleEngine.PlayCard(state, 0, 0, 0, Rng(), catalog);
+
+        Assert.Equal(4, next.ComboCount);
+        Assert.Equal(4, next.Energy);
+        Assert.False(next.NextCardComboFreePass);
+        Assert.True(next.WildUsedInCurrentCombo);
+    }
+
+    [Fact]
+    public void Superwild_can_repeat_and_does_not_disable_a_later_wild()
+    {
+        var firstSuper = CardWithCost("super4", 4, keywords: new[] { "superwild" });
+        var secondSuper = CardWithCost("super1", 1, keywords: new[] { "superwild" });
+        var laterWild = CardWithCost("wild3", 3, keywords: new[] { "wild" });
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { firstSuper, secondSuper, laterWild });
+        var state = Make(
+            ImmutableArray.Create(new BattleCardInstance("s1", "super4", false, null)),
+            lastOrigCost: 1,
+            combo: 1);
+
+        var (afterFirst, _) = BattleEngine.PlayCard(state, 0, 0, 0, Rng(), catalog);
+        Assert.True(afterFirst.NextCardComboFreePass);
+        Assert.False(afterFirst.WildUsedInCurrentCombo);
+
+        var (afterSecond, _) = BattleEngine.PlayCard(
+            afterFirst with
+            {
+                Hand = ImmutableArray.Create(
+                    new BattleCardInstance("s2", "super1", false, null)),
+            },
+            0, 0, 0, Rng(), catalog);
+        Assert.Equal(3, afterSecond.ComboCount);
+        Assert.True(afterSecond.NextCardComboFreePass);
+        Assert.False(afterSecond.WildUsedInCurrentCombo);
+        Assert.Equal(6, afterSecond.Energy);
+
+        var (afterWild, _) = BattleEngine.PlayCard(
+            afterSecond with
+            {
+                Hand = ImmutableArray.Create(
+                    new BattleCardInstance("w1", "wild3", false, null)),
+            },
+            0, 0, 0, Rng(), catalog);
+        Assert.Equal(4, afterWild.ComboCount);
+        Assert.True(afterWild.NextCardComboFreePass);
+        Assert.True(afterWild.WildUsedInCurrentCombo);
+        Assert.Equal(4, afterWild.Energy);
+    }
+
+    [Fact]
+    public void Superwild_remains_effective_after_wild_was_used()
+    {
+        var def = CardWithCost("super4", 4, keywords: new[] { "superwild" });
+        var state = Make(
+            ImmutableArray.Create(new BattleCardInstance("s1", "super4", false, null)),
+            lastOrigCost: 1,
+            combo: 3,
+            wildUsed: true);
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { def });
+
+        var (next, _) = BattleEngine.PlayCard(state, 0, 0, 0, Rng(), catalog);
+
+        Assert.Equal(4, next.ComboCount);
+        Assert.True(next.NextCardComboFreePass);
+        Assert.True(next.WildUsedInCurrentCombo);
+    }
+
+    [Fact]
+    public void Protected_superwild_reduces_renews_protection_and_preserves_wild_used_state()
+    {
+        var def = CardWithCost("super4", 4, keywords: new[] { "superwild" });
+        var state = Make(
+            ImmutableArray.Create(new BattleCardInstance("s1", "super4", false, null)),
+            lastOrigCost: 1,
+            combo: 3,
+            freePass: true,
+            wildUsed: true,
+            energy: 5);
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { def });
+
+        var (next, events) = BattleEngine.PlayCard(state, 0, 0, 0, Rng(), catalog);
+
+        Assert.Equal(4, next.ComboCount);
+        Assert.Equal(2, next.Energy);
+        Assert.Equal(3, events[0].Amount);
+        Assert.True(next.NextCardComboFreePass);
+        Assert.True(next.WildUsedInCurrentCombo);
+    }
+
+    [Fact]
+    public void First_normal_card_starts_combo_without_reduction()
+    {
+        var def = CardWithCost("normal3", 3);
+        var state = Make(
+            ImmutableArray.Create(new BattleCardInstance("n1", "normal3", false, null)),
+            energy: 5);
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { def });
+
+        var (next, _) = BattleEngine.PlayCard(state, 0, 0, 0, Rng(), catalog);
+
+        Assert.Equal(1, next.ComboCount);
+        Assert.Equal(2, next.Energy);
+    }
+
+    [Theory]
+    // 通常カード
+    [InlineData("normal", false, false, false, false)]
+    [InlineData("normal", true,  false, false, true)]
+    [InlineData("normal", false, true,  false, true)]
+    [InlineData("normal", true,  true,  false, true)]
+    // 有効な Wild（自身の効果だけで継続する場合は軽減なし）
+    [InlineData("wild", false, false, false, false)]
+    [InlineData("wild", true,  false, false, true)]
+    [InlineData("wild", false, true,  false, true)]
+    [InlineData("wild", true,  true,  false, true)]
+    // すでに Wild 使用済みで、キーワード効果が無効な後続 Wild
+    [InlineData("wild", false, false, true,  false)]
+    [InlineData("wild", true,  false, true,  true)]
+    [InlineData("wild", false, true,  true,  true)]
+    [InlineData("wild", true,  true,  true,  true)]
+    // SuperWild
+    [InlineData("superwild", false, false, false, false)]
+    [InlineData("superwild", true,  false, false, true)]
+    [InlineData("superwild", false, true,  false, true)]
+    [InlineData("superwild", true,  true,  false, true)]
+    public void Cost_reduction_truth_table_depends_only_on_normal_match_or_incoming_protection(
+        string cardKind,
+        bool matchesNormal,
+        bool incomingProtection,
+        bool wildUsed,
+        bool expectedReduced)
+    {
+        string[]? keywords = cardKind == "normal" ? null : new[] { cardKind };
+        var def = CardWithCost("card4", 4, keywords);
+        var state = Make(
+            ImmutableArray.Create(new BattleCardInstance("c1", "card4", false, null)),
+            lastOrigCost: matchesNormal ? 3 : 1,
+            combo: 2,
+            freePass: incomingProtection,
+            wildUsed: wildUsed,
+            energy: 5);
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { def });
+
+        var (next, events) = BattleEngine.PlayCard(state, 0, 0, 0, Rng(), catalog);
+
+        int expectedPayCost = expectedReduced ? 3 : 4;
+        Assert.Equal(5 - expectedPayCost, next.Energy);
+        Assert.Equal(expectedPayCost, events[0].Amount);
+    }
+
+    [Theory]
+    [InlineData("wild")]
+    [InlineData("superwild")]
+    public void Incoming_protection_reduces_wild_and_superwild_when_normal_cost_misses(string keyword)
+    {
+        var def = CardWithCost("protected-keyword", 4, keywords: new[] { keyword });
+        var state = Make(
+            ImmutableArray.Create(
+                new BattleCardInstance("k1", "protected-keyword", false, null)),
+            lastOrigCost: 1,
+            combo: 2,
+            freePass: true,
+            energy: 5);
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { def });
+
+        var (next, _) = BattleEngine.PlayCard(state, 0, 0, 0, Rng(), catalog);
+
+        Assert.Equal(3, next.ComboCount);
+        Assert.Equal(2, next.Energy);
+        Assert.True(next.NextCardComboFreePass);
+    }
+
+    [Fact]
+    public void Superwild_reduces_when_it_matches_normal_cost_condition()
+    {
+        var def = CardWithCost("super3", 3, keywords: new[] { "superwild" });
+        var state = Make(
+            ImmutableArray.Create(new BattleCardInstance("s1", "super3", false, null)),
+            lastOrigCost: 2,
+            combo: 2,
+            energy: 4);
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { def });
+
+        var (next, _) = BattleEngine.PlayCard(state, 0, 0, 0, Rng(), catalog);
+
+        Assert.Equal(3, next.ComboCount);
+        Assert.Equal(2, next.Energy);
+        Assert.True(next.NextCardComboFreePass);
+    }
+
+    [Fact]
+    public void Zeroed_cards_still_chain_by_original_cost_and_consume_their_modifiers()
+    {
+        var one = CardWithCost("original-one", 1);
+        var two = CardWithCost("original-two", 2);
+        var first = new BattleCardInstance("one", one.Id, false, null)
+            .AddCostModifier(new CardCostModifier(
+                -1, CardCostModifierDuration.UntilTurnEnd, "ultimate"));
+        var second = new BattleCardInstance("two", two.Id, false, null)
+            .AddCostModifier(new CardCostModifier(
+                -2, CardCostModifierDuration.UntilTurnEnd, "ultimate"));
+        var state = Make(ImmutableArray.Create(first, second), energy: 0);
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { one, two });
+
+        var (afterOne, firstEvents) = BattleEngine.PlayCard(
+            state, 0, 0, 0, Rng(), catalog);
+        var (afterTwo, secondEvents) = BattleEngine.PlayCard(
+            afterOne, 0, 0, 0, Rng(), catalog);
+
+        Assert.Equal(0, firstEvents[0].Amount);
+        Assert.Equal(0, secondEvents[0].Amount);
+        Assert.Equal(2, afterTwo.ComboCount);
+        Assert.Equal(2, afterTwo.LastPlayedOrigCost);
+        Assert.Equal(0, afterTwo.Energy);
+        Assert.All(afterTwo.DiscardPile,
+            card => Assert.Empty(card.EffectiveCostModifiers));
     }
 }

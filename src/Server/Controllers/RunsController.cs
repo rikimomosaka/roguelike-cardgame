@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +11,7 @@ using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.History;
 using RoguelikeCardGame.Core.Map;
 using RoguelikeCardGame.Core.Random;
+using RoguelikeCardGame.Core.Relics;
 using RoguelikeCardGame.Core.Rewards;
 using RoguelikeCardGame.Core.Run;
 using RoguelikeCardGame.Server.Abstractions;
@@ -70,6 +72,8 @@ public sealed class RunsController : ControllerBase
             return Problem(statusCode: StatusCodes.Status409Conflict, title: "進行中のランがあります。force=true で上書き可能。");
 
         var (state, map) = await _runStart.StartAsync(accountId, ct);
+        // 新規ランの保存成功後にだけ、旧ランに属する戦闘 session を破棄する。
+        _sessions.Remove(accountId);
         return Ok(RunSnapshotDtoMapper.From(state, map, _data));
     }
 
@@ -99,11 +103,41 @@ public sealed class RunsController : ControllerBase
         {
             return Problem(statusCode: StatusCodes.Status400BadRequest, title: ex.Message);
         }
+        catch (InvalidOperationException ex)
+        {
+            return Problem(statusCode: StatusCodes.Status409Conflict, title: ex.Message);
+        }
 
         var node = map.GetNode(body.NodeId);
-        var actualKind = advanced.UnknownResolutions.TryGetValue(node.Id, out var resolved) ? resolved : node.Kind;
+        TileKind actualKind;
+        if (advanced.UnknownResolutions.TryGetValue(node.Id, out var cachedKind))
+        {
+            actualKind = cachedKind;
+        }
+        else if (node.Kind == TileKind.Unknown)
+        {
+            // Resolve the tile kind on its own stream. Random draws made by the
+            // concrete tile can therefore change without changing the tile kind.
+            var config = _data.UnknownConfig
+                ?? MapGenerationConfigLoader.LoadAct1().UnknownResolutionWeights;
+            var weights = PassiveModifiers.ApplyUnknownWeightDeltas(config, advanced, _data);
+            if (weights.Values.Sum() <= 0)
+                weights = config.Weights;
+            var kindRng = new SystemRng(RunRngSeed.Derive(
+                advanced.RngSeed, advanced.CurrentAct, node.Id, RunRngPurpose.UnknownKind));
+            actualKind = UnknownResolver.ResolveOne(weights, kindRng);
+            advanced = advanced with
+            {
+                UnknownResolutions = advanced.UnknownResolutions.SetItem(node.Id, actualKind),
+            };
+        }
+        else
+        {
+            actualKind = node.Kind;
+        }
 
-        var effectRng = new SystemRng(unchecked((int)advanced.RngSeed ^ (node.Id * 31) ^ (int)advanced.PlaySeconds));
+        var effectRng = new SystemRng(RunRngSeed.Derive(
+            advanced.RngSeed, advanced.CurrentAct, node.Id, RunRngPurpose.NodeContent));
         advanced = NodeEffectResolver.Resolve(advanced, actualKind, node.Row, _data, effectRng);
 
         long elapsed = Math.Clamp(body.ElapsedSeconds, 0, MaxElapsedSecondsPerRequest);
@@ -122,6 +156,12 @@ public sealed class RunsController : ControllerBase
         if (!TryGetAccountId(out var accountId, out var err)) return err!;
         if (!await _accounts.ExistsAsync(accountId, ct))
             return Problem(statusCode: StatusCodes.Status404NotFound, title: $"アカウントが見つかりません: {accountId}");
+
+        // 実 BattleEngine の session は /battle/finalize だけで確定する。
+        // 旧 placeholder API が進行中戦闘を上書きすることを防ぐ。
+        if (_sessions.TryGet(accountId, out _))
+            return Problem(statusCode: StatusCodes.Status409Conflict,
+                title: "進行中の戦闘セッションはこの API では完了できません。");
 
         var s = await _saves.TryLoadAsync(accountId, ct);
         if (s is null || s.Progress != RunProgress.InProgress || s.ActiveBattle is null)
@@ -142,14 +182,15 @@ public sealed class RunsController : ControllerBase
                 PlaySeconds = afterWin.PlaySeconds + elapsed,
             }, RunProgress.Cleared);
             var clearMap = _runStart.RehydrateMap(finished.RngSeed, finished.CurrentAct);
-            var rec = RunHistoryBuilder.From(accountId, finished, clearMap, finished.VisitedNodeIds.Length, RunProgress.Cleared);
-            await _history.AppendAsync(accountId, rec, ct);
+            var rec = RunHistoryBuilder.From(accountId, finished, clearMap, RunProgress.Cleared);
+            rec = await _history.AppendAsync(accountId, rec, ct);
             await _bestiary.MergeAsync(accountId, rec, ct);
             await _saves.DeleteAsync(accountId, ct);
             return Ok(RunSnapshotDtoMapper.ToResultDto(rec));
         }
 
-        var rewardRng = new SystemRng(unchecked((int)s.RngSeed ^ (int)s.PlaySeconds ^ 0x5EED));
+        var rewardRng = new SystemRng(RunRngSeed.Derive(
+            s.RngSeed, s.CurrentAct, s.CurrentNodeId, RunRngPurpose.BattleReward));
 
         RunState updated;
         if (isBoss)
@@ -268,11 +309,11 @@ public sealed class RunsController : ControllerBase
         {
             // act 遷移: 新マップ生成 → Unknown 解決 → AdvanceAct
             int nextAct = s.CurrentAct + 1;
-            var nextActSeed = unchecked((int)(uint)ActMapSeed.Derive(s.RngSeed, nextAct));
             var oldMap = _runStart.RehydrateMap(s.RngSeed, s.CurrentAct);
             var newMap = _runStart.RehydrateMap(s.RngSeed, nextAct);
             var newResolutions = _runStart.ResolveUnknownsForAct(newMap, s.RngSeed, nextAct);
-            var advanceRng = new SystemRng(unchecked(nextActSeed ^ 0xAC70));
+            var advanceRng = new SystemRng(RunRngSeed.Derive(
+                s.RngSeed, nextAct, newMap.StartNodeId, RunRngPurpose.ActTransition));
             updated = ActTransition.AdvanceAct(s, oldMap, newMap, _data, advanceRng, newResolutions);
             // 新アクトの層開始レリック選択はスタートマスに入った時点で ActStartController.Enter が生成する。
             updated = updated with
@@ -338,6 +379,10 @@ public sealed class RunsController : ControllerBase
         var map = _runStart.RehydrateMap(s.RngSeed, s.CurrentAct);
         var node = map.GetNode(s.CurrentNodeId);
         var effectiveKind = s.UnknownResolutions.TryGetValue(node.Id, out var resolved) ? resolved : node.Kind;
+        if (effectiveKind is not (TileKind.Enemy or TileKind.Elite or TileKind.Boss))
+            return Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: "カード報酬のリロールは戦闘報酬でのみ使用できます。");
         var table = _data.RewardTables.TryGetValue($"act{s.CurrentAct}", out var tbl) ? tbl : _data.RewardTables["act1"];
 
         EnemyPool pool;
@@ -352,8 +397,8 @@ public sealed class RunsController : ControllerBase
             pool = new EnemyPool(s.CurrentAct, tier);
         }
 
-        // IRng: reward 生成時と同じ xor パターンで seed を derive する (reroll 専用の xor 定数付き)。
-        var rerollRng = new SystemRng(unchecked((int)s.RngSeed ^ (int)s.PlaySeconds ^ 0x5EED ^ 0x4E11));
+        var rerollRng = new SystemRng(RunRngSeed.Derive(
+            s.RngSeed, s.CurrentAct, s.CurrentNodeId, RunRngPurpose.RewardReroll));
 
         RunState updated;
         try
@@ -393,6 +438,38 @@ public sealed class RunsController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("current/potion/use")]
+    [HttpPost("current/use-potion")]
+    public async Task<IActionResult> PostPotionUse(
+        [FromBody] RunPotionUseRequestDto body, CancellationToken ct)
+    {
+        if (!TryGetAccountId(out var accountId, out var err)) return err!;
+        if (body is null) return BadRequest();
+        if (!await _accounts.ExistsAsync(accountId, ct))
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: $"アカウントが見つかりません: {accountId}");
+
+        var state = await _saves.TryLoadAsync(accountId, ct);
+        if (state is null || state.Progress != RunProgress.InProgress)
+            return Problem(statusCode: StatusCodes.Status409Conflict, title: "進行中のランがありません。");
+
+        RunState updated;
+        try
+        {
+            updated = RunPotionActions.UseOutsideBattle(state, body.SlotIndex, _data);
+        }
+        catch (ArgumentOutOfRangeException ex)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, title: ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Problem(statusCode: StatusCodes.Status409Conflict, title: ex.Message);
+        }
+
+        await _saves.SaveAsync(accountId, updated, ct);
+        return NoContent();
+    }
+
     [HttpPost("current/abandon")]
     public async Task<IActionResult> PostAbandon([FromBody] HeartbeatRequestDto body, CancellationToken ct)
     {
@@ -410,11 +487,11 @@ public sealed class RunsController : ControllerBase
             PlaySeconds = state.PlaySeconds + elapsed,
         }, RunProgress.Abandoned);
         var abandonMap = _runStart.RehydrateMap(finished.RngSeed, finished.CurrentAct);
-        var rec = RunHistoryBuilder.From(accountId, finished, abandonMap, finished.VisitedNodeIds.Length, RunProgress.Abandoned);
-        await _history.AppendAsync(accountId, rec, ct);
+        var rec = RunHistoryBuilder.From(accountId, finished, abandonMap, RunProgress.Abandoned);
+        rec = await _history.AppendAsync(accountId, rec, ct);
         await _bestiary.MergeAsync(accountId, rec, ct);
-        _sessions.Remove(accountId);   // F2: 戦闘中放棄時の session cleanup
         await _saves.DeleteAsync(accountId, ct);
+        _sessions.Remove(accountId);   // 永続化成功後に戦闘 session を cleanup
         return Ok(RunSnapshotDtoMapper.ToResultDto(rec));
     }
 

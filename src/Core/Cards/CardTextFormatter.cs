@@ -107,7 +107,9 @@ public static class CardTextFormatter
         && a.Select == b.Select
         && a.AmountSource == b.AmountSource
         && a.Trigger == b.Trigger
-        && a.Pile == b.Pile;
+        && a.Pile == b.Pile
+        && a.CostDuration == b.CostDuration
+        && a.CardCount == b.CardCount;
 
     private static string DescribeGroup(CardEffect e, int count, CardActorContext context)
     {
@@ -145,11 +147,12 @@ public static class CardTextFormatter
         // formatter は文言を残すが、新規カードではキーワードを使うことを推奨。
         "retainSelf" => "[K:wait]",
         "gainEnergy" => $"エナジー+{AmountToken(e, context)}",
-        "gainMaxEnergy" => $"エナジー上限+{AmountToken(e, context)}",
+        "gainMaxEnergy" => $"ターン開始時のエナジー追加量+{AmountToken(e, context)}",
         "upgrade" => DescribeExhaustOrUpgrade(e, context, isUpgrade: true),
         "selfDamage" => $"{TargetPrefix(e.Scope, e.Side)}{AmountToken(e, context)}ダメージ",
         "addCard" => DescribeAddCard(e, context),
         "recoverFromDiscard" => DescribeRecoverFromDiscard(e, context),
+        "modifyCardCost" => DescribeModifyCardCost(e),
         // Phase 10.5.L1: relic 固有 action の自動文章化。formatter は battle 用と
         // 共有のため、relic action もここに併記する。
         "gainMaxHp" => $"最大HP+{AmountToken(e, context)}",
@@ -259,6 +262,26 @@ public static class CardTextFormatter
         return $"捨札から{selectJp}{AmountToken(e, context)}枚、{dest}に戻す";
     }
 
+    private static string DescribeModifyCardCost(CardEffect e)
+    {
+        string zone = ZoneJp(e.Pile);
+        int count = e.CardCount ?? 1;
+        string targets = e.Select switch
+        {
+            "all" => $"{zone}の全カード",
+            "random" => $"{zone}のカードをランダムに[N:{count}]枚",
+            _ => $"{zone}のカードを[N:{count}]枚選び",
+        };
+        long magnitude = System.Math.Abs((long)e.Amount);
+        string change = e.Amount < 0
+            ? $"コストを[N:{magnitude}]減らす"
+            : $"コストを[N:{magnitude}]増やす";
+        string duration = e.CostDuration == "untilTurnEnd"
+            ? "（このターン終了まで）"
+            : "（使用するまで）";
+        return $"{targets}、{change}{duration}";
+    }
+
     /// <summary>
     /// effect の amount を context で調整した上で marker token を返す。
     /// AmountSource (Variable X) があればそちらを優先 (10.5.D で engine 評価予定)。
@@ -336,6 +359,11 @@ public static class CardTextFormatter
         "dexterity" => "敏捷",
         "poison" => "毒",
         "omnistrike" => "拡散",
+        "barrier" => "バリア",
+        "lifesteal" => "吸血",
+        "reflect" => "反射",
+        "handCostReduction" => "手札軽減",
+        "handCostIncrease" => "手札増加",
         null or "" => "ステータス",
         _ => id,
     };
@@ -354,7 +382,7 @@ public static class CardTextFormatter
 
         return eff.Action switch
         {
-            "energyPerTurnBonus"          => $"エナジー最大値 {sign}{n}",
+            "energyPerTurnBonus"          => $"ターン開始時のエナジー追加量 {sign}{n}",
             "cardsDrawnPerTurnBonus"      => $"ターン開始時の手札枚数 {sign}{n}",
             "goldRewardMultiplier"        => $"戦闘ゴールド報酬 {sign}{n}%",
             "shopPriceMultiplier"         => $"ショップ価格 {sign}{n}%",

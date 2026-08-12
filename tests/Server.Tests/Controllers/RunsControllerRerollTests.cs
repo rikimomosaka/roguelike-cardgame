@@ -5,8 +5,10 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using RoguelikeCardGame.Core.Map;
 using RoguelikeCardGame.Core.Rewards;
 using RoguelikeCardGame.Server.Abstractions;
+using RoguelikeCardGame.Server.Services;
 using Xunit;
 
 namespace RoguelikeCardGame.Server.Tests.Controllers;
@@ -26,7 +28,8 @@ public class RunsControllerRerollTests : IClassFixture<TempDataFactory>
         var client = _factory.CreateClient();
         await BattleTestHelpers.EnsureAccountAsync(client, accountId);
         BattleTestHelpers.WithAccount(client, accountId);
-        await BattleTestHelpers.StartRunAndMoveToEnemyAsync(client);
+        await BattleTestHelpers.StartRunAndMoveToEnemyAsync(
+            client, _factory.Services, accountId);
         var win = await client.PostAsJsonAsync("/api/v1/runs/current/battle/win", new { elapsedSeconds = 0 });
         win.EnsureSuccessStatusCode();
         return client;
@@ -151,5 +154,32 @@ public class RunsControllerRerollTests : IClassFixture<TempDataFactory>
         // Second call → 409 (already used)
         var second = await client.PostAsync("/api/v1/runs/current/reward/reroll-card-choices", null);
         Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
+    }
+
+    [Fact]
+    public async Task RerollCardChoices_EventCardReward_Returns409()
+    {
+        var client = await ClientWithActiveRewardAsync("reroll-event");
+        var repo = _factory.Services.GetRequiredService<ISaveRepository>();
+        var runStart = _factory.Services.GetRequiredService<RunStartService>();
+        var state = (await repo.TryLoadAsync("reroll-event", CancellationToken.None))!;
+        var map = runStart.RehydrateMap(state.RngSeed, state.CurrentAct);
+        var unknownNode = Assert.Single(map.Nodes.Where(node => node.Kind == TileKind.Unknown).Take(1));
+
+        await repo.SaveAsync("reroll-event", state with
+        {
+            CurrentNodeId = unknownNode.Id,
+            VisitedNodeIds = ImmutableArray.Create(unknownNode.Id),
+            UnknownResolutions = state.UnknownResolutions.SetItem(unknownNode.Id, TileKind.Event),
+            Relics = new[] { "gamble_dice" },
+        }, CancellationToken.None);
+
+        var response = await client.PostAsync(
+            "/api/v1/runs/current/reward/reroll-card-choices", null);
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        var unchanged = await repo.TryLoadAsync("reroll-event", CancellationToken.None);
+        Assert.NotNull(unchanged?.ActiveReward);
+        Assert.False(unchanged!.ActiveReward!.RerollUsed);
     }
 }

@@ -29,8 +29,12 @@ public class RunHistoryBuilderTests
             MaxHp = 80,
             Gold = 123,
             PlaySeconds = 456,
+            VisitedNodeIds = ImmutableArray.Create(0),
+            JourneyLog = ImmutableArray.Create(
+                new JourneyEntry(1, 10, TileKind.Enemy, null),
+                new JourneyEntry(1, 11, TileKind.Rest, null)),
         };
-        var rec = RunHistoryBuilder.From("acc_abc", s, FakeMap(), nodesVisited: 7, outcome: RunProgress.GameOver);
+        var rec = RunHistoryBuilder.From("acc_abc", s, FakeMap(), RunProgress.GameOver);
         Assert.Equal(RunHistoryRecord.CurrentSchemaVersion, rec.SchemaVersion);
         Assert.Equal("acc_abc", rec.AccountId);
         Assert.Equal(s.RunId, rec.RunId);
@@ -40,7 +44,7 @@ public class RunHistoryBuilderTests
         Assert.Equal(80, rec.FinalMaxHp);
         Assert.Equal(123, rec.FinalGold);
         Assert.Equal(456, rec.PlaySeconds);
-        Assert.Equal(7, rec.NodesVisited);
+        Assert.Equal(3, rec.NodesVisited);
     }
 
     [Fact]
@@ -54,7 +58,7 @@ public class RunHistoryBuilderTests
             AcquiredPotionIds = ImmutableArray.Create("fire_potion"),
             EncounteredEnemyIds = ImmutableArray.Create("jaw_worm"),
         };
-        var rec = RunHistoryBuilder.From("acct", state, FakeMap(), nodesVisited: 3, outcome: RunProgress.Cleared);
+        var rec = RunHistoryBuilder.From("acct", state, FakeMap(), RunProgress.Cleared);
         Assert.Equal(new[] { "strike", "defend" }, rec.SeenCardBaseIds.ToArray());
         Assert.Equal(new[] { "burning_blood" }, rec.AcquiredRelicIds.ToArray());
         Assert.Equal(new[] { "fire_potion" }, rec.AcquiredPotionIds.ToArray());

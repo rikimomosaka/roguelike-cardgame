@@ -2,7 +2,7 @@
     "id":  "burning_blood",
     "name":  "血のサンゴ",
     "displayName":  null,
-    "activeVersion":  "v1",
+    "activeVersion":  "v2",
     "versions":  [
                      {
                          "version":  "v1",
@@ -15,6 +15,26 @@
 
                                                   ],
                                       "implemented":  false
+                                  }
+                     },
+                     {
+                         "version":  "v2",
+                         "createdAt":  "2026-08-08T00:00:00Z",
+                         "label":  "lifesteal reference relic",
+                         "spec":  {
+                                      "rarity":  1,
+                                      "description":  "戦闘開始時に吸血25%を得る。攻撃で実際に減らしたHPの25%を回復する。",
+                                      "effects":  [
+                                                      {
+                                                          "action":  "buff",
+                                                          "scope":  "self",
+                                                          "target":  null,
+                                                          "amount":  25,
+                                                          "name":  "lifesteal",
+                                                          "trigger":  "OnBattleStart"
+                                                      }
+                                                  ],
+                                      "implemented":  true
                                   }
                      }
                  ]

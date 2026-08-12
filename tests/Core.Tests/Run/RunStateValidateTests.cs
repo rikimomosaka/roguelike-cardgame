@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Immutable;
+using System.Linq;
 using RoguelikeCardGame.Core.Battle;
 using RoguelikeCardGame.Core.Data;
+using RoguelikeCardGame.Core.Events;
 using RoguelikeCardGame.Core.Map;
 using RoguelikeCardGame.Core.Merchant;
 using RoguelikeCardGame.Core.Rewards;
@@ -133,6 +135,72 @@ public class RunStateValidateTests
         Assert.Contains("ActiveRestPending", s.Validate());
     }
 
+    [Fact]
+    public void Validate_ResolvedEventWithCardReward_IsValid()
+    {
+        var resolvedEvent = new EventInstance(
+            "old_library", ImmutableArray<EventChoice>.Empty, ChosenIndex: 0);
+        var s = SampleV4() with
+        {
+            ActiveEvent = resolvedEvent,
+            ActiveReward = FakeReward("reward_common_01"),
+        };
+
+        Assert.Null(s.Validate());
+    }
+
+    [Fact]
+    public void Validate_UnresolvedEventWithReward_ReturnsError()
+    {
+        var unresolvedEvent = new EventInstance(
+            "old_library", ImmutableArray<EventChoice>.Empty, ChosenIndex: null);
+        var s = SampleV4() with
+        {
+            ActiveEvent = unresolvedEvent,
+            ActiveReward = FakeReward("reward_common_01"),
+        };
+
+        Assert.Contains("at most one", s.Validate(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(4)]
+    public void Validate_CardChoicesMayHaveVariableLength(int count)
+    {
+        var ids = Enumerable.Range(1, count).Select(i => $"card_{i}").ToArray();
+        var s = SampleV4() with { ActiveReward = FakeReward(ids) };
+
+        Assert.Null(s.Validate());
+    }
+
+    [Fact]
+    public void Validate_DefaultCardChoices_ReturnsError()
+    {
+        var s = SampleV4() with
+        {
+            ActiveReward = FakeReward() with { CardChoices = default },
+        };
+
+        Assert.Contains("CardChoices", s.Validate());
+    }
+
+    [Fact]
+    public void Validate_EmptyCardChoiceId_ReturnsError()
+    {
+        var s = SampleV4() with { ActiveReward = FakeReward("valid", "") };
+
+        Assert.Contains("CardChoices", s.Validate());
+    }
+
+    [Fact]
+    public void Validate_DuplicateCardChoices_ReturnsError()
+    {
+        var s = SampleV4() with { ActiveReward = FakeReward("same", "same") };
+
+        Assert.Contains("CardChoices", s.Validate());
+    }
+
     private static RunState SampleV4()
     {
         var catalog = EmbeddedDataLoader.LoadCatalog();
@@ -155,6 +223,12 @@ public class RunStateValidateTests
     private static BattlePlaceholderState FakeBattle() =>
         new BattlePlaceholderState("test", ImmutableArray<PlaceholderEnemyInstance>.Empty, BattleOutcome.Pending);
 
-    private static RewardState FakeReward() =>
-        new RewardState(0, false, null, true, ImmutableArray<string>.Empty, CardRewardStatus.Pending);
+    private static RewardState FakeReward(params string[] cardChoices) =>
+        new RewardState(
+            0,
+            false,
+            null,
+            true,
+            ImmutableArray.CreateRange(cardChoices),
+            CardRewardStatus.Pending);
 }

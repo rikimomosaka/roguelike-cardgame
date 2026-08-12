@@ -2,7 +2,7 @@
 REM Roguelike Card Game - dev environment launcher.
 REM Run dev.bat (or double-click) to start Server + Client in separate windows.
 REM Server uses dotnet watch (auto-rebuild on .cs changes).
-REM Client uses Vite hot reload.
+REM Client uses Vite hot reload and opens the browser when ready.
 REM Re-run dev.bat to restart (auto-kills existing processes on port 5114 / 5173).
 
 setlocal
@@ -24,12 +24,12 @@ echo === Launching Server (dotnet watch on port 5114) ===
 start "RoguelikeServer" cmd /k "cd /d %ROOT% && dotnet watch run --project src/Server"
 
 echo === Launching Client (Vite on port 5173) ===
-start "RoguelikeClient" cmd /k "cd /d %ROOT%src\Client && npm run dev"
+start "RoguelikeClient" cmd /k "cd /d %ROOT%src\Client && npm run dev -- --open"
 
 echo.
 echo Both windows launched.
 echo   Server: http://localhost:5114
-echo   Client: http://localhost:5173
+echo   Client: http://localhost:5173 (browser opens automatically)
 echo.
 echo To stop: close each window or Ctrl+C in it.
 echo To restart: just run dev.bat again.

@@ -6,9 +6,9 @@ namespace RoguelikeCardGame.Core.Tests.Battle.Statuses;
 
 public class StatusDefinitionTests
 {
-    [Fact] public void All_contains_six_statuses()
+    [Fact] public void All_contains_supported_statuses()
     {
-        Assert.Equal(6, StatusDefinition.All.Count);
+        Assert.Equal(11, StatusDefinition.All.Count);
         var ids = StatusDefinition.All.Select(s => s.Id).ToHashSet();
         Assert.Contains("strength",   ids);
         Assert.Contains("dexterity",  ids);
@@ -16,6 +16,11 @@ public class StatusDefinitionTests
         Assert.Contains("vulnerable", ids);
         Assert.Contains("weak",       ids);
         Assert.Contains("poison",     ids);
+        Assert.Contains("barrier",    ids);
+        Assert.Contains("lifesteal",  ids);
+        Assert.Contains("reflect",    ids);
+        Assert.Contains("handCostReduction", ids);
+        Assert.Contains("handCostIncrease", ids);
     }
 
     [Fact] public void Strength_is_permanent_buff()
@@ -71,5 +76,18 @@ public class StatusDefinitionTests
     [Fact] public void Get_unknown_throws()
     {
         Assert.Throws<System.InvalidOperationException>(() => StatusDefinition.Get("unknown"));
+    }
+
+    [Theory]
+    [InlineData("handCostReduction", StatusKind.Buff)]
+    [InlineData("handCostIncrease", StatusKind.Debuff)]
+    public void Hand_cost_statuses_are_permanent_and_do_not_count_down(
+        string id, StatusKind expectedKind)
+    {
+        var status = StatusDefinition.Get(id);
+
+        Assert.Equal(expectedKind, status.Kind);
+        Assert.True(status.IsPermanent);
+        Assert.Equal(StatusTickDirection.None, status.TickDirection);
     }
 }

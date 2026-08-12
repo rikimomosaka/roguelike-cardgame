@@ -75,7 +75,6 @@ export function CardVisualPreview({
           upgraded={false}
           description={normalDesc}
           upgradedDescription={isUpgradable ? upgradedDesc : null}
-          width={128}
         />
       </div>
       {isUpgradable && (
@@ -93,7 +92,6 @@ export function CardVisualPreview({
               upgraded={true}
               description={normalDesc}
               upgradedDescription={upgradedDesc}
-              width={128}
             />
           </div>
         </>

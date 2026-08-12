@@ -424,7 +424,7 @@ public class CardTextFormatterTests
     public void GainMaxEnergy()
     {
         var s = CardTextFormatter.FormatEffects(new[] { E("gainMaxEnergy", EffectScope.Self, null, 1) });
-        Assert.Equal("エナジー上限+[N:1]。", s);
+        Assert.Equal("ターン開始時のエナジー追加量+[N:1]。", s);
     }
 
     // --- 10.5.B: Power trigger marker ---
@@ -592,7 +592,7 @@ public class CardTextFormatterTests
             new CardEffect("energyPerTurnBonus", EffectScope.Self, null, 1, Trigger: "Passive")
         };
         var text = CardTextFormatter.FormatEffects(effects);
-        Assert.Contains("エナジー最大値 +[N:1]", text);
+        Assert.Contains("ターン開始時のエナジー追加量 +[N:1]", text);
     }
 
     [Fact]
@@ -722,5 +722,18 @@ public class CardTextFormatterTests
         };
         var text = CardTextFormatter.FormatEffects(effects);
         Assert.Contains($"ハテナマスの{label}出現率 +[N:4]", text);
+    }
+
+    [Theory]
+    [InlineData(-2, "untilPlayed", "手札のカードをランダムに[N:3]枚、コストを[N:2]減らす（使用するまで）。")]
+    [InlineData(1, "untilTurnEnd", "手札のカードをランダムに[N:3]枚、コストを[N:1]増やす（このターン終了まで）。")]
+    public void FormatEffects_ModifyCardCost(
+        int amount, string duration, string expected)
+    {
+        var effect = new CardEffect(
+            "modifyCardCost", EffectScope.Self, null, amount,
+            Pile: "hand", Select: "random", CostDuration: duration, CardCount: 3);
+
+        Assert.Equal(expected, CardTextFormatter.FormatEffects(new[] { effect }));
     }
 }

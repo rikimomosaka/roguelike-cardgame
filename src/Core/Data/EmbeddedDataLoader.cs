@@ -26,11 +26,13 @@ public static class EmbeddedDataLoader
     public static DataCatalog LoadCatalog()
     {
         var asm = typeof(EmbeddedDataLoader).Assembly;
+        var relics = ReadAllWithPrefix(asm, RelicsPrefix).ToList();
+        EmbeddedDataCatalogValidator.ValidateRelics(relics);
         string? merchantPricesJson = ReadSingle(asm, MerchantPricesResourceName);
         var unknownConfig = MapGenerationConfigLoader.LoadAct1().UnknownResolutionWeights;
         return DataCatalog.LoadFromStrings(
             cards: ReadAllWithPrefix(asm, CardsPrefix),
-            relics: ReadAllWithPrefix(asm, RelicsPrefix),
+            relics: relics,
             potions: ReadAllWithPrefix(asm, PotionsPrefix),
             enemies: ReadAllWithPrefix(asm, EnemiesPrefix),
             encounters: ReadAllWithPrefix(asm, EncountersPrefix),
@@ -58,6 +60,7 @@ public static class EmbeddedDataLoader
         var asm = typeof(EmbeddedDataLoader).Assembly;
         var baseCards = ReadAllWithPrefix(asm, CardsPrefix).ToList();
         var baseRelics = ReadAllWithPrefix(asm, RelicsPrefix).ToList();
+        EmbeddedDataCatalogValidator.ValidateRelics(baseRelics);
 
         IEnumerable<string> mergedCards = MergeWith(baseCards, cardOverrides, CardOverrideMerger.Merge);
         IEnumerable<string> mergedRelics = relicOverrides is null

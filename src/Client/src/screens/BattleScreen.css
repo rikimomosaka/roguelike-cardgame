@@ -417,8 +417,8 @@ button.pile:hover { filter: brightness(1.2); }
 
 /* ターン終了 attack アニメーション (ユーザ要望) */
 /* 攻撃側 slot を一瞬反対側へ slide-in/out させる */
-.battle__slot.is-attacking-enemy { animation: slot-attack-enemy 280ms ease-out; }
-.battle__slot.is-attacking-ally  { animation: slot-attack-ally  280ms ease-out; }
+.battle__slot.is-attacking-enemy { animation: slot-attack-enemy 240ms ease-out; }
+.battle__slot.is-attacking-ally  { animation: slot-attack-ally  240ms ease-out; }
 @keyframes slot-attack-enemy {
   0%, 100% { transform: translateX(0); }
   45%      { transform: translateX(48px); }
@@ -430,12 +430,22 @@ button.pile:hover { filter: brightness(1.2); }
 
 /* 被弾 slot を赤く点滅 (ダメージ表現)。amount=0 のときは Client が class を
    付与しないので 0 ダメージは flash しない (ユーザ要望)。 */
-.battle__slot.is-hit { animation: slot-hit 320ms ease-in-out; }
+.battle__slot.is-hit { animation: slot-hit 300ms ease-in-out; }
+.battle__side--player .battle__slot {
+  --hit-recoil-x: -16px;
+  --hit-recoil-settle-x: -10px;
+}
+.battle__side--enemy .battle__slot {
+  --hit-recoil-x: 16px;
+  --hit-recoil-settle-x: 10px;
+}
 @keyframes slot-hit {
-  0%, 100% { filter: none; }
-  20%, 60% {
+  0%, 100% { filter: none; transform: translateX(0); }
+  18%, 58% {
     filter: brightness(1.6) saturate(2.5) drop-shadow(0 0 6px rgba(255, 60, 60, 0.95));
   }
+  34% { transform: translateX(var(--hit-recoil-x, -16px)); }
+  46% { transform: translateX(var(--hit-recoil-settle-x, -10px)); }
 }
 
 /* 死亡演出はユーザ要望により廃止 (HP=0 で alive filter から外れて自然消滅)。 */
@@ -538,17 +548,56 @@ button.pile:hover { filter: brightness(1.2); }
   font-variant-numeric: tabular-nums;
 }
 
-/* Why: 攻撃 chip 内で 通常/ランダム/全体 を色分け、剣マークと slash は白統一。 */
+/* Why: 攻撃 chip 内で 通常/ランダム/全体 を色分ける。 */
 .intent__seg--attack .intent__icon { color: #fff; }
-.intent__seg--attack .intent__slash { color: #fff; padding: 0 2px; }
 .intent__num--single { color: var(--intent-attack); }   /* 通常: 既存の attack 色 */
 .intent__num--random { color: #ff9a4a; }                 /* ランダム: オレンジ */
 .intent__num--all    { color: #ff5a5a; }                 /* 全体: 赤 */
 .intent__nums {
-  display: inline-flex; align-items: baseline;
+  display: inline-flex; align-items: center;
   font-family: var(--font-body);
   font-size: 26px;
   font-variant-numeric: tabular-nums;
+}
+.intent__scope-meta {
+  width: max-content;
+  height: 26px;
+  display: grid;
+  grid-template-rows: 8px 13px;
+  align-content: center;
+  justify-items: center;
+  row-gap: 1px;
+  line-height: 1;
+}
+.intent__scope-label {
+  font-family: var(--font-label);
+  font-size: 7px;
+  line-height: 8px;
+  letter-spacing: 0;
+  white-space: nowrap;
+  text-shadow: 1px 1px 0 #000;
+}
+.intent__scope-label--single { color: var(--intent-attack); }
+.intent__scope-label--random { color: #ff9a4a; }
+.intent__scope-label--all    { color: #ff5a5a; }
+.intent__hit-count {
+  color: #fff;
+  font-size: 11px;
+  line-height: 13px;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+.intent__scope-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+}
+.intent__scope-summary > .intent__num {
+  line-height: 1;
+}
+.intent__scope-separator {
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 3px;
 }
 
 .intent__seg {
@@ -643,6 +692,76 @@ button.pile:hover { filter: brightness(1.2); }
   pointer-events: none;
   -webkit-user-select: none;
   user-select: none;
+}
+
+/* 横一列のスプライトシートを1セル分だけ見せる内側 viewport。
+   Slot 自体の攻撃移動・被弾点滅は外側で動くため、待機フレームとは transform が競合しない。 */
+.sprite-sheet__frame,
+.sprite-sheet__viewport {
+  width: var(--sprite-frame-width, 74px);
+  height: var(--tier-height, 148px);
+}
+
+/* filter は overflow の外側に置く。これによりシートの隣接セルだけを隠しつつ、
+   キャラクター自身のドロップシャドウは viewport 境界で切れない。 */
+.sprite-sheet__frame {
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.55));
+}
+
+/* 待機中であることが小さい表示でも分かるよう、シートの8コマと同期して
+   1〜3pxだけ上下する。step-endで補間せず、整数pxの段階移動に限定する。 */
+.sprite[data-motion="idle"] .sprite-sheet__frame {
+  animation: character-idle-bob var(--sprite-duration, 1200ms) steps(1, end) infinite;
+}
+
+@keyframes character-idle-bob {
+  0%, 100% { transform: translateY(0); }
+  12.5% { transform: translateY(-1px); }
+  25% { transform: translateY(-3px); }
+  37.5% { transform: translateY(-2px); }
+  50% { transform: translateY(0); }
+  62.5% { transform: translateY(1px); }
+  75% { transform: translateY(1px); }
+  87.5% { transform: translateY(0); }
+}
+
+.sprite-sheet__viewport {
+  overflow: hidden;
+}
+
+.sprite--image img.sprite-sheet__image {
+  width: auto;
+  max-width: none;
+  height: 100%;
+  filter: none;
+  transform: translate3d(0, 0, 0);
+  animation-name: character-sprite-sheet;
+  animation-duration: var(--sprite-duration, 1000ms);
+  animation-timing-function:
+    steps(var(--sprite-step-count, 1), var(--sprite-step-position, end));
+  animation-iteration-count: var(--sprite-iteration-count, infinite);
+  animation-fill-mode: var(--sprite-fill-mode, none);
+  will-change: transform;
+}
+
+@keyframes character-sprite-sheet {
+  to { transform: translate3d(var(--sprite-end-x, -100%), 0, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* OS設定で位置移動は止める。ただしゲーム内の状態が静止画に見えないよう、
+     瞬き・衣装差分のフレーム送りだけを低速で残す。 */
+  .sprite[data-motion="idle"] .sprite-sheet__frame {
+    animation: none;
+  }
+
+  /* Idle may be slowed down, but one-shot attack/hurt motions must retain
+     their own duration. Otherwise their 240/300ms active state ends while a
+     2400ms sheet is still showing its almost-static first frame. */
+  .sprite[data-motion="idle"] img.sprite-sheet__image {
+    animation-duration: 2400ms;
+    will-change: auto;
+  }
 }
 
 /* Why: 攻撃/防御/補助を & 区切りで横並び表示。位置は単一 .intent (top: 4px)
@@ -868,18 +987,37 @@ button.pile:hover { filter: brightness(1.2); }
   cursor: help;
 }
 
-.energy__val { display: flex; align-items: baseline; gap: 1px; line-height: 1; }
-.energy__cur { font-size: var(--fs-hero); color: var(--gold); font-variant-numeric: tabular-nums; line-height: 1; }
-.energy__max { font-size: 18px; color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+.energy__val { display: flex; align-items: baseline; gap: 1px; line-height: 1; white-space: nowrap; }
+.energy__cur { font-size: 28px; color: var(--gold); font-variant-numeric: tabular-nums; line-height: 1; }
+.energy__cur.is-capped { font-size: 18px; letter-spacing: -0.5px; }
+.energy__recovery { font-size: 10px; color: var(--fg-muted); font-variant-numeric: tabular-nums; }
 
-/* COMBO chip: 手札のすぐ上、除外 pile と同じ垂直位置に配置 (ユーザ要望)。
-   .pile--exhaust は bottom: 168px なので同じ bottom を指定する。 */
-.battle__combo {
+/* COMBO controls: 戦技 / (COMBO + gauge) / 奥義を一つの固定グリッドにする。
+   中央列の COMBO 下端は旧配置 (bottom: 168px) とほぼ同じ位置を維持する。 */
+.battle__combo-controls {
   position: absolute;
   left: 50%;
+  bottom: 190px;
   transform: translateX(-50%);
-  bottom: 168px;
   z-index: var(--z-hud);
+  width: min(294px, calc(100% - 320px));
+  display: grid;
+  grid-template-columns: minmax(0, 84px) 110px minmax(0, 84px);
+  align-items: start;
+  justify-content: center;
+  gap: 8px;
+}
+
+.battle__combo-column {
+  width: 110px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.battle__combo {
+  position: relative;
   height: 52px;
   width: 110px;
   box-sizing: border-box;
@@ -919,6 +1057,94 @@ button.pile:hover { filter: brightness(1.2); }
 .battle__combo.is-active .battle__combo-v {
   text-shadow: 0 0 6px rgba(241, 201, 91, 0.8);
   font-weight: 700;
+}
+
+.combo-gauge {
+  height: 14px;
+  width: 110px;
+  padding: 2px;
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--bg-0);
+  border: 1px solid var(--gold-border);
+  border-radius: 2px;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.65);
+}
+
+.combo-gauge__segment {
+  min-width: 0;
+  background: rgba(201, 152, 90, 0.14);
+  border: 1px solid rgba(201, 152, 90, 0.28);
+}
+
+.combo-gauge__segment.is-filled {
+  background: var(--gold);
+  border-color: var(--gold-warm);
+  box-shadow: inset 0 -2px 0 var(--gold-deep);
+}
+
+.combo-skill-control {
+  min-width: 0;
+  height: 52px;
+  outline: none;
+}
+
+.combo-skill-button {
+  width: 100%;
+  height: 100%;
+  padding: 4px 3px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: 2px solid var(--fg-muted);
+  border-radius: 3px;
+  background:
+    linear-gradient(180deg, rgba(168, 85, 42, 0.4), rgba(52, 25, 16, 0.94));
+  color: var(--gold-soft);
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.7);
+  font-family: var(--font-label);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.combo-skill-control--ultimate .combo-skill-button {
+  border-color: var(--rarity-e-border);
+  background:
+    linear-gradient(180deg, rgba(112, 74, 145, 0.52), rgba(35, 20, 47, 0.96));
+  color: var(--rarity-e);
+}
+
+.combo-skill-button__name {
+  font-size: 15px;
+  letter-spacing: 2px;
+}
+
+.combo-skill-button__cost {
+  font-family: var(--font-body);
+  font-size: 10px;
+  color: var(--fg-muted);
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.combo-skill-control:hover .combo-skill-button:not(:disabled),
+.combo-skill-control:focus-within .combo-skill-button:not(:disabled) {
+  border-color: var(--gold);
+  box-shadow: 0 0 9px rgba(255, 213, 79, 0.48), 2px 2px 0 rgba(0, 0, 0, 0.7);
+}
+
+.combo-skill-control:focus-visible .combo-skill-button {
+  outline: 2px solid var(--gold-soft);
+  outline-offset: 2px;
+}
+
+.combo-skill-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+  filter: saturate(0.35);
 }
 
 /* ================= End turn ================= */
@@ -1044,7 +1270,7 @@ button.pile:hover { filter: brightness(1.2); }
 
 .hand > .card {
   position: absolute;
-  left: -54px;
+  left: calc(0px - var(--card-half-width));
   bottom: 0;
   pointer-events: auto;
   cursor: grab;
@@ -1237,13 +1463,13 @@ button.pile:hover { filter: brightness(1.2); }
   position: absolute;
   /* Why: 親 .reshuffle-overlay は inset:0 で .app-stage 全域。子は left:0; top:0
      基準で translate を当てて、(rs-from-x/y, rs-to-x/y) に位置決めする。
-     margin で sprite 中心を座標に合わせる (112×156 = 実寸カードサイズの半分:
-     -56, -78)。Card.css の aspect-ratio 1/1.4 と一致 (112 × 1.4 = 156.8)。
+     canonical card token の半幅・半高で sprite 中心を座標に合わせる。
+     Card.css と同じ 112 × 156.8 の厳密な中心を参照する。
      bg/border/shadow は子 <Card> が自前で描画するためここでは指定しない。 */
   top: 0;
   left: 0;
-  margin-left: -56px;
-  margin-top: -78px;
+  margin-left: calc(0px - var(--card-half-width));
+  margin-top: calc(0px - var(--card-half-height));
   animation-name: reshuffle-arc;
   /* Why: 旧 400ms は速すぎて視認しづらかった (ユーザ要望)。700ms に拡大、
      stagger も 60ms → 110ms に広げて 1 枚 1 枚を見える流れに。 */
@@ -1286,8 +1512,8 @@ button.pile:hover { filter: brightness(1.2); }
   position: absolute;
   top: 0;
   left: 0;
-  margin-left: -56px;
-  margin-top: -78px;
+  margin-left: calc(0px - var(--card-half-width));
+  margin-top: calc(0px - var(--card-half-height));
   animation: draw-fly 260ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
   opacity: 0;
 }

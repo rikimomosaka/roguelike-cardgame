@@ -22,6 +22,8 @@ const baseHand: BattleCardInstanceDto[] = [
     instanceId: 'c1',
     cardDefinitionId: 'strike',
     isUpgraded: false,
+    originalCost: 1,
+    currentCost: 1,
     costOverride: null,
     adjustedDescription: null,
     adjustedUpgradedDescription: null,
@@ -30,6 +32,8 @@ const baseHand: BattleCardInstanceDto[] = [
     instanceId: 'c2',
     cardDefinitionId: 'defend',
     isUpgraded: false,
+    originalCost: 1,
+    currentCost: 1,
     costOverride: null,
     adjustedDescription: null,
     adjustedUpgradedDescription: null,
@@ -38,6 +42,8 @@ const baseHand: BattleCardInstanceDto[] = [
     instanceId: 'play_card',
     cardDefinitionId: 'choose_card',
     isUpgraded: false,
+    originalCost: 1,
+    currentCost: 1,
     costOverride: null,
     adjustedDescription: null,
     adjustedUpgradedDescription: null,
@@ -51,7 +57,6 @@ const cardNames = {
 }
 const typeOf = () => 'skill' as const
 const rarityOf = () => 'c' as const
-const costOf = () => 1
 
 describe('CardChoiceModal Hand mode', () => {
   it('shows confirm button disabled until N selected', () => {
@@ -62,7 +67,6 @@ describe('CardChoiceModal Hand mode', () => {
         cardNames={cardNames}
         cardTypeOf={typeOf}
         cardRarityOf={rarityOf}
-        cardCostOf={costOf}
         onConfirm={vi.fn()}
       />,
     )
@@ -78,7 +82,6 @@ describe('CardChoiceModal Hand mode', () => {
         cardNames={cardNames}
         cardTypeOf={typeOf}
         cardRarityOf={rarityOf}
-        cardCostOf={costOf}
         onConfirm={vi.fn()}
       />,
     )
@@ -96,7 +99,6 @@ describe('CardChoiceModal Hand mode', () => {
         cardNames={cardNames}
         cardTypeOf={typeOf}
         cardRarityOf={rarityOf}
-        cardCostOf={costOf}
         onConfirm={onConfirm}
       />,
     )
@@ -117,6 +119,8 @@ describe('CardChoiceModal Hand mode', () => {
         instanceId: 'extra',
         cardDefinitionId: 'fire',
         isUpgraded: false,
+        originalCost: 2,
+        currentCost: 0,
         costOverride: null,
         adjustedDescription: null,
         adjustedUpgradedDescription: null,
@@ -130,7 +134,6 @@ describe('CardChoiceModal Hand mode', () => {
         cardNames={{ ...cardNames, fire: 'Fire' }}
         cardTypeOf={typeOf}
         cardRarityOf={rarityOf}
-        cardCostOf={costOf}
         onConfirm={onConfirm}
       />,
     )
@@ -158,6 +161,8 @@ const drawPile: BattleCardInstanceDto[] = [
     instanceId: 'd1',
     cardDefinitionId: 'fire',
     isUpgraded: false,
+    originalCost: 2,
+    currentCost: 2,
     costOverride: null,
     adjustedDescription: null,
     adjustedUpgradedDescription: null,
@@ -166,6 +171,8 @@ const drawPile: BattleCardInstanceDto[] = [
     instanceId: 'd2',
     cardDefinitionId: 'ice',
     isUpgraded: true,
+    originalCost: 3,
+    currentCost: 3,
     costOverride: null,
     adjustedDescription: null,
     adjustedUpgradedDescription: null,
@@ -182,7 +189,6 @@ describe('CardChoiceModal List mode', () => {
         cardNames={{ fire: '炎', ice: '氷' }}
         cardTypeOf={typeOf}
         cardRarityOf={rarityOf}
-        cardCostOf={costOf}
         onConfirm={vi.fn()}
       />,
     )
@@ -201,7 +207,6 @@ describe('CardChoiceModal List mode', () => {
         cardNames={{ fire: '炎', ice: '氷' }}
         cardTypeOf={typeOf}
         cardRarityOf={rarityOf}
-        cardCostOf={costOf}
         onConfirm={onConfirm}
       />,
     )

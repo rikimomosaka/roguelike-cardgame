@@ -19,6 +19,8 @@ public static class RunActions
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(map);
 
+        EnsureCurrentNodeIsResolved(state, map);
+
         if (targetNodeId < 0 || targetNodeId >= map.Nodes.Length)
             throw new ArgumentException(
                 $"targetNodeId {targetNodeId} is out of range [0..{map.Nodes.Length - 1}]",
@@ -35,5 +37,28 @@ public static class RunActions
             CurrentNodeId = targetNodeId,
             VisitedNodeIds = state.VisitedNodeIds.Add(targetNodeId),
         };
+    }
+
+    private static void EnsureCurrentNodeIsResolved(RunState state, DungeonMap map)
+    {
+        if (state.Progress != RunProgress.InProgress)
+            throw new InvalidOperationException("Cannot move after the run has ended");
+        if (state.ActiveBattle is not null)
+            throw new InvalidOperationException("Cannot leave the current node while a battle is active");
+        if (state.ActiveReward is not null)
+            throw new InvalidOperationException("Cannot leave the current node while a reward is pending");
+        if (state.ActiveEvent is { ChosenIndex: null })
+            throw new InvalidOperationException("Cannot leave the current node before choosing an event option");
+        if (state.ActiveRestPending && !state.ActiveRestCompleted)
+            throw new InvalidOperationException("Cannot leave the current node before choosing a rest action");
+        if (state.ActiveActStartRelicChoice is not null)
+            throw new InvalidOperationException("Cannot leave the current node before choosing an act-start relic");
+        if (state.CurrentNodeId == map.StartNodeId
+            && !state.VisitedNodeIds.Contains(state.CurrentNodeId))
+            throw new InvalidOperationException(
+                "Cannot leave the start node before completing the act-start relic choice");
+
+        // Merchant inventory is intentionally not checked. Leaving a shop without
+        // purchasing anything is a valid player choice.
     }
 }

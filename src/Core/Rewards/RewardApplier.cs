@@ -2,6 +2,7 @@ using System;
 using System.Collections.Immutable;
 using System.Linq;
 using RoguelikeCardGame.Core.Data;
+using RoguelikeCardGame.Core.Relics;
 using RoguelikeCardGame.Core.Run;
 
 namespace RoguelikeCardGame.Core.Rewards;
@@ -81,13 +82,16 @@ public static class RewardApplier
         var r = Require(s);
         if (r.RelicId is null) throw new InvalidOperationException("No relic to claim");
         if (r.RelicClaimed) throw new InvalidOperationException("Relic already claimed");
+        if (RelicPoolHelper.GetActStartReservedIds(catalog).Contains(r.RelicId))
+            throw new InvalidOperationException(
+                $"Act-start relic \"{r.RelicId}\" cannot be claimed from a normal reward");
         var newRelics = s.Relics.Append(r.RelicId).ToList();
         var s1 = s with
         {
             Relics = newRelics,
             ActiveReward = r with { RelicClaimed = true },
         };
-        s1 = Relics.NonBattleRelicEffects.ApplyOnPickup(s1, r.RelicId, catalog);
+        s1 = NonBattleRelicEffects.ApplyOnPickup(s1, r.RelicId, catalog);
         return Bestiary.BestiaryTracker.NoteRelicsAcquired(s1, new[] { r.RelicId });
     }
 

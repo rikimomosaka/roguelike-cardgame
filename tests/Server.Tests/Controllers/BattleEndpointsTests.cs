@@ -31,7 +31,8 @@ public class BattleEndpointsTests : IClassFixture<TempDataFactory>
         var client = _factory.CreateClient();
         await BattleTestHelpers.EnsureAccountAsync(client, "bob");
         BattleTestHelpers.WithAccount(client, "bob");
-        await BattleTestHelpers.StartRunAndMoveToEnemyAsync(client);
+        await BattleTestHelpers.StartRunAndMoveToEnemyAsync(
+            client, _factory.Services, "bob");
 
         var res = await client.PostAsJsonAsync("/api/v1/runs/current/battle/win", new { elapsedSeconds = 1 });
         Assert.Equal(HttpStatusCode.OK, res.StatusCode);

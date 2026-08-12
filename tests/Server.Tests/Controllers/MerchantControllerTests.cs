@@ -101,6 +101,21 @@ public class MerchantControllerTests : IClassFixture<TempDataFactory>
             runEl = snap.RootElement.GetProperty("run");
         }
 
+        if (runEl.GetProperty("activeEvent").ValueKind != JsonValueKind.Null
+            && runEl.GetProperty("activeEvent").GetProperty("chosenIndex").ValueKind == JsonValueKind.Null)
+        {
+            int choiceIndex = 0;
+            foreach (var choice in runEl.GetProperty("activeEvent").GetProperty("choices").EnumerateArray())
+            {
+                if (choice.GetProperty("conditionMet").GetBoolean()) break;
+                choiceIndex++;
+            }
+            (await client.PostAsJsonAsync(
+                "/api/v1/event/choose", new { choiceIndex })).EnsureSuccessStatusCode();
+            snap = await GetSnapshotAsync(client);
+            runEl = snap.RootElement.GetProperty("run");
+        }
+
         if (runEl.GetProperty("activeReward").ValueKind != JsonValueKind.Null)
         {
             var gold = await client.PostAsync("/api/v1/runs/current/reward/gold", null);
@@ -134,6 +149,15 @@ public class MerchantControllerTests : IClassFixture<TempDataFactory>
                 }
             }
         }
+
+        snap = await GetSnapshotAsync(client);
+        runEl = snap.RootElement.GetProperty("run");
+        if (runEl.GetProperty("activeRestPending").GetBoolean()
+            && !runEl.GetProperty("activeRestCompleted").GetBoolean())
+        {
+            (await client.PostAsync("/api/v1/rest/heal", content: null))
+                .EnsureSuccessStatusCode();
+        }
     }
 
     private async Task TraverseIntermediateAsync(HttpClient client, int nodeId, string accountId)
@@ -157,6 +181,8 @@ public class MerchantControllerTests : IClassFixture<TempDataFactory>
 
         var newRes = await client.PostAsync("/api/v1/runs/new", content: null);
         newRes.EnsureSuccessStatusCode();
+        await BattleTestHelpers.MarkActStartResolvedForTestAsync(
+            _factory.Services, accountId);
         var doc = JsonDocument.Parse(await newRes.Content.ReadAsStringAsync());
         var map = ParseMap(doc);
         var path = FindShortestPath(map, "Merchant");

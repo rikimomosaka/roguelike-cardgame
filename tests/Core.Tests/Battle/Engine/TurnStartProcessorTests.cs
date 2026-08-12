@@ -47,12 +47,82 @@ public class TurnStartProcessorTests
         Assert.Equal(2, next.Turn);
     }
 
-    [Fact] public void Refills_energy_to_max()
+    [Theory]
+    [InlineData(BattleOutcome.Victory, BattlePhase.PlayerInput)]
+    [InlineData(BattleOutcome.Pending, BattlePhase.Resolved)]
+    public void Terminal_state_is_a_no_op(
+        BattleOutcome outcome, BattlePhase phase)
     {
-        var s = MakeState(Deck(10), energy: 0, energyMax: 3);
+        var state = MakeState(
+            Deck(10),
+            hand: ImmutableArray.Create(
+                BattleFixtures.MakeBattleCard("strike", "held")),
+            turn: 4,
+            energy: 2,
+            energyMax: 3) with
+        {
+            Outcome = outcome,
+            Phase = phase,
+        };
+        var rng = new FakeRng(new int[100], new double[0]);
+
+        var (next, events) = TurnStartProcessor.Process(
+            state, rng, BattleFixtures.MinimalCatalog());
+
+        Assert.Same(state, next);
+        Assert.Empty(events);
+        Assert.Equal(4, next.Turn);
+        Assert.Equal(2, next.Energy);
+        Assert.Single(next.Hand);
+        Assert.Equal(10, next.DrawPile.Length);
+    }
+
+    [Fact]
+    public void Resets_turn_max_combo_even_when_called_directly()
+    {
+        var s = MakeState(Deck(10)) with
+        {
+            ComboCount = 3,
+            MaxComboThisTurn = 6,
+            LastPlayedOrigCost = 2,
+            NextCardComboFreePass = true,
+            WildUsedInCurrentCombo = true,
+        };
+        var rng = new FakeRng(new int[100], new double[0]);
+
+        var (next, _) = TurnStartProcessor.Process(s, rng, BattleFixtures.MinimalCatalog());
+
+        Assert.Equal(0, next.ComboCount);
+        Assert.Equal(0, next.MaxComboThisTurn);
+        Assert.Null(next.LastPlayedOrigCost);
+        Assert.False(next.NextCardComboFreePass);
+        Assert.False(next.WildUsedInCurrentCombo);
+    }
+
+    [Theory]
+    [InlineData(0, 3, 3)]
+    [InlineData(2, 3, 5)]
+    [InlineData(5, 4, 9)]
+    [InlineData(int.MaxValue - 1, 3, int.MaxValue)]
+    [InlineData(int.MaxValue, 3, int.MaxValue)]
+    public void Adds_energy_per_turn_to_carried_energy_without_overflow(
+        int currentEnergy, int energyPerTurn, int expected)
+    {
+        var s = MakeState(Deck(10), energy: currentEnergy, energyMax: energyPerTurn);
         var rng = new FakeRng(new int[100], new double[0]);
         var (next, _) = TurnStartProcessor.Process(s, rng, BattleFixtures.MinimalCatalog());
-        Assert.Equal(3, next.Energy);
+        Assert.Equal(expected, next.Energy);
+    }
+
+    [Fact]
+    public void Zero_energy_per_turn_preserves_carried_energy()
+    {
+        var s = MakeState(Deck(10), energy: 7, energyMax: 0);
+        var rng = new FakeRng(new int[100], new double[0]);
+
+        var (next, _) = TurnStartProcessor.Process(s, rng, BattleFixtures.MinimalCatalog());
+
+        Assert.Equal(7, next.Energy);
     }
 
     [Fact] public void Draws_five_cards_when_draw_pile_sufficient()

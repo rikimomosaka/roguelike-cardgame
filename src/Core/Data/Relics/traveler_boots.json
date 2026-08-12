@@ -12,7 +12,13 @@
                                       "rarity":  1,
                                       "description":  "蜜を集めるように、こまめな歩みに小さな実りをもたらすお守り。",
                                       "effects":  [
-
+                                                      {
+                                                          "action":  "gainGold",
+                                                          "scope":   "self",
+                                                          "target":  null,
+                                                          "amount":  1,
+                                                          "trigger": "OnMapTileResolved"
+                                                      }
                                                   ],
                                       "implemented":  true
                                   }

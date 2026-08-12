@@ -68,6 +68,90 @@ public class PlayerAttackingResolverOnEnemyDeathTests
     }
 
     [Fact]
+    public void All_hit_finishes_all_target_events_before_OnEnemyDeath_events()
+    {
+        var relic = BattleFixtures.Relic("od", "OnEnemyDeath", true,
+            new CardEffect("block", EffectScope.Self, null, 1));
+        var catalog = BattleFixtures.MinimalCatalog(relics: new[] { relic });
+        var hero = BattleFixtures.Hero() with
+        {
+            AttackAll = AttackPool.Empty.Add(100),
+        };
+        var state = BattleFixtures.MinimalState(
+            allies: ImmutableArray.Create(hero),
+            enemies: ImmutableArray.Create(
+                BattleFixtures.Goblin(slotIndex: 0, hp: 5),
+                BattleFixtures.Goblin(slotIndex: 1, hp: 5)),
+            ownedRelicIds: ImmutableArray.Create("od"));
+
+        var (_, events) = PlayerAttackingResolver.Resolve(state, MakeRng(), catalog);
+
+        int lastHitEvent = events
+            .Select((battleEvent, index) => (battleEvent, index))
+            .Where(item => item.battleEvent.HitIndex == 0)
+            .Max(item => item.index);
+        int firstRelicEvent = events
+            .Select((battleEvent, index) => (battleEvent, index))
+            .First(item => item.battleEvent.Note?.Contains("relic:od") == true)
+            .index;
+
+        Assert.True(firstRelicEvent > lastHitEvent);
+    }
+
+    [Fact]
+    public void OnEnemyDeath_buff_affects_the_next_All_hit_not_later_targets_of_the_same_hit()
+    {
+        var relic = BattleFixtures.Relic("od", "OnEnemyDeath", true,
+            new CardEffect("buff", EffectScope.Self, null, 10, Name: "strength"));
+        var catalog = BattleFixtures.MinimalCatalog(relics: new[] { relic });
+        var hero = BattleFixtures.Hero() with
+        {
+            AttackAll = AttackPool.Empty.Add(5).Add(5),
+        };
+        var state = BattleFixtures.MinimalState(
+            allies: ImmutableArray.Create(hero),
+            enemies: ImmutableArray.Create(
+                BattleFixtures.Goblin(slotIndex: 0, hp: 5),
+                BattleFixtures.Goblin(slotIndex: 1, hp: 100)),
+            ownedRelicIds: ImmutableArray.Create("od"));
+
+        var (after, _) = PlayerAttackingResolver.Resolve(state, MakeRng(), catalog);
+
+        // hit 0: 両方へ5。その後Strength +10。hit 1: 生存中のslot 1へ15。
+        Assert.Equal(80, after.Enemies[1].CurrentHp);
+        Assert.Equal(10, after.Allies[0].GetStatus("strength"));
+    }
+
+    [Fact]
+    public void Attacker_death_after_an_All_hit_cancels_its_remaining_hits()
+    {
+        var relic = BattleFixtures.Relic("fatal_recoil", "OnEnemyDeath", true,
+            new CardEffect("selfDamage", EffectScope.Self, null, 99));
+        var catalog = BattleFixtures.MinimalCatalog(relics: new[] { relic });
+        var hero = BattleFixtures.Hero() with
+        {
+            AttackAll = AttackPool.Empty.Add(5).Add(5),
+        };
+        var state = BattleFixtures.MinimalState(
+            allies: ImmutableArray.Create(hero),
+            enemies: ImmutableArray.Create(
+                BattleFixtures.Goblin(slotIndex: 0, hp: 5),
+                BattleFixtures.Goblin(slotIndex: 1, hp: 100)),
+            ownedRelicIds: ImmutableArray.Create("fatal_recoil"));
+
+        var (after, events) = PlayerAttackingResolver.Resolve(state, MakeRng(), catalog);
+
+        Assert.False(after.Allies[0].IsAlive);
+        // hit 0 は開始時点の両対象へ完了。死亡後の hit 1 は不発。
+        Assert.Equal(95, after.Enemies[1].CurrentHp);
+        var attackEvents = events
+            .Where(e => e.Kind == BattleEventKind.AttackFire)
+            .ToList();
+        Assert.Equal(2, attackEvents.Count);
+        Assert.All(attackEvents, e => Assert.Equal(0, e.HitIndex));
+    }
+
+    [Fact]
     public void Attack_killing_zero_enemies_fires_no_OnEnemyDeath()
     {
         var relic = BattleFixtures.Relic("od", "OnEnemyDeath", true,

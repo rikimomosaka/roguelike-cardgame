@@ -52,9 +52,9 @@ public sealed class ActStartController : ControllerBase
         if (s.VisitedNodeIds.Contains(s.CurrentNodeId))
             return Problem(statusCode: StatusCodes.Status409Conflict, title: "スタートマスは通過済みです。");
 
-        // (rngSeed, act) から決定的にレリック選択 RNG を派生させる
-        var derivedSeed = unchecked((int)(uint)ActMapSeed.Derive(s.RngSeed, s.CurrentAct));
-        var rng = new SystemRng(unchecked(derivedSeed ^ 0x5ECF));
+        // Use a stable stream independent from map generation and elapsed play time.
+        var rng = new SystemRng(RunRngSeed.Derive(
+            s.RngSeed, s.CurrentAct, s.CurrentNodeId, RunRngPurpose.ActStartRelic));
         RunState updated;
         try
         {

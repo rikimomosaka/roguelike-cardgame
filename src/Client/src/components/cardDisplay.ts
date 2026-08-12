@@ -1,5 +1,6 @@
 import type { CardCatalog } from '../api/catalog'
 import type { CardRarity, CardType } from './Card'
+import { rarityCodeFromNumber } from './rarity'
 
 export type CardDisplay = {
   name: string
@@ -17,16 +18,6 @@ const TYPE_MAP: Record<string, CardType> = {
   curse: 'curse',
   status: 'status',
   unit: 'unit',
-}
-
-function rarityFromNumber(n: number): CardRarity {
-  switch (n) {
-    case 0: return 'c'
-    case 1: return 'r'
-    case 2: return 'e'
-    case 3: return 'l'
-    default: return 'c'
-  }
 }
 
 export function cardDisplay(
@@ -49,7 +40,7 @@ export function cardDisplay(
     name: entry.displayName ?? entry.name,
     cost: entry.cost ?? 0,
     type: TYPE_MAP[entry.cardType.toLowerCase()] ?? 'skill',
-    rarity: rarityFromNumber(entry.rarity),
+    rarity: rarityCodeFromNumber(entry.rarity),
     description: entry.description ?? '',
     upgradedDescription: entry.upgradedDescription ?? null,
   }

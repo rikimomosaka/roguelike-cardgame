@@ -65,6 +65,13 @@ export function EffectEditor({ effect, meta, allCardIds, onChange, onRemove, exc
                 patch.scope = 'self'
                 patch.side = null
               }
+              if (newAction === 'modifyCardCost') {
+                patch.pile = effect.pile ?? 'hand'
+                patch.select = effect.select ?? 'choose'
+                patch.cardCount = effect.cardCount ?? 1
+                patch.costDuration = effect.costDuration ?? 'untilPlayed'
+                patch.amount = effect.amount === 0 ? -1 : effect.amount
+              }
               set(patch)
             }}
             aria-label="effect action"
@@ -216,6 +223,33 @@ export function EffectEditor({ effect, meta, allCardIds, onChange, onRemove, exc
             </select>
           </label>
         )}
+        {fields.includes('cardCount') && effect.select !== 'all' && (
+          <label className="effect-editor__label">
+            対象カード枚数
+            <input
+              type="number"
+              min={1}
+              value={effect.cardCount ?? 1}
+              onChange={(e) => set({
+                cardCount: Math.max(1, parseInt(e.target.value, 10) || 1),
+              })}
+              aria-label="effect card count"
+            />
+          </label>
+        )}
+        {fields.includes('costDuration') && (
+          <label className="effect-editor__label">
+            コスト変更の期限
+            <select
+              value={effect.costDuration ?? 'untilPlayed'}
+              onChange={(e) => set({ costDuration: e.target.value || null })}
+              aria-label="effect cost duration"
+            >
+              <option value="untilPlayed">使用するまで</option>
+              <option value="untilTurnEnd">このターン終了まで</option>
+            </select>
+          </label>
+        )}
         {fields.includes('cardRefId') && (
           <label className="effect-editor__label">
             参照カード
@@ -246,6 +280,22 @@ export function EffectEditor({ effect, meta, allCardIds, onChange, onRemove, exc
                 </option>
               ))}
             </select>
+          </label>
+        )}
+        {fields.includes('trigger') && effect.trigger === 'OnHit' && (
+          <label className="effect-editor__label">
+            発動確率（%）
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={effect.chancePercent ?? 100}
+              onChange={(e) => {
+                const value = Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0))
+                set({ chancePercent: value })
+              }}
+              aria-label="effect chance percent"
+            />
           </label>
         )}
         {fields.includes('comboMin') && (
@@ -328,6 +378,7 @@ function triggerJp(t: string): string {
     case 'OnPlayCard': return 'カードプレイ時'
     case 'OnEnemyDeath': return '敵撃破時'
     case 'OnDamageReceived': return 'ダメージ受け時'
+    case 'OnHit': return '攻撃命中時'
     case 'OnCombo': return 'コンボ達成時'
     case 'OnMapTileResolved': return 'マスイベント解決後'
     case 'OnCardDiscarded': return 'カード捨て時'
@@ -353,15 +404,16 @@ function actionJp(a: string): string {
     case 'draw':              return `ドロー (${a})`
     case 'discard':           return `カード捨て (${a})`
     case 'gainEnergy':        return `エナジー獲得 (${a})`
-    case 'gainMaxEnergy':     return `最大エナジー増 (${a})`
+    case 'gainMaxEnergy':     return `ターン開始時エナジー追加量増 (${a})`
     case 'exhaustCard':       return `カード消去 (${a})`
     case 'upgrade':           return `カード強化 (${a})`
     case 'summon':            return `召喚 (${a})`
     case 'selfDamage':        return `自傷 (${a})`
     case 'addCard':           return `カード追加 (${a})`
     case 'recoverFromDiscard':return `捨札から戻す (${a})`
+    case 'modifyCardCost':     return `カードコスト変更 (${a})`
     // Phase 10.6.B Passive modifier 系
-    case 'energyPerTurnBonus':       return `エナジー最大値 + (${a})`
+    case 'energyPerTurnBonus':       return `ターン開始時エナジー追加量 + (${a})`
     case 'cardsDrawnPerTurnBonus':   return `毎ターン手札枚数 + (${a})`
     case 'goldRewardMultiplier':     return `戦闘ゴールド報酬 % (${a})`
     case 'shopPriceMultiplier':      return `ショップ価格 % (${a})`

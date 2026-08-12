@@ -144,6 +144,27 @@ public class RewardApplierTests
     }
 
     [Fact]
+    public void ClaimRelic_LegacyRewardWithActStartRelic_RejectsButCanBeSkipped()
+    {
+        var reservedId = Cat.ActStartRelicPools![3][0];
+        var s = StateWithReward(new RewardState(
+            Gold: 0, GoldClaimed: true,
+            PotionId: null, PotionClaimed: true,
+            CardChoices: ImmutableArray<string>.Empty,
+            CardStatus: CardRewardStatus.Claimed,
+            RelicId: reservedId,
+            RelicClaimed: false));
+
+        var ex = Assert.Throws<System.InvalidOperationException>(() =>
+            RewardApplier.ClaimRelic(s, Cat));
+
+        Assert.Contains("Act-start relic", ex.Message);
+        Assert.DoesNotContain(reservedId, s.Relics);
+        Assert.False(s.ActiveReward!.RelicClaimed);
+        Assert.Null(RewardApplier.Proceed(s).ActiveReward);
+    }
+
+    [Fact]
     public void ClaimRelic_AlreadyClaimed_Throws()
     {
         var s = StateWithReward(new RewardState(
@@ -173,8 +194,6 @@ public class RewardApplierTests
     [Fact]
     public void ClaimRelic_AddsRelicAndClearsRewardState()
     {
-        // Phase 10.5.L1.5: extra_max_hp の base effects=[] (リセット済み) なので、
-        // OnPickup 発火による MaxHp 加算は確認できない。Relics list 追加のみを検証。
         var s0 = StateWithReward(new RewardState(
             0, true, null, true,
             ImmutableArray<string>.Empty, CardRewardStatus.Claimed,
@@ -183,6 +202,8 @@ public class RewardApplierTests
         var s1 = RewardApplier.ClaimRelic(s0, Cat);
         Assert.Contains("extra_max_hp", s1.Relics);
         Assert.True(s1.ActiveReward!.RelicClaimed);
+        Assert.Equal(87, s1.MaxHp);
+        Assert.Equal(57, s1.CurrentHp);
     }
 
     [Fact]

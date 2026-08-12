@@ -113,4 +113,38 @@ public class SummonResolverBuffDebuffHealTests
             && e.TargetInstanceId == injured.InstanceId
             && e.Amount == 8);
     }
+
+    [Fact]
+    public void Summon_effect_after_kill_preserves_OnEnemyDeath_updates_to_the_summon()
+    {
+        var hero = BattleFixtures.Hero(70);
+        var summon = BattleFixtures.SummonActor(
+                "guardian_inst", "guardian", 1, hp: 10, moveId: "strike_guard")
+            with { CurrentHp = 5 };
+        var unitDef = UnitWithMove("guardian", "strike_guard", MoveKind.Attack, hp: 10,
+            new CardEffect("attack", EffectScope.Single, EffectSide.Enemy, 10),
+            new CardEffect("block", EffectScope.Self, null, 2));
+        var deathBoon = BattleFixtures.Relic("death_boon", "OnEnemyDeath", true,
+            new CardEffect("block", EffectScope.All, EffectSide.Ally, 3),
+            new CardEffect("heal", EffectScope.All, EffectSide.Ally, 4),
+            new CardEffect("buff", EffectScope.All, EffectSide.Ally, 1, Name: "strength"));
+        var goblinDef = BattleFixtures.GoblinDef(hp: 5, attack: 1);
+        var catalog = BattleFixtures.MinimalCatalog(
+            enemies: new[] { goblinDef },
+            units: new[] { unitDef },
+            relics: new[] { deathBoon });
+        var state = State(
+            new[] { hero, summon },
+            BattleFixtures.Goblin(hp: 5)) with
+        {
+            OwnedRelicIds = ImmutableArray.Create("death_boon"),
+        };
+
+        var (next, _) = PlayerAttackingResolver.Resolve(state, Rng(), catalog);
+
+        var afterSummon = next.Allies.First(a => a.InstanceId == summon.InstanceId);
+        Assert.Equal(9, afterSummon.CurrentHp);
+        Assert.Equal(1, afterSummon.GetStatus("strength"));
+        Assert.Equal(5, afterSummon.Block.RawTotal);
+    }
 }

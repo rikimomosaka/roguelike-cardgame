@@ -52,6 +52,7 @@ type Props = {
   onDiscardPotion: (slotIndex: number) => void
   /** 戦闘中の potion 使用ハンドラ。指定されると menu に「使う」が出る。 */
   onUsePotion?: (slotIndex: number) => void
+  outsideBattlePotionUseOnly?: boolean
   onOpenMenu: () => void
   menuActive?: boolean
   onTogglePeek?: () => void
@@ -71,6 +72,28 @@ function formatElapsed(totalSeconds: number): string {
   return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`
 }
 
+function ElapsedTimer({ initialSeconds }: { initialSeconds: number }) {
+  const [elapsedSeconds, setElapsedSeconds] = useState(initialSeconds)
+
+  useEffect(() => {
+    const startedAt = Date.now()
+    const id = window.setInterval(() => {
+      setElapsedSeconds(initialSeconds + (Date.now() - startedAt) / 1000)
+    }, 1000)
+    return () => window.clearInterval(id)
+  }, [initialSeconds])
+
+  const label = formatElapsed(elapsedSeconds)
+  return (
+    <span
+      className="topbar__group topbar__timer"
+      aria-label={`経過時間 ${label}`}
+    >
+      <span className="topbar__num topbar__timer-text">{label}</span>
+    </span>
+  )
+}
+
 export function TopBar({
   currentHp,
   maxHp,
@@ -80,6 +103,7 @@ export function TopBar({
   relics,
   onDiscardPotion,
   onUsePotion,
+  outsideBattlePotionUseOnly,
   onOpenMenu,
   menuActive,
   onTogglePeek,
@@ -88,21 +112,6 @@ export function TopBar({
   playSeconds,
 }: Props) {
   const [deckOpen, setDeckOpen] = useState(false)
-  // Re-sync the displayed timer whenever the server-side baseline changes.
-  const baselineRef = useRef<{ seconds: number; at: number }>({
-    seconds: playSeconds ?? 0,
-    at: Date.now(),
-  })
-  useEffect(() => {
-    baselineRef.current = { seconds: playSeconds ?? 0, at: Date.now() }
-  }, [playSeconds])
-  const [now, setNow] = useState<number>(() => Date.now())
-  useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 1000)
-    return () => window.clearInterval(id)
-  }, [])
-  const elapsedSec = baselineRef.current.seconds + (now - baselineRef.current.at) / 1000
-  const elapsedLabel = formatElapsed(elapsedSec)
   // Drag-scroll for the relics row. Long-press (mousedown) then drag horizontally.
   const relicsRef = useRef<HTMLUListElement | null>(null)
   const dragRef = useRef<{ startX: number; startScroll: number; pointerId: number } | null>(null)
@@ -159,12 +168,10 @@ export function TopBar({
           <span className="topbar__num">{displayedGold}</span> GOLD
         </span>
       </span>
-      <span
-        className="topbar__group topbar__timer"
-        aria-label={`経過時間 ${elapsedLabel}`}
-      >
-        <span className="topbar__num topbar__timer-text">{elapsedLabel}</span>
-      </span>
+      <ElapsedTimer
+        key={playSeconds ?? 0}
+        initialSeconds={playSeconds ?? 0}
+      />
       <ul
         ref={relicsRef}
         className="topbar__relics"
@@ -188,6 +195,7 @@ export function TopBar({
             potionId={id}
             onDiscard={() => onDiscardPotion(i)}
             onUse={onUsePotion ? () => onUsePotion(i) : undefined}
+            outsideBattleUseOnly={outsideBattlePotionUseOnly}
           />
         ))}
       </div>
@@ -233,7 +241,6 @@ export function TopBar({
                           description={disp.description}
                           upgradedDescription={disp.upgradedDescription}
                           upgraded={card.upgraded}
-                          width={112}
                         />
                       </li>
                     )

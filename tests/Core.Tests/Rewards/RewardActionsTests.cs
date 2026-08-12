@@ -99,6 +99,22 @@ public class RewardActionsTests
     // ── Reroll テスト (Phase 10.6.B T7) ─────────────────────────────────
 
     [Fact]
+    public void AssignReward_RecordsPresentedCardChoicesAsSeen()
+    {
+        var s0 = Sample();
+        var reward = SampleReward() with
+        {
+            CardChoices = ImmutableArray.Create(
+                "reward_common_01", "reward_rare_01", "reward_epic_01"),
+            CardStatus = CardRewardStatus.Pending,
+        };
+
+        var s1 = RewardActions.AssignReward(s0, reward, s0.RewardRngState, BaseCatalog);
+
+        Assert.All(reward.CardChoices, id => Assert.Contains(id, s1.SeenCardBaseIds));
+    }
+
+    [Fact]
     public void Reroll_NoActiveReward_Throws()
     {
         var s = Sample();
@@ -174,6 +190,8 @@ public class RewardActionsTests
             new EnemyPool(1, EnemyTier.Weak), fake.RewardTables["act1"]);
 
         Assert.True(s2.ActiveReward!.RerollUsed);
+        Assert.All(s2.ActiveReward.CardChoices,
+            id => Assert.Contains(id, s2.SeenCardBaseIds));
         Assert.Equal(3, s2.ActiveReward!.CardChoices.Length); // bonus 無しなので 3 枚
         Assert.Equal(CardRewardStatus.Pending, s2.ActiveReward!.CardStatus);
     }

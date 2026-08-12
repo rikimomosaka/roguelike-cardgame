@@ -18,7 +18,7 @@ public class BossRewardFlowTests
     {
         var cat = EmbeddedDataLoader.LoadCatalog();
         var s = TestRunStates.FreshDefault(cat) with { CurrentAct = act };
-        var r = BossRewardFlow.GenerateBossReward(s, cat, new SystemRng(1));
+        var (r, _) = BossRewardFlow.GenerateBossReward(s, cat, new SystemRng(1));
         Assert.NotNull(r);
         Assert.True(r!.IsBossReward);
     }
@@ -28,8 +28,9 @@ public class BossRewardFlowTests
     {
         var cat = EmbeddedDataLoader.LoadCatalog();
         var s = TestRunStates.FreshDefault(cat) with { CurrentAct = RunConstants.MaxAct };
-        var r = BossRewardFlow.GenerateBossReward(s, cat, new SystemRng(1));
+        var (r, newRng) = BossRewardFlow.GenerateBossReward(s, cat, new SystemRng(1));
         Assert.Null(r);
+        Assert.Equal(s.RewardRngState, newRng);
     }
 
     [Fact]
@@ -54,6 +55,24 @@ public class BossRewardFlowTests
         Assert.NotNull(s1.ActiveReward);
         Assert.True(s1.ActiveReward!.IsBossReward);
         Assert.Equal(59, s1.Gold);
+    }
+
+    [Fact]
+    public void Resolve_NonFinalAct_PersistsGeneratedRewardRngState()
+    {
+        var cat = EmbeddedDataLoader.LoadCatalog();
+        var initialRng = new RoguelikeCardGame.Core.Rewards.RewardRngState(27, 6);
+        var s0 = TestRunStates.FreshDefault(cat) with
+        {
+            CurrentAct = 1,
+            RewardRngState = initialRng,
+        };
+
+        var s1 = BossRewardFlow.Resolve(s0, cat, new SystemRng(1));
+
+        Assert.Equal(initialRng.PotionChancePercent, s1.RewardRngState.PotionChancePercent);
+        Assert.Equal(initialRng.RareChanceBonusPercent + 1,
+            s1.RewardRngState.RareChanceBonusPercent);
     }
 
     private static DataCatalog BuildCatalogWithFakeRelic(

@@ -24,33 +24,20 @@ public class NonBattleRelicEffectsTests
             new System.DateTimeOffset(2026, 4, 22, 0, 0, 0, System.TimeSpan.Zero)
         ) with { CurrentHp = hp, MaxHp = maxHp, Gold = gold };
 
-    // Phase 10.5.L1.5: 36 base relic JSON は effects=[] にリセット済みなので、
-    // ApplyOnPickup / ApplyOnMapTileResolved / ApplyPassiveRestHealBonus の効果は
-    // base relic では発火しない (extra_max_hp / coin_purse / traveler_boots / warm_blanket
-    // を含む全 relic の effects=[])。テストは fake relic を catalog 注入で構築する。
-
     [Fact]
-    public void ApplyOnPickup_GainMaxHpEffect_IncreasesMaxHpAndCurrentHp()
+    public void ApplyOnPickup_ExtraMaxHp_IncreasesMaxHpAndCurrentHp()
     {
         var s0 = Sample(hp: 50, maxHp: 80);
-        var fake = BuildCatalogWithFakeRelic(
-            id: "fake_max_hp",
-            effects: new[] { new CardEffect(
-                "gainMaxHp", EffectScope.Self, null, 7, Trigger: "OnPickup") });
-        var s1 = NonBattleRelicEffects.ApplyOnPickup(s0, "fake_max_hp", fake);
+        var s1 = NonBattleRelicEffects.ApplyOnPickup(s0, "extra_max_hp", Catalog);
         Assert.Equal(87, s1.MaxHp);
         Assert.Equal(57, s1.CurrentHp);
     }
 
     [Fact]
-    public void ApplyOnPickup_GainGoldEffect_AddsGold()
+    public void ApplyOnPickup_CoinPurse_AddsGold()
     {
         var s0 = Sample(gold: 99);
-        var fake = BuildCatalogWithFakeRelic(
-            id: "fake_gold",
-            effects: new[] { new CardEffect(
-                "gainGold", EffectScope.Self, null, 50, Trigger: "OnPickup") });
-        var s1 = NonBattleRelicEffects.ApplyOnPickup(s0, "fake_gold", fake);
+        var s1 = NonBattleRelicEffects.ApplyOnPickup(s0, "coin_purse", Catalog);
         Assert.Equal(149, s1.Gold);
     }
 
@@ -67,14 +54,10 @@ public class NonBattleRelicEffectsTests
     }
 
     [Fact]
-    public void ApplyOnMapTileResolved_GainGoldEffect_GrantsOneGoldPerOwned()
+    public void ApplyOnMapTileResolved_TravelerBoots_GrantsOneGoldPerTile()
     {
-        var fake = BuildCatalogWithFakeRelic(
-            id: "fake_walker",
-            effects: new[] { new CardEffect(
-                "gainGold", EffectScope.Self, null, 1, Trigger: "OnMapTileResolved") });
-        var s0 = Sample(gold: 10) with { Relics = new List<string> { "fake_walker" } };
-        var s1 = NonBattleRelicEffects.ApplyOnMapTileResolved(s0, fake);
+        var s0 = Sample(gold: 10) with { Relics = new List<string> { "traveler_boots" } };
+        var s1 = NonBattleRelicEffects.ApplyOnMapTileResolved(s0, Catalog);
         Assert.Equal(11, s1.Gold);
     }
 
@@ -87,14 +70,10 @@ public class NonBattleRelicEffectsTests
     }
 
     [Fact]
-    public void ApplyPassiveRestHealBonus_PassiveRestHealBonusEffect_AddsBonus()
+    public void ApplyPassiveRestHealBonus_WarmBlanket_AddsTen()
     {
-        var fake = BuildCatalogWithFakeRelic(
-            id: "fake_warm",
-            effects: new[] { new CardEffect(
-                "restHealBonus", EffectScope.Self, null, 10, Trigger: "Passive") });
-        var s0 = Sample() with { Relics = new List<string> { "fake_warm" } };
-        int bonus = PassiveModifiers.ApplyPassiveRestHealBonus(0, s0, fake);
+        var s0 = Sample() with { Relics = new List<string> { "warm_blanket" } };
+        int bonus = PassiveModifiers.ApplyPassiveRestHealBonus(0, s0, Catalog);
         Assert.Equal(10, bonus);
     }
 

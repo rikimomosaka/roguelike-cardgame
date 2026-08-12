@@ -11,28 +11,91 @@
 /* ---- Campfire flicker decoration ---- */
 .rs-fire {
   align-self: center;
-  width: 140px;
-  height: 140px;
-  display: grid;
-  place-items: center;
-  margin: 0 0 4px;
-  filter: drop-shadow(0 0 14px rgba(255, 170, 60, 0.6))
-    drop-shadow(0 0 28px rgba(255, 80, 0, 0.42));
+  position: relative;
+  isolation: isolate;
+  width: 180px;
+  height: 180px;
+  flex: 0 0 180px;
+  margin: -8px 0 10px;
 }
 
-.rs-fire img {
+.rs-fire::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  left: 22px;
+  right: 22px;
+  top: 8px;
+  bottom: 30px;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at 50% 62%,
+    rgba(255, 205, 90, 0.28) 0%,
+    rgba(255, 105, 20, 0.15) 42%,
+    transparent 72%
+  );
+  animation: rs-fire-glow 720ms steps(4, end) infinite;
+}
+
+.rs-fire__logs,
+.rs-fire__flame-viewport {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  image-rendering: pixelated;
-  /* Brightness-only flicker — size stays fixed. */
-  animation: rs-flicker 1.4s ease-in-out infinite;
+  pointer-events: none;
 }
 
-@keyframes rs-flicker {
-  0%, 100% { filter: brightness(1); }
-  35%      { filter: brightness(1.18); }
-  65%      { filter: brightness(0.88); }
+.rs-fire__logs {
+  z-index: 1;
+  transform: translateY(18px);
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.65));
+}
+
+.rs-fire__flame-viewport {
+  z-index: 2;
+  transform: translateY(-12px);
+  overflow: hidden;
+  filter:
+    drop-shadow(0 0 8px rgba(255, 205, 75, 0.82))
+    drop-shadow(0 0 18px rgba(255, 82, 0, 0.58));
+}
+
+.rs-fire__flame {
+  display: block;
+  width: 600%;
+  max-width: none;
+  height: 100%;
+  image-rendering: pixelated;
+  pointer-events: none;
+  animation: rs-flame-sprite 720ms steps(6, jump-none) infinite;
+  will-change: transform;
+}
+
+@keyframes rs-flame-sprite {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-83.333333%, 0, 0); }
+}
+
+@keyframes rs-fire-glow {
+  0%, 100% { opacity: 0.78; transform: scale(0.96); }
+  25%      { opacity: 1; transform: scale(1.05); }
+  50%      { opacity: 0.68; transform: scale(0.92); }
+  75%      { opacity: 0.9; transform: scale(1.01); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rs-fire::before {
+    animation: none;
+  }
+
+  .rs-fire__flame {
+    /* Keep the requested frame animation visible even when Windows reports
+       reduced motion; only slow it down and remove the surrounding pulse. */
+    animation-duration: 1440ms;
+  }
 }
 
 /* ---- Actions row (choices + inline close button) ---- */
@@ -210,7 +273,7 @@
 }
 
 .rs-picker-item {
-  width: 128px;
+  width: var(--card-width);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -218,10 +281,6 @@
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.rs-picker-item > .card {
-  width: 100% !important;
 }
 
 .rs-picker-empty {
@@ -244,10 +303,6 @@
   border: none;
   cursor: pointer;
   transition: transform 0.12s ease;
-}
-
-.rs-picker-card > .card {
-  width: 100% !important;
 }
 
 .rs-picker-card:disabled {

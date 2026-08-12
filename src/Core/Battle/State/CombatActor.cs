@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using RoguelikeCardGame.Core.Battle.Events;
 
 namespace RoguelikeCardGame.Core.Battle.State;
 
@@ -26,8 +27,28 @@ public sealed record CombatActor(
     int? RemainingLifetimeTurns,                   // 10.2.D
     string? AssociatedSummonHeldInstanceId)        // 10.2.D
 {
+    /// <summary>
+    /// Logical player ownership for heroes and summons. Legacy battle snapshots omit
+    /// these fields; resolvers retain a solo-safe fallback for those snapshots.
+    /// Enemy actors normally leave both values null.
+    /// </summary>
+    public int? OwnerPlayerSlot { get; init; }
+    public string? OwnerActorInstanceId { get; init; }
+
+    /// <summary>
+    /// Last positive applier for each status. This init-only optional property keeps
+    /// old constructors and saves compatible; absent legacy data is an empty map.
+    /// </summary>
+    public ImmutableDictionary<string, CombatSource> StatusSources { get; init; } =
+        ImmutableDictionary<string, CombatSource>.Empty;
+
     public bool IsAlive => CurrentHp > 0;
 
     /// <summary>未保持なら 0 を返す。Statuses は 0 以下の amount を持たない不変条件。</summary>
     public int GetStatus(string id) => Statuses.TryGetValue(id, out var v) ? v : 0;
+
+    public CombatSource? GetStatusSource(string id) =>
+        Statuses.ContainsKey(id) && StatusSources.TryGetValue(id, out var source)
+            ? source
+            : null;
 }

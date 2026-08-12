@@ -36,6 +36,9 @@ public static class MerchantActions
             throw new InvalidOperationException($"Not enough gold ({s.Gold} < {offer.Price})");
         if (!catalog.TryGetRelic(relicId, out _))
             throw new ArgumentException($"unknown relic id \"{relicId}\"", nameof(relicId));
+        if (RelicPoolHelper.GetActStartReservedIds(catalog).Contains(relicId))
+            throw new InvalidOperationException(
+                $"Act-start relic \"{relicId}\" cannot be purchased from a merchant");
         var soldOffer = offer with { Sold = true };
         var s1 = s with
         {

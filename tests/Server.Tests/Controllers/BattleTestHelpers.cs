@@ -1,8 +1,12 @@
+using System;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using RoguelikeCardGame.Server.Abstractions;
 
 namespace RoguelikeCardGame.Server.Tests.Controllers;
 
@@ -23,15 +27,41 @@ internal static class BattleTestHelpers
     }
 
     /// <summary>
+    /// Test-only setup for scenarios that are unrelated to the act-start UI flow.
+    /// Production clients must complete /act-start/enter and /act-start/choose.
+    /// </summary>
+    public static async Task MarkActStartResolvedForTestAsync(
+        IServiceProvider services,
+        string accountId)
+    {
+        var saves = services.GetRequiredService<ISaveRepository>();
+        var state = await saves.TryLoadAsync(accountId, CancellationToken.None)
+            ?? throw new InvalidOperationException($"Run not found for {accountId}");
+        if (state.VisitedNodeIds.IndexOf(state.CurrentNodeId) >= 0) return;
+
+        await saves.SaveAsync(
+            accountId,
+            state with
+            {
+                VisitedNodeIds = state.VisitedNodeIds.Add(state.CurrentNodeId),
+            },
+            CancellationToken.None);
+    }
+
+    /// <summary>
     /// Starts a new run, fetches /current, finds a start-outgoing node whose effective kind is Enemy
     /// (checking unknownResolutions when tile is Unknown), moves there. Caller must have already
     /// set X-Account-Id header.
     /// </summary>
-    public static async Task StartRunAndMoveToEnemyAsync(HttpClient client)
+    public static async Task StartRunAndMoveToEnemyAsync(
+        HttpClient client,
+        IServiceProvider services,
+        string accountId)
     {
         var newRes = await client.PostAsync("/api/v1/runs/new", content: null);
         newRes.EnsureSuccessStatusCode();
         var doc = JsonDocument.Parse(await newRes.Content.ReadAsStringAsync());
+        await MarkActStartResolvedForTestAsync(services, accountId);
         int startId = doc.RootElement.GetProperty("run").GetProperty("currentNodeId").GetInt32();
 
         // Build a map from node id -> kind, plus unknownResolutions overlay.

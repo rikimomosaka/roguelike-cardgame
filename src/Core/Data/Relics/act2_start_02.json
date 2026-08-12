@@ -12,7 +12,13 @@
                                       "rarity":  1,
                                       "description":  "豪商が用いたという封蝋印。押された証文には金が集まると噂される。",
                                       "effects":  [
-
+                                                      {
+                                                          "action":  "gainGold",
+                                                          "scope":   "self",
+                                                          "target":  null,
+                                                          "amount":  100,
+                                                          "trigger": "OnPickup"
+                                                      }
                                                   ],
                                       "implemented":  true
                                   }

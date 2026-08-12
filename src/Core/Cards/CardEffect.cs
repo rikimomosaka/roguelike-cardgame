@@ -17,6 +17,8 @@ namespace RoguelikeCardGame.Core.Cards;
 /// <param name="Select">10.5.B reserved: discard 等の選択方式。"random" | "choose" | "all"。engine 動作は 10.5.F で実装。</param>
 /// <param name="AmountSource">10.5.B reserved: Variable X 等の amount ソース。"handCount" | "drawPileCount" 等。engine 動作は 10.5.D で実装。</param>
 /// <param name="Trigger">10.5.B reserved: power カードの発火タイミング。"OnTurnStart" | "OnPlayCard" 等。engine 動作は 10.5.E で実装。</param>
+/// <param name="CostDuration">modifyCardCost 専用。"untilPlayed" | "untilTurnEnd"。</param>
+/// <param name="CardCount">modifyCardCost で random/choose するカード枚数。Select=all では未使用。</param>
 public sealed record CardEffect(
     string Action,
     EffectScope Scope,
@@ -30,7 +32,10 @@ public sealed record CardEffect(
     string? CardRefId = null,
     string? Select = null,
     string? AmountSource = null,
-    string? Trigger = null)
+    string? Trigger = null,
+    int? ChancePercent = null,
+    string? CostDuration = null,
+    int? CardCount = null)
 {
     /// <summary>
     /// JSON ロード時の safety net 正規化。

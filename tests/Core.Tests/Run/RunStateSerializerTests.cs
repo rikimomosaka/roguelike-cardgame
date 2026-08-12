@@ -112,10 +112,37 @@ public class RunStateSerializerTests
     {
         // v3 の shape で schemaVersion だけ 99 にした JSON。
         // UnmappedMemberHandling.Disallow に引っかからず、schemaVersion check に到達する。
-        var original = SampleV4() with { SchemaVersion = 99 };
-        var json = RunStateSerializer.Serialize(original);
+        var json = RunStateSerializer.Serialize(SampleV4());
+        json = System.Text.RegularExpressions.Regex.Replace(
+            json, "\"schemaVersion\":\\d+", "\"schemaVersion\":99");
         var ex = Assert.Throws<RunStateSerializerException>(() => RunStateSerializer.Deserialize(json));
         Assert.Contains("schemaVersion", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Serialize_InvalidState_ThrowsBeforeWritingJson()
+    {
+        var invalid = SampleV4() with { PotionSlotCount = 2 };
+
+        var ex = Assert.Throws<RunStateSerializerException>(() =>
+            RunStateSerializer.Serialize(invalid));
+
+        Assert.Contains("before serialization", ex.Message);
+        Assert.Contains("Potion", ex.Message);
+    }
+
+    [Fact]
+    public void Deserialize_StructurallyInvalidCurrentState_Throws()
+    {
+        var json = RunStateSerializer.Serialize(SampleV4());
+        json = System.Text.RegularExpressions.Regex.Replace(
+            json, "\"potionSlotCount\":3", "\"potionSlotCount\":2");
+
+        var ex = Assert.Throws<RunStateSerializerException>(() =>
+            RunStateSerializer.Deserialize(json));
+
+        Assert.Contains("after deserialization", ex.Message);
+        Assert.Contains("Potion", ex.Message);
     }
 
     [Fact]

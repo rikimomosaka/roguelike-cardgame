@@ -1,5 +1,8 @@
 # Phase 10.2.C — コンボ + 対象指定 設計
 
+> **現行仕様の優先事項:** Wild / SuperWild の後続カード保護と再使用制限は
+> [`../../current-combo-spec.md`](../../current-combo-spec.md) を正とする。本文書内の Phase 10.2.C 当時の記述より優先する。
+
 > 作成日: 2026-04-26
 > 対象フェーズ: Phase 10.2.C（Phase 10.2 サブマイルストーン 3 番目 / 全 5 段階）
 > 親 spec: [`2026-04-25-phase10-battle-system-design.md`](2026-04-25-phase10-battle-system-design.md)

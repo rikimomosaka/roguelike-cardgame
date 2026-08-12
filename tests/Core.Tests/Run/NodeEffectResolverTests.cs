@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using RoguelikeCardGame.Core.Battle;
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Data;
@@ -75,6 +76,44 @@ public class NodeEffectResolverTests
         Assert.Empty(next.ActiveReward.CardChoices);
         Assert.NotNull(next.ActiveReward.RelicId);
         Assert.False(next.ActiveReward.RelicClaimed);
+    }
+
+    [Theory]
+    [InlineData(2, 40, 55)]
+    [InlineData(3, 55, 75)]
+    public void Resolve_Treasure_UsesCurrentActRewardTable(int act, int goldMin, int goldMax)
+    {
+        var cat = EmbeddedDataLoader.LoadCatalog();
+        var s = TestRunStates.FreshDefault(cat) with { CurrentAct = act };
+
+        var next = NodeEffectResolver.Resolve(
+            s, TileKind.Treasure, currentRow: 5, cat, new SequentialRng(1UL));
+
+        Assert.NotNull(next.ActiveReward);
+        Assert.InRange(next.ActiveReward!.Gold, goldMin, goldMax);
+    }
+
+    [Fact]
+    public void Resolve_Enemy_UsesCurrentActWeakRowThreshold()
+    {
+        var cat = EmbeddedDataLoader.LoadCatalog();
+        var tables = cat.RewardTables.ToDictionary(kv => kv.Key, kv => kv.Value);
+        tables["act2"] = tables["act2"] with
+        {
+            EnemyPoolRouting = new EnemyPoolRoutingConfig(WeakRowsThreshold: 0),
+        };
+        cat = cat with { RewardTables = tables };
+        var s = TestRunStates.FreshDefault(cat) with
+        {
+            CurrentAct = 2,
+            EncounterQueueWeak = ImmutableArray.Create("enc_w_act2_grunt"),
+            EncounterQueueStrong = ImmutableArray.Create("enc_s_act2_brute"),
+        };
+
+        var next = NodeEffectResolver.Resolve(
+            s, TileKind.Enemy, currentRow: 1, cat, new SequentialRng(1UL));
+
+        Assert.Equal("enc_s_act2_brute", next.ActiveBattle!.EncounterId);
     }
 
     [Fact]
@@ -201,6 +240,26 @@ public class NodeEffectResolverTests
         // Assert
         Assert.True(s1.ActiveRestPending);
         Assert.Equal(54, s1.Gold);
+    }
+
+    [Fact]
+    public void Resolve_ConcreteTile_FiresOnMapTileResolvedExactlyOnce()
+    {
+        var fake = BuildCatalogWithFakeRelic(
+            id: "tile_tithe",
+            effects: new[] { new CardEffect(
+                "gainGold", EffectScope.Self, null, 7, Trigger: "OnMapTileResolved") });
+        var s0 = TestRunStates.FreshDefault(fake) with
+        {
+            Gold = 100,
+            Relics = new List<string> { "tile_tithe" },
+        };
+
+        var s1 = NodeEffectResolver.Resolve(
+            s0, TileKind.Rest, currentRow: 5, fake, new SequentialRng(1UL));
+
+        Assert.True(s1.ActiveRestPending);
+        Assert.Equal(107, s1.Gold);
     }
 
     [Fact]

@@ -148,5 +148,29 @@ public class CardEffectParserTests
         Assert.Null(e.Select);
         Assert.Null(e.AmountSource);
         Assert.Null(e.Trigger);
+        Assert.Null(e.CostDuration);
+        Assert.Null(e.CardCount);
+    }
+
+    [Fact]
+    public void Parses_modify_card_cost_fields()
+    {
+        var e = Parse("""{"action":"modifyCardCost","scope":"self","amount":-2,"pile":"draw","select":"random","cardCount":3,"costDuration":"untilPlayed"}""");
+
+        Assert.Equal("modifyCardCost", e.Action);
+        Assert.Equal(-2, e.Amount);
+        Assert.Equal("draw", e.Pile);
+        Assert.Equal("random", e.Select);
+        Assert.Equal(3, e.CardCount);
+        Assert.Equal("untilPlayed", e.CostDuration);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(0)]
+    public void Non_positive_card_count_is_rejected(int count)
+    {
+        Assert.Throws<Exception>(() => Parse(
+            $$"""{"action":"modifyCardCost","scope":"self","amount":-1,"pile":"hand","select":"random","cardCount":{{count}},"costDuration":"untilPlayed"}"""));
     }
 }

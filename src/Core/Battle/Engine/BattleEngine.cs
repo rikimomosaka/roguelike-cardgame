@@ -36,7 +36,11 @@ public static partial class BattleEngine
             Statuses: ImmutableDictionary<string, int>.Empty,
             CurrentMoveId: null,
             RemainingLifetimeTurns: null,                  // 10.2.D
-            AssociatedSummonHeldInstanceId: null);         // 10.2.D
+            AssociatedSummonHeldInstanceId: null)          // 10.2.D
+        {
+            OwnerPlayerSlot = 0,
+            OwnerActorInstanceId = "hero_inst",
+        };
 
         // 2. 敵 CombatActor 生成
         var enemiesBuilder = ImmutableArray.CreateBuilder<CombatActor>();
@@ -67,8 +71,9 @@ public static partial class BattleEngine
         var drawPile = deckCards.ToImmutableArray();
 
         // 4. 初期 BattleState（Turn=0、TurnStartProcessor で +1 して Turn=1 へ）
-        // Phase 10.6.B: 所持 relic から passive modifier を適用した EnergyMax / DrawPerTurn を snapshot
-        int energyMaxFinal = Relics.PassiveModifiers.ApplyEnergyPerTurnBonus(InitialEnergy, run, catalog);
+        // Phase 10.6.B: 所持 relic からターン開始時エナジー追加量 / DrawPerTurn を snapshot。
+        // BattleState の EnergyMax は互換名であり、現在は保有上限を意味しない。
+        int energyPerTurnFinal = Relics.PassiveModifiers.ApplyEnergyPerTurnBonus(InitialEnergy, run, catalog);
         int drawPerTurnFinal = Relics.PassiveModifiers.ApplyCardsDrawnPerTurnBonus(TurnStartProcessor.BaseDrawPerTurn, run, catalog);
         var initial = new BattleState(
             Turn: 0,
@@ -78,7 +83,7 @@ public static partial class BattleEngine
             Enemies: enemiesBuilder.ToImmutable(),
             TargetAllyIndex: 0,
             TargetEnemyIndex: enemiesBuilder.Count > 0 ? 0 : (int?)null,
-            Energy: 0, EnergyMax: energyMaxFinal,
+            Energy: 0, EnergyMax: energyPerTurnFinal,
             DrawPile: drawPile,
             Hand: ImmutableArray<BattleCardInstance>.Empty,
             DiscardPile: ImmutableArray<BattleCardInstance>.Empty,
@@ -92,7 +97,12 @@ public static partial class BattleEngine
             Potions: run.Potions,                           // 10.2.E (already ImmutableArray<string>)
             EncounterId: encounterId,
             WildUsedInCurrentCombo: false,
-            DrawPerTurn: drawPerTurnFinal);
+            DrawPerTurn: drawPerTurnFinal)
+        {
+            MaxComboThisTurn = 0,
+            ComboGauge = 0,
+            UsedCharacterSkillIdsThisTurn = ImmutableHashSet<string>.Empty,
+        };
 
         var events = new List<BattleEvent>();
         int order = 0;
@@ -102,7 +112,7 @@ public static partial class BattleEngine
             BattleEventKind.BattleStart, Order: order++,
             Note: encounterId));
 
-        // 5. ターン 1 開始処理（5 ドロー、Energy=3、TurnStart イベント発火）
+        // 5. ターン 1 開始処理（5 ドロー、Energy=0+3、TurnStart イベント発火）
         var (afterTurnStart, evsTurnStart) = TurnStartProcessor.Process(initial, rng, catalog);
         foreach (var ev in evsTurnStart) { events.Add(ev with { Order = order++ }); }
 

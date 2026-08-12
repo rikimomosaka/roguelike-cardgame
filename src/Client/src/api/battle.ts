@@ -59,6 +59,20 @@ export async function usePotion(
   })
 }
 
+export async function useTacticalSkill(accountId: string): Promise<BattleActionResponseDto> {
+  return await apiRequest<BattleActionResponseDto>('POST', '/runs/current/battle/use-tactical-skill', {
+    accountId,
+    body: {},
+  })
+}
+
+export async function useUltimateSkill(accountId: string): Promise<BattleActionResponseDto> {
+  return await apiRequest<BattleActionResponseDto>('POST', '/runs/current/battle/use-ultimate-skill', {
+    accountId,
+    body: {},
+  })
+}
+
 export async function setBattleTarget(
   accountId: string,
   body: { side: 'Ally' | 'Enemy'; slotIndex: number },

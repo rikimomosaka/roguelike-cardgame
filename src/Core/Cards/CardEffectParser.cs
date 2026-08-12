@@ -35,10 +35,20 @@ public static class CardEffectParser
         string? select = GetOptionalString(el, "select");
         string? amountSource = GetOptionalString(el, "amountSource");
         string? trigger = GetOptionalString(el, "trigger");
+        int? chancePercent = el.TryGetProperty("chancePercent", out var chanceEl)
+            ? chanceEl.GetInt32()
+            : null;
+        if (chancePercent is < 0 or > 100)
+            throw makeException($"chancePercent must be between 0 and 100, got {chancePercent}");
+        string? costDuration = GetOptionalString(el, "costDuration");
+        int? cardCount = GetOptionalInt(el, "cardCount");
+        if (cardCount is <= 0)
+            throw makeException($"cardCount must be positive when specified, got {cardCount}");
 
         var raw = new CardEffect(action, scope, side, amount,
             Name: name, UnitId: unitId, ComboMin: comboMin, Pile: pile, BattleOnly: battleOnly,
-            CardRefId: cardRefId, Select: select, AmountSource: amountSource, Trigger: trigger);
+            CardRefId: cardRefId, Select: select, AmountSource: amountSource, Trigger: trigger,
+            ChancePercent: chancePercent, CostDuration: costDuration, CardCount: cardCount);
         return raw.Normalize();
     }
 

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using RoguelikeCardGame.Core.Battle.Events;
 using RoguelikeCardGame.Core.Battle.State;
 using RoguelikeCardGame.Core.Data;
@@ -27,6 +26,7 @@ public static partial class BattleEngine
         if (state.Phase != BattlePhase.PlayerInput)
             throw new InvalidOperationException(
                 $"UsePotion requires Phase=PlayerInput, got {state.Phase}");
+        RejectWhileCardChoiceIsPending(state, "UsePotion");
 
         if (potionIndex < 0 || potionIndex >= state.Potions.Length)
             throw new InvalidOperationException(
@@ -39,9 +39,10 @@ public static partial class BattleEngine
         if (!catalog.TryGetPotion(potionId, out var def))
             throw new InvalidOperationException($"potion '{potionId}' not in catalog");
 
-        var caster = state.Allies.FirstOrDefault(a => a.DefinitionId == "hero");
-        if (caster is null || !caster.IsAlive)
+        var owner = ProvisionalSoloHeroOwnerResolver.Resolve(state);
+        if (owner is null)
             throw new InvalidOperationException("hero not available");
+        var caster = owner.Hero;
 
         var s = state with
         {
@@ -49,22 +50,44 @@ public static partial class BattleEngine
             TargetAllyIndex = targetAllyIndex ?? state.TargetAllyIndex,
         };
 
+        var useSource = new CombatSource(
+            CombatSourceKind.PotionEffect,
+            OwnerSlot: caster.OwnerPlayerSlot ?? caster.SlotIndex,
+            OwnerInstanceId: caster.OwnerActorInstanceId ?? caster.InstanceId,
+            ActorInstanceId: caster.InstanceId,
+            DefinitionId: def.Id);
         var events = new List<BattleEvent>
         {
             new(BattleEventKind.UsePotion, Order: 0,
                 CasterInstanceId: caster.InstanceId,
                 CardId: def.Id,
-                Amount: potionIndex),
+                Amount: potionIndex,
+                Source: useSource),
         };
         int order = 1;
 
-        foreach (var eff in def.Effects)
+        for (int effectIndex = 0; effectIndex < def.Effects.Count; effectIndex++)
         {
-            var (afterEff, evs) = EffectApplier.Apply(s, caster, eff, rng, catalog);
+            var eff = def.Effects[effectIndex];
+            var source = useSource with
+            {
+                EffectIndex = effectIndex,
+                Scope = eff.Scope.ToString().ToLowerInvariant(),
+            };
+            var (afterEff, evs) = EffectApplier.Apply(
+                s, caster, eff, rng, catalog, source);
             s = afterEff;
-            foreach (var ev in evs) { events.Add(ev with { Order = order++ }); }
-            caster = s.Allies.FirstOrDefault(a => a.DefinitionId == "hero");
-            if (caster is null || !caster.IsAlive) break;
+            foreach (var ev in evs)
+            {
+                events.Add(ev with
+                {
+                    Order = order++,
+                    Source = ev.Source ?? source,
+                });
+            }
+            owner = ProvisionalSoloHeroOwnerResolver.Resolve(s);
+            if (owner is null) break;
+            caster = owner.Hero;
         }
 
         s = s with { Potions = s.Potions.SetItem(potionIndex, "") };

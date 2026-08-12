@@ -33,6 +33,13 @@ public enum BattleEventKind
     AddCard            = 20,
     /// <summary>カードを discard pile から hand or exhaust に戻した。</summary>
     RecoverFromDiscard = 21,
-    /// <summary>EnergyMax を増加させた (永続)。</summary>
+    /// <summary>ターン開始時のエナジー追加量（互換名 EnergyMax）を増加させた。</summary>
     GainMaxEnergy      = 22,
+
+    /// <summary>キャラクター固有スキルを使用した。</summary>
+    UseCharacterSkill  = 23,
+    /// <summary>コンボゲージが増減した。</summary>
+    ComboGaugeChanged  = 24,
+    /// <summary>カード個体へコスト増減modifierを付与した。</summary>
+    ModifyCardCost     = 25,
 }

@@ -13,4 +13,12 @@ public sealed record BattleEvent(
     string? TargetInstanceId = null,
     int? Amount = null,
     string? CardId = null,
-    string? Note = null);
+    string? Note = null,
+    int? BlockedAmount = null,
+    int? HitIndex = null,
+    DamageType? DamageType = null,
+    CombatSource? Source = null,
+    DamageCauseChain? CauseChain = null,
+    int? ActualHpLoss = null,
+    int? Overkill = null,
+    bool? HitLanded = null);

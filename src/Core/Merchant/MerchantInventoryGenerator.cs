@@ -62,9 +62,9 @@ public static class MerchantInventoryGenerator
     private static ImmutableArray<MerchantOffer> PickRelics(
         DataCatalog catalog, MerchantPrices prices, RunState s, IRng rng, int count)
     {
-        var candidates = catalog.Relics.Values
+        var candidates = Relics.RelicPoolHelper.GetNormalAcquisitionRelics(catalog)
             .Where(r => !s.Relics.Contains(r.Id) && prices.Relics.ContainsKey(r.Rarity))
-            .OrderBy(r => r.Id)
+            .OrderBy(r => r.Id, System.StringComparer.Ordinal)
             .ToList();
         return PickFromPool(candidates, count, rng,
             def => new MerchantOffer("relic", def.Id, prices.Relics[def.Rarity], false));

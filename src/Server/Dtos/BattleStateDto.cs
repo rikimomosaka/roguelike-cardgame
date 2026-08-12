@@ -11,7 +11,7 @@ public sealed record BattleStateDto(
     int? TargetAllyIndex,
     int? TargetEnemyIndex,
     int Energy,
-    int EnergyMax,
+    int EnergyPerTurn, // ターン開始時の追加量。保有上限ではない
     IReadOnlyList<BattleCardInstanceDto> DrawPile,
     IReadOnlyList<BattleCardInstanceDto> Hand,
     IReadOnlyList<BattleCardInstanceDto> DiscardPile,
@@ -19,6 +19,9 @@ public sealed record BattleStateDto(
     IReadOnlyList<BattleCardInstanceDto> SummonHeld,
     IReadOnlyList<BattleCardInstanceDto> PowerCards,
     int ComboCount,
+    int MaxComboThisTurn,
+    int ComboGauge,
+    IReadOnlyList<string> UsedCharacterSkillIdsThisTurn,
     int? LastPlayedOrigCost,
     bool NextCardComboFreePass,
     IReadOnlyList<string> OwnedRelicIds,

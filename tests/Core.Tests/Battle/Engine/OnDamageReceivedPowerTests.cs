@@ -86,6 +86,87 @@ public class OnDamageReceivedPowerTests
     }
 
     [Fact]
+    public void Enemy_all_hit_finishes_every_target_before_OnDamageReceived_fires()
+    {
+        var powerDef = DamageReceivedPower("p_order");
+        var instance = new BattleCardInstance("p_inst", "p_order", false, null);
+        var hero = BattleFixtures.Hero(hp: 20, slotIndex: 0);
+        var summon = BattleFixtures.SummonActor(
+            "summon_inst", "test_summon", slotIndex: 1, hp: 10);
+        var goblin = BattleFixtures.Goblin();
+        var state = BattleFixtures.MinimalState(
+            allies: ImmutableArray.Create(hero, summon),
+            enemies: ImmutableArray.Create(goblin),
+            phase: BattlePhase.EnemyAttacking) with
+            {
+                PowerCards = ImmutableArray.Create(instance),
+            };
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { powerDef });
+
+        var (_, events) = EnemyAttackingResolver.Resolve(state, MakeRng(), catalog);
+
+        var damageEvents = events
+            .Where(e => e.Kind == BattleEventKind.DealDamage)
+            .ToList();
+        Assert.Equal(2, damageEvents.Count);
+        Assert.All(damageEvents, e => Assert.Equal(0, e.HitIndex));
+
+        int lastDamageOrder = damageEvents.Max(e => e.Order);
+        var powerEvent = Assert.Single(events, e =>
+            e.Note != null && e.Note.Contains("power:p_order"));
+        Assert.True(powerEvent.Order > lastDamageOrder);
+    }
+
+    [Fact]
+    public void OnDamageReceived_debuff_affects_the_enemys_next_hit()
+    {
+        var powerDef = new CardDefinition(
+            "p_weak", "p_weak", null, CardRarity.Common, CardType.Power,
+            Cost: 1, UpgradedCost: null,
+            Effects: new CardEffect[]
+            {
+                new("debuff", EffectScope.Single, EffectSide.Enemy, 1,
+                    Name: "weak", Trigger: "OnDamageReceived"),
+            },
+            UpgradedEffects: null, Keywords: null);
+        var instance = new BattleCardInstance("p_inst", "p_weak", false, null);
+        var enemyDef = BattleFixtures.GoblinDef() with
+        {
+            Moves = new[]
+            {
+                new MoveDefinition(
+                    "swing", MoveKind.Attack,
+                    new CardEffect[]
+                    {
+                        new("attack", EffectScope.Single, EffectSide.Enemy, 5),
+                        new("attack", EffectScope.Single, EffectSide.Enemy, 5),
+                    },
+                    "swing"),
+            },
+        };
+        var hero = BattleFixtures.Hero(hp: 20);
+        var goblin = BattleFixtures.Goblin();
+        var state = BattleFixtures.MinimalState(
+            allies: ImmutableArray.Create(hero),
+            enemies: ImmutableArray.Create(goblin),
+            phase: BattlePhase.EnemyAttacking) with
+            {
+                PowerCards = ImmutableArray.Create(instance),
+            };
+        var catalog = BattleFixtures.MinimalCatalog(
+            cards: new[] { powerDef }, enemies: new[] { enemyDef });
+
+        var (after, events) = EnemyAttackingResolver.Resolve(state, MakeRng(), catalog);
+
+        // 1発目5。被弾powerで敵へWeak、その後の2発目は floor(5*.75)=3。
+        Assert.Equal(12, after.Allies[0].CurrentHp);
+        Assert.Equal(
+            new int?[] { 5, 3 },
+            events.Where(e => e.Kind == BattleEventKind.DealDamage)
+                .Select(e => e.Amount));
+    }
+
+    [Fact]
     public void PoisonTick_triggers_OnDamageReceived_power()
     {
         var powerDef = DamageReceivedPower("p_poison");

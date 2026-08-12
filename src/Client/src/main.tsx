@@ -1,6 +1,7 @@
 // src/Client/src/main.tsx
 import { StrictMode, useEffect, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
+import './styles/fonts.css'
 import './index.css'
 import './styles/tokens.css'
 import './App.css'
@@ -15,6 +16,8 @@ document.addEventListener('contextmenu', (e) => {
   e.preventDefault()
 })
 
+// Entry-point-only component; this module is intentionally not a refresh boundary.
+// eslint-disable-next-line react-refresh/only-export-components
 function AppStage({ children }: { children: ReactNode }) {
   useEffect(() => {
     function update() {

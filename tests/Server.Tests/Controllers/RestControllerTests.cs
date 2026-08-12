@@ -156,6 +156,8 @@ public class RestControllerTests : IClassFixture<TempDataFactory>
 
         var newRes = await client.PostAsync("/api/v1/runs/new", content: null);
         newRes.EnsureSuccessStatusCode();
+        await BattleTestHelpers.MarkActStartResolvedForTestAsync(
+            _factory.Services, accountId);
         var doc = JsonDocument.Parse(await newRes.Content.ReadAsStringAsync());
         var map = ParseMap(doc);
         var path = FindShortestPath(map, "Rest");

@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { RewardStateDto } from '../api/types'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import { cardDisplay } from '../components/cardDisplay'
 import { Popup } from '../components/Popup'
 import { PotionSlot } from '../components/PotionSlot'
+import { getRelicTooltipContent } from '../components/relicTooltip'
+import { useTooltipTarget } from '../components/Tooltip'
 import { useCardCatalog, usePotionCatalog } from '../hooks/useCardCatalog'
 import { useRelicCatalog } from '../hooks/useRelicCatalog'
 import './RewardPopup.css'
@@ -29,9 +31,16 @@ export function RewardPopup(p: Props) {
   const cardResolved = r.cardStatus === 'Claimed'
   const { names: cardNames, catalog: cardCatalog } = useCardCatalog()
   const { names: potionNames } = usePotionCatalog()
-  const { names: relicNames } = useRelicCatalog()
+  const { names: relicNames, catalog: relicCatalog } = useRelicCatalog()
   const cardLabel = (id: string) => cardNames[id] ?? id
   const potionLabel = (id: string) => potionNames[id] ?? id
+  const relicTooltipContent = useMemo(
+    () => r.relicId
+      ? getRelicTooltipContent(r.relicId, relicCatalog, relicNames)
+      : null,
+    [r.relicId, relicCatalog, relicNames],
+  )
+  const relicTip = useTooltipTarget(relicTooltipContent)
 
   // Reroll は Pending 限定 (server も同条件で 400)。cardResolved (Claimed) のチェックでは
   // soft-skip 後の Skipped 状態を捉えられないため、cardStatus を直接見る。
@@ -93,7 +102,6 @@ export function RewardPopup(p: Props) {
                   rarity={disp.rarity}
                   description={disp.description}
                   upgradedDescription={disp.upgradedDescription}
-                  width={140}
                 />
               </button>
             )
@@ -169,6 +177,7 @@ export function RewardPopup(p: Props) {
               className="rw-tile"
               disabled={r.relicClaimed}
               onClick={() => p.onClaimRelic()}
+              {...relicTip}
             >
               <span className="rw-tile__icon" aria-hidden="true">
                 {r.relicClaimed ? '✓' : <img src={`/icons/relics/${r.relicId}.png`} alt="" draggable={false} />}

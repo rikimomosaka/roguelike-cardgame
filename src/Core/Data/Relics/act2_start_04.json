@@ -12,7 +12,13 @@
                                       "rarity":  1,
                                       "description":  "厳かな祈りの数珠。握っていると、見えない手に守られている気がする。",
                                       "effects":  [
-
+                                                      {
+                                                          "action":  "gainMaxHp",
+                                                          "scope":   "self",
+                                                          "target":  null,
+                                                          "amount":  10,
+                                                          "trigger": "OnPickup"
+                                                      }
                                                   ],
                                       "implemented":  true
                                   }

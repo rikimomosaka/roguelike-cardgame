@@ -64,25 +64,51 @@ public class BattleDeterminismTests
         {
             s.Turn, Phase = s.Phase.ToString(), Outcome = s.Outcome.ToString(),
             s.TargetAllyIndex, s.TargetEnemyIndex, s.Energy, s.EnergyMax, s.EncounterId,
+            s.ComboCount, s.MaxComboThisTurn, s.LastPlayedOrigCost,
+            s.NextCardComboFreePass, s.WildUsedInCurrentCombo,
+            s.ComboGauge,
+            UsedCharacterSkillIdsThisTurn = s.UsedCharacterSkillIdsThisTurn
+                .OrderBy(id => id).ToArray(),
             Allies = s.Allies.Select(a => new {
                 a.InstanceId, a.DefinitionId, Side = a.Side.ToString(),
                 a.SlotIndex, a.CurrentHp, a.MaxHp,
-                Block = a.Block.Sum, AttackSingle = a.AttackSingle.Sum,
-                AttackRandom = a.AttackRandom.Sum, AttackAll = a.AttackAll.Sum,
+                Block = a.Block.Sum,
+                AttackSingle = a.AttackSingle.HitAmounts.ToArray(),
+                AttackRandom = a.AttackRandom.HitAmounts.ToArray(),
+                AttackAll = a.AttackAll.HitAmounts.ToArray(),
                 a.CurrentMoveId,
                 Statuses = a.Statuses.OrderBy(kv => kv.Key).Select(kv => new { kv.Key, kv.Value }) }),
             Enemies = s.Enemies.Select(e => new {
                 e.InstanceId, e.DefinitionId, Side = e.Side.ToString(),
                 e.SlotIndex, e.CurrentHp, e.MaxHp,
-                Block = e.Block.Sum, AttackSingle = e.AttackSingle.Sum,
-                AttackRandom = e.AttackRandom.Sum, AttackAll = e.AttackAll.Sum,
+                Block = e.Block.Sum,
+                AttackSingle = e.AttackSingle.HitAmounts.ToArray(),
+                AttackRandom = e.AttackRandom.HitAmounts.ToArray(),
+                AttackAll = e.AttackAll.HitAmounts.ToArray(),
                 e.CurrentMoveId,
                 Statuses = e.Statuses.OrderBy(kv => kv.Key).Select(kv => new { kv.Key, kv.Value }) }),
-            DrawPile = s.DrawPile.Select(c => new { c.InstanceId, c.CardDefinitionId, c.IsUpgraded, c.CostOverride }),
-            Hand = s.Hand.Select(c => new { c.InstanceId, c.CardDefinitionId, c.IsUpgraded, c.CostOverride }),
-            DiscardPile = s.DiscardPile.Select(c => new { c.InstanceId, c.CardDefinitionId, c.IsUpgraded, c.CostOverride }),
-            ExhaustPile = s.ExhaustPile.Select(c => new { c.InstanceId, c.CardDefinitionId, c.IsUpgraded, c.CostOverride }),
+            DrawPile = ProjectCards(s.DrawPile),
+            Hand = ProjectCards(s.Hand),
+            DiscardPile = ProjectCards(s.DiscardPile),
+            ExhaustPile = ProjectCards(s.ExhaustPile),
+            SummonHeld = ProjectCards(s.SummonHeld),
+            PowerCards = ProjectCards(s.PowerCards),
         });
+
+    private static object ProjectCards(ImmutableArray<BattleCardInstance> cards) =>
+        cards.Select(c => new
+        {
+            c.InstanceId,
+            c.CardDefinitionId,
+            c.IsUpgraded,
+            c.CostOverride,
+            CostModifiers = c.EffectiveCostModifiers.Select(modifier => new
+            {
+                modifier.Amount,
+                Duration = modifier.Duration.ToString(),
+                modifier.SourceId,
+            }),
+        }).ToArray();
 
     [Fact] public void Same_seed_same_inputs_yields_identical_state()
     {
@@ -172,10 +198,12 @@ public class BattleDeterminismTests
         var a = RunComboAndPlay(seed: 7777);
         var b = RunComboAndPlay(seed: 7777);
 
-        // コンボ関連フィールドの個別 assertion（StateJson は ComboCount / LastPlayedOrigCost / NextCardComboFreePass を含まないため）
+        // StateJson にも含めるが、個別 assertion で不一致箇所を診断しやすくする。
         Assert.Equal(a.ComboCount, b.ComboCount);
+        Assert.Equal(a.MaxComboThisTurn, b.MaxComboThisTurn);
         Assert.Equal(a.LastPlayedOrigCost, b.LastPlayedOrigCost);
         Assert.Equal(a.NextCardComboFreePass, b.NextCardComboFreePass);
+        Assert.Equal(a.WildUsedInCurrentCombo, b.WildUsedInCurrentCombo);
         Assert.Equal(a.Energy, b.Energy);
         Assert.Equal(a.Hand.Length, b.Hand.Length);
         // 全体構造の一致も確認

@@ -51,6 +51,19 @@ public class EffectApplierGainEnergyExhaustSelfRetainSelfTests
         Assert.Equal(8, next.Energy);  // EnergyMax 超過 OK
     }
 
+    [Fact]
+    public void GainEnergy_saturates_instead_of_overflowing()
+    {
+        var s = MakeState(energy: int.MaxValue - 1);
+        var hero = s.Allies[0];
+        var eff = new CardEffect("gainEnergy", EffectScope.Self, null, 5);
+
+        var (next, _) = EffectApplier.Apply(
+            s, hero, eff, Rng(), BattleFixtures.MinimalCatalog());
+
+        Assert.Equal(int.MaxValue, next.Energy);
+    }
+
     [Fact] public void ExhaustSelf_emits_event_only()
     {
         var s = MakeState();

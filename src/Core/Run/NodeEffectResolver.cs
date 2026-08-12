@@ -30,7 +30,23 @@ public static class NodeEffectResolver
             ActiveActStartRelicChoice = null,
         };
 
-        var table = data.RewardTables["act1"];
+        var next = kind == TileKind.Unknown
+            ? ResolveUnknownAndDispatch(state, currentRow, data, rng)
+            : ResolveConcreteKind(state, kind, currentRow, data, rng);
+
+        // Unknown is dispatched directly to its concrete kind, so this fires once per
+        // public Resolve call rather than once for Unknown and again for the result.
+        return NonBattleRelicEffects.ApplyOnMapTileResolved(next, data);
+    }
+
+    private static RunState ResolveConcreteKind(
+        RunState state, TileKind kind, int currentRow, DataCatalog data, IRng rng)
+    {
+        string rewardTableId = $"act{state.CurrentAct}";
+        if (!data.RewardTables.TryGetValue(rewardTableId, out var table))
+            throw new InvalidOperationException(
+                $"RewardTable \"{rewardTableId}\" is not configured for the current act");
+
         return kind switch
         {
             TileKind.Start => state with {
@@ -47,7 +63,6 @@ public static class NodeEffectResolver
             TileKind.Merchant => StartMerchant(state, data, rng),
             TileKind.Treasure => StartTreasure(state, table, data, rng),
             TileKind.Event => StartEvent(state, data, rng),
-            TileKind.Unknown => ResolveUnknownAndDispatch(state, currentRow, data, rng),
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
         };
     }
@@ -64,7 +79,7 @@ public static class NodeEffectResolver
 
         // cache hit: 既に解決済みならその値で再 dispatch
         if (state.UnknownResolutions.TryGetValue(nodeId, out var cached))
-            return Resolve(state, cached, currentRow, data, rng);
+            return ResolveConcreteKind(state, cached, currentRow, data, rng);
 
         // 未解決 → modifier 適用後に lazy resolve
         // UnknownConfig が null の場合 (テスト用途等) は MapGenerationConfigLoader からロード
@@ -83,7 +98,7 @@ public static class NodeEffectResolver
         };
 
         // resolved kind で再 dispatch (1 段再帰、resolved は Unknown 以外なので無限ループなし)
-        return Resolve(newState, resolved, currentRow, data, rng);
+        return ResolveConcreteKind(newState, resolved, currentRow, data, rng);
     }
 
     private static EnemyPool RouteEnemyPool(RewardTable table, int act, int row)

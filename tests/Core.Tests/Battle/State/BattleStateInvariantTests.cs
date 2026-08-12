@@ -25,7 +25,7 @@ public class BattleStateInvariantTests
         ImmutableArray<CombatActor>? enemies = null,
         BattlePhase phase = BattlePhase.PlayerInput,
         BattleOutcome outcome = BattleOutcome.Pending,
-        int turn = 1, int energy = 3, int energyMax = 3,
+        int turn = 1, int energy = 3, int energyMax = 3, int combo = 0,
         int? tgtA = 0, int? tgtE = 0)
         => new(
             Turn: turn, Phase: phase, Outcome: outcome,
@@ -39,7 +39,7 @@ public class BattleStateInvariantTests
             ExhaustPile: ImmutableArray<BattleCardInstance>.Empty,
             SummonHeld: ImmutableArray<BattleCardInstance>.Empty,
             PowerCards: ImmutableArray<BattleCardInstance>.Empty,
-            ComboCount: 0,
+            ComboCount: combo,
             LastPlayedOrigCost: null,
             NextCardComboFreePass: false,
             OwnedRelicIds: ImmutableArray<string>.Empty,
@@ -78,10 +78,12 @@ public class BattleStateInvariantTests
         Assert.NotEqual(BattleOutcome.Pending, s.Outcome);
     }
 
-    [Fact] public void Energy_within_bounds()
+    [Fact] public void Energy_can_exceed_turn_start_amount_when_carried_or_gained()
     {
-        var s = Make(energy: 3, energyMax: 3);
-        Assert.InRange(s.Energy, 0, s.EnergyMax);
+        var s = Make(energy: 8, energyMax: 3);
+        Assert.Equal(8, s.Energy);
+        Assert.True(s.Energy >= 0);
+        Assert.True(s.Energy > s.EnergyMax);
     }
 
     [Fact] public void Turn_starts_from_one_or_higher()
@@ -144,8 +146,12 @@ public class BattleStateInvariantTests
     {
         var s = Make();
         Assert.Equal(0, s.ComboCount);
+        Assert.Equal(0, s.MaxComboThisTurn);
         Assert.Null(s.LastPlayedOrigCost);
         Assert.False(s.NextCardComboFreePass);
+        Assert.False(s.WildUsedInCurrentCombo);
+        Assert.Equal(0, s.ComboGauge);
+        Assert.Empty(s.UsedCharacterSkillIdsThisTurn);
     }
 
     [Fact] public void ComboFields_record_equality_distinguishes()
@@ -154,10 +160,30 @@ public class BattleStateInvariantTests
         var s2 = s1 with { ComboCount = 1 };
         var s3 = s1 with { LastPlayedOrigCost = 2 };
         var s4 = s1 with { NextCardComboFreePass = true };
+        var s5 = s1 with { WildUsedInCurrentCombo = true };
+        var s6 = s1 with { MaxComboThisTurn = 2 };
+        var s7 = s1 with { ComboGauge = 1 };
+        var s8 = s1 with
+        {
+            UsedCharacterSkillIdsThisTurn = ImmutableHashSet.Create("tactical"),
+        };
         Assert.NotEqual(s1, s2);
         Assert.NotEqual(s1, s3);
         Assert.NotEqual(s1, s4);
+        Assert.NotEqual(s1, s5);
+        Assert.NotEqual(s1, s6);
+        Assert.NotEqual(s1, s7);
+        Assert.NotEqual(s1, s8);
         Assert.NotEqual(s2, s3);
+    }
+
+    [Fact]
+    public void Turn_max_defaults_to_current_combo_for_directly_constructed_state()
+    {
+        var s = Make(combo: 3);
+
+        Assert.Equal(3, s.MaxComboThisTurn);
+        Assert.True(s.MaxComboThisTurn >= s.ComboCount);
     }
 
     [Fact] public void ComboCount_invariant_non_negative()
@@ -166,6 +192,15 @@ public class BattleStateInvariantTests
         Assert.True(s.ComboCount >= 0);
         s = s with { ComboCount = 5 };
         Assert.True(s.ComboCount >= 0);
+    }
+
+    [Fact]
+    public void MaxComboThisTurn_invariant_non_negative()
+    {
+        var s = Make();
+        Assert.True(s.MaxComboThisTurn >= 0);
+        s = s with { MaxComboThisTurn = 5 };
+        Assert.True(s.MaxComboThisTurn >= s.ComboCount);
     }
 
     // === 10.2.D: SummonHeld / PowerCards ===

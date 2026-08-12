@@ -136,6 +136,21 @@ public sealed record DataCatalog(
                 int act = doc.RootElement.GetProperty("act").GetInt32();
                 var ids = doc.RootElement.GetProperty("relicIds").EnumerateArray()
                     .Select(e => e.GetString()!).ToImmutableArray();
+                if (act < 1)
+                    throw new DataCatalogException($"act-start relic pool act must be positive: act={act}");
+                if (ids.Length < 3)
+                    throw new DataCatalogException(
+                        $"act-start relic pool requires at least 3 relics: act={act}, count={ids.Length}");
+                if (ids.Any(string.IsNullOrWhiteSpace))
+                    throw new DataCatalogException($"act-start relic pool contains an empty ID: act={act}");
+                if (ids.Distinct(StringComparer.Ordinal).Count() != ids.Length)
+                    throw new DataCatalogException($"act-start relic pool contains duplicate IDs: act={act}");
+                foreach (var id in ids)
+                {
+                    if (!relicMap.ContainsKey(id))
+                        throw new DataCatalogException(
+                            $"act-start relic pool references unknown relic '{id}': act={act}");
+                }
                 if (!pools.TryAdd(act, ids))
                     throw new DataCatalogException($"act-start relic pool 重複: act={act}");
             }

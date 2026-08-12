@@ -63,6 +63,32 @@ public class NodeEffectResolverLazyUnknownTests
     }
 
     [Fact]
+    public void Resolve_Unknown_FiresOnMapTileResolvedOnceAfterConcreteDispatch()
+    {
+        var fake = RelicCatalogTestHelpers.BuildCatalogWithFakeRelic(
+            BaseCatalog,
+            "unknown_tithe",
+            new CardEffect[]
+            {
+                new("gainGold", EffectScope.Self, null, 7, Trigger: "OnMapTileResolved"),
+            });
+        var state = SampleStateAtUnknownNode(fake) with
+        {
+            Gold = 100,
+            Relics = new List<string> { "unknown_tithe" },
+            UnknownResolutions = ImmutableDictionary.CreateRange(
+                new[] { new KeyValuePair<int, TileKind>(42, TileKind.Treasure) }),
+        };
+
+        var s1 = NodeEffectResolver.Resolve(
+            state, TileKind.Unknown, currentRow: 5, fake, new SequentialRng(1UL));
+
+        Assert.NotNull(s1.ActiveReward);
+        Assert.Equal(TileKind.Treasure, s1.UnknownResolutions[42]);
+        Assert.Equal(107, s1.Gold);
+    }
+
+    [Fact]
     public void Resolve_Unknown_WithRelicWeightDelta_BiasesOutcome()
     {
         // 全 5+1 種 (Enemy/Elite/Merchant/Rest/Treasure/Event) を -100000 で 0 以下にし、

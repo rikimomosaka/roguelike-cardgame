@@ -1,11 +1,13 @@
 /* =============================================================
    Card — canonical from archives-cards-v12.html
-   Width is controlled via inline style (default 104px).
-   Height is derived from 1:1.4 aspect ratio.
+   Every scene renders this one canonical geometry. Larger presentations
+   transform the completed root card instead of resizing its child parts.
    ============================================================= */
 
 .card {
-  aspect-ratio: 1 / 1.4;
+  width: var(--card-width);
+  height: var(--card-height);
+  flex: 0 0 auto;
   position: relative;
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-md);
@@ -97,7 +99,7 @@
   border: 1px solid var(--fg-muted);
   display: grid;
   place-items: center;
-  font-family: var(--font-body);
+  font-family: var(--font-digit);
   font-size: 16px;
   line-height: 1;
   color: var(--gold);
@@ -106,47 +108,73 @@
   box-shadow: 0 0 4px rgba(255, 213, 79, 0.35);
   text-shadow: var(--text-shadow-pixel);
   z-index: 1;
+  overflow: hidden;
 }
 
 .card__cost-n {
-  display: inline-block;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
   line-height: 1;
-  transform: translateY(-1px);
+  white-space: nowrap;
+  box-sizing: border-box;
+  /* Silkscreen's visible glyph sits slightly below its line-box center.
+     Reduced original costs use their own optical offsets at the circle level. */
+  transform: translate(
+    var(--card-cost-digit-x, 0),
+    var(--card-cost-digit-y, -1px)
+  );
+  transform-origin: center;
 }
 
-/* Why: コンボ軽減時は「現在コスト (上, 強調) / 元コスト (下, 取り消し線)」の
+/* Why: コンボ軽減時は「現在コスト (上, 強調) / 元コスト (下, 灰色)」の
    2 個円を縦並び表示する。1 個の円に "1→0" を詰め込むより視認性が高い。
    各円は通常 .card__cost と同じ 22x22 サイズを保つ。 */
 .card__cost-stack {
   position: absolute;
   left: 0;
   top: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  width: 22px;
+  display: grid;
+  grid-template-columns: 22px;
+  grid-template-rows: 22px 22px;
+  row-gap: 2px;
+  justify-items: start;
+  align-items: start;
   z-index: 2;
 }
 .card__cost-stack .card__cost {
-  position: static;
-}
-.card__cost--current {
-  border-color: #f1c95b;
-  color: #f1c95b;
-  background: rgba(241, 201, 91, 0.15);
-  box-shadow: 0 0 8px rgba(241, 201, 91, 0.7);
+  position: relative;
+  left: auto;
+  top: auto;
+  margin: 0;
 }
 .card__cost--current .card__cost-n {
   color: #f1c95b;
-  font-weight: 700;
-  text-shadow: 0 0 4px rgba(241, 201, 91, 0.85);
+  font-weight: 400;
+  /* Keep the normal pixel outline, but do not glow/bolden the glyph itself. */
+  text-shadow: var(--text-shadow-pixel);
 }
 .card__cost--orig {
-  border-color: #888;
-  background: rgba(60, 60, 60, 0.45);
+  --card-cost-digit-x: 0;
+  --card-cost-digit-y: 0;
 }
 .card__cost--orig .card__cost-n {
   color: #aaa;
   font-size: 13px;
+}
+
+/* Fit multi-character costs inside the 20px inner diameter. The circle keeps
+   its canonical 22px geometry; only the complete number is optically fitted. */
+.card__cost-n[data-digits='2'] {
+  font-size: 13px;
+  letter-spacing: -1px;
+}
+
+.card__cost-n[data-digits='3'] {
+  font-size: 10px;
+  letter-spacing: -1px;
 }
 
 .card__name {
@@ -271,3 +299,19 @@
 .card--rarity-t .card__cost   { border-color: #d8d8d8; color: #f0f0f0; box-shadow: 0 0 4px rgba(216,216,216,0.3); }
 .card--rarity-t .card__name   { color: var(--rarity-c); }
 .card--rarity-t .card__illust { border-color: rgba(216,216,216,0.4); }
+
+/* Reduced-cost state must win over the rarity ring. Keeping the old cost
+   neutral and unlit prevents the two close rings from visually merging. */
+.card .card__cost--current {
+  border-color: #f1c95b;
+  color: #f1c95b;
+  background: rgba(241, 201, 91, 0.15);
+  box-shadow: 0 0 5px rgba(241, 201, 91, 0.5);
+}
+
+.card .card__cost--orig {
+  border-color: #888;
+  color: #aaa;
+  background: rgba(60, 60, 60, 0.45);
+  box-shadow: none;
+}

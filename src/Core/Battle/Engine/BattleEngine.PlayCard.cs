@@ -16,68 +16,94 @@ public static partial class BattleEngine
         int? targetEnemyIndex, int? targetAllyIndex,
         IRng rng, DataCatalog catalog)
     {
+        ValidateComboTrackingState(state);
         if (state.Phase != BattlePhase.PlayerInput)
             throw new InvalidOperationException($"PlayCard requires Phase=PlayerInput, got {state.Phase}");
         if (handIndex < 0 || handIndex >= state.Hand.Length)
             throw new InvalidOperationException($"handIndex {handIndex} out of range [0, {state.Hand.Length})");
 
         // Phase 10.5.M2-Choose: 既存 pending を resolve しないと PlayCard 不可
-        if (state.PendingCardPlay is not null)
-            throw new InvalidOperationException(
-                "Cannot play card while PendingCardPlay is set; resolve via ResolveCardChoice first");
+        RejectWhileCardChoiceIsPending(state, "PlayCard");
 
         var card = state.Hand[handIndex];
         if (!catalog.TryGetCard(card.CardDefinitionId, out var def))
             throw new InvalidOperationException($"card '{card.CardDefinitionId}' not in catalog");
+        var owner = ProvisionalSoloHeroOwnerResolver.Resolve(state)
+            ?? throw new InvalidOperationException("PlayCard requires a living hero owner");
+        var hero = owner.Hero;
 
-        // 10.2.C: 元コスト算定（CostOverride 無視）
-        int? origCost = card.IsUpgraded ? def.UpgradedCost ?? def.Cost : def.Cost;
+        // コンボ参照値は常にカード定義上の元コスト。CostOverride、カード個体modifier、
+        // 手札中status、奥義、コンボ軽減のいずれにも影響されない。
+        int? origCost = BattleCardCostCalculator.GetOriginalCost(card, def);
         if (origCost is null)
             throw new InvalidOperationException($"card '{def.Id}' is unplayable (cost=null)");
         int actualCost = origCost.Value;
 
         // 10.2.C: コンボ判定
-        bool matchesNormal =
-            state.LastPlayedOrigCost is { } prev && actualCost == prev + 1;
+        bool matchesNormal = BattleCardCostCalculator.IsNormalComboSuccessor(
+            state, card, def);
         // Why: 強化により獲得するキーワード (例: starter_summon_3+ で superwild) を反映するため、
         // 単一 Keywords ではなく EffectiveKeywords(IsUpgraded) を参照する。
         var keywords = def.EffectiveKeywords(card.IsUpgraded);
         bool hasWild = keywords?.Contains("wild") == true;
         bool hasSuperWild = keywords?.Contains("superwild") == true;
-        // 10.5.M4: ワイルド/スーパーワイルドは 1 コンボ連鎖につき最初の 1 回しか発動しない。
-        // すでに WildUsedInCurrentCombo が立っていればキーワード効果を無効化する。
-        bool wildEffective = (hasWild || hasSuperWild) && !state.WildUsedInCurrentCombo;
+        // SuperWild は Wild の使用済み状態に影響されず、何度でも発動する。
+        // 両方の keyword を持つ場合も SuperWild を優先し、Wild 使用済みにはしない。
+        bool superWildEffective = hasSuperWild;
+        bool wildEffective = hasWild && !hasSuperWild && !state.WildUsedInCurrentCombo;
+        bool grantsNextCardProtection = superWildEffective || wildEffective;
 
         bool isContinuing =
             state.NextCardComboFreePass ? true
           : matchesNormal              ? true
-          : wildEffective              ? true
+          : grantsNextCardProtection   ? true
           : false;
 
-        bool isReduced = matchesNormal;
-
-        // 10.2.C: payCost 算定
-        int basePay = card.CostOverride ?? actualCost;
-        int payCost = Math.Max(0, basePay - (isReduced ? 1 : 0));
+        // 軽減は「通常の次コスト条件」または「直前の Wild 系による次カード保護」で発生する。
+        // 今回の Wild / SuperWild 自身のキーワードだけで継続する場合は、そのカードを軽減しない。
+        // 一方、直前の保護中なら今回のカード種別に関係なく軽減する。
+        // 支払は「個体modifier → 手札中の主人公status → コンボ-1」の順。
+        // 現在コストが0でも、コンボ判定と LastPlayedOrigCost は上のactualCostを使う。
+        var cost = BattleCardCostCalculator.EvaluateForHand(
+            state, card, def, hero);
+        int payCost = cost.PayableCost
+            ?? throw new InvalidOperationException($"card '{def.Id}' is unplayable (cost=null)");
 
         if (state.Energy < payCost)
             throw new InvalidOperationException($"insufficient energy: have {state.Energy}, need {payCost}");
 
         // 10.2.C: combo フィールド更新
-        int newCombo = isContinuing ? state.ComboCount + 1 : 1;
+        int newCombo = isContinuing
+            ? (int)Math.Min(int.MaxValue, (long)state.ComboCount + 1)
+            : 1;
+        int newMaxCombo = Math.Max(state.MaxComboThisTurn, newCombo);
+        int maxComboIncrease = (int)Math.Min(
+            int.MaxValue,
+            Math.Max(0L, (long)newMaxCombo - state.MaxComboThisTurn));
+        int gaugeBefore = Math.Clamp(state.ComboGauge, 0, MaxComboGauge);
+        int newComboGauge = (int)Math.Min(
+            MaxComboGauge, (long)gaugeBefore + maxComboIncrease);
+        int comboGaugeIncrease = newComboGauge - gaugeBefore;
         int? newLastCost = actualCost;
-        // M4: スーパーワイルドの「次カード自動継続」効果も「初回のみ」。
-        bool newFreePass = wildEffective && hasSuperWild;
-        // M4: ワイルド系効果が今回発動した、または既に発動済 (連鎖継続中) なら立て続ける。
-        //   コンボ切断 (newCombo == 1) でリセット。
-        bool newWildUsed = newCombo == 1
-            ? false
-            : state.WildUsedInCurrentCombo || wildEffective;
+        // Wild / SuperWild はどちらも「次の 1 枚」まで保護する。
+        // 保護を消費したカードが新たに保護を予約しなければ false へ戻る。
+        bool newFreePass = grantsNextCardProtection;
+        // Wild だけが同一コンボ中の後続 Wild を無効化する。
+        // 既に使用済みの Wild がコンボを切った場合、そのプレイでは
+        // 効果を再発動させず、新しいコンボの使用済み状態だけを解除する。
+        bool newWildUsed = isContinuing
+            && (state.WildUsedInCurrentCombo || wildEffective);
 
+        // コスト変更は領域移動時ではなく、プレイが受理された時点で消費する。
+        // choose pause中も既にプレイ済みなので、Hand上の同一個体を書き換えておく。
+        var playedCard = card.ConsumeCostChangesOnPlay();
         var s = state with
         {
             Energy = state.Energy - payCost,
+            Hand = state.Hand.SetItem(handIndex, playedCard),
             ComboCount = newCombo,
+            MaxComboThisTurn = newMaxCombo,
+            ComboGauge = newComboGauge,
             LastPlayedOrigCost = newLastCost,
             NextCardComboFreePass = newFreePass,
             WildUsedInCurrentCombo = newWildUsed,
@@ -88,20 +114,38 @@ public static partial class BattleEngine
         var events = new List<BattleEvent>
         {
             new(BattleEventKind.PlayCard, Order: 0,
-                CasterInstanceId: state.Allies[0].InstanceId,
+                CasterInstanceId: hero.InstanceId,
                 CardId: def.Id,
                 Amount: payCost),
         };
 
-        var caster = s.Allies[0];
-        int order = 1;
+        if (comboGaugeIncrease > 0)
+        {
+            events.Add(new BattleEvent(
+                BattleEventKind.ComboGaugeChanged,
+                Order: events.Count,
+                CasterInstanceId: hero.InstanceId,
+                Amount: comboGaugeIncrease,
+                CardId: def.Id,
+                Note: $"remaining={newComboGauge}",
+                Source: new CombatSource(
+                    CombatSourceKind.CardEffect,
+                    OwnerSlot: hero.OwnerPlayerSlot ?? hero.SlotIndex,
+                    OwnerInstanceId: hero.OwnerActorInstanceId ?? hero.InstanceId,
+                    ActorInstanceId: hero.InstanceId,
+                    DefinitionId: def.Id,
+                    InstanceId: card.InstanceId)));
+        }
 
-        var effects = (card.IsUpgraded && def.UpgradedEffects is not null)
+        var caster = hero;
+        int order = events.Count;
+
+        var effects = (playedCard.IsUpgraded && def.UpgradedEffects is not null)
             ? def.UpgradedEffects
             : def.Effects;
 
         var (afterEffects, effectEvents, summonSucceeded, _) = ApplyEffectsFrom(
-            s, caster, card, effects, startIndex: 0, newCombo, summonSucceededIn: false,
+            s, caster, playedCard, effects, startIndex: 0, newCombo, summonSucceededIn: false,
             ref order, rng, catalog);
         s = afterEffects;
         events.AddRange(effectEvents);
@@ -113,7 +157,7 @@ public static partial class BattleEngine
         // Phase 10.5.M2-Choose T4: 終盤共通処理 (relic / カード移動 / power triggers) を切り出し。
         // 同じ helper を ResolveCardChoice からも呼ぶ。move 対象 card は handIndex ではなく
         // InstanceId で検索 (resume で hand 順序が変わっている可能性に対応)。
-        return FinalizeCardPlay(s, card, def, summonSucceeded, events, ref order, rng, catalog);
+        return FinalizeCardPlay(s, playedCard, def, summonSucceeded, events, ref order, rng, catalog);
     }
 
     /// <summary>
@@ -133,7 +177,8 @@ public static partial class BattleEngine
         // 10.2.E 追加: OnPlayCard レリック発動（effect 適用後・カード移動前）
         // Phase 10.5.L1.5: trigger ID を power 側と統一 ("OnCardPlay" → "OnPlayCard")。
         var (afterRelic, evsRelic) = RelicTriggerProcessor.Fire(
-            s, "OnPlayCard", catalog, rng, orderStart: order);
+            s, "OnPlayCard", catalog, rng, orderStart: order,
+            playingCardInstanceId: card.InstanceId);
         s = afterRelic;
         foreach (var ev in evsRelic) { events.Add(ev with { Order = order++ }); }
 
@@ -196,13 +241,15 @@ public static partial class BattleEngine
         // 10.5.E: destination pile 振り分け後の power トリガ発動
         // OnPlayCard はカード移動完了後 (Power カード自身が PowerCards に居る状態で) 発火
         var (afterOnPlay, evsOnPlay) = PowerTriggerProcessor.Fire(
-            s, "OnPlayCard", catalog, rng, orderStart: order);
+            s, "OnPlayCard", catalog, rng, orderStart: order,
+            playingCardInstanceId: card.InstanceId);
         s = afterOnPlay;
         foreach (var ev in evsOnPlay) { events.Add(ev with { Order = order++ }); }
 
         // OnCombo は combo update 後で fire (combo は冒頭で update 済み)
         var (afterCombo, evsCombo) = PowerTriggerProcessor.FireOnCombo(
-            s, s.ComboCount, catalog, rng, orderStart: order);
+            s, s.ComboCount, catalog, rng, orderStart: order,
+            playingCardInstanceId: card.InstanceId);
         s = afterCombo;
         foreach (var ev in evsCombo) { events.Add(ev with { Order = order++ }); }
 
@@ -250,14 +297,25 @@ public static partial class BattleEngine
             }
 
             int beforeAlliesLength = s.Allies.Length;
-            var (afterEffect, evs) = EffectApplier.Apply(s, caster, eff, rng, catalog);
+            var source = new CombatSource(
+                CombatSourceKind.CardEffect,
+                OwnerSlot: caster.OwnerPlayerSlot ?? caster.SlotIndex,
+                OwnerInstanceId: caster.OwnerActorInstanceId ?? caster.InstanceId,
+                ActorInstanceId: caster.InstanceId,
+                DefinitionId: card.CardDefinitionId,
+                InstanceId: card.InstanceId,
+                EffectIndex: i,
+                Scope: eff.Scope.ToString().ToLowerInvariant());
+            var (afterEffect, evs) = EffectApplier.Apply(
+                s, caster, eff, rng, catalog, source,
+                playingCardInstanceId: card.InstanceId);
             s = afterEffect;
             foreach (var ev in evs)
             {
                 events.Add(ev with { Order = order });
                 order++;
             }
-            caster = s.Allies[0];
+            caster = ProvisionalSoloHeroOwnerResolver.Resolve(s)?.Hero ?? caster;
 
             // 10.2.D: summon 成功検出
             if (eff.Action == "summon" && s.Allies.Length > beforeAlliesLength)

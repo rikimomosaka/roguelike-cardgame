@@ -206,4 +206,42 @@ public class EventControllerTests : IClassFixture<TempDataFactory>
         var getRes = await client.GetAsync("/api/v1/event/current");
         Assert.Equal(HttpStatusCode.OK, getRes.StatusCode);
     }
+
+    [Fact]
+    public async Task PostChoose_LethalDamage_RecordsGameOverAndDeletesCurrentSave()
+    {
+        const string AccountId = "ev1-lethal-damage";
+        var client = await StartFreshRunAsync(AccountId);
+        var repo = _factory.Services.GetRequiredService<ISaveRepository>();
+        var state = (await repo.TryLoadAsync(AccountId, CancellationToken.None))!;
+        var lethalChoice = new EventChoice(
+            "accept",
+            Condition: null,
+            Effects: ImmutableArray.Create<EventEffect>(new EventEffect.TakeDamage(10)),
+            ResultMessage: "defeated");
+        var lethalEvent = new EventInstance(
+            "lethal_test_event",
+            ImmutableArray.Create(lethalChoice));
+        await repo.SaveAsync(
+            AccountId,
+            state with { CurrentHp = 10, ActiveEvent = lethalEvent },
+            CancellationToken.None);
+
+        var response = await client.PostAsJsonAsync(
+            "/api/v1/event/choose", new { choiceIndex = 0 });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var result = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("GameOver", result.RootElement.GetProperty("outcome").GetString());
+        Assert.Equal(0, result.RootElement.GetProperty("finalHp").GetInt32());
+
+        var current = await client.GetAsync("/api/v1/runs/current");
+        Assert.Equal(HttpStatusCode.NoContent, current.StatusCode);
+
+        var history = _factory.Services.GetRequiredService<IHistoryRepository>();
+        var records = await history.ListAsync(AccountId, CancellationToken.None);
+        var record = Assert.Single(records);
+        Assert.Equal(RunProgress.GameOver, record.Outcome);
+        Assert.Equal(0, record.FinalHp);
+    }
 }

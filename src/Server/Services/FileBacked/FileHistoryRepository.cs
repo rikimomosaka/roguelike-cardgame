@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -20,6 +21,8 @@ public sealed class FileHistoryRepository : IHistoryRepository
 {
     private readonly string _root;
     private readonly ILogger<FileHistoryRepository> _logger;
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _appendLocks =
+        new(StringComparer.OrdinalIgnoreCase);
 
     public FileHistoryRepository(IOptions<DataStorageOptions> options, ILogger<FileHistoryRepository>? logger = null)
     {
@@ -30,17 +33,109 @@ public sealed class FileHistoryRepository : IHistoryRepository
         _logger = logger ?? NullLogger<FileHistoryRepository>.Instance;
     }
 
-    public async Task AppendAsync(string accountId, RunHistoryRecord record, CancellationToken ct)
+    public async Task<RunHistoryRecord> AppendAsync(
+        string accountId, RunHistoryRecord record, CancellationToken ct)
     {
         AccountIdValidator.Validate(accountId);
         ArgumentNullException.ThrowIfNull(record);
-        var dir = Path.Combine(_root, accountId);
-        Directory.CreateDirectory(dir);
-        var stamp = record.EndedAtUtc.ToString("yyyyMMddTHHmmssfffZ");
-        var fileName = $"{stamp}_{record.RunId}.json";
-        var path = Path.Combine(dir, fileName);
-        var json = JsonSerializer.Serialize(record, JsonOptions.Default);
-        await File.WriteAllTextAsync(path, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), ct);
+        var gate = _appendLocks.GetOrAdd(
+            accountId, static _ => new SemaphoreSlim(initialCount: 1, maxCount: 1));
+        await gate.WaitAsync(ct);
+        try
+        {
+            var dir = Path.Combine(_root, accountId);
+            Directory.CreateDirectory(dir);
+
+            // A run is a single history fact. Finalize/abandon may be retried after a
+            // later persistence step fails, but must not append the same RunId twice.
+            var existing = await FindRunIdAsync(dir, record.RunId, ct);
+            if (existing is not null) return existing;
+
+            var stamp = record.EndedAtUtc.ToString("yyyyMMddTHHmmssfffZ");
+            var fileName = $"{stamp}_{record.RunId}.json";
+            var path = Path.Combine(dir, fileName);
+            var json = JsonSerializer.Serialize(record, JsonOptions.Default);
+            await WriteAtomicAsync(path, json, ct);
+            return record;
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    private static async Task<RunHistoryRecord?> FindRunIdAsync(
+        string directory, string runId, CancellationToken ct)
+    {
+        string suffix = $"_{runId}.json";
+        foreach (var path in Directory.EnumerateFiles(directory, "*.json"))
+        {
+            string fileName = Path.GetFileName(path);
+            if (!fileName.EndsWith(suffix, StringComparison.Ordinal)
+                && !fileName.Equals($"{runId}.json", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            try
+            {
+                var json = await File.ReadAllTextAsync(path, Encoding.UTF8, ct);
+                var existing = DeserializeRecord(json);
+                if (existing is not null
+                    && string.Equals(existing.RunId, runId, StringComparison.Ordinal))
+                {
+                    return existing;
+                }
+            }
+            catch (Exception ex) when (ex is IOException or JsonException
+                                           or FormatException or InvalidOperationException)
+            {
+                // An old partial/corrupt file is not a committed history fact. Leave it
+                // for ListAsync diagnostics and allow a valid retry file to be written.
+            }
+        }
+        return null;
+    }
+
+    private static async Task WriteAtomicAsync(
+        string finalPath, string contents, CancellationToken ct)
+    {
+        string tempPath = $"{finalPath}.tmp.{Guid.NewGuid():N}";
+        try
+        {
+            await using (var stream = new FileStream(
+                tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None,
+                bufferSize: 4096,
+                options: FileOptions.Asynchronous | FileOptions.WriteThrough))
+            await using (var writer = new StreamWriter(
+                stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+                bufferSize: 4096, leaveOpen: true))
+            {
+                await writer.WriteAsync(contents.AsMemory(), ct);
+                await writer.FlushAsync(ct);
+                stream.Flush(flushToDisk: true);
+            }
+
+            if (File.Exists(finalPath))
+                File.Replace(tempPath, finalPath, destinationBackupFileName: null,
+                    ignoreMetadataErrors: true);
+            else
+                File.Move(tempPath, finalPath);
+        }
+        finally
+        {
+            TryDeleteTemp(tempPath);
+        }
+    }
+
+    private static void TryDeleteTemp(string path)
+    {
+        try
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
     }
 
     public async Task<IReadOnlyList<RunHistoryRecord>> ListAsync(string accountId, CancellationToken ct)

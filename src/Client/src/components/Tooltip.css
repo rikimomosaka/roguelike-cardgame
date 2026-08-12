@@ -68,6 +68,14 @@
 /* Why: Phase 10.5.G — Token rarity placeholder。差別化は別フェーズ。 */
 .tip__rare--t { color: var(--rarity-c); border-color: var(--rarity-c-border); background: var(--rarity-c-bg); }
 
+.tip__status {
+  margin: 1px 0 5px;
+  color: var(--gold-warm);
+  font-size: 13px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+
 .tip__desc {
   color: var(--fg-muted);
   font-size: 15px;

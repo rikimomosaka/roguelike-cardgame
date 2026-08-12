@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using RoguelikeCardGame.Core.Battle.Engine;
+using RoguelikeCardGame.Core.Battle.Events;
 using RoguelikeCardGame.Core.Battle.State;
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Random;
@@ -109,5 +110,27 @@ public class EffectApplierSummonInstanceIdTests
         var (afterState2, _) = EffectApplier.Apply(state, hero, effect, rng2, catalog);
 
         Assert.NotEqual(afterState1.Allies[1].InstanceId, afterState2.Allies[1].InstanceId);
+    }
+
+    [Fact]
+    public void Summon_persists_logical_player_owner_from_effect_source()
+    {
+        var state = MakeStateWithHero();
+        var catalog = BattleFixtures.MinimalCatalog();
+        var hero = state.Allies[0];
+        var effect = new CardEffect("summon", EffectScope.Self, null, 0, UnitId: "minion");
+        var source = new CombatSource(
+            CombatSourceKind.CardEffect,
+            OwnerSlot: 7,
+            OwnerInstanceId: "room-hero-7",
+            ActorInstanceId: hero.InstanceId,
+            DefinitionId: "summon-card");
+
+        var (afterState, _) = EffectApplier.Apply(
+            state, hero, effect, MakeRng(0x3333), catalog, source);
+
+        var summon = afterState.Allies[1];
+        Assert.Equal(7, summon.OwnerPlayerSlot);
+        Assert.Equal("room-hero-7", summon.OwnerActorInstanceId);
     }
 }

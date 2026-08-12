@@ -25,9 +25,18 @@ const deck: CardInstanceDto[] = [
 
 describe('RestScreen', () => {
   it('default view shows heal and upgrade buttons', () => {
-    render(<RestScreen deck={deck} completed={false} onHeal={vi.fn()} onUpgrade={vi.fn()} onClose={vi.fn()} />)
+    const { container } = render(<RestScreen deck={deck} completed={false} onHeal={vi.fn()} onUpgrade={vi.fn()} onClose={vi.fn()} />)
     expect(screen.getByRole('button', { name: /^heal$/i })).toBeDefined()
     expect(screen.getByRole('button', { name: /upgrade card/i })).toBeDefined()
+    const fire = container.querySelector('.rs-fire')
+    const logs = container.querySelector('.rs-fire__logs')
+    const flameViewport = container.querySelector('.rs-fire__flame-viewport')
+    const flame = container.querySelector('.rs-fire__flame')
+    expect(flame).toHaveAttribute('src', '/icons/ui/rest_flame.png?v=2')
+    expect(logs).toHaveAttribute('src', '/icons/ui/rest_logs.png')
+    expect(flameViewport?.contains(flame)).toBe(true)
+    expect(fire?.children[0]).toBe(logs)
+    expect(fire?.children[1]).toBe(flameViewport)
   })
 
   it('heal button calls onHeal', async () => {

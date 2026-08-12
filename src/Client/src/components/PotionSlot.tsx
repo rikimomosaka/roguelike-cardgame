@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { usePotionCatalog } from '../hooks/useCardCatalog'
 import type { CardRarity } from './Card'
+import { rarityCodeFromNumber } from './rarity'
 import { useTooltipTarget } from './Tooltip'
 import type { TooltipContent } from './Tooltip'
 
@@ -11,31 +12,24 @@ type Props = {
   onDiscard: () => void
   /** 戦闘中の使用ハンドラ。指定されたときメニューに「使う」を表示する。 */
   onUse?: () => void
+  outsideBattleUseOnly?: boolean
 }
 
-function potionRarityCode(n: number): CardRarity {
-  switch (n) {
-    case 0: return 'c'
-    case 1: return 'r'
-    case 2: return 'e'
-    case 3: return 'l'
-    default: return 'c'
-  }
-}
-
-export function PotionSlot({ slotIndex, potionId, onDiscard, onUse }: Props) {
+export function PotionSlot({ slotIndex, potionId, onDiscard, onUse, outsideBattleUseOnly = false }: Props) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [menuPos, setMenuPos] = useState<{ left: number; top: number } | null>(null)
   const iconRef = useRef<HTMLButtonElement>(null)
   const filled = potionId !== ''
   const { catalog: potionCatalog } = usePotionCatalog()
+  const canUse = onUse !== undefined &&
+    (!outsideBattleUseOnly || potionCatalog?.[potionId]?.usableOutsideBattle === true)
   const tooltipContent = useMemo<TooltipContent | null>(() => {
     if (!filled) return null
     const entry = potionCatalog?.[potionId]
     const name = entry?.name ?? potionId
     const desc = entry?.description ?? '—'
     const rarity: CardRarity | undefined =
-      entry !== undefined ? potionRarityCode(entry.rarity) : undefined
+      entry !== undefined ? rarityCodeFromNumber(entry.rarity) : undefined
     return { name, rarity, desc }
   }, [filled, potionCatalog, potionId])
   const tip = useTooltipTarget(tooltipContent)
@@ -86,7 +80,7 @@ export function PotionSlot({ slotIndex, potionId, onDiscard, onUse }: Props) {
           style={{ left: menuPos.left, top: menuPos.top }}
           onMouseDown={e => e.stopPropagation()}
         >
-          {onUse ? (
+          {canUse ? (
             <button
               type="button"
               onClick={() => {

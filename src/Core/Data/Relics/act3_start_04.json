@@ -12,7 +12,13 @@
                                       "rarity":  2,
                                       "description":  "夜空から落ちた燃え滓。掌の上で熱を孕み、決戦の朝を予感させる。",
                                       "effects":  [
-
+                                                      {
+                                                          "action":  "gainMaxHp",
+                                                          "scope":   "self",
+                                                          "target":  null,
+                                                          "amount":  15,
+                                                          "trigger": "OnPickup"
+                                                      }
                                                   ],
                                       "implemented":  true
                                   }

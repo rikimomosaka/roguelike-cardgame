@@ -118,6 +118,7 @@ public class BattleEnginePlayCardPowerTests
                 Energy = 2,
                 LastPlayedOrigCost = 1,
                 ComboCount = 1,
+                MaxComboThisTurn = 1,
                 PowerCards = ImmutableArray.Create(powerInst),
             };
 

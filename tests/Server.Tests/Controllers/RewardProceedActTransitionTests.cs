@@ -55,12 +55,13 @@ public class RewardProceedActTransitionTests : IClassFixture<TempDataFactory>
 
         // ボスを倒した直後の状態を模倣: BossRewardFlow でボス報酬を生成し ActiveReward に設定
         var rewardRng = new SystemRng(unchecked((int)injected.RngSeed ^ (int)injected.PlaySeconds ^ 0x5EED));
-        var reward = BossRewardFlow.GenerateBossReward(injected, catalog, rewardRng);
+        var (reward, newRewardRngState) = BossRewardFlow.GenerateBossReward(injected, catalog, rewardRng);
 
         var withReward = injected with
         {
             ActiveBattle = null,
             ActiveReward = reward,
+            RewardRngState = newRewardRngState,
         };
 
         await repo.SaveAsync(accountId, withReward, CancellationToken.None);
@@ -129,7 +130,8 @@ public class RewardProceedActTransitionTests : IClassFixture<TempDataFactory>
         const string AccountId = "proc-normal-reward";
         await BattleTestHelpers.EnsureAccountAsync(client, AccountId);
         BattleTestHelpers.WithAccount(client, AccountId);
-        await BattleTestHelpers.StartRunAndMoveToEnemyAsync(client);
+        await BattleTestHelpers.StartRunAndMoveToEnemyAsync(
+            client, _fx.Services, AccountId);
         (await client.PostAsJsonAsync("/api/v1/runs/current/battle/win", new { elapsedSeconds = 0 }))
             .EnsureSuccessStatusCode();
 

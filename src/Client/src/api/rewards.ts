@@ -37,6 +37,13 @@ export async function discardPotion(accountId: string, slotIndex: number): Promi
   })
 }
 
+export async function consumePotionOutsideBattle(accountId: string, slotIndex: number): Promise<void> {
+  await apiRequest<void>('POST', '/runs/current/use-potion', {
+    accountId,
+    body: { slotIndex },
+  })
+}
+
 export async function claimRelic(accountId: string): Promise<void> {
   await apiRequest<void>('POST', '/runs/current/reward/claim-relic', { accountId })
 }

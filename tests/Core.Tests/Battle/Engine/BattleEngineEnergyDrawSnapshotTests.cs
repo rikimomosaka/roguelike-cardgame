@@ -39,6 +39,7 @@ public class BattleEngineEnergyDrawSnapshotTests
         var run = SampleRun();
         var (state, _) = BattleEngine.Start(run, FirstEncounterId(BaseCatalog), new SequentialRng(1UL), BaseCatalog);
         Assert.Equal(BattleEngine.InitialEnergy, state.EnergyMax);
+        Assert.Equal(BattleEngine.InitialEnergy, state.Energy);
         Assert.Equal(TurnStartProcessor.BaseDrawPerTurn, state.DrawPerTurn);
     }
 
@@ -51,6 +52,7 @@ public class BattleEngineEnergyDrawSnapshotTests
         var run = SampleRun("energy_charm");
         var (state, _) = BattleEngine.Start(run, FirstEncounterId(fake), new SequentialRng(1UL), fake);
         Assert.Equal(BattleEngine.InitialEnergy + 1, state.EnergyMax);
+        Assert.Equal(BattleEngine.InitialEnergy + 1, state.Energy);
     }
 
     [Fact]

@@ -27,6 +27,11 @@ public class AccountIdValidatorTests
     [InlineData("with?question")]
     [InlineData("with|pipe")]
     [InlineData("with\"quote")]
+    [InlineData("trailing.")]
+    [InlineData("trailing ")]
+    [InlineData("CON")]
+    [InlineData("con.profile")]
+    [InlineData("Lpt9")]
     public void Validate_InvalidId_ThrowsArgumentException(string id)
     {
         Assert.Throws<ArgumentException>(() => AccountIdValidator.Validate(id));

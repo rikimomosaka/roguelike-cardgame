@@ -57,6 +57,56 @@ public class EffectApplierBuffDebuffTests
         Assert.Equal(1, next.Enemies[0].GetStatus("vulnerable"));
     }
 
+    [Fact] public void Positive_status_application_records_latest_source_and_event_source()
+    {
+        var hero = BattleFixtures.Hero(slotIndex: 4);
+        var goblin = BattleFixtures.Goblin();
+        var state = State(hero, goblin);
+        var effect = new CardEffect(
+            "debuff", EffectScope.Single, EffectSide.Enemy, 3, Name: "poison");
+        var first = new CombatSource(
+            CombatSourceKind.CardEffect, 4, hero.InstanceId, hero.InstanceId,
+            DefinitionId: "poison_card", InstanceId: "poison-card-1",
+            EffectIndex: 0, Scope: "single");
+        var second = first with
+        {
+            DefinitionId = "stronger_poison",
+            InstanceId = "poison-card-2",
+            EffectIndex = 1,
+        };
+
+        var (afterFirst, firstEvents) = EffectApplier.Apply(
+            state, hero, effect, Rng(), BattleFixtures.MinimalCatalog(), first);
+        var (afterSecond, secondEvents) = EffectApplier.Apply(
+            afterFirst, hero, effect, Rng(), BattleFixtures.MinimalCatalog(), second);
+
+        Assert.Equal(first, Assert.Single(firstEvents).Source);
+        Assert.Equal(second, Assert.Single(secondEvents).Source);
+        Assert.Equal(second, afterSecond.Enemies[0].GetStatusSource("poison"));
+    }
+
+    [Fact] public void Removing_status_removes_its_saved_source()
+    {
+        var hero = BattleFixtures.Hero();
+        var source = new CombatSource(
+            CombatSourceKind.CardEffect, 0, hero.InstanceId, hero.InstanceId,
+            DefinitionId: "cleanse", InstanceId: "cleanse-1", EffectIndex: 0);
+        var poisoned = BattleFixtures.WithPoison(BattleFixtures.Goblin(), 2) with
+        {
+            StatusSources = ImmutableDictionary<string, CombatSource>.Empty
+                .Add("poison", source),
+        };
+        var state = State(hero, poisoned);
+        var effect = new CardEffect(
+            "debuff", EffectScope.Single, EffectSide.Enemy, -2, Name: "poison");
+
+        var (after, _) = EffectApplier.Apply(
+            state, hero, effect, Rng(), BattleFixtures.MinimalCatalog(), source);
+
+        Assert.False(after.Enemies[0].Statuses.ContainsKey("poison"));
+        Assert.False(after.Enemies[0].StatusSources.ContainsKey("poison"));
+    }
+
     [Fact] public void Debuff_all_enemies_adds_weak_to_each()
     {
         var hero = BattleFixtures.Hero();

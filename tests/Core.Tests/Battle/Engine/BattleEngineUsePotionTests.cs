@@ -88,9 +88,29 @@ public class BattleEngineUsePotionTests
         var state = BattleFixtures.MinimalState(
             potions: ImmutableArray.Create("atk_p", "", ""));
 
-        var (after, _) = BattleEngine.UsePotion(state, 0, null, null, MakeRng(), catalog);
+        var (after, useEvents) = BattleEngine.UsePotion(state, 0, null, null, MakeRng(), catalog);
 
         Assert.Equal(3, after.Allies[0].AttackAll.Sum);
+        var hit = Assert.Single(after.Allies[0].AttackAll.Hits);
+        Assert.Equal(CombatSourceKind.PotionEffect, hit.Source.Kind);
+        Assert.Equal("hero_inst", hit.Source.OwnerInstanceId);
+        Assert.Equal("hero_inst", hit.Source.ActorInstanceId);
+        Assert.Equal("atk_p", hit.Source.DefinitionId);
+        Assert.Null(hit.Source.InstanceId);
+        Assert.Equal(0, hit.Source.EffectIndex);
+        Assert.Equal("all", hit.Source.Scope);
+
+        var (_, damageEvents) = PlayerAttackingResolver.Resolve(
+            after with { Phase = BattlePhase.PlayerAttacking }, MakeRng(), catalog);
+        var damage = Assert.Single(damageEvents, e => e.Kind == BattleEventKind.DealDamage);
+        Assert.Equal(hit.Source, damage.Source);
+        Assert.Equal(3, damage.ActualHpLoss);
+
+        var used = Assert.Single(useEvents, e => e.Kind == BattleEventKind.UsePotion);
+        Assert.Equal(CombatSourceKind.PotionEffect, used.Source?.Kind);
+        Assert.Equal("atk_p", used.Source?.DefinitionId);
+        Assert.Null(used.Source?.EffectIndex);
+        Assert.Null(used.Source?.Scope);
     }
 
     [Fact]
@@ -172,6 +192,10 @@ public class BattleEngineUsePotionTests
         var ev = events.First(e => e.Kind == BattleEventKind.UsePotion);
         Assert.Equal("p", ev.CardId);
         Assert.Equal(1, ev.Amount);
+        Assert.Equal(CombatSourceKind.PotionEffect, ev.Source?.Kind);
+        Assert.Equal("hero_inst", ev.Source?.OwnerInstanceId);
+        Assert.Equal("hero_inst", ev.Source?.ActorInstanceId);
+        Assert.Equal("p", ev.Source?.DefinitionId);
     }
 
     [Fact]
@@ -193,5 +217,34 @@ public class BattleEngineUsePotionTests
         Assert.Equal(42, after2.Allies[0].CurrentHp);
         Assert.Equal("", after2.Potions[0]);
         Assert.Equal("", after2.Potions[1]);
+    }
+
+    [Fact]
+    public void UsePotion_uses_living_hero_with_lowest_slot_when_array_order_differs()
+    {
+        var potion = BattleFixtures.Potion("heal_owner",
+            new CardEffect("heal", EffectScope.Self, null, 10));
+        var catalog = BattleFixtures.MinimalCatalog(potions: new[] { potion });
+        var highSlot = BattleFixtures.Hero(currentHp: 20, maxHp: 70, slotIndex: 5) with
+        {
+            InstanceId = "hero-high",
+        };
+        var lowSlot = BattleFixtures.Hero(currentHp: 30, maxHp: 70, slotIndex: 1) with
+        {
+            InstanceId = "hero-low",
+        };
+        var state = BattleFixtures.MinimalState(
+            allies: ImmutableArray.Create(highSlot, lowSlot),
+            potions: ImmutableArray.Create("heal_owner"));
+
+        var (after, events) = BattleEngine.UsePotion(
+            state, 0, null, null, MakeRng(), catalog);
+
+        Assert.Equal(20, after.Allies[0].CurrentHp);
+        Assert.Equal(40, after.Allies[1].CurrentHp);
+        var used = Assert.Single(events, e => e.Kind == BattleEventKind.UsePotion);
+        Assert.Equal("hero-low", used.CasterInstanceId);
+        Assert.Equal("hero-low", used.Source!.OwnerInstanceId);
+        Assert.Equal(1, used.Source.OwnerSlot);
     }
 }

@@ -96,6 +96,14 @@
   font-weight: bold;
 }
 
+.card-desc-trigger__icon {
+  width: 1.15em;
+  height: 1.15em;
+  margin-right: 0.12em;
+  vertical-align: -0.2em;
+  object-fit: contain;
+}
+
 /* compress=false 時のシンプルな行 wrapper。card-desc 親の pre-wrap で改行が
    そのまま反映され、長文は自然折返し (圧縮 useLayoutEffect は走らない)。 */
 .card-desc--no-compress {

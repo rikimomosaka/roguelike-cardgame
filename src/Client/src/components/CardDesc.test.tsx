@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { render } from '@testing-library/react'
-import { CardDesc } from './CardDesc'
+import { CardDesc, KEYWORD_DEFS, STATUS_DEFS } from './CardDesc'
 
 describe('CardDesc', () => {
   it('renders plain text without markers as-is', () => {
@@ -22,6 +22,20 @@ describe('CardDesc', () => {
     expect(kw?.getAttribute('data-keyword')).toBe('wild')
   })
 
+  it('keeps Wild and SuperWild tooltip descriptions aligned with the game rules', () => {
+    expect(KEYWORD_DEFS.wild.desc).toBe(
+      'このカード及び次に使うカードではコンボが途切れない。このコンボ中、以降のワイルドを無効にする。',
+    )
+    expect(KEYWORD_DEFS.superwild.desc).toBe(
+      'このカード及び次に使うカードではコンボが途切れない。',
+    )
+  })
+
+  it('defines both hand-wide cost statuses for nested tooltips', () => {
+    expect(STATUS_DEFS.handCostReduction).toMatchObject({ name: '手札軽減' })
+    expect(STATUS_DEFS.handCostIncrease).toMatchObject({ name: '手札増加' })
+  })
+
   it('renders [T:OnTurnStart] as JP label', () => {
     const { container } = render(<CardDesc text="[T:OnTurnStart]の度にカードを [N:1] 枚引く。" />)
     expect(container.textContent).toContain('ターン開始時')
@@ -34,6 +48,12 @@ describe('CardDesc', () => {
     expect(container.textContent).toContain('X(Xは手札の数)')
     const v = container.querySelector('.card-desc-var')
     expect(v).toBeInTheDocument()
+  })
+
+  it('renders the OnHit visual next to its trigger label', () => {
+    const { container } = render(<CardDesc text="[T:OnHit]" />)
+    const icon = container.querySelector('.card-desc-trigger__icon')
+    expect(icon).toHaveAttribute('src', '/icons/ui/on_hit.png')
   })
 
   it('renders [C:strike] as card name reference', () => {

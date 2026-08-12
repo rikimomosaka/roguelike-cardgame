@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Immutable;
 using RoguelikeCardGame.Core.Battle.Definitions;
+using RoguelikeCardGame.Core.Bestiary;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Random;
 using RoguelikeCardGame.Core.Relics;
@@ -28,7 +29,8 @@ public static class RewardActions
         var rewardWithGold = reward with { Gold = goldAdjusted };
 
         var s1 = s with { ActiveReward = rewardWithGold, RewardRngState = newRng };
-        return NonBattleRelicEffects.ApplyOnRewardGenerated(s1, catalog);
+        var afterTriggers = NonBattleRelicEffects.ApplyOnRewardGenerated(s1, catalog);
+        return BestiaryTracker.NoteCardsSeen(afterTriggers, rewardWithGold.CardChoices);
     }
 
     /// <summary>
@@ -64,7 +66,7 @@ public static class RewardActions
             sourcePool, s.RewardRngState, ImmutableArray<string>.Empty,
             table, catalog, rng, s);
 
-        return s with
+        var updated = s with
         {
             ActiveReward = r with
             {
@@ -72,5 +74,6 @@ public static class RewardActions
                 RerollUsed = true,
             }
         };
+        return BestiaryTracker.NoteCardsSeen(updated, newPicks);
     }
 }

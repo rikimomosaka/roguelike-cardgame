@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { AccountProvider } from '../context/AccountContext'
 import type { RunResultDto } from '../api/types'
 import { InGameMenuScreen } from './InGameMenuScreen'
@@ -11,7 +11,10 @@ function Wrapper({ onExitToMenu, onAbandon, onClose, requireExitConfirm }: {
   onClose: () => void
   requireExitConfirm?: boolean
 }) {
-  const ref = useRef(performance.now())
+  const ref = useRef(0)
+  useEffect(() => {
+    ref.current = performance.now()
+  }, [])
   return (
     <AccountProvider>
       <InGameMenuScreen

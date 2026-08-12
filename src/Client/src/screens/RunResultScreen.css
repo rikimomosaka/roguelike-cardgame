@@ -128,14 +128,14 @@
   box-shadow: 0 0 4px currentColor;
 }
 
-.rc--common { color: #a89068; }
-.rc--common::before { background: #a89068; }
-.rc--uncommon { color: #6ab8ff; }
-.rc--uncommon::before { background: #6ab8ff; }
-.rc--rare { color: var(--gold); }
-.rc--rare::before { background: var(--gold); }
-.rc--boss { color: #d47aff; }
-.rc--boss::before { background: #d47aff; }
+.rc--common { color: var(--rarity-c); }
+.rc--common::before { background: var(--rarity-c); }
+.rc--rare { color: var(--rarity-r); }
+.rc--rare::before { background: var(--rarity-r); }
+.rc--epic { color: var(--rarity-e); }
+.rc--epic::before { background: var(--rarity-e); }
+.rc--legendary { color: var(--rarity-l); }
+.rc--legendary::before { background: var(--rarity-l); }
 
 /* ---------- Statistics panel ---------- */
 .rr__stats-panel {
@@ -438,20 +438,23 @@
   letter-spacing: 1px;
 }
 
-.item--common .rr__item-name { color: #c9b890; }
-.item--common .rr__item-icon { border-color: #6a5a3a; }
-.item--uncommon { background: rgba(58, 90, 138, 0.12); }
-.item--uncommon .rr__item-name { color: #9ecbff; }
-.item--uncommon .rr__item-icon { border-color: #3a5a8a; }
-.item--rare { background: rgba(184, 144, 56, 0.1); }
-.item--rare .rr__item-name { color: #ffe58a; }
-.item--rare .rr__item-icon {
-  border-color: #b89038;
-  box-shadow: 0 0 6px rgba(255, 213, 79, 0.15);
+.item--common .rr__item-name { color: var(--rarity-c); }
+.item--common .rr__item-icon { border-color: var(--rarity-c-border); }
+.item--rare { background: var(--rarity-r-bg); }
+.item--rare .rr__item-name { color: var(--rarity-r); }
+.item--rare .rr__item-icon { border-color: var(--rarity-r-border); }
+.item--epic { background: var(--rarity-e-bg); }
+.item--epic .rr__item-name { color: var(--rarity-e); }
+.item--epic .rr__item-icon {
+  border-color: var(--rarity-e-border);
+  box-shadow: var(--glow-epic);
 }
-.item--boss { background: rgba(122, 74, 160, 0.12); }
-.item--boss .rr__item-name { color: #e4a8ff; }
-.item--boss .rr__item-icon { border-color: #7a4aa0; }
+.item--legendary { background: var(--rarity-l-bg); }
+.item--legendary .rr__item-name { color: var(--rarity-l); }
+.item--legendary .rr__item-icon {
+  border-color: var(--rarity-l-border);
+  box-shadow: var(--glow-legendary);
+}
 
 .rr__empty {
   font-family: var(--font-label);

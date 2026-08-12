@@ -17,6 +17,9 @@ export type CardEffect = {
   select: string | null
   amountSource: string | null
   trigger: string | null
+  chancePercent: number | null
+  costDuration: string | null
+  cardCount: number | null
 }
 
 export type CardSpec = {
@@ -49,6 +52,9 @@ export function emptyEffect(): CardEffect {
     select: null,
     amountSource: null,
     trigger: null,
+    chancePercent: null,
+    costDuration: null,
+    cardCount: null,
   }
 }
 
@@ -88,6 +94,9 @@ function normalizeEffect(raw: unknown): CardEffect {
   if (typeof r.select === 'string') e.select = r.select
   if (typeof r.amountSource === 'string') e.amountSource = r.amountSource
   if (typeof r.trigger === 'string') e.trigger = r.trigger
+  if (typeof r.chancePercent === 'number') e.chancePercent = r.chancePercent
+  if (typeof r.costDuration === 'string') e.costDuration = r.costDuration
+  if (typeof r.cardCount === 'number') e.cardCount = r.cardCount
   return e
 }
 
@@ -144,6 +153,9 @@ function effectToJsonObject(e: CardEffect): Record<string, unknown> {
   if (e.select !== null) out.select = e.select
   if (e.amountSource !== null) out.amountSource = e.amountSource
   if (e.trigger !== null) out.trigger = e.trigger
+  if (e.chancePercent !== null) out.chancePercent = e.chancePercent
+  if (e.costDuration !== null) out.costDuration = e.costDuration
+  if (e.cardCount !== null) out.cardCount = e.cardCount
   return out
 }
 
@@ -261,6 +273,7 @@ export const EFFECT_ACTION_FIELDS: Record<string, (keyof CardEffect)[]> = {
   selfDamage: ['amount', 'trigger'],
   addCard: ['cardRefId', 'amount', 'pile', 'trigger'],
   recoverFromDiscard: ['amount', 'pile', 'select', 'trigger'],
+  modifyCardCost: ['amount', 'pile', 'select', 'cardCount', 'costDuration'],
 
   // Phase 10.6.B passive modifier actions: amount + trigger ("Passive" 自動セット)
   // unknownTileWeightDelta は name (タイル種別) も使う

@@ -24,7 +24,25 @@ internal static class TurnStartProcessor
 
     public static (BattleState, IReadOnlyList<BattleEvent>) Process(BattleState state, IRng rng, DataCatalog catalog)
     {
-        var s = state with { Turn = state.Turn + 1 };
+        // 決着済み state へ直接呼ばれても、ターン・エナジー・手札を進めない。
+        if (state.Outcome != RoguelikeCardGame.Core.Battle.State.BattleOutcome.Pending
+            || state.Phase == BattlePhase.Resolved)
+            return (state, ImmutableArray<BattleEvent>.Empty);
+
+        // EndTurn を経由しない直接呼び出しでも、新しいターンへ前ターンのコンボ状態を
+        // 持ち越さない。通常フローでは TurnEndProcessor のリセットと二重に保証する。
+        var s = state with
+        {
+            Turn = state.Turn + 1,
+            ComboCount = 0,
+            MaxComboThisTurn = 0,
+            LastPlayedOrigCost = null,
+            NextCardComboFreePass = false,
+            WildUsedInCurrentCombo = false,
+            UsedCharacterSkillIdsThisTurn = ImmutableHashSet<string>.Empty,
+        };
+        s = BattleCardCostModifierLifecycle.Remove(
+            s, CardCostModifierDuration.UntilTurnEnd);
         var events = new List<BattleEvent>();
         int order = 0;
 
@@ -67,8 +85,9 @@ internal static class TurnStartProcessor
         // 10.2.D: Lifetime 死亡で召喚カードを Discard へ
         s = SummonCleanup.Apply(s, events, ref order);
 
-        // Step 6-7: Energy reset / Draw
-        s = s with { Energy = s.EnergyMax };
+        // Step 6-7: 未使用 Energy を持ち越し、ターン開始時追加量 EnergyMax を加算して Draw。
+        // EnergyMax は互換性のため名称を維持しているが、現在は保有上限ではない。
+        s = s with { Energy = EnergyMath.AddSaturating(s.Energy, s.EnergyMax) };
         s = DrawHelper.Draw(s, s.DrawPerTurn, rng, out _);
 
         // Step 8: OnTurnStart レリック発動 (10.2.E / 10.5.L1.5: 文字列 trigger に変更)
@@ -113,32 +132,51 @@ internal static class TurnStartProcessor
             //  poison-1 のダメージ、という順序になり、毒 4 のはずが 3 ダメで止まるバグ
             //  があった。Slay the Spire と同じく「毒ダメ後に -1」が正しい。
             int newPoison = poison - 1;
+            int actualHpLoss = System.Math.Min(System.Math.Max(actor.CurrentHp, 0), poison);
+            int overkill = System.Math.Max(0, poison - System.Math.Max(actor.CurrentHp, 0));
+            var poisonSource = actor.GetStatusSource("poison")
+                ?? CombatSource.Unattributed;
+            var poisonChain = new DamageCauseChain(System.Collections.Immutable.ImmutableArray.Create(
+                new DamageCauseFrame(0, DamageType.Poison, poisonSource, null, "poison")));
             var newStatuses = newPoison <= 0
                 ? actor.Statuses.Remove("poison")
                 : actor.Statuses.SetItem("poison", newPoison);
+            var newStatusSources = newPoison <= 0
+                ? actor.StatusSources.Remove("poison")
+                : actor.StatusSources;
             var updated = actor with
             {
-                CurrentHp = actor.CurrentHp - poison,
+                CurrentHp = System.Math.Max(0, actor.CurrentHp - poison),
                 Statuses = newStatuses,
+                StatusSources = newStatusSources,
             };
             s = ReplaceActor(s, aid, updated);
 
             events.Add(new BattleEvent(
                 BattleEventKind.PoisonTick, Order: order++,
-                TargetInstanceId: aid, Amount: poison, Note: "poison"));
+                TargetInstanceId: aid, Amount: poison, Note: "poison",
+                DamageType: DamageType.Poison, Source: poisonSource,
+                CauseChain: poisonChain, ActualHpLoss: actualHpLoss,
+                Overkill: overkill, HitLanded: poison > 0));
 
             if (newPoison <= 0)
             {
                 events.Add(new BattleEvent(
                     BattleEventKind.RemoveStatus, Order: order++,
-                    TargetInstanceId: aid, Note: "poison"));
+                    TargetInstanceId: aid, Note: "poison",
+                    DamageType: DamageType.Poison, Source: poisonSource,
+                    CauseChain: poisonChain, ActualHpLoss: actualHpLoss,
+                    Overkill: overkill, HitLanded: poison > 0));
             }
 
             if (wasAlive && !updated.IsAlive)
             {
                 events.Add(new BattleEvent(
                     BattleEventKind.ActorDeath, Order: order++,
-                    TargetInstanceId: aid, Note: "poison"));
+                    TargetInstanceId: aid, Note: "poison",
+                    DamageType: DamageType.Poison, Source: poisonSource,
+                    CauseChain: poisonChain, ActualHpLoss: actualHpLoss,
+                    Overkill: overkill, HitLanded: poison > 0));
 
                 // 10.2.E: 敵の毒死で OnEnemyDeath 発火
                 if (wasEnemy)
@@ -149,7 +187,7 @@ internal static class TurnStartProcessor
                     foreach (var ev in evsRelic) { events.Add(ev with { Order = order++ }); }
                 }
             }
-            else if (updated.DefinitionId == "hero" && updated.IsAlive && poison > 0)
+            else if (updated.DefinitionId == "hero" && updated.IsAlive && actualHpLoss > 0)
             {
                 // 10.5.E: hero に毒 damage が入った直後 OnDamageReceived power fire
                 var (afterPower, evsPower) = PowerTriggerProcessor.FireOnDamageReceived(

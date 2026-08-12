@@ -12,7 +12,13 @@
                                       "rarity":  0,
                                       "description":  "ずんぐりとした赤いキノコ。一口齧ると、肉体の芯がじわりと太くなる。",
                                       "effects":  [
-
+                                                      {
+                                                          "action":  "gainMaxHp",
+                                                          "scope":   "self",
+                                                          "target":  null,
+                                                          "amount":  7,
+                                                          "trigger": "OnPickup"
+                                                      }
                                                   ],
                                       "implemented":  true
                                   }

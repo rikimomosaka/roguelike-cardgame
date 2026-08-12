@@ -1,7 +1,18 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { RelicCatalog } from '../api/catalog'
 import type { RewardStateDto } from '../api/types'
+import { TooltipHost } from '../components/Tooltip'
 import { RewardPopup } from './RewardPopup'
+
+const relicHookState = vi.hoisted(() => ({
+  catalog: null as RelicCatalog | null,
+  names: {} as Record<string, string>,
+}))
+
+vi.mock('../hooks/useRelicCatalog', () => ({
+  useRelicCatalog: () => relicHookState,
+}))
 
 function baseReward(overrides: Partial<RewardStateDto> = {}): RewardStateDto {
   return {
@@ -33,6 +44,11 @@ function baseHandlers() {
 }
 
 describe('RewardPopup', () => {
+  beforeEach(() => {
+    relicHookState.catalog = null
+    relicHookState.names = {}
+  })
+
   it('進む is always enabled and invokes onProceed even with nothing claimed', () => {
     const handlers = baseHandlers()
     render(
@@ -132,6 +148,111 @@ describe('RewardPopup', () => {
     )
     fireEvent.click(screen.getByText(/レリック: coin_purse/))
     await waitFor(() => expect(handlers.onClaimRelic).toHaveBeenCalledTimes(1))
+  })
+
+  it('relic 行の hover で TopBar と共通の名称・レア度・効果説明を表示する', () => {
+    relicHookState.catalog = {
+      coin_purse: {
+        id: 'coin_purse',
+        name: 'コインの巾着',
+        description: '効果とフレーバーを結合した互換テキスト',
+        effectText: '入手時、20ゴールドを得る。',
+        flavor: '旅人が落とした古い巾着。',
+        rarity: 'Epic',
+      },
+    }
+    relicHookState.names = { coin_purse: 'コインの巾着' }
+    const handlers = baseHandlers()
+
+    render(
+      <TooltipHost>
+        <RewardPopup
+          reward={baseReward({ relicId: 'coin_purse', relicClaimed: false })}
+          potions={['', '', '']}
+          potionSlotCount={3}
+          {...handlers}
+        />
+      </TooltipHost>,
+    )
+
+    const relicButton = screen.getByRole('button', { name: /レリック: コインの巾着/ })
+    fireEvent.mouseEnter(relicButton, { clientX: 120, clientY: 100 })
+
+    const tooltip = screen.getByRole('tooltip')
+    expect(within(tooltip).getByText('コインの巾着')).toBeInTheDocument()
+    expect(within(tooltip).getByText('EPIC')).toBeInTheDocument()
+    expect(within(tooltip).getByText('入手時、20ゴールドを得る。')).toBeInTheDocument()
+    expect(within(tooltip).getByText('旅人が落とした古い巾着。')).toBeInTheDocument()
+    expect(within(tooltip).queryByText('効果とフレーバーを結合した互換テキスト')).toBeNull()
+
+    fireEvent.mouseLeave(relicButton)
+    expect(screen.queryByRole('tooltip')).toBeNull()
+  })
+
+  it('relic 行はキーボードフォーカスでも説明を表示して関連付ける', () => {
+    relicHookState.catalog = {
+      coin_purse: {
+        id: 'coin_purse',
+        name: 'コインの巾着',
+        description: '入手時、20ゴールドを得る。',
+        effectText: '入手時、20ゴールドを得る。',
+        flavor: '',
+        rarity: 'Common',
+      },
+    }
+    relicHookState.names = { coin_purse: 'コインの巾着' }
+
+    render(
+      <TooltipHost>
+        <RewardPopup
+          reward={baseReward({ relicId: 'coin_purse', relicClaimed: false })}
+          potions={['', '', '']}
+          potionSlotCount={3}
+          {...baseHandlers()}
+        />
+      </TooltipHost>,
+    )
+
+    const relicButton = screen.getByRole('button', { name: /レリック: コインの巾着/ })
+    fireEvent.focus(relicButton)
+    const tooltip = screen.getByRole('tooltip')
+    expect(tooltip.id).not.toBe('')
+    expect(relicButton).toHaveAttribute('aria-describedby', tooltip.id)
+    expect(within(tooltip).getByText('入手時、20ゴールドを得る。')).toBeInTheDocument()
+
+    fireEvent.blur(relicButton)
+    expect(screen.queryByRole('tooltip')).toBeNull()
+  })
+
+  it('effectText が空の relic は flavor を説明欄へ重複表示しない', () => {
+    relicHookState.catalog = {
+      bell_earring: {
+        id: 'bell_earring',
+        name: 'べるイヤリング',
+        description: '揺れるたびに澄んだ音色を響かせる。',
+        effectText: '',
+        flavor: '揺れるたびに澄んだ音色を響かせる。',
+        rarity: 'Common',
+      },
+    }
+    relicHookState.names = { bell_earring: 'べるイヤリング' }
+
+    render(
+      <TooltipHost>
+        <RewardPopup
+          reward={baseReward({ relicId: 'bell_earring', relicClaimed: false })}
+          potions={['', '', '']}
+          potionSlotCount={3}
+          {...baseHandlers()}
+        />
+      </TooltipHost>,
+    )
+
+    const relicButton = screen.getByRole('button', { name: /レリック: べるイヤリング/ })
+    fireEvent.mouseEnter(relicButton, { clientX: 120, clientY: 100 })
+    const tooltip = screen.getByRole('tooltip')
+    expect(within(tooltip).getAllByText('揺れるたびに澄んだ音色を響かせる。')).toHaveLength(1)
+    expect(within(tooltip).getByText('—')).toBeInTheDocument()
   })
 
   it('relic は relicId が null のときは表示されない', () => {

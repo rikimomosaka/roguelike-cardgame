@@ -4,14 +4,16 @@ import './CardDesc.css'
 
 // Why: キーワード ID → 日本語表示名 + 説明文。Core 側 CardKeywords 辞書と同期。
 //   tooltip の二段目で定義 popup を出すために description も保持。
+// Shared immutable description data is intentionally colocated with its renderer.
+// eslint-disable-next-line react-refresh/only-export-components
 export const KEYWORD_DEFS: Record<string, { name: string; desc: string }> = {
   wild: {
     name: 'ワイルド',
-    desc: 'このカードではコンボが途切れない。このコンボ中、以降のワイルドを無効にする。',
+    desc: 'このカード及び次に使うカードではコンボが途切れない。このコンボ中、以降のワイルドを無効にする。',
   },
   superwild: {
     name: 'スーパーワイルド',
-    desc: 'このカード及び次に使うカードではコンボが途切れない。このコンボ中、以降のワイルドを無効にする。',
+    desc: 'このカード及び次に使うカードではコンボが途切れない。',
   },
   wait: {
     name: '待機',
@@ -30,6 +32,7 @@ export const KEYWORD_DEFS: Record<string, { name: string; desc: string }> = {
 
 // Why: status ID → 日本語名 + 効果説明。tooltip 二段目で定義 popup 表示用。
 //   Core 側 (CardTextFormatter.JpStatusName / Server meta endpoint) と同期。
+// eslint-disable-next-line react-refresh/only-export-components
 export const STATUS_DEFS: Record<string, { name: string; desc: string }> = {
   strength: { name: '筋力', desc: '与えるダメージが X 増加する。' },
   dexterity: { name: '敏捷', desc: '得るブロックが X 増加する。' },
@@ -37,6 +40,17 @@ export const STATUS_DEFS: Record<string, { name: string; desc: string }> = {
   vulnerable: { name: '脆弱', desc: '受けるダメージが 1.5 倍になる。X ターン残存。' },
   poison: { name: '毒', desc: 'ターン開始時に X ダメージを受け、X が 1 減る。' },
   omnistrike: { name: '拡散', desc: '全ての攻撃を全体攻撃に変更する。X ターン残存。' },
+  barrier: { name: 'バリア', desc: '正の攻撃をXヒット無効化する。ブロックは消費しない。' },
+  lifesteal: { name: '吸血', desc: '攻撃で実際に減らしたHPのX%を回復する。' },
+  reflect: { name: '反射', desc: '攻撃を受けるたび、攻撃者へXの固定ダメージを返す。' },
+  handCostReduction: {
+    name: '手札軽減',
+    desc: '手札にあるカードの現在コストをX減らす。手札を離れると適用されない。',
+  },
+  handCostIncrease: {
+    name: '手札増加',
+    desc: '手札にあるカードの現在コストをX増やす。手札を離れると適用されない。',
+  },
 }
 
 // Why: relic / power カード共通の発火タイミング ID → 日本語表示。
@@ -50,6 +64,7 @@ const TRIGGER_JP: Record<string, string> = {
   OnPlayCard: 'カードプレイ時',
   OnEnemyDeath: '敵撃破時',
   OnDamageReceived: 'ダメージ受け時',
+  OnHit: '攻撃命中時',
   OnCombo: 'コンボ達成時',
   OnMapTileResolved: 'マスイベント解決後',
   OnCardDiscarded: 'カード捨て時',
@@ -76,6 +91,8 @@ export type CardDescRef =
   | { kind: 'status'; id: string; name: string; desc: string }
   | { kind: 'card'; id: string; name: string }
 
+// Pure parser used by Tooltip; it has no Fast Refresh state of its own.
+// eslint-disable-next-line react-refresh/only-export-components
 export function extractCardDescRefs(
   text: string,
   cardNames: Record<string, string> = {},
@@ -325,6 +342,14 @@ function renderMarker(
       const jp = TRIGGER_JP[value] ?? value
       return (
         <span key={key} className="card-desc-trigger">
+          {value === 'OnHit' && (
+            <img
+              className="card-desc-trigger__icon"
+              src="/icons/ui/on_hit.png"
+              alt=""
+              draggable={false}
+            />
+          )}
           {jp}
         </span>
       )

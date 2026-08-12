@@ -269,21 +269,19 @@
 /* ---------- Card grid (cards tab) ---------- */
 .achievements__card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  grid-template-columns: repeat(auto-fill, var(--card-width));
   gap: 8px;
   align-items: start;
-  justify-items: stretch;
+  justify-content: start;
+  justify-items: start;
 }
 
 .achievements__card-cell {
+  width: var(--card-width);
   display: flex;
   flex-direction: column;
   gap: 4px;
-  align-items: stretch;
-}
-
-.achievements__card-cell .card {
-  width: 100% !important;
+  align-items: center;
 }
 
 .achievements__card-id {

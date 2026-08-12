@@ -78,10 +78,10 @@ public class EmbeddedDataLoaderTests
         var catalog = EmbeddedDataLoader.LoadCatalog();
         // Phase 10.6.B: lucky_die を削除 (37→36)。gamble_dice v2 で reroll 効果を移管 (false→true で +1、合計 20 維持)
         Assert.Equal(36, catalog.Relics.Count);
-        // 20 ファイルが Implemented: true、16 ファイルが Implemented: false の想定
+        // 24 files are implemented; 12 remain explicit placeholders.
         var trueCount = catalog.Relics.Values.Count(r => r.Implemented);
         var falseCount = catalog.Relics.Values.Count(r => !r.Implemented);
-        Assert.Equal(20, trueCount);
-        Assert.Equal(16, falseCount);
+        Assert.Equal(24, trueCount);
+        Assert.Equal(12, falseCount);
     }
 }

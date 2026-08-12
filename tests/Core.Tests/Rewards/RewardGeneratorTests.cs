@@ -207,10 +207,28 @@ public class RewardGeneratorTests
         var rt = catalog.RewardTables["act1"];
         var rng = new SequentialRng(99UL);
         var rngState = new RewardRngState(40, 0);
-        var owned = ImmutableArray.CreateRange(catalog.Relics.Keys.Take(catalog.Relics.Count - 1));
+        var normalPool = RelicPoolHelper.GetNormalAcquisitionRelics(catalog);
+        var expected = normalPool[^1].Id;
+        var owned = normalPool[..^1].Select(relic => relic.Id).ToImmutableArray();
         var (reward, _) = RewardGenerator.GenerateTreasure(rngState, owned, rt, catalog, rng);
-        Assert.NotNull(reward.RelicId);
-        Assert.DoesNotContain(reward.RelicId!, owned);
+        Assert.Equal(expected, reward.RelicId);
+    }
+
+    [Fact]
+    public void GenerateFromNonBattle_Treasure_ExcludesEveryActStartReservedRelic()
+    {
+        var catalog = EmbeddedDataLoader.LoadCatalog();
+        var rt = catalog.RewardTables["act1"];
+        var normalPool = RelicPoolHelper.GetNormalAcquisitionRelics(catalog);
+        var expected = normalPool[0].Id;
+        var owned = normalPool.Skip(1).Select(relic => relic.Id).ToImmutableArray();
+
+        var (reward, _) = RewardGenerator.GenerateTreasure(
+            new RewardRngState(40, 0), owned, rt, catalog, new SequentialRng(23UL));
+
+        Assert.Equal(expected, reward.RelicId);
+        Assert.DoesNotContain(
+            reward.RelicId!, RelicPoolHelper.GetActStartReservedIds(catalog));
     }
 
     [Fact]
@@ -302,6 +320,92 @@ public class RewardGeneratorTests
             s);
 
         Assert.Single(reward.CardChoices); // 床 1
+    }
+
+    [Fact]
+    public void RegenerateCardChoicesForReward_WhenPoolHasOneEligibleCard_ReturnsItAndStops()
+    {
+        var reducedCards = BaseCatalog.Cards
+            .Where(pair => !pair.Key.StartsWith("reward_", StringComparison.Ordinal)
+                || pair.Key == "reward_common_01")
+            .ToDictionary(pair => pair.Key, pair => pair.Value);
+        var catalog = BaseCatalog with { Cards = reducedCards };
+        var s = Sample();
+
+        var picks = RewardGenerator.RegenerateCardChoicesForReward(
+            new EnemyPool(1, EnemyTier.Weak),
+            s.RewardRngState,
+            ImmutableArray<string>.Empty,
+            catalog.RewardTables["act1"],
+            catalog,
+            new SequentialRng(99UL),
+            s);
+
+        Assert.Equal(new[] { "reward_common_01" }, picks);
+    }
+
+    [Fact]
+    public void RegenerateCardChoicesForReward_WhenPoolIsEmpty_ReturnsEmpty()
+    {
+        var reducedCards = BaseCatalog.Cards
+            .Where(pair => !pair.Key.StartsWith("reward_", StringComparison.Ordinal))
+            .ToDictionary(pair => pair.Key, pair => pair.Value);
+        var catalog = BaseCatalog with { Cards = reducedCards };
+        var s = Sample();
+
+        var picks = RewardGenerator.RegenerateCardChoicesForReward(
+            new EnemyPool(1, EnemyTier.Weak),
+            s.RewardRngState,
+            ImmutableArray<string>.Empty,
+            catalog.RewardTables["act1"],
+            catalog,
+            new SequentialRng(99UL),
+            s);
+
+        Assert.Empty(picks);
+    }
+
+    [Fact]
+    public void GenerateFromEnemy_WhenCardPoolIsEmpty_MarksCardRewardResolved()
+    {
+        var reducedCards = BaseCatalog.Cards
+            .Where(pair => !pair.Key.StartsWith("reward_", StringComparison.Ordinal))
+            .ToDictionary(pair => pair.Key, pair => pair.Value);
+        var catalog = BaseCatalog with { Cards = reducedCards };
+        var s = Sample();
+
+        var (reward, _) = RewardGenerator.Generate(
+            new RewardContext.FromEnemy(new EnemyPool(1, EnemyTier.Weak)),
+            s.RewardRngState,
+            ImmutableArray<string>.Empty,
+            catalog.RewardTables["act1"],
+            catalog,
+            new SequentialRng(99UL),
+            s);
+
+        Assert.Empty(reward.CardChoices);
+        Assert.Equal(CardRewardStatus.Claimed, reward.CardStatus);
+    }
+
+    [Fact]
+    public void RegenerateCardChoicesForReward_IsIndependentOfCatalogDictionaryOrder()
+    {
+        var reversedCards = BaseCatalog.Cards
+            .OrderByDescending(pair => pair.Key, StringComparer.Ordinal)
+            .ToDictionary(pair => pair.Key, pair => pair.Value);
+        var reversedCatalog = BaseCatalog with { Cards = reversedCards };
+        var s = Sample();
+
+        var expected = RewardGenerator.RegenerateCardChoicesForReward(
+            new EnemyPool(1, EnemyTier.Weak), s.RewardRngState,
+            ImmutableArray<string>.Empty, BaseCatalog.RewardTables["act1"], BaseCatalog,
+            new SequentialRng(99UL), s);
+        var actual = RewardGenerator.RegenerateCardChoicesForReward(
+            new EnemyPool(1, EnemyTier.Weak), s.RewardRngState,
+            ImmutableArray<string>.Empty, reversedCatalog.RewardTables["act1"], reversedCatalog,
+            new SequentialRng(99UL), s);
+
+        Assert.Equal(expected.ToArray(), actual.ToArray());
     }
 
     [Fact]

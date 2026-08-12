@@ -4,7 +4,7 @@
 //   - versions タブ + RelicSpecForm + 各種 mutation ボタン
 //   - 新規レリック / 削除レリック モーダル
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { DevMeta, DevRelicDto } from '../api/dev'
 import {
   createNewRelic,
@@ -39,7 +39,7 @@ export function DevRelicsScreen({ onBack }: Props = {}) {
   const [selectedVer, setSelectedVer] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   const [newRelicOpen, setNewRelicOpen] = useState(false)
-  const [pendingSelectId, setPendingSelectId] = useState<string | null>(null)
+  const pendingSelectIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -50,6 +50,7 @@ export function DevRelicsScreen({ onBack }: Props = {}) {
         if (list.length > 0) {
           setSelectedId((prevId) => {
             let id: string
+            const pendingSelectId = pendingSelectIdRef.current
             if (pendingSelectId && list.some((c) => c.id === pendingSelectId)) {
               id = pendingSelectId
             } else {
@@ -59,7 +60,7 @@ export function DevRelicsScreen({ onBack }: Props = {}) {
             setSelectedVer(r.activeVersion ?? null)
             return id
           })
-          if (pendingSelectId) setPendingSelectId(null)
+          pendingSelectIdRef.current = null
         } else {
           setSelectedId(null)
           setSelectedVer(null)
@@ -91,7 +92,15 @@ export function DevRelicsScreen({ onBack }: Props = {}) {
   if (!relics || !meta) return <div className="dev-loading">読込中...</div>
 
   const selected = relics.find((c) => c.id === selectedId) ?? null
-  const allRelicIds = relics.map((c) => c.id)
+  const selectedVersionId = selected
+    ? (selectedVer ?? selected.activeVersion)
+    : null
+  const selectedVersionSpec = selected?.versions.find(
+    (version) => version.version === selectedVersionId,
+  )?.spec
+  const detailKey = selected
+    ? `${selected.id}:${selectedVersionId}:${JSON.stringify(selectedVersionSpec)}`
+    : ''
 
   return (
     <div className="dev-cards">
@@ -128,11 +137,10 @@ export function DevRelicsScreen({ onBack }: Props = {}) {
         ) : null}
         {selected ? (
           <DevRelicDetail
-            key={`${selected.id}`}
+            key={detailKey}
             relic={selected}
-            versionId={selectedVer ?? selected.activeVersion}
+            versionId={selectedVersionId!}
             meta={meta}
-            allRelicIds={allRelicIds}
             onSelectVersion={setSelectedVer}
             onAfterMutation={() => setReloadKey((k) => k + 1)}
             onAfterDelete={() => {
@@ -151,7 +159,7 @@ export function DevRelicsScreen({ onBack }: Props = {}) {
           onClose={() => setNewRelicOpen(false)}
           onCreated={(id) => {
             setNewRelicOpen(false)
-            setPendingSelectId(id)
+            pendingSelectIdRef.current = id
             setReloadKey((k) => k + 1)
           }}
         />
@@ -368,7 +376,6 @@ type DetailProps = {
   relic: DevRelicDto
   versionId: string
   meta: DevMeta
-  allRelicIds: string[]
   onSelectVersion: (v: string) => void
   onAfterMutation: () => void
   onAfterDelete: () => void
@@ -378,7 +385,6 @@ function DevRelicDetail({
   relic,
   versionId,
   meta,
-  allRelicIds: _allRelicIds,
   onSelectVersion,
   onAfterMutation,
   onAfterDelete,
@@ -393,12 +399,6 @@ function DevRelicDetail({
   const [saving, setSaving] = useState<boolean>(false)
   const [deleteOpen, setDeleteOpen] = useState<boolean>(false)
   const nextVerN = computeNextVerN(relic)
-
-  useEffect(() => {
-    if (ver) setDraft(parseRelicSpec(ver.spec))
-    setLabel('')
-    setEditError(null)
-  }, [relic.id, versionId, ver?.spec])
 
   const saveAsNew = async () => {
     setEditError(null)

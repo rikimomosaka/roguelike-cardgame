@@ -32,11 +32,42 @@ public class AccountsControllerTests : IClassFixture<TempDataFactory>
     }
 
     [Fact]
+    public async Task Post_WithUnknownHeader_CreatesAccountFromRequestBody()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Account-Id", "unknown-create-header");
+
+        var res = await client.PostAsJsonAsync(
+            "/api/v1/accounts", new { accountId = "requested-body-account" });
+
+        Assert.Equal(HttpStatusCode.Created, res.StatusCode);
+        var body = await res.Content.ReadFromJsonAsync<AccountResponse>();
+        Assert.NotNull(body);
+        Assert.Equal("requested-body-account", body!.Id);
+
+        var get = await client.GetAsync("/api/v1/accounts/requested-body-account");
+        Assert.Equal(HttpStatusCode.OK, get.StatusCode);
+    }
+
+    [Fact]
     public async Task Post_DuplicateId_Returns409()
     {
         var client = _factory.CreateClient();
         await client.PostAsJsonAsync("/api/v1/accounts", new { accountId = "dup" });
         var res = await client.PostAsJsonAsync("/api/v1/accounts", new { accountId = "dup" });
+
+        Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
+    }
+
+    [Fact]
+    public async Task Post_CaseVariantDuplicate_Returns409_OnEveryOs()
+    {
+        var client = _factory.CreateClient();
+        await client.PostAsJsonAsync(
+            "/api/v1/accounts", new { accountId = "HttpCaseOwner" });
+
+        var res = await client.PostAsJsonAsync(
+            "/api/v1/accounts", new { accountId = "httpcaseowner" });
 
         Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
     }
@@ -62,6 +93,20 @@ public class AccountsControllerTests : IClassFixture<TempDataFactory>
         Assert.Equal(HttpStatusCode.OK, res.StatusCode);
         var body = await res.Content.ReadFromJsonAsync<AccountResponse>();
         Assert.Equal("alice", body!.Id);
+    }
+
+    [Fact]
+    public async Task Get_CaseVariant_ReturnsStoredCanonicalId()
+    {
+        var client = _factory.CreateClient();
+        await client.PostAsJsonAsync(
+            "/api/v1/accounts", new { accountId = "CanonicalAlice" });
+
+        var res = await client.GetAsync("/api/v1/accounts/canonicalalice");
+
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        var body = await res.Content.ReadFromJsonAsync<AccountResponse>();
+        Assert.Equal("CanonicalAlice", body!.Id);
     }
 
     [Fact]

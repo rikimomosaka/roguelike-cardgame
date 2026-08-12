@@ -102,6 +102,14 @@
   --ls-tight: 0.5px;
   --ls-wide: 3px;
 
+  /* ---------- Canonical card geometry ---------- */
+  /* Every full card is composed at this exact size. Larger presentations
+     scale the completed card instead of recomputing its internal layout. */
+  --card-width: 112px;
+  --card-height: 156.8px;
+  --card-half-width: calc(var(--card-width) / 2);
+  --card-half-height: calc(var(--card-height) / 2);
+
   /* ---------- Radii ---------- */
   --radius-sm: 2px;
   --radius-md: 3px;

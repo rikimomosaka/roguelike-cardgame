@@ -119,8 +119,12 @@ public class BattleEngineStartTests
         var cat = BattleFixtures.MinimalCatalog();
         var (s, _) = BattleEngine.Start(run, "enc_test", Rng(), cat);
         Assert.Equal(0, s.ComboCount);
+        Assert.Equal(0, s.MaxComboThisTurn);
         Assert.Null(s.LastPlayedOrigCost);
         Assert.False(s.NextCardComboFreePass);
+        Assert.False(s.WildUsedInCurrentCombo);
+        Assert.Equal(0, s.ComboGauge);
+        Assert.Empty(s.UsedCharacterSkillIdsThisTurn);
     }
 
     [Fact] public void Start_initializes_summon_held_and_power_cards_to_empty()

@@ -1,13 +1,14 @@
 import { useMemo } from 'react'
 import type { ReactNode } from 'react'
 import type { RunResultDto, RunResultJourneyEntryDto, RunSnapshotDto, TileKind } from '../api/types'
-import type { CardRarity } from '../components/Card'
 import { cardDisplay } from '../components/cardDisplay'
+import { optionalRarityCodeFromNumber, rarityCodeFromName } from '../components/rarity'
 import { useTooltipTarget } from '../components/Tooltip'
 import type { TooltipContent } from '../components/Tooltip'
 import { useCardCatalog, usePotionCatalog } from '../hooks/useCardCatalog'
 import { useRelicCatalog } from '../hooks/useRelicCatalog'
 import type { CardCatalog, PotionCatalog, RelicCatalog } from '../api/catalog'
+import { rarityToItemClass } from './runResultRarity'
 import './RunResultScreen.css'
 
 const TILE_IMG_SRC: Record<TileKind, string> = {
@@ -26,37 +27,6 @@ type Props = {
   result: RunResultDto
   snapshot?: RunSnapshotDto
   onReturnToMenu: () => void
-}
-
-function rarityToItemClass(rarity: CardRarity | undefined): string {
-  switch (rarity) {
-    case 'r': return 'item--uncommon'
-    case 'e': return 'item--rare'
-    case 'l': return 'item--boss'
-    case 'c':
-    default:
-      return 'item--common'
-  }
-}
-
-function relicRarityCode(rarity: string | undefined): CardRarity | undefined {
-  if (!rarity) return undefined
-  const r = rarity.toLowerCase()
-  if (r === 'rare' || r === 'r') return 'r'
-  if (r === 'epic' || r === 'e') return 'e'
-  if (r === 'legendary' || r === 'l') return 'l'
-  return 'c'
-}
-
-function potionRarityCode(n: number | undefined): CardRarity | undefined {
-  if (n === undefined) return undefined
-  switch (n) {
-    case 0: return 'c'
-    case 1: return 'r'
-    case 2: return 'e'
-    case 3: return 'l'
-    default: return 'c'
-  }
 }
 
 function journeyIcon(kind: TileKind, resolvedKind: TileKind | null): ReactNode {
@@ -375,7 +345,7 @@ function RelicRow({
 }) {
   const entry = relicCatalog?.[id]
   const name = relicNames[id] ?? id
-  const rarity = relicRarityCode(entry?.rarity)
+  const rarity = rarityCodeFromName(entry?.rarity)
   const description = entry?.description ?? null
   const tooltipContent = useMemo<TooltipContent | null>(() => {
     if (!description) return null
@@ -408,7 +378,7 @@ function PotionRow({
 }) {
   const entry = potionCatalog?.[id]
   const name = potionNames[id] ?? id
-  const rarity = potionRarityCode(entry?.rarity)
+  const rarity = optionalRarityCodeFromNumber(entry?.rarity)
   const description = entry?.description ?? null
   const tooltipContent = useMemo<TooltipContent | null>(() => {
     if (!description) return null

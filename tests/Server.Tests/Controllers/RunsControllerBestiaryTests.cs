@@ -26,7 +26,8 @@ public class RunsControllerBestiaryTests : IClassFixture<TempDataFactory>
         BattleTestHelpers.WithAccount(client, acc);
 
         // Start run + move to enemy + win battle (ActiveReward produced).
-        await BattleTestHelpers.StartRunAndMoveToEnemyAsync(client);
+        await BattleTestHelpers.StartRunAndMoveToEnemyAsync(
+            client, _factory.Services, acc);
         var winResp = await client.PostAsJsonAsync(
             "/api/v1/runs/current/battle/win", new { elapsedSeconds = 0 });
         winResp.EnsureSuccessStatusCode();

@@ -33,7 +33,7 @@ public class PlayerAttackingResolverOmnistrikeTests
 
     private static IRng Rng() => new FakeRng(new int[0], new double[0]);
 
-    [Fact] public void Omnistrike_combines_pools_and_hits_all_enemies()
+    [Fact] public void Omnistrike_preserves_each_pool_hit_and_hits_all_enemies()
     {
         // Single +5 を 1 枚、All +3 を 1 枚 → combined Sum=8, AddCount=2
         var hero = BattleFixtures.WithOmnistrike(BattleFixtures.Hero(), 1) with
@@ -42,9 +42,14 @@ public class PlayerAttackingResolverOmnistrikeTests
             AttackAll    = AttackPool.Empty.Add(3),
         };
         var s = State(hero, BattleFixtures.Goblin(0, hp: 50), BattleFixtures.Goblin(1, hp: 50));
-        var (next, _) = PlayerAttackingResolver.Resolve(s, Rng(), BattleFixtures.MinimalCatalog());
+        var (next, events) = PlayerAttackingResolver.Resolve(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(50 - 8, next.Enemies[0].CurrentHp);
         Assert.Equal(50 - 8, next.Enemies[1].CurrentHp);
+
+        var hits = events.Where(e => e.Kind == BattleEventKind.AttackFire).ToList();
+        Assert.Equal(4, hits.Count);
+        Assert.Equal(new int?[] { 5, 5, 3, 3 }, hits.Select(e => e.Amount));
+        Assert.Equal(new int?[] { 0, 0, 1, 1 }, hits.Select(e => e.HitIndex));
     }
 
     [Fact] public void Omnistrike_AddCount_combines_for_strength_calc()
@@ -57,8 +62,9 @@ public class PlayerAttackingResolverOmnistrikeTests
             AttackRandom = AttackPool.Empty.Add(3),
         };
         var s = State(hero, BattleFixtures.Goblin(0, hp: 50));
-        var (next, _) = PlayerAttackingResolver.Resolve(s, Rng(), BattleFixtures.MinimalCatalog());
+        var (next, events) = PlayerAttackingResolver.Resolve(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(50 - 19, next.Enemies[0].CurrentHp);
+        Assert.Equal(3, events.Count(e => e.Kind == BattleEventKind.AttackFire));
     }
 
     [Fact] public void Omnistrike_with_empty_pools_does_not_fire()
@@ -81,6 +87,27 @@ public class PlayerAttackingResolverOmnistrikeTests
         Assert.Equal(3, evs.Count(e => e.Kind == BattleEventKind.AttackFire));
         Assert.All(evs.Where(e => e.Kind == BattleEventKind.AttackFire),
                    e => Assert.Equal("omnistrike", e.Note));
+    }
+
+    [Fact] public void Omnistrike_does_not_hit_an_enemy_again_after_an_earlier_hit_kills_it()
+    {
+        var hero = BattleFixtures.WithOmnistrike(BattleFixtures.Hero(), 1) with
+        {
+            AttackSingle = AttackPool.Empty.Add(5).Add(4),
+        };
+        var state = State(
+            hero,
+            BattleFixtures.Goblin(0, hp: 5),
+            BattleFixtures.Goblin(1, hp: 20));
+
+        var (next, events) = PlayerAttackingResolver.Resolve(
+            state, Rng(), BattleFixtures.MinimalCatalog());
+
+        Assert.Equal(0, next.Enemies[0].CurrentHp);
+        Assert.Equal(11, next.Enemies[1].CurrentHp);
+        var hits = events.Where(e => e.Kind == BattleEventKind.AttackFire).ToList();
+        Assert.Equal(3, hits.Count);
+        Assert.Equal(new int?[] { 0, 0, 1 }, hits.Select(e => e.HitIndex));
     }
 
     [Fact] public void Without_omnistrike_uses_single_random_all_path()

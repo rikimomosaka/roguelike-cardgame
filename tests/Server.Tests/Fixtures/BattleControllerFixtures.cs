@@ -36,7 +36,8 @@ internal static class BattleControllerFixtures
 
         await BattleTestHelpers.EnsureAccountAsync(client, accountId);
         BattleTestHelpers.WithAccount(client, accountId);
-        await BattleTestHelpers.StartRunAndMoveToEnemyAsync(client);
+        await BattleTestHelpers.StartRunAndMoveToEnemyAsync(
+            client, factory.Services, accountId);
 
         return (client, accountId);
     }

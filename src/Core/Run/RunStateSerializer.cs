@@ -16,7 +16,18 @@ public sealed class RunStateSerializerException : Exception
 public static class RunStateSerializer
 {
     public static string Serialize(RunState state)
-        => JsonSerializer.Serialize(state, JsonOptions.Default);
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ValidateState(state, "before serialization");
+        try
+        {
+            return JsonSerializer.Serialize(state, JsonOptions.Default);
+        }
+        catch (Exception ex) when (ex is JsonException or NotSupportedException)
+        {
+            throw new RunStateSerializerException("RunState JSON serialization failed.", ex);
+        }
+    }
 
     public static RunState Deserialize(string json)
     {
@@ -28,8 +39,17 @@ public static class RunStateSerializer
         if (node is not JsonObject obj)
             throw new RunStateSerializerException("RunState JSON のルートがオブジェクトではありません。");
 
-        int version = obj["schemaVersion"]?.GetValue<int>()
-            ?? throw new RunStateSerializerException("schemaVersion が存在しません。");
+        int version;
+        try
+        {
+            version = obj["schemaVersion"]?.GetValue<int>()
+                ?? throw new RunStateSerializerException("schemaVersion is missing.");
+        }
+        catch (RunStateSerializerException) { throw; }
+        catch (Exception ex) when (ex is InvalidOperationException or FormatException or JsonException)
+        {
+            throw new RunStateSerializerException("schemaVersion is invalid.", ex);
+        }
 
         if (version == 3) { obj = MigrateV3ToV4(obj); version = 4; }
         if (version == 4) { obj = MigrateV4ToV5(obj); version = 5; }
@@ -41,11 +61,29 @@ public static class RunStateSerializer
 
         RunState? state;
         try { state = JsonSerializer.Deserialize<RunState>(obj.ToJsonString(), JsonOptions.Default); }
-        catch (JsonException ex)
-        { throw new RunStateSerializerException("RunState JSON のパースに失敗しました。", ex); }
+        catch (Exception ex) when (ex is JsonException or NotSupportedException or InvalidOperationException)
+        { throw new RunStateSerializerException("RunState JSON deserialization failed.", ex); }
 
         if (state is null) throw new RunStateSerializerException("RunState JSON が null でした。");
+        ValidateState(state, "after deserialization");
         return state;
+    }
+
+    private static void ValidateState(RunState state, string phase)
+    {
+        string? invalid;
+        try
+        {
+            invalid = state.Validate();
+        }
+        catch (Exception ex) when (ex is NullReferenceException or InvalidOperationException or ArgumentException)
+        {
+            throw new RunStateSerializerException(
+                $"RunState validation failed {phase} because required data is missing or malformed.", ex);
+        }
+
+        if (invalid is not null)
+            throw new RunStateSerializerException($"RunState validation failed {phase}: {invalid}");
     }
 
     private static JsonObject MigrateV3ToV4(JsonObject obj)

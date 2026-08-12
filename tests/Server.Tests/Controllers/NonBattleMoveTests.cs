@@ -125,6 +125,27 @@ public class NonBattleMoveTests : IClassFixture<TempDataFactory>
             runEl = snap.RootElement.GetProperty("run");
         }
 
+        if (runEl.GetProperty("activeEvent").ValueKind != JsonValueKind.Null
+            && runEl.GetProperty("activeEvent").GetProperty("chosenIndex").ValueKind == JsonValueKind.Null)
+        {
+            int choiceIndex = 0;
+            bool foundAvailableChoice = false;
+            foreach (var choice in runEl.GetProperty("activeEvent").GetProperty("choices").EnumerateArray())
+            {
+                if (choice.GetProperty("conditionMet").GetBoolean())
+                {
+                    foundAvailableChoice = true;
+                    break;
+                }
+                choiceIndex++;
+            }
+            Assert.True(foundAvailableChoice, "An intermediate event must have an available choice");
+            (await client.PostAsJsonAsync(
+                "/api/v1/event/choose", new { choiceIndex })).EnsureSuccessStatusCode();
+            snap = await GetSnapshotAsync(client);
+            runEl = snap.RootElement.GetProperty("run");
+        }
+
         if (runEl.GetProperty("activeReward").ValueKind != JsonValueKind.Null)
         {
             // Claim gold
@@ -162,6 +183,17 @@ public class NonBattleMoveTests : IClassFixture<TempDataFactory>
                 }
             }
         }
+
+        // A Rest node is no longer skippable. Complete its one action before this
+        // helper attempts to continue along the path.
+        snap = await GetSnapshotAsync(client);
+        runEl = snap.RootElement.GetProperty("run");
+        if (runEl.GetProperty("activeRestPending").GetBoolean()
+            && !runEl.GetProperty("activeRestCompleted").GetBoolean())
+        {
+            (await client.PostAsync("/api/v1/rest/heal", content: null))
+                .EnsureSuccessStatusCode();
+        }
     }
 
     private async Task ResetPotionsAsync(string accountId)
@@ -179,6 +211,8 @@ public class NonBattleMoveTests : IClassFixture<TempDataFactory>
         var client = await NewClientAsync(accountId);
         var newRes = await client.PostAsync("/api/v1/runs/new", content: null);
         newRes.EnsureSuccessStatusCode();
+        await BattleTestHelpers.MarkActStartResolvedForTestAsync(
+            _factory.Services, accountId);
         var doc = JsonDocument.Parse(await newRes.Content.ReadAsStringAsync());
         var map = ParseMap(doc);
         var path = FindShortestPath(map, targetKind);
@@ -238,6 +272,15 @@ public class NonBattleMoveTests : IClassFixture<TempDataFactory>
         int beforeHp = beforeRun.GetProperty("currentHp").GetInt32();
         int beforeGold = beforeRun.GetProperty("gold").GetInt32();
         int beforeDeckLen = beforeRun.GetProperty("deck").GetArrayLength();
+        Assert.Equal(JsonValueKind.Null, beforeRun.GetProperty("activeBattle").ValueKind);
+        Assert.Equal(JsonValueKind.Null, beforeRun.GetProperty("activeReward").ValueKind);
+        Assert.True(
+            beforeRun.GetProperty("activeEvent").ValueKind == JsonValueKind.Null
+            || beforeRun.GetProperty("activeEvent").GetProperty("chosenIndex").ValueKind != JsonValueKind.Null);
+        Assert.True(
+            !beforeRun.GetProperty("activeRestPending").GetBoolean()
+            || beforeRun.GetProperty("activeRestCompleted").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, beforeRun.GetProperty("activeActStartRelicChoice").ValueKind);
 
         int merchantId = path[^1];
         var moveRes = await client.PostAsJsonAsync("/api/v1/runs/current/move",

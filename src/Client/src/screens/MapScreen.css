@@ -165,15 +165,78 @@ main.map-screen {
 }
 
 .map-screen__node.is-current {
-  color: var(--fg-strong);
-  border-color: var(--fg-strong);
-  background: #3a2a10;
+  color: #bcefff;
+  border-color: #3ec6ff;
+  background: #071a24;
+  outline-color: #e6faff;
+  outline-width: 3px;
   box-shadow:
-    0 0 14px rgba(255, 213, 79, 0.55),
-    inset 0 0 8px rgba(255, 213, 79, 0.25);
+    0 0 0 3px rgba(62, 198, 255, 0.55),
+    0 0 16px rgba(62, 198, 255, 0.75),
+    inset 0 0 9px rgba(62, 198, 255, 0.32);
   width: 68px;
   height: 68px;
   font-size: 28px;
+}
+
+/* 現在地は「次に行けるマス」の金色パルスと混同しないよう、
+   静止した水色タグ + 段階的なドット矢印で明示する。 */
+.map-screen__current-marker {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 44px;
+  padding: 4px 5px 3px;
+  border: 2px solid #e6faff;
+  background: #071a24;
+  color: #68dcff;
+  box-shadow:
+    0 0 0 2px #1687aa,
+    3px 3px 0 rgba(0, 12, 18, 0.9);
+  font-family: var(--font-label);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.map-screen__current-marker::after {
+  content: '';
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  width: 14px;
+  height: 10px;
+  transform: translateX(-50%);
+  background: #68dcff;
+  /* Diagonals are deliberately stepped so the pointer stays pixel-art styled. */
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% 40%,
+    79% 40%,
+    79% 60%,
+    64% 60%,
+    64% 80%,
+    57% 80%,
+    57% 100%,
+    43% 100%,
+    43% 80%,
+    36% 80%,
+    36% 60%,
+    21% 60%,
+    21% 40%,
+    0 40%
+  );
+  filter: drop-shadow(2px 2px 0 #001018);
 }
 
 .map-screen__node.is-next {
@@ -287,7 +350,7 @@ main.map-screen {
 }
 
 .map-screen__node.is-current .map-screen__node-label {
-  color: #2a1c0e;
+  color: #07506a;
 }
 
 .map-screen__node.is-next .map-screen__node-label {

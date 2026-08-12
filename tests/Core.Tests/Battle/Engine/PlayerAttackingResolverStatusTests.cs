@@ -55,6 +55,22 @@ public class PlayerAttackingResolverStatusTests
         Assert.Equal(30 - 7, next.Enemies[0].CurrentHp);
     }
 
+    [Fact] public void Weak_rounds_each_hit_before_damage_is_summed()
+    {
+        var hero = BattleFixtures.WithWeak(BattleFixtures.Hero(), 1) with
+        {
+            AttackSingle = AttackPool.Empty.Add(5).Add(5).Add(5),
+        };
+
+        var (next, _) = PlayerAttackingResolver.Resolve(
+            State(hero, BattleFixtures.Goblin(hp: 30)),
+            Rng(),
+            BattleFixtures.MinimalCatalog());
+
+        // floor(5*0.75)=3 を3回。合計15へ掛けた11にはならない。
+        Assert.Equal(21, next.Enemies[0].CurrentHp);
+    }
+
     [Fact] public void Vulnerable_amplifies_damage_after_block()
     {
         // attack=10, target.Block=Sum=4, vuln=1 → rawDamage=6 → vuln 9
@@ -66,6 +82,21 @@ public class PlayerAttackingResolverStatusTests
         var s = State(hero, goblin);
         var (next, _) = PlayerAttackingResolver.Resolve(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(30 - 9, next.Enemies[0].CurrentHp);
+    }
+
+    [Fact] public void Vulnerable_rounds_each_hit_after_its_block_calculation()
+    {
+        var hero = BattleFixtures.Hero() with
+        {
+            AttackSingle = AttackPool.Empty.Add(5).Add(5).Add(5),
+        };
+        var goblin = BattleFixtures.WithVulnerable(BattleFixtures.Goblin(hp: 30), 1);
+
+        var (next, _) = PlayerAttackingResolver.Resolve(
+            State(hero, goblin), Rng(), BattleFixtures.MinimalCatalog());
+
+        // floor(5*1.5)=7 を3回。合計15へ掛けた22にはならない。
+        Assert.Equal(9, next.Enemies[0].CurrentHp);
     }
 
     [Fact] public void Dexterity_boosts_target_block_against_attack()
@@ -83,10 +114,8 @@ public class PlayerAttackingResolverStatusTests
 
     [Fact] public void All_corrections_combined_via_resolver()
     {
-        // 入力: Sum=8 AddCount=2, str=3, weak=1, vuln=1, target.Block=Sum=2 AddCount=0, dex=0
-        // attacker side: floor((8 + 2*3) * 0.75) = floor(14 * 0.75) = 10
-        // block: 2 → absorbed=2, rawDamage=8
-        // vuln: floor(8*1.5) = 12
+        // 各hit: floor((4+3)*0.75)=5。
+        // 1発目はBlock 2を消費して floor(3*1.5)=4、2発目は floor(5*1.5)=7。
         var hero = BattleFixtures.WithWeak(BattleFixtures.WithStrength(BattleFixtures.Hero(), 3), 1) with
         {
             AttackSingle = AttackPool.Empty.Add(4).Add(4),
@@ -97,6 +126,6 @@ public class PlayerAttackingResolverStatusTests
         };
         var s = State(hero, goblin);
         var (next, _) = PlayerAttackingResolver.Resolve(s, Rng(), BattleFixtures.MinimalCatalog());
-        Assert.Equal(30 - 12, next.Enemies[0].CurrentHp);
+        Assert.Equal(30 - 11, next.Enemies[0].CurrentHp);
     }
 }

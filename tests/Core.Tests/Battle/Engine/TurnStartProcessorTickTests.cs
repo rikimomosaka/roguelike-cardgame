@@ -40,7 +40,9 @@ public class TurnStartProcessorTickTests
         var (next, evs) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(70 - 3, next.Allies[0].CurrentHp);
         Assert.Equal(10, next.Allies[0].Block.Sum); // Block は無傷
-        Assert.Contains(evs, e => e.Kind == BattleEventKind.PoisonTick && e.Amount == 3);
+        var tick = Assert.Single(evs, e => e.Kind == BattleEventKind.PoisonTick && e.Amount == 3);
+        Assert.Equal(CombatSource.Unattributed, tick.Source);
+        Assert.Equal(DamageType.Poison, tick.DamageType);
     }
 
     [Fact] public void Poison_damages_all_actors_with_poison()
@@ -96,20 +98,22 @@ public class TurnStartProcessorTickTests
     {
         var hero = BattleFixtures.Hero(70);
         var goblin = BattleFixtures.WithPoison(BattleFixtures.Goblin(hp: 3), 5);
-        var s = State(hero, goblin);
+        var s = State(hero, goblin) with { Energy = 2 };
         var (next, evs) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(RoguelikeCardGame.Core.Battle.State.BattleOutcome.Victory, next.Outcome);
         Assert.Equal(BattlePhase.Resolved, next.Phase);
+        Assert.Equal(2, next.Energy); // 決着したため +EnergyMax されない
         Assert.Contains(evs, e => e.Kind == BattleEventKind.BattleEnd);
     }
 
     [Fact] public void Poison_kills_hero_outcome_defeat()
     {
         var hero = BattleFixtures.WithPoison(BattleFixtures.Hero(hp: 2), 5);
-        var s = State(hero, BattleFixtures.Goblin());
+        var s = State(hero, BattleFixtures.Goblin()) with { Energy = 2 };
         var (next, evs) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(RoguelikeCardGame.Core.Battle.State.BattleOutcome.Defeat, next.Outcome);
         Assert.Equal(BattlePhase.Resolved, next.Phase);
+        Assert.Equal(2, next.Energy); // 決着したため +EnergyMax されない
         Assert.Contains(evs, e => e.Kind == BattleEventKind.BattleEnd);
     }
 
@@ -123,7 +127,7 @@ public class TurnStartProcessorTickTests
                 BattleFixtures.MakeBattleCard("strike", "c2")),
         };
         var (next, _) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
-        Assert.Equal(0, next.Energy);    // EnergyMax まで回復しない
+        Assert.Equal(0, next.Energy);    // 決着済みなので次ターン分を加算しない
         Assert.Empty(next.Hand);          // ドローしない
     }
 
@@ -155,13 +159,22 @@ public class TurnStartProcessorTickTests
     [Fact] public void Status_at_one_decrements_to_zero_and_emits_RemoveStatus()
     {
         var hero = BattleFixtures.Hero();
-        var goblin = BattleFixtures.WithVulnerable(BattleFixtures.Goblin(), 1);
+        var source = new CombatSource(
+            CombatSourceKind.CardEffect, 0, hero.InstanceId, hero.InstanceId,
+            DefinitionId: "vulnerable_card");
+        var goblin = BattleFixtures.WithVulnerable(BattleFixtures.Goblin(), 1) with
+        {
+            StatusSources = ImmutableDictionary<string, CombatSource>.Empty
+                .Add("vulnerable", source),
+        };
         var s = State(hero, goblin);
         var (next, evs) = SideStatusCountdown.ApplyForSide(s, ActorSide.Enemy, 0);
         Assert.False(next.Enemies[0].Statuses.ContainsKey("vulnerable"));
-        Assert.Contains(evs, e => e.Kind == BattleEventKind.RemoveStatus
-                                  && e.Note == "vulnerable"
-                                  && e.TargetInstanceId == goblin.InstanceId);
+        Assert.False(next.Enemies[0].StatusSources.ContainsKey("vulnerable"));
+        var removed = Assert.Single(evs, e => e.Kind == BattleEventKind.RemoveStatus
+            && e.Note == "vulnerable"
+            && e.TargetInstanceId == goblin.InstanceId);
+        Assert.Equal(source, removed.Source);
     }
 
     [Fact] public void Strength_does_not_countdown()
@@ -203,6 +216,37 @@ public class TurnStartProcessorTickTests
         Assert.Contains(evs, e => e.Kind == BattleEventKind.RemoveStatus
                                   && e.Note == "poison"
                                   && e.TargetInstanceId == hero.InstanceId);
+        Assert.False(next.Allies[0].StatusSources.ContainsKey("poison"));
+    }
+
+    [Fact] public void Poison_tick_and_death_credit_the_last_positive_applier()
+    {
+        var hero = BattleFixtures.Hero(slotIndex: 5);
+        var goblin = BattleFixtures.Goblin(hp: 3);
+        var state = State(hero, goblin);
+        var source = new CombatSource(
+            CombatSourceKind.CardEffect, 5, hero.InstanceId, hero.InstanceId,
+            DefinitionId: "toxic_dart", InstanceId: "toxic-dart-h2",
+            EffectIndex: 0, Scope: "single");
+        var poison = new RoguelikeCardGame.Core.Cards.CardEffect(
+            "debuff", RoguelikeCardGame.Core.Cards.EffectScope.Single,
+            RoguelikeCardGame.Core.Cards.EffectSide.Enemy, 5, Name: "poison");
+        var (poisoned, _) = EffectApplier.Apply(
+            state, hero, poison, Rng(), BattleFixtures.MinimalCatalog(), source);
+
+        var (_, events) = TurnStartProcessor.Process(
+            poisoned, Rng(), BattleFixtures.MinimalCatalog());
+
+        var tick = Assert.Single(events, e => e.Kind == BattleEventKind.PoisonTick);
+        var death = Assert.Single(events, e => e.Kind == BattleEventKind.ActorDeath
+            && e.Note == "poison");
+        Assert.Equal(source, tick.Source);
+        Assert.Equal(source, death.Source);
+        Assert.Equal(DamageType.Poison, death.DamageType);
+        Assert.Equal(3, death.ActualHpLoss);
+        Assert.Equal(2, death.Overkill);
+        Assert.True(death.HitLanded);
+        Assert.Equal(tick.CauseChain, death.CauseChain);
     }
 
     [Fact] public void Poison_stack_does_not_decrement_via_side_countdown()

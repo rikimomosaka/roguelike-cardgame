@@ -202,6 +202,8 @@ export type BattleEventKind =
   | 'ApplyStatus' | 'RemoveStatus' | 'PoisonTick'
   | 'Heal' | 'Draw' | 'Discard' | 'Upgrade' | 'Exhaust'
   | 'GainEnergy' | 'Summon' | 'UsePotion'
+  | 'UseCharacterSkill' | 'ComboGaugeChanged'
+  | 'ModifyCardCost'
   // Phase 10.5.F: engine 新 actions
   | 'AddCard' | 'RecoverFromDiscard' | 'GainMaxEnergy'
 
@@ -212,8 +214,14 @@ export type IntentDto = {
   attackRandom: number | null
   /** 全体攻撃 (all) の予定ダメージ。 */
   attackAll: number | null
-  /** 攻撃回数 (effects 中 attack の数)。 */
+  /** 全 scope を合計した攻撃回数。 */
   attackHits: number | null
+  /** single の攻撃回数。 */
+  attackSingleHits: number | null
+  /** random の攻撃回数。 */
+  attackRandomHits: number | null
+  /** all の攻撃回数。 */
+  attackAllHits: number | null
   /** block 予定値。 */
   block: number | null
   hasBuff: boolean
@@ -243,6 +251,11 @@ export type BattleCardInstanceDto = {
   instanceId: string
   cardDefinitionId: string
   isUpgraded: boolean
+  /** Card definition cost used exclusively for combo chaining. */
+  originalCost: number | null
+  /** Authoritative cost payable in the DTO's current zone/context. */
+  currentCost: number | null
+  /** Compatibility alias: currentCost when it differs from originalCost. */
   costOverride: number | null
   /**
    * Phase 10.5.C: hero (caster) の statuses を反映した description。
@@ -264,6 +277,43 @@ export type BattleEventDto = {
   amount: number | null
   cardId: string | null
   note: string | null
+  /** DealDamage 時に Block が実際に吸収した量。 */
+  blockedAmount: number | null
+  /** 同じ論理ヒットを共有するイベントの 0 始まり番号。 */
+  hitIndex: number | null
+  /** 攻撃・毒・固定ダメージなど、ダメージ計算ルールの区分。 */
+  damageType?: string | null
+  /** カード、敵行動、召喚など、この効果を発生させた出所。 */
+  source?: CombatSourceDto | null
+  /** 反射などで派生した効果を、最初の原因まで遡るための決定的な列。 */
+  causeChain?: DamageCauseFrameDto[] | null
+  /** Blockと過剰ダメージを除き、対象のHPを実際に減らした量。 */
+  actualHpLoss?: number | null
+  /** 残りHPを超えた分。 */
+  overkill?: number | null
+  /** ダメージが0でも、対象へヒット自体が成立したか。 */
+  hitLanded?: boolean | null
+}
+
+export type CombatSourceDto = {
+  kind: string
+  /** 所有者が存在しない環境・旧データではnull。プレイヤー0へ誤帰属させない。 */
+  ownerSlot: number | null
+  ownerInstanceId: string | null
+  actorInstanceId: string | null
+  definitionId: string | null
+  instanceId: string | null
+  moveId: string | null
+  effectIndex: number | null
+  scope: string | null
+}
+
+export type DamageCauseFrameDto = {
+  depth: number
+  damageType: string
+  source: CombatSourceDto
+  hitIndex: number | null
+  cause: string
 }
 
 /**
@@ -271,8 +321,8 @@ export type BattleEventDto = {
  * pile=hand なら手札 UI、それ以外 (draw/discard) はリスト UI で選択させる。
  */
 export type PendingChoiceDto = {
-  action: 'discard' | 'exhaustCard' | 'upgrade' | 'recoverFromDiscard'
-  pile: 'hand' | 'draw' | 'discard'
+  action: 'discard' | 'exhaustCard' | 'upgrade' | 'recoverFromDiscard' | 'modifyCardCost'
+  pile: 'hand' | 'draw' | 'discard' | 'exhaust'
   count: number
   candidateInstanceIds: string[]
 }
@@ -292,7 +342,8 @@ export type BattleStateDto = {
   targetAllyIndex: number | null
   targetEnemyIndex: number | null
   energy: number
-  energyMax: number
+  /** Amount added at the start of each turn; this is not a holding cap. */
+  energyPerTurn: number
   drawPile: BattleCardInstanceDto[]
   hand: BattleCardInstanceDto[]
   discardPile: BattleCardInstanceDto[]
@@ -300,6 +351,9 @@ export type BattleStateDto = {
   summonHeld: BattleCardInstanceDto[]
   powerCards: BattleCardInstanceDto[]
   comboCount: number
+  maxComboThisTurn: number
+  comboGauge: number
+  usedCharacterSkillIdsThisTurn: string[]
   lastPlayedOrigCost: number | null
   nextCardComboFreePass: boolean
   ownedRelicIds: string[]

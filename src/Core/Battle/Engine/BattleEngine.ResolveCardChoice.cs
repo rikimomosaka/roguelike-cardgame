@@ -55,15 +55,27 @@ public static partial class BattleEngine
 
         // pending クリア + choose effect 適用
         var s = state with { PendingCardPlay = null };
-        var caster = s.Allies[0];
+        var caster = ProvisionalSoloHeroOwnerResolver.Resolve(s)?.Hero
+            ?? throw new InvalidOperationException(
+                "ResolveCardChoice requires a living hero owner");
         var events = new List<BattleEvent>();
         int order = 0;
+        var source = new CombatSource(
+            CombatSourceKind.CardEffect,
+            OwnerSlot: caster.OwnerPlayerSlot ?? caster.SlotIndex,
+            OwnerInstanceId: caster.OwnerActorInstanceId ?? caster.InstanceId,
+            ActorInstanceId: caster.InstanceId,
+            DefinitionId: card.CardDefinitionId,
+            InstanceId: card.InstanceId,
+            EffectIndex: pending.EffectIndex,
+            Scope: pendingEffect.Scope.ToString().ToLowerInvariant());
 
         var (afterChose, evsChose) = EffectApplier.ApplyChoseEffect(
-            s, caster, pendingEffect, selectedInstanceIds, rng, catalog);
+            s, caster, pendingEffect, selectedInstanceIds, rng, catalog, source,
+            playingCardInstanceId: pending.CardInstanceId);
         s = afterChose;
         foreach (var ev in evsChose) { events.Add(ev with { Order = order++ }); }
-        caster = s.Allies[0];
+        caster = ProvisionalSoloHeroOwnerResolver.Resolve(s)?.Hero ?? caster;
 
         // 残り effect 続行 (再 pause 可能性あり)
         var (afterEffects, effectEvents, summonSucceeded, _) = ApplyEffectsFrom(

@@ -17,6 +17,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { CSSProperties, ReactNode } from 'react'
 import { Card } from '../components/Card'
 import type { CardRarity, CardType } from '../components/Card'
+import { rarityCodeFromNumber } from '../components/rarity'
 import { useTooltipTarget } from '../components/Tooltip'
 import type { TooltipContent } from '../components/Tooltip'
 import {
@@ -27,7 +28,9 @@ import {
   resolveCardChoice,
   setBattleTarget,
   startBattle,
-  usePotion,
+  usePotion as consumeBattlePotion,
+  useTacticalSkill as activateTacticalSkill,
+  useUltimateSkill as activateUltimateSkill,
 } from '../api/battle'
 import type {
   ActorSide,
@@ -48,7 +51,33 @@ import {
   toCharacterDemo,
   toHandCardDemo,
 } from './battleScreen/dtoAdapter'
+import { readAttackAnimationHit } from './battleScreen/attackAnimation'
+import {
+  formatAttackIntentSummary,
+  formatAttackScopeLabel,
+  toAttackIntentSummarySegments,
+} from './battleScreen/intentSummary'
 import { CardChoiceModal } from './battleScreen/CardChoiceModal'
+import {
+  formatComboDescription,
+  formatMaxComboThisTurn,
+} from './battleScreen/comboPresentation'
+import {
+  ENERGY_CARRYOVER_DESCRIPTION,
+  formatEnergyOrbValue,
+  formatEnergyTooltipStatusLine,
+  formatEnergyTooltipTitle,
+} from './battleScreen/energyPresentation'
+import {
+  clampComboGauge,
+  COMBO_GAUGE_DESCRIPTION,
+  COMBO_GAUGE_MAX,
+  getComboSkillAvailability,
+  TACTICAL_SKILL_COST,
+  TACTICAL_SKILL_DESCRIPTION,
+  ULTIMATE_SKILL_COST,
+  ULTIMATE_SKILL_DESCRIPTION,
+} from './battleScreen/comboSkillPresentation'
 import './BattleScreen.css'
 
 // -------------------- Exported intermediate types --------------------
@@ -90,6 +119,10 @@ export type IntentAttackBreakdown = {
   random?: number
   all?: number
   hits?: number
+  singleHits?: number
+  randomHits?: number
+  allHits?: number
+  total?: number
 }
 
 export type IntentDemo = {
@@ -104,6 +137,20 @@ export type IntentDemo = {
 
 export type SpriteKind = 'hero' | 'ally' | 'enemy' | 'elite'
 
+/** Character animation state. New sprite sheets can be added without changing Slot markup. */
+export type CharacterMotion = 'idle' | 'attack' | 'hurt'
+
+/** Metadata for a horizontal, equally-sized sprite sheet. */
+export type SpriteSheetDemo = {
+  src: string
+  frameWidth: number
+  frameHeight: number
+  frameCount: number
+  durationMs: number
+  /** Idle usually loops; one-shot attack/hurt sheets stop on their final valid frame. */
+  loop: boolean
+}
+
 export type CharacterDemo = {
   occupied: boolean
   name: string
@@ -112,6 +159,8 @@ export type CharacterDemo = {
   spriteKind: SpriteKind
   /** PNG 等の立ち絵 URL。指定時は text sprite ではなく <img> で描画する。 */
   image?: string
+  /** Motion-specific sheets. `image` remains the static loading/error fallback. */
+  animations?: Partial<Record<CharacterMotion, SpriteSheetDemo>>
   /** キャラのサイズ段階 (1 〜 10)。1 = スライム級の小型、5 = 標準、10 = 巨大ボス級。
    *  立ち絵 image 表示時は heightTier に応じて高さが決定される (縦横比は維持)。 */
   heightTier?: number
@@ -131,7 +180,7 @@ export type CharacterDemo = {
 export type HandCardDemo = {
   name: string
   cost: number | string
-  /** コンボ軽減で cost と異なる元コスト。未軽減時は null/undefined。 */
+  /** 現在コストと異なる、コンボ参照用の元コスト。変更なしは null/undefined。 */
   costOrig?: number | null
   type: CardType
   rarity: CardRarity
@@ -167,8 +216,11 @@ type Props = {
 // -------------------- Animation timing --------------------
 
 const STEP_DELAY_MS = 80         // 既存 fallback (汎用 event)
-const ATTACK_SLIDE_MS = 280      // 攻撃側 slot の slide-in/out 1 周
-const HIT_FLASH_MS = 320         // 被弾 slot の赤点滅
+// Keep these values in sync with the hero sprite metadata and the slot
+// keyframes in BattleScreen.css. At 240/300ms every pose is still shown for
+// several browser frames while chained hits resolve without a long pause.
+const ATTACK_SLIDE_MS = 240      // 攻撃側 slot の slide-in/out 1 周
+const HIT_FLASH_MS = 300         // 被弾 slot の赤点滅 + のけぞり
 // 手札カード exit (捨札方向に縮小フェード / 喪失行きは中央拡大→回転消滅)。
 // M6.9: 喪失アニメは 700ms (中央移動 + ホールド + 回転消滅) なので長い方に合わせる。
 //  短い discard アニメ (260ms) は完了後に DOM が残るがレイアウト的に害無し
@@ -328,18 +380,29 @@ function IntentSegment({
         <span className="intent__icon">{intent.icon}</span>
       )}
       {intent.kind === 'attack' && intent.attack ? (
-        // Why: 通常/ランダム/全体を 1 chip 内で色分け表示。slash は白、各数値は
-        // 種類ごとの色 (single=現状色, random=オレンジ, all=赤)。
+        // 合計値を先頭にした X(NHIT) で幅を抑える。複数 scope も
+        // 同じ表記で並べ、隣のキャラクターの予告との干渉を避ける。
         <span className="intent__nums">
           {(() => {
-            const segs: { v: number; k: 'single' | 'random' | 'all' }[] = []
-            if (intent.attack.single && intent.attack.single > 0) segs.push({ v: intent.attack.single, k: 'single' })
-            if (intent.attack.random && intent.attack.random > 0) segs.push({ v: intent.attack.random, k: 'random' })
-            if (intent.attack.all && intent.attack.all > 0) segs.push({ v: intent.attack.all, k: 'all' })
-            return segs.map((s, i) => (
-              <span key={i}>
-                {i > 0 ? <span className="intent__slash">/</span> : null}
-                <span className={`intent__num intent__num--${s.k}`}>{s.v}</span>
+            const segments = toAttackIntentSummarySegments(intent.attack)
+            return segments.map((segment, index) => (
+              <span
+                className="intent__scope-summary"
+                data-attack-summary={formatAttackIntentSummary(segment)}
+                key={segment.scope}
+              >
+                {index > 0 ? <span className="intent__scope-separator">｜</span> : null}
+                <span className={`intent__num intent__num--${segment.scope}`}>
+                  {segment.total}
+                </span>
+                <span className="intent__scope-meta">
+                  <span
+                    className={`intent__scope-label intent__scope-label--${segment.scope}`}
+                  >
+                    {formatAttackScopeLabel(segment.scope)}
+                  </span>
+                  <span className="intent__hit-count">({segment.hits}HIT)</span>
+                </span>
               </span>
             ))
           })()}
@@ -392,24 +455,115 @@ type SlotProps = {
   onClick?: () => void
 }
 
+type ActiveCharacterAnimation = {
+  motion: CharacterMotion
+  sheet: SpriteSheetDemo
+}
+
+const CHARACTER_MOTION_PRIORITY: readonly CharacterMotion[] = ['hurt', 'attack', 'idle']
+
+/**
+ * Pick the highest-priority animation that is both active and usable.
+ * Failed sheets are skipped so a lower-priority motion (ultimately the static image)
+ * can take over without an interval or another network request loop.
+ */
+function selectCharacterAnimation(
+  animations: CharacterDemo['animations'],
+  isAttacking: boolean,
+  isHit: boolean,
+  failedSources: ReadonlySet<string>,
+): ActiveCharacterAnimation | null {
+  const active: Record<CharacterMotion, boolean> = {
+    idle: true,
+    attack: isAttacking,
+    hurt: isHit,
+  }
+
+  for (const motion of CHARACTER_MOTION_PRIORITY) {
+    const sheet = animations?.[motion]
+    if (
+      active[motion]
+      && sheet
+      && sheet.frameWidth > 0
+      && sheet.frameHeight > 0
+      && sheet.frameCount > 0
+      && sheet.durationMs > 0
+      && !failedSources.has(sheet.src)
+    ) {
+      return { motion, sheet }
+    }
+  }
+
+  return null
+}
+
 function Slot({ char, isTargeted, showTargetVisual, attackingDir, isHit, onClick }: SlotProps) {
   // Why: 影の横幅は描画後の sprite 横幅と同じにしたい。silhouette は決定論的
   //  (tier-height × 0.55) で同期計算できる。画像は naturalWidth/Height が
   //  load 後にしか取れないので onLoad で aspect を State に保持し、それ以降
   //  の render で width = tier-height × aspect を渡す。影の高さは固定 (CSS)。
-  const [imageAspect, setImageAspect] = useState<number | null>(null)
-  useEffect(() => {
-    setImageAspect(null) // 画像が切り替わったら再計測
-  }, [char.image])
+  const [imageMeasurement, setImageMeasurement] = useState<{
+    source: string | undefined
+    aspect: number
+  } | null>(null)
+  const [failedAnimationSources, setFailedAnimationSources] = useState<ReadonlySet<string>>(
+    () => new Set<string>(),
+  )
+  const activeAnimation = selectCharacterAnimation(
+    char.animations,
+    attackingDir !== undefined,
+    isHit === true,
+    failedAnimationSources,
+  )
+  const imageAspect = imageMeasurement !== null
+    && imageMeasurement.source === char.image
+    ? imageMeasurement.aspect
+    : null
   const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget
     if (img.naturalHeight > 0) {
-      setImageAspect(img.naturalWidth / img.naturalHeight)
+      setImageMeasurement({
+        source: char.image,
+        aspect: img.naturalWidth / img.naturalHeight,
+      })
     }
   }
+  const handleAnimationError = (source: string) => {
+    setFailedAnimationSources(previous => {
+      if (previous.has(source)) return previous
+      const next = new Set(previous)
+      next.add(source)
+      return next
+    })
+  }
+  const displayHeight = char.heightTier !== undefined ? heightForTier(char.heightTier) : 148
+  const animationFrameAspect = activeAnimation !== null
+    ? activeAnimation.sheet.frameWidth / activeAnimation.sheet.frameHeight
+    : null
+  const animationFrameWidth = animationFrameAspect !== null
+    ? displayHeight * animationFrameAspect
+    : null
+  const animationStepCount = activeAnimation !== null
+    ? activeAnimation.sheet.frameCount
+    : null
+  const animationStepPosition = activeAnimation !== null
+    && !activeAnimation.sheet.loop
+    && activeAnimation.sheet.frameCount > 1
+    ? 'jump-none'
+    : 'end'
+  const animationEndX = activeAnimation !== null && animationFrameWidth !== null
+    ? -animationFrameWidth * (
+        activeAnimation.sheet.loop
+          ? activeAnimation.sheet.frameCount
+          : Math.max(0, activeAnimation.sheet.frameCount - 1)
+      )
+    : null
   const shadowWidth: number | null = (() => {
     if (char.heightTier === undefined) return null // text fallback: CSS default
     const h = heightForTier(char.heightTier)
+    if (animationFrameAspect !== null && Number.isFinite(animationFrameAspect)) {
+      return h * animationFrameAspect
+    }
     if (char.image) {
       return imageAspect !== null && Number.isFinite(imageAspect)
         ? h * imageAspect
@@ -456,21 +610,50 @@ function Slot({ char, isTargeted, showTargetVisual, attackingDir, isHit, onClick
       {/* Why: image があれば <img>、無くても heightTier があればシルエット
           placeholder（実アセット届くまでの仮置き）、両方無ければ text sprite。
           --tier-height CSS 変数で高さを段階制御 (1〜10)。 */}
-      {char.image ? (
+      {activeAnimation || char.image ? (
         <div
           className={`sprite sprite--image sprite--${char.spriteKind}`}
+          data-motion={activeAnimation?.motion}
           style={
-            char.heightTier !== undefined
-              ? ({ '--tier-height': `${heightForTier(char.heightTier)}px` } as CSSProperties)
-              : undefined
+            ({
+              '--tier-height': `${displayHeight}px`,
+              ...(activeAnimation && animationFrameWidth !== null
+                ? {
+                    '--sprite-frame-width': `${animationFrameWidth}px`,
+                    '--sprite-frame-count': activeAnimation.sheet.frameCount,
+                    '--sprite-step-count': animationStepCount,
+                    '--sprite-step-position': animationStepPosition,
+                    '--sprite-duration': `${activeAnimation.sheet.durationMs}ms`,
+                    '--sprite-end-x': `${animationEndX}px`,
+                    '--sprite-iteration-count': activeAnimation.sheet.loop ? 'infinite' : '1',
+                    '--sprite-fill-mode': activeAnimation.sheet.loop ? 'none' : 'forwards',
+                  }
+                : {}),
+            } as CSSProperties)
           }
         >
-          <img
-            src={char.image}
-            alt={char.name}
-            draggable={false}
-            onLoad={handleImageLoad}
-          />
+          {activeAnimation ? (
+            <div className="sprite-sheet__frame">
+              <div className="sprite-sheet__viewport">
+                <img
+                  key={`${activeAnimation.motion}:${activeAnimation.sheet.src}`}
+                  className="sprite-sheet__image"
+                  src={activeAnimation.sheet.src}
+                  alt={char.name}
+                  draggable={false}
+                  onError={() => handleAnimationError(activeAnimation.sheet.src)}
+                />
+              </div>
+            </div>
+          ) : char.image ? (
+            <img
+              className="sprite__static-image"
+              src={char.image}
+              alt={char.name}
+              draggable={false}
+              onLoad={handleImageLoad}
+            />
+          ) : null}
         </div>
       ) : char.heightTier !== undefined ? (
         <div
@@ -595,9 +778,6 @@ function HandCard({ card, fan, onClick, leaving, leaveDx, leaveDy, leavingMode, 
            upgrade 状態に応じて事前解決済だが、両方持って Card に判定を委ねる。 */
         description={card.description ?? card.desc}
         upgradedDescription={card.upgradedDescription}
-        /* Why: 実績画面 (TopBar デッキ modal) の Card 幅 112 と統一する。
-           デフォルト 104 だと「ストライク」「ウィスプ召喚」が見切れていた。 */
-        width={112}
         className={[
           card.playable ? 'is-playable' : '',
           leaving ? 'is-leaving' : '',
@@ -664,9 +844,12 @@ function PileModal({ kind, cards, onClose }: PileModalProps) {
               //   未指定 (catalog 経路 fallback) は static description を使う。
               const disp = {
                 name: fallbackName,
-                cost: card.costOverride ?? def?.cost ?? 0,
+                cost: card.currentCost ?? 'X',
+                costOrig: card.currentCost !== card.originalCost
+                  ? card.originalCost
+                  : null,
                 type: ((def?.cardType ?? 'attack').toLowerCase()) as CardType,
-                rarity: ((['c','r','e','l'][def?.rarity ?? 0]) ?? 'c') as CardRarity,
+                rarity: rarityCodeFromNumber(def?.rarity ?? 1),
                 description: card.adjustedDescription ?? def?.description ?? '',
                 upgradedDescription:
                   card.adjustedUpgradedDescription ?? def?.upgradedDescription ?? null,
@@ -676,12 +859,12 @@ function PileModal({ kind, cards, onClose }: PileModalProps) {
                   <Card
                     name={disp.name}
                     cost={disp.cost}
+                    costOrig={disp.costOrig}
                     type={disp.type}
                     rarity={disp.rarity}
                     description={disp.description}
                     upgradedDescription={disp.upgradedDescription}
                     upgraded={card.isUpgraded}
-                    width={112}
                   />
                 </li>
               )
@@ -695,52 +878,190 @@ function PileModal({ kind, cards, onClose }: PileModalProps) {
 
 /**
  * COMBO chip with hover tooltip.
- * Why: コンボ仕様 (元コスト+1 のカードを 1 軽減 + プレイで継続) を hover で
- * 確認できるようにする。superwild 中は「任意のカードでコンボ継続」と表現。
+ * Why: normal next-cost and pending Wild-family pass reductions must be
+ * understandable without inspecting every card in hand.
  */
-function ComboChip({
+export function ComboChip({
   count,
+  maxComboThisTurn,
   lastPlayedOrigCost,
-  superwild,
+  nextCardComboFreePass,
 }: {
   count: number
+  maxComboThisTurn: number
   lastPlayedOrigCost: number | null
-  superwild: boolean
+  nextCardComboFreePass: boolean
 }) {
-  const desc = (() => {
-    if (count === 0) {
-      return '現在０コンボ。カードをプレイすると、そのカードよりコストが1大きいカードのコストをターン中1軽減。'
-    }
-    const reduceTarget =
-      lastPlayedOrigCost !== null ? `${lastPlayedOrigCost + 1}` : '?'
-    if (superwild) {
-      return `現在${count}コンボ。ターン中コストが${reduceTarget}のカードを1軽減し、任意のカードをプレイでコンボ継続。`
-    }
-    return `現在${count}コンボ。ターン中コストが${reduceTarget}のカードを1軽減し、それをプレイでコンボ継続。`
-  })()
-  const tip = useTip({ name: 'コンボ', desc })
+  const desc = formatComboDescription({
+    count,
+    lastPlayedOrigCost,
+    nextCardComboFreePass,
+  })
+  const tip = useTip({
+    name: 'コンボ',
+    statusLine: formatMaxComboThisTurn(maxComboThisTurn),
+    desc,
+  })
   return (
     <div
-      className={`battle__combo${count > 1 ? ' is-active' : ''}`}
-      aria-label={`コンボ ×${count}`}
+      className={`battle__combo${maxComboThisTurn > 1 ? ' is-active' : ''}`}
+      aria-label={`このターンの最大コンボ ×${maxComboThisTurn}`}
       {...tip}
     >
       <span className="battle__combo-k">COMBO</span>
-      <span className="battle__combo-v">×{count}</span>
+      <span className="battle__combo-v">×{maxComboThisTurn}</span>
     </div>
   )
 }
 
-function EnergyOrb({ cur, max }: { cur: number; max: number }) {
+export function ComboGauge({ value }: { value: number }) {
+  const clampedValue = clampComboGauge(value)
+  const accessibleName = `コンボゲージ ${clampedValue}/${COMBO_GAUGE_MAX}`
   const tip = useTip({
-    name: 'エナジー',
-    desc: 'カードをプレイするのに必要なリソース。ターン開始時に最大値まで回復する。',
+    name: 'コンボゲージ',
+    statusLine: `(現在${clampedValue}/${COMBO_GAUGE_MAX})`,
+    desc: COMBO_GAUGE_DESCRIPTION,
   })
   return (
-    <div className="energy" {...tip}>
-      <div className="energy__val">
-        <span className="energy__cur">{cur}</span>
-        <span className="energy__max">/{max}</span>
+    <div
+      className="combo-gauge"
+      role="meter"
+      aria-label={accessibleName}
+      aria-valuemin={0}
+      aria-valuemax={COMBO_GAUGE_MAX}
+      aria-valuenow={clampedValue}
+      tabIndex={0}
+      {...tip}
+    >
+      {Array.from({ length: COMBO_GAUGE_MAX }, (_, index) => (
+        <span
+          className={`combo-gauge__segment${index < clampedValue ? ' is-filled' : ''}`}
+          aria-hidden="true"
+          key={index}
+        />
+      ))}
+    </div>
+  )
+}
+
+type ComboSkillKind = 'tactical' | 'ultimate'
+
+function ComboSkillControl({
+  kind,
+  disabled,
+  onClick,
+}: {
+  kind: ComboSkillKind
+  disabled: boolean
+  onClick: () => void
+}) {
+  const tactical = kind === 'tactical'
+  const label = tactical ? '戦技' : '奥義'
+  const cost = tactical ? TACTICAL_SKILL_COST : ULTIMATE_SKILL_COST
+  const desc = tactical ? TACTICAL_SKILL_DESCRIPTION : ULTIMATE_SKILL_DESCRIPTION
+  const accessibleName = `${label}（コンボゲージ${cost}消費）`
+  const tip = useTip({
+    name: label,
+    statusLine: `(コンボゲージ${cost}消費)`,
+    desc,
+  })
+
+  return (
+    <div
+      className={`combo-skill-control combo-skill-control--${kind}`}
+      data-combo-skill={kind}
+      role="group"
+      aria-label={accessibleName}
+      aria-disabled={disabled}
+      tabIndex={disabled ? 0 : undefined}
+      {...tip}
+    >
+      <button
+        type="button"
+        className="combo-skill-button"
+        aria-label={accessibleName}
+        aria-describedby={tip['aria-describedby']}
+        disabled={disabled}
+        onClick={onClick}
+      >
+        <span className="combo-skill-button__name">{label}</span>
+        <span className="combo-skill-button__cost">消費 {cost}</span>
+      </button>
+    </div>
+  )
+}
+
+export function BattleComboControls({
+  count,
+  maxComboThisTurn,
+  lastPlayedOrigCost,
+  nextCardComboFreePass,
+  comboGauge,
+  tacticalDisabled,
+  ultimateDisabled,
+  onUseTactical,
+  onUseUltimate,
+}: {
+  count: number
+  maxComboThisTurn: number
+  lastPlayedOrigCost: number | null
+  nextCardComboFreePass: boolean
+  comboGauge: number
+  tacticalDisabled: boolean
+  ultimateDisabled: boolean
+  onUseTactical: () => void
+  onUseUltimate: () => void
+}) {
+  return (
+    <div className="battle__combo-controls">
+      <ComboSkillControl
+        kind="tactical"
+        disabled={tacticalDisabled}
+        onClick={onUseTactical}
+      />
+      <div className="battle__combo-column">
+        <ComboChip
+          count={count}
+          maxComboThisTurn={maxComboThisTurn}
+          lastPlayedOrigCost={lastPlayedOrigCost}
+          nextCardComboFreePass={nextCardComboFreePass}
+        />
+        <ComboGauge value={comboGauge} />
+      </div>
+      <ComboSkillControl
+        kind="ultimate"
+        disabled={ultimateDisabled}
+        onClick={onUseUltimate}
+      />
+    </div>
+  )
+}
+
+export function EnergyOrb({
+  cur,
+  recoveryPerTurn,
+}: {
+  cur: number
+  recoveryPerTurn: number
+}) {
+  const value = formatEnergyOrbValue(cur, recoveryPerTurn)
+  const title = formatEnergyTooltipTitle()
+  const statusLine = formatEnergyTooltipStatusLine(cur, recoveryPerTurn)
+  const accessibleName = `${title}${statusLine}`
+  const tip = useTip({
+    name: title,
+    statusLine,
+    desc: ENERGY_CARRYOVER_DESCRIPTION,
+  })
+  return (
+    <div className="energy" aria-label={accessibleName} tabIndex={0} {...tip}>
+      <div className={`energy__val${value.recoveryText ? ' has-recovery' : ''}`}>
+        <span className={`energy__cur${value.capped ? ' is-capped' : ''}`}>
+          {value.currentText}
+        </span>
+        {value.recoveryText ? (
+          <span className="energy__recovery">{value.recoveryText}</span>
+        ) : null}
       </div>
     </div>
   )
@@ -760,6 +1081,9 @@ export function BattleScreen({
   const [state, setState] = useState<BattleStateDto | null>(null)
   const [animating, setAnimating] = useState(false)
   const [busy, setBusy] = useState(false)
+  // React state is committed asynchronously, so two clicks in the same render can both
+  // observe busy=false. Keep an immediate guard for every mutating battle command.
+  const busyRef = useRef(false)
   const [error, setError] = useState<string | null>(null)
   const [pileOpen, setPileOpen] = useState<PileKind | null>(null)
   // Why: ターン終了時 attack アニメーションの transient state。
@@ -894,19 +1218,9 @@ export function BattleScreen({
     [cardCatalog],
   )
   const cardRarityOf = useCallback(
-    (id: string): CardRarity =>
-      ((['c', 'r', 'e', 'l'][cardCatalog?.[id]?.rarity ?? 0]) ?? 'c') as CardRarity,
+    (id: string): CardRarity => rarityCodeFromNumber(cardCatalog?.[id]?.rarity ?? 1),
     [cardCatalog],
   )
-  const cardCostOf = useCallback(
-    (id: string): number => {
-      const def = cardCatalog?.[id]
-      if (!def) return 0
-      return def.cost ?? 0
-    },
-    [cardCatalog],
-  )
-
   // Phase 10.5.M2-Choose T7 follow-up (I1): resolveCardChoice 失敗時のエラーを
   //  CardChoiceModal 内 banner として表示するための state。
   const [chooseError, setChooseError] = useState<string | null>(null)
@@ -980,7 +1294,11 @@ export function BattleScreen({
     // fans は render 内の handDemos / fan と同じ計算で生成 (cardCatalog 等は dep に
     // 入れず最新値を読む)。
     const newDemos = hand.map((c) =>
-      toHandCardDemo(c, cardCatalog, state.energy, state.lastPlayedOrigCost),
+      toHandCardDemo(
+        c,
+        cardCatalog,
+        state.energy,
+      ),
     )
     const newFans = fanLayout(newDemos.length)
     prevHandRef.current = {
@@ -995,7 +1313,7 @@ export function BattleScreen({
   // Why: 山札補充は playSteps 内で「部分ドロー → reshuffle 演出 → 残りドロー」
   //  の 3 段階表示を組み立てるため、setState 後 useEffect 検出ではなく
   //  playSteps から直接 triggerReshuffleAnim を呼ぶ方式に変更。
-  function triggerReshuffleAnim(cards: BattleCardInstanceDto[]) {
+  const triggerReshuffleAnim = useCallback((cards: BattleCardInstanceDto[]) => {
     if (cards.length === 0) return
     const drawEl = drawPileRef.current
     const discEl = discardPileRef.current
@@ -1037,7 +1355,7 @@ export function BattleScreen({
     window.setTimeout(() => {
       setReshuffleEntries([])
     }, cards.length * stagger + duration + 50)
-  }
+  }, [])
 
   // Why: 1 枚を山札アイコン → 手札の予定 fan 位置へ飛ばす。返り値は flight 時間 (ms)。
   //  - playSteps の stagger ループで「triggerDrawAnim → sleep(flight) → setState (hand に追加)」を 1 サイクル。
@@ -1095,10 +1413,9 @@ export function BattleScreen({
 
   // BattleActionResponse を再生する。
   // 設計 (ユーザ要望):
-  //  - 同じ caster の連続 AttackFire / DealDamage を 1 個の "attack burst"
-  //    として束ねる (engine は per-target に AttackFire+DealDamage ペアを
-  //    emit するため、全体攻撃 / 複数 effects で連続する)。
-  //  - burst あたり: slide アニメ 1 回 → 全被弾 slot 同時 flash → 進行
+  //  - Core event の HitIndex ごとに slide アニメを1回再生する。
+  //    All は同じ HitIndex を全対象で共有するため、全被弾 slot を同時 flash。
+  //    Single / Random の連撃は HitIndex が異なるため、実ヒット数だけ再生する。
   //  - HP 表示は damageOverlay (instanceId → 累積 damage) で progressive に
   //    減らす。playSteps 中は setState を呼ばず最後にまとめて確定するため、
   //    後続 attacker の最終 state が前 attacker の演出に染み出さない。
@@ -1160,89 +1477,33 @@ export function BattleScreen({
         }
 
         if (ev.kind === 'AttackFire') {
-          // この caster の連続 AttackFire / DealDamage を集約。
-          // AttackFire (totalAttack) と DealDamage (post-block damage) を
-          // ペアで読み、block 消費量 = totalAttack - damage を計算する。
-          const casterId = ev.casterInstanceId ?? undefined
-          const hits: { targetId: string; damage: number; blockConsumed: number }[] = []
-          let pendingFireAmount = 0
-          let pendingFireTargetId: string | undefined = undefined
-          let j = i
-          while (j < steps.length) {
-            const e = steps[j].event
-            if ((e.kind === 'AttackFire' || e.kind === 'DealDamage')
-                && e.casterInstanceId === casterId) {
-              if (e.kind === 'AttackFire') {
-                pendingFireAmount = e.amount ?? 0
-                pendingFireTargetId = e.targetInstanceId ?? undefined
-              } else if (e.kind === 'DealDamage' && e.targetInstanceId) {
-                const damage = e.amount ?? 0
-                // pendingFire と同 target なら pair。違う場合は fallback で
-                // damage のみ反映 (block 消費量は不明 → 0 扱い)。
-                const blockConsumed = pendingFireTargetId === e.targetInstanceId
-                  ? Math.max(0, pendingFireAmount - damage)
-                  : 0
-                hits.push({
-                  targetId: e.targetInstanceId,
-                  damage,
-                  blockConsumed,
-                })
-                pendingFireAmount = 0
-                pendingFireTargetId = undefined
-              }
-              j++
-            } else {
-              break
-            }
+          const hit = readAttackAnimationHit(steps, i)
+          if (!hit) {
+            i++
+            continue
           }
+          const casterId = hit.casterId
 
           // slide 方向は caster side で決定 (現在の state ベースで判定)。
           const side = casterId && state
             ? (state.allies.some(a => a.instanceId === casterId) ? 'Ally' : 'Enemy')
             : undefined
 
-          // Why: 内部で蓄積された攻撃回数 (intent.attackHits) 分だけ slide
-          // アニメを連続再生する (ユーザ要望: ｼｭｼｭｼｭと連続で動くイメージ)。
-          // ダメージ自体は engine が 1 個の DealDamage に集約しているので、
-          // damage 反映と flash は最終 slide のタイミングでまとめて実行する。
-          // attackHits 不明 (null) や 0 の場合は 1 回だけ slide。
-          // 上限を MAX_SLIDES に cap: 一部の敵 (six_ghost.divider 等) は move
-          // 内に 6+ の attack effect を持つが、そのまま再生すると視覚的に
-          // 過剰なので 5 段までに制限する。
-          const MAX_SLIDES = 5
-          const casterActor = casterId && state
-            ? (state.allies.find(a => a.instanceId === casterId)
-                ?? state.enemies.find(e => e.instanceId === casterId))
-            : undefined
-          const rawSlideCount = Math.max(1, casterActor?.intent?.attackHits ?? 1)
-          const slideCount = Math.min(MAX_SLIDES, rawSlideCount)
-          const PER_HIT_MS = slideCount > 1 ? 200 : ATTACK_SLIDE_MS
-          const GAP_MS = 60
-
           // Why: damage > 0 の target だけ赤 flash する。block で完全相殺
           // (damage=0) の場合は flash しない (ユーザ仕様: ブロック値だけ減る)。
           const flashTargets = Array.from(new Set(
-            hits.filter(h => h.damage > 0).map(h => h.targetId),
+            hit.targets.filter(target => target.damage > 0).map(target => target.targetId),
           ))
 
-          // 前段の slide (damage 反映なし)
-          for (let s = 0; s < slideCount - 1; s++) {
-            setSlotAnim({ attackerId: casterId, attackerSide: side })
-            await sleep(PER_HIT_MS)
-            // CSS animation を再トリガするため一度 class を外す
-            setSlotAnim({})
-            await sleep(GAP_MS)
-          }
-
-          // 最終 slide: 中盤で damage/block 反映 + flash 開始
+          // 1論理ヒットにつき1 slide。damage/block もそのヒットの中盤で反映する。
           setSlotAnim({ attackerId: casterId, attackerSide: side })
-          await sleep(PER_HIT_MS / 2)
-          for (const h of hits) {
-            if (h.damage > 0) {
-              dmg[h.targetId] = (dmg[h.targetId] ?? 0) + h.damage
+          await sleep(ATTACK_SLIDE_MS / 2)
+          for (const target of hit.targets) {
+            if (target.damage > 0) {
+              dmg[target.targetId] = (dmg[target.targetId] ?? 0) + target.damage
             }
-            if (h.blockConsumed > 0) {
-              blk[h.targetId] = (blk[h.targetId] ?? 0) + h.blockConsumed
+            if (target.blockConsumed > 0) {
+              blk[target.targetId] = (blk[target.targetId] ?? 0) + target.blockConsumed
             }
           }
           setDamageOverlay({ ...dmg })
@@ -1250,13 +1511,13 @@ export function BattleScreen({
           if (flashTargets.length > 0) {
             setSlotAnim({ attackerId: casterId, attackerSide: side, hitIds: flashTargets })
           }
-          await sleep(PER_HIT_MS / 2)
+          await sleep(ATTACK_SLIDE_MS / 2)
           setSlotAnim(prev => ({ ...prev, attackerId: undefined, attackerSide: undefined }))
           if (flashTargets.length > 0) {
-            await sleep(Math.max(0, HIT_FLASH_MS - PER_HIT_MS / 2))
+            await sleep(Math.max(0, HIT_FLASH_MS - ATTACK_SLIDE_MS / 2))
           }
           setSlotAnim({})
-          i = j
+          i = hit.nextStepIndex
           continue
         }
 
@@ -1405,7 +1666,7 @@ export function BattleScreen({
         await handleFinalize()
       }
     },
-    [handleFinalize, state, showBanner],
+    [handleFinalize, state, showBanner, triggerReshuffleAnim],
   )
 
   // 初期化: GET /battle → 既存ならそれを表示、なければ POST /start。
@@ -1436,17 +1697,29 @@ export function BattleScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountId])
 
-  async function withBusy<T>(fn: () => Promise<T>): Promise<T | null> {
-    if (animating || busy) return null
+  function beginBattleCommand(): boolean {
+    if (animating || busyRef.current) return false
+    busyRef.current = true
     setBusy(true)
     setError(null)
+    return true
+  }
+
+  function endBattleCommand() {
+    busyRef.current = false
+    setBusy(false)
+  }
+
+  async function withBusy<T>(fn: () => Promise<T>): Promise<T | null> {
+    if (!beginBattleCommand()) return null
     try {
       return await fn()
     } catch (e) {
+      setAnimating(false)
       setError((e as Error).message)
       return null
     } finally {
-      setBusy(false)
+      endBattleCommand()
     }
   }
 
@@ -1470,19 +1743,15 @@ export function BattleScreen({
     // engine ロジックで無効化されるが、わざわざ呼ばないのが望ましい。
     const card = state?.hand[handIndex]
     if (!card) return
-    const def = cardCatalog?.[card.cardDefinitionId]
-    const orig = card.isUpgraded
-      ? def?.upgradedCost ?? def?.cost
-      : def?.cost
-    const baseCost = card.costOverride ?? orig
-    if (baseCost === null || baseCost === undefined) return
-    // combo 軽減も考慮した支払いコスト
-    const willCombo =
-      orig !== null && orig !== undefined &&
-      state?.lastPlayedOrigCost !== null && state?.lastPlayedOrigCost !== undefined &&
-      orig === state.lastPlayedOrigCost + 1
-    const payCost = Math.max(0, baseCost - (willCombo ? 1 : 0))
+    // Server/Coreが投影した現在支払コストを使用し、Clientではルールを再計算しない。
+    const payCost = card.currentCost
+    if (payCost === null) return
     if (state && payCost > state.energy) return
+
+    // Lock before the first animation frame. React state is asynchronous, so a
+    // ref guard is needed to stop another command during the centering animation.
+    if (!beginBattleCommand()) return
+    try {
 
     // 多段階 play アニメ用に DOM 位置を計測する。
     // demo / fan は現フレームで生成された値を ref から拾う (render との 1:1)。
@@ -1491,8 +1760,8 @@ export function BattleScreen({
     const cardEl = handCardRefs.current.get(card.instanceId)
     if (!cardEl || !demo || !fanEntry) {
       // Fallback: 計測不能 → アニメ無しで従来動作。
-      const resp = await withBusy(() => playCard(accountId, { handIndex }))
-      if (resp) await playSteps(resp)
+      const resp = await playCard(accountId, { handIndex })
+      await playSteps(resp)
       return
     }
     // Why: .app-stage が transform: scale() を持つため position: fixed の
@@ -1571,27 +1840,52 @@ export function BattleScreen({
     await sleep(200)
     // Stage 2: holding (server 呼び出し + playSteps の演出をホールド)
     setPlayingCard(p => (p ? { ...p, stage: 'holding' } : null))
-    const resp = await withBusy(() => playCard(accountId, { handIndex }))
-    if (!resp) {
-      setPlayingCard(null)
-      return
-    }
+    const resp = await playCard(accountId, { handIndex })
     await playSteps(resp)
     // Stage 3: leaving (パイル中心 / 喪失なら回転縮小消滅)
     //   discard: 280ms / exhaust: 320ms (CSS と一致)。
     setPlayingCard(p => (p ? { ...p, stage: 'leaving' } : null))
     await sleep(dest === 'exhaust' ? 320 : 280)
-    setPlayingCard(null)
+    } catch (e) {
+      setAnimating(false)
+      setError((e as Error).message)
+    } finally {
+      // Never leave the moving-card overlay or command lock behind on failure.
+      setPlayingCard(null)
+      endBattleCommand()
+    }
   }
 
   async function handleEndTurn() {
-    const resp = await withBusy(() => endTurn(accountId))
-    if (resp) await playSteps(resp)
+    await withBusy(async () => {
+      const resp = await endTurn(accountId)
+      await playSteps(resp)
+      return resp
+    })
   }
 
   async function handleUsePotion(potionIndex: number) {
-    const resp = await withBusy(() => usePotion(accountId, { potionIndex }))
-    if (resp) await playSteps(resp)
+    await withBusy(async () => {
+      const resp = await consumeBattlePotion(accountId, { potionIndex })
+      await playSteps(resp)
+      return resp
+    })
+  }
+
+  async function handleUseTacticalSkill() {
+    await withBusy(async () => {
+      const resp = await activateTacticalSkill(accountId)
+      await playSteps(resp)
+      return resp
+    })
+  }
+
+  async function handleUseUltimateSkill() {
+    await withBusy(async () => {
+      const resp = await activateUltimateSkill(accountId)
+      await playSteps(resp)
+      return resp
+    })
   }
 
   async function handleSetTarget(side: ActorSide, slotIndex: number) {
@@ -1674,7 +1968,11 @@ export function BattleScreen({
   const enemyOccupiedCount = enemySlots.filter(c => c.occupied).length
 
   const handDemos = state.hand.map((c) =>
-    toHandCardDemo(c, cardCatalog, state.energy, state.lastPlayedOrigCost),
+    toHandCardDemo(
+      c,
+      cardCatalog,
+      state.energy,
+    ),
   )
   const fan = fanLayout(handDemos.length)
 
@@ -1682,6 +1980,15 @@ export function BattleScreen({
   //  ターゲット切替 / end-turn / potion) を disable し、Server 側 RejectIfPending と
   //  二重防御する。
   const interactionsDisabled = animating || busy || state.pendingCardPlay !== null
+  const comboSkillAvailability = getComboSkillAvailability({
+    comboGauge: state.comboGauge,
+    phase: state.phase,
+    animating,
+    busy,
+    hasPendingChoice: state.pendingCardPlay !== null,
+    handCount: state.hand.length,
+    tacticalUsedThisTurn: state.usedCharacterSkillIdsThisTurn.includes('tactical'),
+  })
 
   return (
     <div className="battle-screen">
@@ -1786,7 +2093,7 @@ export function BattleScreen({
           </div>
 
           {/* Energy orb */}
-          <EnergyOrb cur={state.energy} max={state.energyMax} />
+          <EnergyOrb cur={state.energy} recoveryPerTurn={state.energyPerTurn} />
 
           {/* Piles (clickable to open modal) */}
           <button
@@ -1823,11 +2130,17 @@ export function BattleScreen({
             <span className="pile__num">{state.discardPile.length}</span>
           </button>
 
-          {/* COMBO chip + Turn end */}
-          <ComboChip
+          {/* Tactical / COMBO + gauge / Ultimate controls + Turn end */}
+          <BattleComboControls
             count={state.comboCount}
+            maxComboThisTurn={state.maxComboThisTurn}
             lastPlayedOrigCost={state.lastPlayedOrigCost}
-            superwild={state.nextCardComboFreePass}
+            nextCardComboFreePass={state.nextCardComboFreePass}
+            comboGauge={state.comboGauge}
+            tacticalDisabled={comboSkillAvailability.tacticalDisabled}
+            ultimateDisabled={comboSkillAvailability.ultimateDisabled}
+            onUseTactical={() => void handleUseTacticalSkill()}
+            onUseUltimate={() => void handleUseUltimateSkill()}
           />
           <button
             type="button"
@@ -1909,25 +2222,26 @@ export function BattleScreen({
           hand={state.hand}
           drawPile={state.drawPile}
           discardPile={state.discardPile}
+          exhaustPile={state.exhaustPile}
           cardNames={cardNamesMemo}
           cardTypeOf={cardTypeOf}
           cardRarityOf={cardRarityOf}
-          cardCostOf={cardCostOf}
           errorMessage={chooseError}
           onConfirm={async (selectedInstanceIds) => {
             // Why (I1): withBusy は throw を catch して null を返すが、
             //  念のため try/catch も入れて両ルートをカバー。失敗時は banner を出す。
             setChooseError(null)
             try {
-              const resp = await withBusy(() =>
-                resolveCardChoice(accountId, { selectedInstanceIds }),
-              )
-              if (!resp) {
+              const completed = await withBusy(async () => {
+                const resp = await resolveCardChoice(accountId, { selectedInstanceIds })
+                await playSteps(resp)
+                return true
+              })
+              if (!completed) {
                 console.error('resolveCardChoice failed: withBusy returned null')
                 setChooseError('カード選択の確定に失敗しました。再度お試しください。')
                 return
               }
-              await playSteps(resp)
             } catch (err) {
               console.error('resolveCardChoice failed:', err)
               setChooseError(
@@ -1981,7 +2295,6 @@ export function BattleScreen({
             rarity={playingCard.entry.demo.rarity}
             art={playingCard.entry.demo.art}
             upgraded={playingCard.entry.demo.upgraded}
-            width={112}
           />
         </div>
       )}
@@ -1997,7 +2310,6 @@ export function BattleScreen({
               e.card,
               cardCatalog,
               state?.energy ?? 0,
-              state?.lastPlayedOrigCost ?? null,
             )
             return (
               <div
@@ -2019,7 +2331,6 @@ export function BattleScreen({
                   rarity={demo.rarity}
                   art={demo.art}
                   upgraded={demo.upgraded}
-                  width={112}
                 />
               </div>
             )
@@ -2035,7 +2346,6 @@ export function BattleScreen({
               e.card,
               cardCatalog,
               state?.energy ?? 0,
-              state?.lastPlayedOrigCost ?? null,
             )
             return (
               <div
@@ -2057,7 +2367,6 @@ export function BattleScreen({
                   rarity={demo.rarity}
                   art={demo.art}
                   upgraded={demo.upgraded}
-                  width={112}
                 />
               </div>
             )

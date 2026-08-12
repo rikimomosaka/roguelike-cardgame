@@ -66,6 +66,59 @@ public class FileAccountRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task Lookup_IsCaseInsensitive_AndReturnsStoredCanonicalId()
+    {
+        await _repo.CreateAsync("Alice", FixedNow, CancellationToken.None);
+
+        Assert.True(await _repo.ExistsAsync("alice", CancellationToken.None));
+        var got = await _repo.GetAsync("ALICE", CancellationToken.None);
+
+        Assert.NotNull(got);
+        Assert.Equal("Alice", got!.Id);
+    }
+
+    [Fact]
+    public async Task CreateAsync_CaseVariant_ThrowsAccountAlreadyExists_OnEveryOs()
+    {
+        await _repo.CreateAsync("CaseOwner", FixedNow, CancellationToken.None);
+
+        await Assert.ThrowsAsync<AccountAlreadyExistsException>(() =>
+            _repo.CreateAsync("caseowner", FixedNow, CancellationToken.None));
+
+        Assert.Single(Directory.GetFiles(Path.Combine(_tempRoot, "accounts"), "*.json"));
+    }
+
+    [Fact]
+    public async Task ConcurrentCaseVariantCreates_ExactlyOneSucceeds()
+    {
+        static async Task<Exception?> TryCreateAsync(
+            FileAccountRepository repo, string id)
+        {
+            try
+            {
+                await repo.CreateAsync(id, FixedNow, CancellationToken.None);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return ex;
+            }
+        }
+
+        var outcomes = await Task.WhenAll(
+            TryCreateAsync(_repo, "RaceOwner"),
+            TryCreateAsync(_repo, "raceowner"));
+
+        Assert.Single(outcomes, outcome => outcome is null);
+        Assert.Single(outcomes, outcome => outcome is AccountAlreadyExistsException);
+        var stored = await _repo.GetAsync("RACEOWNER", CancellationToken.None);
+        Assert.NotNull(stored);
+        Assert.True(
+            string.Equals(stored!.Id, "RaceOwner", StringComparison.Ordinal)
+            || string.Equals(stored.Id, "raceowner", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task CreateAsync_WritesUnderAccountsSubdir()
     {
         await _repo.CreateAsync("carol", FixedNow, CancellationToken.None);

@@ -91,6 +91,8 @@ public class RunsControllerTests : IClassFixture<TempDataFactory>
         await EnsureAccountAsync(client, "eve");
         WithAccount(client, "eve");
         var newRes = await client.PostAsync("/api/v1/runs/new", content: null);
+        await BattleTestHelpers.MarkActStartResolvedForTestAsync(
+            _factory.Services, "eve");
         var doc = JsonDocument.Parse(await newRes.Content.ReadAsStringAsync());
         int startId = doc.RootElement.GetProperty("run").GetProperty("currentNodeId").GetInt32();
         int targetId = -1;
@@ -121,6 +123,8 @@ public class RunsControllerTests : IClassFixture<TempDataFactory>
         await EnsureAccountAsync(client, "fay");
         WithAccount(client, "fay");
         var newRes = await client.PostAsync("/api/v1/runs/new", content: null);
+        await BattleTestHelpers.MarkActStartResolvedForTestAsync(
+            _factory.Services, "fay");
         var doc = JsonDocument.Parse(await newRes.Content.ReadAsStringAsync());
         int startId = doc.RootElement.GetProperty("run").GetProperty("currentNodeId").GetInt32();
         int bad = -1;
@@ -203,6 +207,8 @@ public class RunsControllerTests : IClassFixture<TempDataFactory>
         WithAccount(client, "ivy");
 
         var newRes = await client.PostAsync("/api/v1/runs/new", content: null);
+        await BattleTestHelpers.MarkActStartResolvedForTestAsync(
+            _factory.Services, "ivy");
         var newDoc = JsonDocument.Parse(await newRes.Content.ReadAsStringAsync());
         int startId = newDoc.RootElement.GetProperty("run").GetProperty("currentNodeId").GetInt32();
         int firstTarget = -1;

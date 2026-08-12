@@ -1,4 +1,7 @@
 using System.Collections.Immutable;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using RoguelikeCardGame.Core.Battle.Events;
 using RoguelikeCardGame.Core.Battle.State;
 using RoguelikeCardGame.Core.Tests.Battle.Fixtures;
 using Xunit;
@@ -47,6 +50,38 @@ public class CombatActorTests
         var statuses = ImmutableDictionary<string, int>.Empty.Add("strength", 3);
         var a = MakeHero() with { Statuses = statuses };
         Assert.Equal(3, a.GetStatus("strength"));
+    }
+
+    [Fact] public void StatusSources_defaults_empty_and_only_returns_source_for_live_status()
+    {
+        var actor = MakeHero();
+        Assert.Empty(actor.StatusSources);
+        Assert.Null(actor.GetStatusSource("poison"));
+
+        var source = new CombatSource(
+            CombatSourceKind.CardEffect, 0, actor.InstanceId, actor.InstanceId,
+            DefinitionId: "poison_card");
+        var staleOnly = actor with
+        {
+            StatusSources = ImmutableDictionary<string, CombatSource>.Empty
+                .Add("poison", source),
+        };
+        Assert.Null(staleOnly.GetStatusSource("poison"));
+    }
+
+    [Fact] public void Legacy_json_without_new_attribution_fields_restores_safe_defaults()
+    {
+        var json = JsonNode.Parse(JsonSerializer.Serialize(MakeHero()))!.AsObject();
+        json.Remove(nameof(CombatActor.StatusSources));
+        json.Remove(nameof(CombatActor.OwnerPlayerSlot));
+        json.Remove(nameof(CombatActor.OwnerActorInstanceId));
+
+        var restored = JsonSerializer.Deserialize<CombatActor>(json.ToJsonString());
+
+        Assert.NotNull(restored);
+        Assert.Empty(restored.StatusSources);
+        Assert.Null(restored.OwnerPlayerSlot);
+        Assert.Null(restored.OwnerActorInstanceId);
     }
 
     [Fact] public void Record_inequality_when_statuses_differ()

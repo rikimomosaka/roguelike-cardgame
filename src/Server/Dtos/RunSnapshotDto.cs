@@ -99,9 +99,9 @@ public static class RunSnapshotDtoMapper
         return new RunSnapshotDto(run, MapDtoMapper.From(map));
     }
 
-    public static RunResultDto ToResult(string accountId, RunState s, DungeonMap currentMap, int nodesVisited, RunProgress outcome)
+    public static RunResultDto ToResult(string accountId, RunState s, DungeonMap currentMap, RunProgress outcome)
     {
-        var rec = RunHistoryBuilder.From(accountId, s, currentMap, nodesVisited, outcome);
+        var rec = RunHistoryBuilder.From(accountId, s, currentMap, outcome);
         return ToResultDto(rec);
     }
 

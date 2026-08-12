@@ -116,6 +116,26 @@ public class ActTransitionTests
     }
 
     [Fact]
+    public void AdvanceAct_FromFinalAct_Throws()
+    {
+        var cat = EmbeddedDataLoader.LoadCatalog();
+        var state = TestRunStates.FreshDefault(cat) with { CurrentAct = RunConstants.MaxAct };
+
+        Assert.Throws<InvalidOperationException>(() =>
+            ActTransition.AdvanceAct(state, FakeMap(0), FakeMap(999), cat, new SystemRng(1)));
+    }
+
+    [Fact]
+    public void AdvanceAct_AfterRunEnded_Throws()
+    {
+        var cat = EmbeddedDataLoader.LoadCatalog();
+        var state = TestRunStates.FreshDefault(cat) with { Progress = RunProgress.GameOver };
+
+        Assert.Throws<InvalidOperationException>(() =>
+            ActTransition.AdvanceAct(state, FakeMap(0), FakeMap(999), cat, new SystemRng(1)));
+    }
+
+    [Fact]
     public void FinishRun_SetsProgress_AndUpdatesSavedAtUtc()
     {
         var cat = EmbeddedDataLoader.LoadCatalog();
@@ -125,5 +145,16 @@ public class ActTransitionTests
         var next = ActTransition.FinishRun(s, RunProgress.Cleared);
         Assert.Equal(RunProgress.Cleared, next.Progress);
         Assert.True(next.SavedAtUtc > before);
+    }
+
+    [Fact]
+    public void FinishRun_WhenAlreadyFinished_ThrowsWithoutReclassifyingOutcome()
+    {
+        var cat = EmbeddedDataLoader.LoadCatalog();
+        var state = TestRunStates.FreshDefault(cat) with { Progress = RunProgress.GameOver };
+
+        Assert.Throws<InvalidOperationException>(
+            () => ActTransition.FinishRun(state, RunProgress.Cleared));
+        Assert.Equal(RunProgress.GameOver, state.Progress);
     }
 }

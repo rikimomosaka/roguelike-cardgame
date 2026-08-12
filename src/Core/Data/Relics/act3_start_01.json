@@ -12,7 +12,13 @@
                                       "rarity":  2,
                                       "description":  "微かに七色を放つ星型の結晶。英雄の証として伝えられているが、由来は誰も知らない。",
                                       "effects":  [
-
+                                                      {
+                                                          "action":  "gainMaxHp",
+                                                          "scope":   "self",
+                                                          "target":  null,
+                                                          "amount":  20,
+                                                          "trigger": "OnPickup"
+                                                      }
                                                   ],
                                       "implemented":  true
                                   }

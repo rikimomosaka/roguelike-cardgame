@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using System.Threading;
+using System.Threading.Tasks;
 using RoguelikeCardGame.Core.Battle.State;
 using RoguelikeCardGame.Core.Random;
 
@@ -20,7 +22,29 @@ public sealed record BattleSession(BattleState State, IRng Rng);
 /// </summary>
 public sealed class BattleSessionStore
 {
-    private readonly ConcurrentDictionary<string, BattleSession> _sessions = new();
+    private readonly ConcurrentDictionary<string, BattleSession> _sessions =
+        new(StringComparer.OrdinalIgnoreCase);
+    // Gate は session 削除時にも残す。待機中 command が旧 gate を保持する間に
+    // 同じ accountId 用の新 gate を作ると、2 本が同時実行され session が復活し得るため。
+    // accountId は永続アカウント集合に属するので service lifetime 中の保持を許容する。
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _commandLocks =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    internal int CommandLockCount => _commandLocks.Count;
+
+    /// <summary>
+    /// 同一アカウントの戦闘 command を直列化する。
+    /// BattleSession の State と可変 IRng は必ず同じ lease 内で読み書きすること。
+    /// アカウントごとに別 semaphore を使うため、別アカウントの戦闘は並列に進行できる。
+    /// </summary>
+    public async ValueTask<IAsyncDisposable> AcquireCommandLockAsync(
+        string accountId, CancellationToken cancellationToken)
+    {
+        var gate = _commandLocks.GetOrAdd(
+            accountId, static _ => new SemaphoreSlim(initialCount: 1, maxCount: 1));
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        return new CommandLockLease(gate);
+    }
 
     public bool TryGet(string accountId, [MaybeNullWhen(false)] out BattleSession session)
         => _sessions.TryGetValue(accountId, out session);
@@ -36,4 +60,17 @@ public sealed class BattleSessionStore
     /// 本番経路では accountId 単位の <see cref="Remove"/> を使うこと。
     /// </summary>
     public void Clear() => _sessions.Clear();
+
+    private sealed class CommandLockLease : IAsyncDisposable
+    {
+        private SemaphoreSlim? _gate;
+
+        public CommandLockLease(SemaphoreSlim gate) => _gate = gate;
+
+        public ValueTask DisposeAsync()
+        {
+            Interlocked.Exchange(ref _gate, null)?.Release();
+            return ValueTask.CompletedTask;
+        }
+    }
 }

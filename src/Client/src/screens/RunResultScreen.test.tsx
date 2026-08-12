@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { RunResultDto } from '../api/types'
 import { RunResultScreen } from './RunResultScreen'
+import { rarityToItemClass } from './runResultRarity'
 
 const sample: RunResultDto = {
   schemaVersion: 1,
@@ -26,6 +27,15 @@ const sample: RunResultDto = {
 }
 
 describe('RunResultScreen', () => {
+  it.each([
+    ['c', 'item--common'],
+    ['r', 'item--rare'],
+    ['e', 'item--epic'],
+    ['l', 'item--legendary'],
+  ] as const)('uses the canonical result class for %s rarity', (rarity, expected) => {
+    expect(rarityToItemClass(rarity)).toBe(expected)
+  })
+
   it('shows outcome, act reached, nodes, play seconds', () => {
     render(<RunResultScreen result={sample} onReturnToMenu={vi.fn()} />)
     expect(screen.getByText(/Cleared/)).toBeDefined()

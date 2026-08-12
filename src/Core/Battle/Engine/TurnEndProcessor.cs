@@ -10,7 +10,7 @@ using RoguelikeCardGame.Core.Random;
 namespace RoguelikeCardGame.Core.Battle.Engine;
 
 /// <summary>
-/// ターン終了処理。Phase 10.2.C でコンボ 3 フィールドのリセットを追加。
+/// ターン終了処理。Phase 10.2.C でコンボ状態のリセットを追加。
 /// Phase 10.2.D で retainSelf-aware 手札整理 + DataCatalog 引数追加。
 /// Phase 10.2.E で OnTurnEnd レリック発火 + IRng 引数追加 (step 3)。
 /// 親 spec §4-6 参照。
@@ -42,9 +42,14 @@ internal static class TurnEndProcessor
         s = s with
         {
             ComboCount = 0,
+            MaxComboThisTurn = 0,
             LastPlayedOrigCost = null,
             NextCardComboFreePass = false,
+            WildUsedInCurrentCombo = false,
+            UsedCharacterSkillIdsThisTurn = ImmutableHashSet<string>.Empty,
         };
+        s = BattleCardCostModifierLifecycle.Remove(
+            s, CardCostModifierDuration.UntilTurnEnd);
 
         // Step 5: 手札整理 (retainSelf-aware, 10.2.D 既存)
         var keepInHand = ImmutableArray.CreateBuilder<BattleCardInstance>();

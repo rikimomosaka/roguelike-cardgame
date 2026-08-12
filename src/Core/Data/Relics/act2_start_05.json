@@ -12,7 +12,13 @@
                                       "rarity":  1,
                                       "description":  "古い羊皮紙に描かれた覚え書き。ところどころに金貨の記号が躍る。",
                                       "effects":  [
-
+                                                      {
+                                                          "action":  "gainGold",
+                                                          "scope":   "self",
+                                                          "target":  null,
+                                                          "amount":  80,
+                                                          "trigger": "OnPickup"
+                                                      }
                                                   ],
                                       "implemented":  true
                                   }

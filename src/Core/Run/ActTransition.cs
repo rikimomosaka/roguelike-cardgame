@@ -19,6 +19,11 @@ public static class ActTransition
         ArgumentNullException.ThrowIfNull(newMap);
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(rng);
+        if (state.Progress != RunProgress.InProgress)
+            throw new InvalidOperationException("Only an in-progress run can advance to the next act");
+        if (state.CurrentAct < 1 || state.CurrentAct >= RunConstants.MaxAct)
+            throw new InvalidOperationException(
+                $"Cannot advance from act {state.CurrentAct}; valid source acts are 1..{RunConstants.MaxAct - 1}");
 
         int nextAct = state.CurrentAct + 1;
         var queueWeak = EncounterQueue.Initialize(new EnemyPool(nextAct, EnemyTier.Weak), catalog, rng);
@@ -57,6 +62,9 @@ public static class ActTransition
     public static RunState FinishRun(RunState state, RunProgress outcome)
     {
         ArgumentNullException.ThrowIfNull(state);
+        if (state.Progress != RunProgress.InProgress)
+            throw new InvalidOperationException(
+                $"Run is already finished with outcome {state.Progress}");
         if (outcome == RunProgress.InProgress)
             throw new ArgumentException("FinishRun cannot be called with InProgress", nameof(outcome));
         return state with

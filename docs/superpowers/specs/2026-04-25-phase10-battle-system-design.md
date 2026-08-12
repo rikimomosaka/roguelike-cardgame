@@ -1,5 +1,8 @@
 # Phase 10 — 本格バトルシステム 設計
 
+> **現行仕様の優先事項:** Wild / SuperWild の後続カード保護と再使用制限は
+> [`../../current-combo-spec.md`](../../current-combo-spec.md) を正とする。本文書内の Phase 10 当時の記述より優先する。
+
 > 作成日: 2026-04-25
 > 対象フェーズ: Phase 10（Phase 5 の `BattlePlaceholder` を本物のバトルロジックに差し替える）
 > 関連ロードマップ: [`2026-04-20-roadmap.md`](../plans/2026-04-20-roadmap.md) Phase 10 節
@@ -435,7 +438,7 @@ public sealed record CardInstance(
    - `strength / dexterity` は永続なので tick なし
 4. **召喚キャラの Lifetime カウント処理**
    - `RemainingLifetimeTurns -= 1`、0 になった召喚は消滅 → 関連 SummonHeld カードを捨札へ
-5. **エナジー回復**: `Energy = EnergyMax`
+5. **エナジー追加**: `Energy = saturatingAdd(Energy, EnergyMax)`。未使用分を持ち越し、`int.MaxValue` で飽和する。`EnergyMax` は互換名であり、現在はターン開始時追加量を表す。
 6. **ドロー**: 5 枚（山札不足ならシャッフルで補充、ハンド上限 10 まで）
 7. **OnTurnStart レリック発動**
 

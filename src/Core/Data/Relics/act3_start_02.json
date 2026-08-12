@@ -12,7 +12,13 @@
                                       "rarity":  2,
                                       "description":  "深海色の宝石を抱いた指輪。王位継承の儀でのみ取り出されるという。",
                                       "effects":  [
-
+                                                      {
+                                                          "action":  "gainGold",
+                                                          "scope":   "self",
+                                                          "target":  null,
+                                                          "amount":  150,
+                                                          "trigger": "OnPickup"
+                                                      }
                                                   ],
                                       "implemented":  true
                                   }

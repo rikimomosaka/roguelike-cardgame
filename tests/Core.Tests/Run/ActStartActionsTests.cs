@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Random;
+using RoguelikeCardGame.Core.Relics;
 using RoguelikeCardGame.Core.Run;
 using Xunit;
 
@@ -37,6 +38,30 @@ public class ActStartActionsTests
     }
 
     [Fact]
+    public void GenerateChoices_LegacySaveWithTooManyOwnedActRelics_FillsMissingChoicesFromNormalPool()
+    {
+        var cat = EmbeddedDataLoader.LoadCatalog();
+        var pool = cat.ActStartRelicPools![2];
+        var owned = pool.Take(4).ToArray();
+        var s = TestRunStates.FreshDefault(cat) with
+        {
+            CurrentAct = 2,
+            Relics = owned,
+        };
+
+        var choice = ActStartActions.GenerateChoices(s, act: 2, cat, new SystemRng(7));
+
+        Assert.Equal(3, choice.RelicIds.Length);
+        Assert.Equal(3, choice.RelicIds.Distinct().Count());
+        Assert.Contains(pool[4], choice.RelicIds);
+        Assert.DoesNotContain(choice.RelicIds, id => owned.Contains(id));
+        var normal = RelicPoolHelper.GetNormalAcquisitionRelics(cat)
+            .Select(relic => relic.Id)
+            .ToHashSet(System.StringComparer.Ordinal);
+        Assert.Equal(2, choice.RelicIds.Count(normal.Contains));
+    }
+
+    [Fact]
     public void ChooseRelic_AddsRelic_ClearsChoice()
     {
         var cat = EmbeddedDataLoader.LoadCatalog();
@@ -66,18 +91,20 @@ public class ActStartActionsTests
     }
 
     [Fact]
-    public void ChooseRelic_AddsToRelicsList()
+    public void ChooseRelic_AppliesActTwoPickupEffect()
     {
-        // Phase 10.5.L1.5: base relic JSON は effects=[] にリセット済みなので、
-        // OnPickup 発火による副作用は base catalog では無く、Relics list への追加だけ確認。
         var cat = EmbeddedDataLoader.LoadCatalog();
         var s = TestRunStates.FreshDefault(cat) with
         {
             ActiveActStartRelicChoice = new ActStartRelicChoice(
-                ImmutableArray.Create("act1_start_01", "act1_start_02", "act1_start_03")),
+                ImmutableArray.Create("act2_start_01", "act2_start_02", "act2_start_03")),
+            CurrentHp = 40,
+            MaxHp = 80,
         };
-        var next = ActStartActions.ChooseRelic(s, "act1_start_01", cat);
-        Assert.Contains("act1_start_01", next.Relics);
+        var next = ActStartActions.ChooseRelic(s, "act2_start_01", cat);
+        Assert.Contains("act2_start_01", next.Relics);
         Assert.Null(next.ActiveActStartRelicChoice);
+        Assert.Equal(92, next.MaxHp);
+        Assert.Equal(52, next.CurrentHp);
     }
 }

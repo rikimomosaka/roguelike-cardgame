@@ -12,7 +12,13 @@
                                       "rarity":  1,
                                       "description":  "見知らぬ戦士の遺品。被ると、ほんの少しだけ背筋が伸びる。",
                                       "effects":  [
-
+                                                      {
+                                                          "action":  "gainMaxHp",
+                                                          "scope":   "self",
+                                                          "target":  null,
+                                                          "amount":  12,
+                                                          "trigger": "OnPickup"
+                                                      }
                                                   ],
                                       "implemented":  true
                                   }

@@ -10,6 +10,7 @@ import {
   proceedReward,
   rerollCardChoices,
   skipCard,
+  consumePotionOutsideBattle,
 } from '../api/rewards'
 import { buyFromMerchant, discardAtMerchant, leaveMerchant } from '../api/merchant'
 import { chooseEvent } from '../api/event'
@@ -122,8 +123,9 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
   // Why: 戦闘中のタイマー継続用 tick。MapScreen / BattleScreen を切り替えても
   // 親が継続して秒数をカウントすることで、TopBar の playSeconds 表示が peek
   // 切替時にリセットされない (ユーザ要望)。
-  const [battleTicks, setBattleTicks] = useState(0)
+  const [battleClock, setBattleClock] = useState({ key: '', ticks: 0 })
   const [pan, setPan] = useState({ x: 0, y: 0 })
+  const [dragging, setDragging] = useState(false)
   const [zoom, setZoom] = useState(1)
   const [actBanner, setActBanner] = useState<number | null>(null)
   const [actStartRelicDismissed, setActStartRelicDismissed] = useState(false)
@@ -134,8 +136,11 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
   >(null)
   const dragRef = useRef<{ startX: number; startY: number; startPan: { x: number; y: number }; moved: boolean } | null>(null)
   const stageRef = useRef<HTMLDivElement | null>(null)
-  const mountedAt = useRef<number>(performance.now())
+  const mountedAt = useRef<number>(0)
   const snapRef = useRef<RunSnapshotDto>(snap)
+  useEffect(() => {
+    mountedAt.current = performance.now()
+  }, [])
   useEffect(() => { snapRef.current = snap }, [snap])
 
   const toggleMenu = useCallback(() => setMenuOpen(v => !v), [])
@@ -161,6 +166,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
       startPan: pan,
       moved: false,
     }
+    setDragging(true)
     e.currentTarget.setPointerCapture(e.pointerId)
   }
 
@@ -175,6 +181,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
 
   function onStagePointerUp(e: ReactPointerEvent<HTMLDivElement>) {
     dragRef.current = null
+    setDragging(false)
     if (e.currentTarget.hasPointerCapture(e.pointerId)) {
       e.currentTarget.releasePointerCapture(e.pointerId)
     }
@@ -302,17 +309,23 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
   const currentNode = snap.map.nodes.find((n) => n.id === snap.run.currentNodeId)!
   const visited = new Set(snap.run.visitedNodeIds)
   const activeBattle = snap.run.activeBattle
+  const activeBattleKey = activeBattle
+    ? `${snap.run.currentNodeId}:${activeBattle.encounterId}`
+    : null
+  const battleTicks = activeBattleKey !== null && battleClock.key === activeBattleKey
+    ? battleClock.ticks
+    : 0
 
   // Why: 戦闘中の秒カウンタ。切替で親が継続するため peek でも timer が止まらない。
   useEffect(() => {
-    if (!activeBattle) {
-      if (battleTicks !== 0) setBattleTicks(0)
-      return
-    }
-    const id = window.setInterval(() => setBattleTicks(t => t + 1), 1000)
+    if (activeBattleKey === null) return
+    const id = window.setInterval(() => {
+      setBattleClock((clock) => clock.key === activeBattleKey
+        ? { ...clock, ticks: clock.ticks + 1 }
+        : { key: activeBattleKey, ticks: 1 })
+    }, 1000)
     return () => window.clearInterval(id)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeBattle])
+  }, [activeBattleKey])
   const activeReward = snap.run.activeReward
   const activeMerchant = snap.run.activeMerchant
   const activeEvent = snap.run.activeEvent
@@ -325,6 +338,12 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
   const actStartRelicVisible = activeActStartRelicChoice !== null && !actStartRelicDismissed
   // 選択未完了の間は (popup を一旦閉じていても) 移動を禁止する。
   const choicePending = activeActStartRelicChoice !== null
+  // Closing a required-choice popup only hides it; it does not resolve the
+  // current node. Keep outgoing nodes locked until the server snapshot confirms
+  // that the choice was completed, matching Core RunActions.
+  const requiredChoicePending = (activeEvent !== null && activeEvent.chosenIndex === null)
+    || (activeRestPending && !snap.run.activeRestCompleted)
+    || choicePending
   const blockedByModal = activeBattle !== null
     || rewardVisible
     || merchantVisible
@@ -342,7 +361,8 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
     && activeActStartRelicChoice === null
 
   function isSelectable(n: MapNodeDto): boolean {
-    if (blockedByModal) return false
+    if (blockedByModal || requiredChoicePending) return false
+    if (snap.run.progress !== 'InProgress') return false
     // 現在マスが未通過（= スタートマス入場イベント未消化）の間は次マスを選べない。
     if (!visited.has(currentNode.id)) return false
     return currentNode.outgoingNodeIds.includes(n.id)
@@ -457,6 +477,12 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
     await refresh()
   }
 
+  async function handleUsePotionOutsideBattle(slotIndex: number) {
+    if (!accountId || activeBattle) return
+    await consumePotionOutsideBattle(accountId, slotIndex)
+    await refresh()
+  }
+
   async function handleClaimRelic() {
     if (!accountId) return
     await claimRelic(accountId)
@@ -489,8 +515,12 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
 
   async function handleChooseEvent(choiceIndex: number) {
     if (!accountId) return
-    await chooseEvent(accountId, choiceIndex)
-    await refresh()
+    const result = await chooseEvent(accountId, choiceIndex)
+    if ('outcome' in result) {
+      onRunFinished?.(result, snapRef.current)
+    } else {
+      setSnap(result)
+    }
   }
 
   async function handleRestHeal() {
@@ -594,6 +624,8 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
           deck={snap.run.deck}
           relics={liveRelics}
           onDiscardPotion={handleDiscardPotion}
+          onUsePotion={activeBattle ? undefined : handleUsePotionOutsideBattle}
+          outsideBattlePotionUseOnly
           onOpenMenu={toggleMenu}
           menuActive={menuOpen}
           onTogglePeek={activeBattle ? () => setPeekMap(v => !v) : () => {}}
@@ -612,7 +644,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
           onPointerMove={onStagePointerMove}
           onPointerUp={onStagePointerUp}
           onPointerCancel={onStagePointerUp}
-          style={{ cursor: dragRef.current ? 'grabbing' : 'grab' }}
+          style={{ cursor: dragging ? 'grabbing' : 'grab' }}
         >
           <div className="map-screen__act-badge" aria-hidden="true">
             <span className="k">ACT</span>
@@ -645,7 +677,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
                   const startEntryActive = currentNode.kind === 'Start' && !visited.has(currentNode.id)
                   const nextEdge = !startEntryActive
                     && n.id === snap.run.currentNodeId
-                    && currentNode.outgoingNodeIds.includes(toId)
+                    && isSelectable(to)
                   // Why: 過去の道は青、次に行ける道は黄色、それ以外は白。
                   // 全ての道を黒で縁取り (ユーザ要望)。
                   const stroke = visitedEdge
@@ -728,6 +760,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
                   data-visited={isVisited ? 'true' : 'false'}
                   data-reopen-reward={reopen ? 'true' : 'false'}
                   data-start-entry={startEntry ? 'true' : 'false'}
+                  aria-current={isCurrent ? 'location' : undefined}
                   onClick={() => handleClick(n)}
                   disabled={!clickable}
                   className={classes}
@@ -735,6 +768,15 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
                   aria-label={`マス ${n.id} (${nodeTooltipFor(n.kind, resolvedKind)})`}
                   title={nodeTooltipFor(n.kind, resolvedKind)}
                 >
+                  {isCurrent && (
+                    <span
+                      className="map-screen__current-marker"
+                      data-testid="map-current-marker"
+                      aria-hidden="true"
+                    >
+                      現在地
+                    </span>
+                  )}
                   <span aria-hidden="true">{iconFor(n.kind, resolvedKind)}</span>
                   {label && <span className="map-screen__node-label">{label}</span>}
                 </button>

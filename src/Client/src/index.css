@@ -1,6 +1,13 @@
 /* src/Client/src/index.css */
 * { box-sizing: border-box; }
 
+/* Project art direction: every in-game raster asset is pixel art. Keep sprite
+   edges crisp even when responsive layout scales an image away from its source size. */
+img,
+canvas.pixel-art {
+  image-rendering: pixelated;
+}
+
 html, body {
   margin: 0;
   padding: 0;

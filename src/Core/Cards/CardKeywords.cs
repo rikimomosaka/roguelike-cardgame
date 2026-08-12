@@ -13,13 +13,10 @@ public static class CardKeywords
 
     private static readonly Dictionary<string, KeywordMeta> _map = new()
     {
-        // Phase 10.5.M4: wild / superwild は 1 コンボ連鎖につき最初の 1 回しか発動しない。
-        //  engine: コスト連番判定を満たさなくてもコンボ継続を保証 (初回のみ)。
-        //          以降そのコンボ連鎖中は wild/superwild キーワードが無効化される。
         ["wild"] = new("wild", "ワイルド",
-            "このカードではコンボが途切れない。このコンボ中、以降のワイルドを無効にする。"),
-        ["superwild"] = new("superwild", "スーパーワイルド",
             "このカード及び次に使うカードではコンボが途切れない。このコンボ中、以降のワイルドを無効にする。"),
+        ["superwild"] = new("superwild", "スーパーワイルド",
+            "このカード及び次に使うカードではコンボが途切れない。"),
         // Phase 10.5.M2/M4: retainSelf action から keyword 化。
         ["wait"] = new("wait", "待機",
             "手札にある限り、次のターンに持ち越される。"),

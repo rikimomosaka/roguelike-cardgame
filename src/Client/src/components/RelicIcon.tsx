@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
-import type { CardRarity } from './Card'
 import { useTooltipTarget } from './Tooltip'
 import type { RelicCatalog } from '../api/catalog'
+import { getRelicTooltipContent } from './relicTooltip'
 import './RelicIcon.css'
 
 type Props = {
@@ -16,20 +16,11 @@ export function RelicIcon({ id, catalog, names }: Props) {
   // M6.3: 効果テキストとフレーバーを分離して tooltip に渡す。
   //   effectText 単体を desc に、flavor は専用スロットへ。古い catalog (effectText
   //   未提供) には description フォールバックで動作。
-  const effectText = entry?.effectText ?? ''
-  const flavor = entry?.flavor ?? ''
-  const fallbackDesc = effectText.length > 0 ? effectText : entry?.description ?? ''
   const rarityKey = entry ? rarityClassOf(entry.rarity) : 'common'
   const rarityClass = `relic-icon--${rarityKey}`
-  const rarityCode = rarityCodeFromKey(rarityKey)
   const content = useMemo(
-    () => ({
-      name,
-      rarity: rarityCode,
-      desc: fallbackDesc || '—',
-      flavor: flavor || undefined,
-    }),
-    [name, rarityCode, fallbackDesc, flavor],
+    () => getRelicTooltipContent(id, catalog, names),
+    [id, catalog, names],
   )
   const tip = useTooltipTarget(content)
   return (
@@ -53,13 +44,3 @@ function rarityClassOf(rarity: string): string {
   if (r === 'legendary' || r === 'l') return 'legendary'
   return 'common'
 }
-
-function rarityCodeFromKey(key: string): CardRarity {
-  switch (key) {
-    case 'rare': return 'r'
-    case 'epic': return 'e'
-    case 'legendary': return 'l'
-    default: return 'c'
-  }
-}
-

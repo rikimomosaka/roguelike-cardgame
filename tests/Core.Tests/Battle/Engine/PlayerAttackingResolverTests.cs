@@ -46,6 +46,48 @@ public class PlayerAttackingResolverTests
         Assert.Equal(20, next.Enemies[1].CurrentHp);
     }
 
+    [Fact] public void Single_hits_keep_the_final_selected_target_and_stop_after_it_dies()
+    {
+        var hero = BattleFixtures.Hero() with
+        {
+            AttackSingle = AttackPool.Empty.Add(5).Add(5).Add(5),
+        };
+        var state = MakeState(
+            hero,
+            BattleFixtures.Goblin(slotIndex: 0, hp: 20),
+            BattleFixtures.Goblin(slotIndex: 1, hp: 5))
+            with { TargetEnemyIndex = 1 };
+
+        var (next, events) = PlayerAttackingResolver.Resolve(
+            state, Rng(), BattleFixtures.MinimalCatalog());
+
+        Assert.Equal(20, next.Enemies[0].CurrentHp);
+        Assert.Equal(0, next.Enemies[1].CurrentHp);
+        var hits = events.Where(e => e.Kind == BattleEventKind.AttackFire).ToList();
+        Assert.Single(hits);
+        Assert.Equal(0, hits[0].HitIndex);
+    }
+
+    [Fact] public void Single_is_a_no_op_when_its_fixed_target_is_already_dead()
+    {
+        var hero = BattleFixtures.Hero() with
+        {
+            AttackSingle = AttackPool.Empty.Add(5).Add(5),
+        };
+        var deadTarget = BattleFixtures.Goblin(slotIndex: 0, hp: 5) with
+        {
+            CurrentHp = 0,
+        };
+        var survivor = BattleFixtures.Goblin(slotIndex: 1, hp: 20);
+
+        var (next, events) = PlayerAttackingResolver.Resolve(
+            MakeState(hero, deadTarget, survivor) with { TargetEnemyIndex = 0 },
+            Rng(), BattleFixtures.MinimalCatalog());
+
+        Assert.Equal(20, next.Enemies[1].CurrentHp);
+        Assert.DoesNotContain(events, e => e.Kind == BattleEventKind.AttackFire);
+    }
+
     [Fact] public void All_attack_hits_every_enemy()
     {
         var hero = BattleFixtures.Hero() with { AttackAll = AttackPool.Empty.Add(4) };
@@ -55,6 +97,28 @@ public class PlayerAttackingResolverTests
         var (next, _) = PlayerAttackingResolver.Resolve(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(16, next.Enemies[0].CurrentHp);
         Assert.Equal(16, next.Enemies[1].CurrentHp);
+    }
+
+    [Fact] public void All_attack_applies_each_hit_to_each_enemy_still_alive()
+    {
+        var hero = BattleFixtures.Hero() with
+        {
+            AttackAll = AttackPool.Empty.Add(5).Add(4),
+        };
+        var state = MakeState(
+            hero,
+            BattleFixtures.Goblin(slotIndex: 0, hp: 5),
+            BattleFixtures.Goblin(slotIndex: 1, hp: 20));
+
+        var (next, events) = PlayerAttackingResolver.Resolve(
+            state, Rng(), BattleFixtures.MinimalCatalog());
+
+        Assert.Equal(0, next.Enemies[0].CurrentHp);
+        Assert.Equal(11, next.Enemies[1].CurrentHp);
+        var hits = events.Where(e => e.Kind == BattleEventKind.AttackFire).ToList();
+        Assert.Equal(3, hits.Count);
+        Assert.Equal(new int?[] { 0, 0, 1 }, hits.Select(e => e.HitIndex));
+        Assert.Equal(new int?[] { 5, 5, 4 }, hits.Select(e => e.Amount));
     }
 
     [Fact] public void Random_attack_uses_rng_to_pick_target()
@@ -67,6 +131,46 @@ public class PlayerAttackingResolverTests
         var (next, _) = PlayerAttackingResolver.Resolve(s, rng, BattleFixtures.MinimalCatalog());
         Assert.Equal(20, next.Enemies[0].CurrentHp);
         Assert.Equal(13, next.Enemies[1].CurrentHp);
+    }
+
+    [Fact] public void Random_attack_draws_again_for_every_hit_and_excludes_dead_enemies()
+    {
+        var hero = BattleFixtures.Hero() with
+        {
+            AttackRandom = AttackPool.Empty.Add(5).Add(7).Add(3),
+        };
+        var state = MakeState(
+            hero,
+            BattleFixtures.Goblin(slotIndex: 0, hp: 5),
+            BattleFixtures.Goblin(slotIndex: 1, hp: 20),
+            BattleFixtures.Goblin(slotIndex: 2, hp: 20));
+
+        // 1発目はA。A死亡後の候補[B,C]から2発目はC、3発目はB。
+        var (next, events) = PlayerAttackingResolver.Resolve(
+            state, Rng(0, 1, 0), BattleFixtures.MinimalCatalog());
+
+        Assert.Equal(0, next.Enemies[0].CurrentHp);
+        Assert.Equal(17, next.Enemies[1].CurrentHp);
+        Assert.Equal(13, next.Enemies[2].CurrentHp);
+        var hits = events.Where(e => e.Kind == BattleEventKind.AttackFire).ToList();
+        Assert.Equal(
+            new[] { next.Enemies[0].InstanceId, next.Enemies[2].InstanceId, next.Enemies[1].InstanceId },
+            hits.Select(e => e.TargetInstanceId));
+        Assert.Equal(new int?[] { 0, 1, 2 }, hits.Select(e => e.HitIndex));
+    }
+
+    [Fact] public void Random_attack_is_a_no_op_when_no_living_enemy_exists()
+    {
+        var hero = BattleFixtures.Hero() with
+        {
+            AttackRandom = AttackPool.Empty.Add(5).Add(5),
+        };
+        var dead = BattleFixtures.Goblin(hp: 5) with { CurrentHp = 0 };
+
+        var (_, events) = PlayerAttackingResolver.Resolve(
+            MakeState(hero, dead), Rng(), BattleFixtures.MinimalCatalog());
+
+        Assert.DoesNotContain(events, e => e.Kind == BattleEventKind.AttackFire);
     }
 
     [Fact] public void Block_absorbs_damage_partially()
@@ -89,6 +193,23 @@ public class PlayerAttackingResolverTests
         Assert.Equal(2, next.Enemies[0].Block.Sum); // 5 - 3 = 2
     }
 
+    [Fact] public void Block_is_consumed_one_hit_at_a_time()
+    {
+        var hero = BattleFixtures.Hero() with
+        {
+            AttackSingle = AttackPool.Empty.Add(4).Add(4),
+        };
+        var goblin = BattleFixtures.Goblin(hp: 20) with { Block = BlockPool.Empty.Add(5) };
+
+        var (next, events) = PlayerAttackingResolver.Resolve(
+            MakeState(hero, goblin), Rng(), BattleFixtures.MinimalCatalog());
+
+        Assert.Equal(17, next.Enemies[0].CurrentHp);
+        var damageEvents = events.Where(e => e.Kind == BattleEventKind.DealDamage).ToList();
+        Assert.Equal(new int?[] { 0, 3 }, damageEvents.Select(e => e.Amount));
+        Assert.Equal(new int?[] { 4, 1 }, damageEvents.Select(e => e.BlockedAmount));
+    }
+
     [Fact] public void Lethal_attack_emits_ActorDeath()
     {
         var hero = BattleFixtures.Hero() with { AttackSingle = AttackPool.Empty.Add(99) };
@@ -104,6 +225,24 @@ public class PlayerAttackingResolverTests
         var s = MakeState(hero, BattleFixtures.Goblin());
         var (_, events) = PlayerAttackingResolver.Resolve(s, Rng(), BattleFixtures.MinimalCatalog());
         Assert.DoesNotContain(events, e => e.Kind == BattleEventKind.AttackFire);
+    }
+
+    [Fact] public void Added_zero_is_still_a_hit_and_receives_strength()
+    {
+        var hero = BattleFixtures.WithStrength(BattleFixtures.Hero(), 2) with
+        {
+            AttackSingle = AttackPool.Empty.Add(0),
+        };
+
+        var (next, events) = PlayerAttackingResolver.Resolve(
+            MakeState(hero, BattleFixtures.Goblin(hp: 20)),
+            Rng(),
+            BattleFixtures.MinimalCatalog());
+
+        Assert.Equal(18, next.Enemies[0].CurrentHp);
+        var hit = Assert.Single(events, e => e.Kind == BattleEventKind.AttackFire);
+        Assert.Equal(2, hit.Amount);
+        Assert.Equal(0, hit.HitIndex);
     }
 
     [Fact] public void Order_is_Single_then_Random_then_All()
@@ -122,5 +261,6 @@ public class PlayerAttackingResolverTests
         Assert.Equal("single", fireEvents[0].Note);
         Assert.Equal("random", fireEvents[1].Note);
         Assert.Equal("all", fireEvents[2].Note);
+        Assert.Equal(new int?[] { 0, 1, 2, 2 }, fireEvents.Select(e => e.HitIndex));
     }
 }

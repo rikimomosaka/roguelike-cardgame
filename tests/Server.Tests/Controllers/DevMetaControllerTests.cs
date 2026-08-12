@@ -48,6 +48,9 @@ public class DevMetaControllerTests : IClassFixture<DevWebApplicationFactory>
         var json = body.GetRawText();
         Assert.Contains("attack", json);
         Assert.Contains("addCard", json);
+        Assert.Contains("modifyCardCost", json);
+        Assert.Contains("handCostReduction", json);
+        Assert.Contains("handCostIncrease", json);
         Assert.Contains("wild", json);
         Assert.Contains("Common", json);
         // unified triggers の代表的な値 (relic + power 統合)

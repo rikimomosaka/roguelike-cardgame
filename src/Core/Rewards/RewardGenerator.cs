@@ -45,9 +45,9 @@ public static class RewardGenerator
         DataCatalog data,
         IRng rng)
     {
-        var pool = data.Relics.Keys
+        var pool = RelicPoolHelper.GetNormalAcquisitionRelics(data)
+            .Select(relic => relic.Id)
             .Where(id => !ownedRelics.Contains(id))
-            .OrderBy(id => id)
             .ToArray();
         string? relic = pool.Length == 0 ? null : pool[rng.NextInt(0, pool.Length)];
         var entry = table.NonBattle["treasure"];
@@ -133,7 +133,7 @@ public static class RewardGenerator
             Gold: gold, GoldClaimed: false,
             PotionId: potionId, PotionClaimed: potionId is null,
             CardChoices: picks,
-            CardStatus: CardRewardStatus.Pending);
+            CardStatus: picks.IsEmpty ? CardRewardStatus.Claimed : CardRewardStatus.Pending);
         return (reward, newRng);
     }
 
@@ -158,29 +158,59 @@ public static class RewardGenerator
         int take = rareFinal - rarePct;
         int commonFinal = Math.Max(0, commonPct - take);
 
-        var picks = new List<string>();
-        var seen = new HashSet<string>();
+        var available = data.Cards.Values
+            .Where(c => c.Rarity is CardRarity.Common or CardRarity.Rare or CardRarity.Epic)
+            .Where(c => c.Id.StartsWith("reward_", StringComparison.Ordinal))
+            .Where(c => !exclusions.Contains(c.Id))
+            .OrderBy(c => c.Id, StringComparer.Ordinal)
+            .GroupBy(c => c.Rarity)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Select(c => c.Id).ToList());
+
+        int commonWeight = Math.Clamp(commonFinal, 0, 100);
+        int rareWeight = Math.Clamp(rareFinal, 0, 100 - commonWeight);
+        var rarityWeights = new Dictionary<CardRarity, int>
+        {
+            [CardRarity.Common] = commonWeight,
+            [CardRarity.Rare] = rareWeight,
+            [CardRarity.Epic] = 100 - commonWeight - rareWeight,
+        };
+        var picks = new List<string>(targetCount);
         while (picks.Count < targetCount)
         {
-            var r = rng.NextInt(0, 100);
-            CardRarity rarity;
-            if (r < commonFinal) rarity = CardRarity.Common;
-            else if (r < commonFinal + rareFinal) rarity = CardRarity.Rare;
-            else rarity = CardRarity.Epic;
+            // Only roll among rarities that can still produce a card.  Retrying an
+            // empty rarity forever used to hang reward generation when exclusions,
+            // a rarity-specific reward, or a choice-count bonus exhausted the pool.
+            var weightedRarities = rarityWeights
+                .Where(pair => pair.Value > 0
+                    && available.TryGetValue(pair.Key, out var cards)
+                    && cards.Count > 0)
+                .OrderBy(pair => pair.Key)
+                .ToArray();
+            int totalWeight = weightedRarities.Sum(pair => pair.Value);
+            if (totalWeight <= 0) break;
+
+            int rarityRoll = rng.NextInt(0, totalWeight);
+            CardRarity rarity = weightedRarities[^1].Key;
+            foreach (var pair in weightedRarities)
+            {
+                if (rarityRoll < pair.Value)
+                {
+                    rarity = pair.Key;
+                    break;
+                }
+                rarityRoll -= pair.Value;
+            }
 
             // Why: c.Rarity == rarity (Common/Rare/Epic) で Token は元々除外されるが、
             // 将来 rarity 選択ロジックが変わっても token カードが紛れ込まないよう
             // 明示的に Token を除外する防御的フィルタを追加 (Phase 10.5.G)。
-            var pool2 = data.Cards.Values
-                .Where(c => c.Rarity != CardRarity.Token)
-                .Where(c => c.Rarity == rarity && c.Id.StartsWith("reward_"))
-                .Where(c => !exclusions.Contains(c.Id) && !seen.Contains(c.Id))
-                .Select(c => c.Id)
-                .ToList();
-            if (pool2.Count == 0) continue;
-            var pick = pool2[rng.NextInt(0, pool2.Count)];
+            var pool2 = available[rarity];
+            int pickIndex = rng.NextInt(0, pool2.Count);
+            var pick = pool2[pickIndex];
+            pool2.RemoveAt(pickIndex);
             picks.Add(pick);
-            seen.Add(pick);
         }
         return picks.ToImmutableArray();
     }

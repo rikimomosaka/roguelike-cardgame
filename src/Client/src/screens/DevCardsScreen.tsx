@@ -4,7 +4,7 @@
 // Phase 10.5.M: textarea 撤去 → CardSpecForm (構造化フォーム + ライブテキスト + ライブビジュアル
 //               プレビュー)。Delete Card ボタンで override only / alsoBase 削除可能。
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { DevCardDto, DevMeta } from '../api/dev'
 import {
   createNewCard,
@@ -38,7 +38,7 @@ export function DevCardsScreen({ onBack }: Props = {}) {
   const [selectedVer, setSelectedVer] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   const [newCardOpen, setNewCardOpen] = useState(false)
-  const [pendingSelectId, setPendingSelectId] = useState<string | null>(null)
+  const pendingSelectIdRef = useRef<string | null>(null)
 
   // 1) cards を fetch
   useEffect(() => {
@@ -50,6 +50,7 @@ export function DevCardsScreen({ onBack }: Props = {}) {
         if (list.length > 0) {
           setSelectedId((prevId) => {
             let id: string
+            const pendingSelectId = pendingSelectIdRef.current
             if (pendingSelectId && list.some((c) => c.id === pendingSelectId)) {
               id = pendingSelectId
             } else {
@@ -59,7 +60,7 @@ export function DevCardsScreen({ onBack }: Props = {}) {
             setSelectedVer(card.activeVersion ?? null)
             return id
           })
-          if (pendingSelectId) setPendingSelectId(null)
+          pendingSelectIdRef.current = null
         } else {
           setSelectedId(null)
           setSelectedVer(null)
@@ -92,6 +93,15 @@ export function DevCardsScreen({ onBack }: Props = {}) {
   if (!cards || !meta) return <div className="dev-loading">読込中...</div>
 
   const selected = cards.find((c) => c.id === selectedId) ?? null
+  const selectedVersionId = selected
+    ? (selectedVer ?? selected.activeVersion)
+    : null
+  const selectedVersionSpec = selected?.versions.find(
+    (version) => version.version === selectedVersionId,
+  )?.spec
+  const detailKey = selected
+    ? `${selected.id}:${selectedVersionId}:${JSON.stringify(selectedVersionSpec)}`
+    : ''
   const allCardIds = cards.map((c) => c.id)
   const cardNames: Record<string, string> = {}
   for (const c of cards) {
@@ -134,9 +144,9 @@ export function DevCardsScreen({ onBack }: Props = {}) {
         ) : null}
         {selected ? (
           <DevCardDetail
-            key={`${selected.id}`}
+            key={detailKey}
             card={selected}
-            versionId={selectedVer ?? selected.activeVersion}
+            versionId={selectedVersionId!}
             meta={meta}
             allCardIds={allCardIds}
             cardNames={cardNames}
@@ -158,7 +168,7 @@ export function DevCardsScreen({ onBack }: Props = {}) {
           onClose={() => setNewCardOpen(false)}
           onCreated={(id) => {
             setNewCardOpen(false)
-            setPendingSelectId(id)
+            pendingSelectIdRef.current = id
             setReloadKey((k) => k + 1)
           }}
         />
@@ -401,14 +411,6 @@ function DevCardDetail({
   const [saving, setSaving] = useState<boolean>(false)
   const [deleteOpen, setDeleteOpen] = useState<boolean>(false)
   const nextVerN = computeNextVerN(card)
-
-  useEffect(() => {
-    if (ver) setDraft(parseSpec(ver.spec))
-    setLabel('')
-    setEditError(null)
-    // Why: card.id / version 切替で draft をその version の spec に同期する。
-    //   ver?.spec が依存に入っているのは外部 mutation 後 reload した場合の同期用。
-  }, [card.id, versionId, ver?.spec])
 
   const saveAsNew = async () => {
     setEditError(null)

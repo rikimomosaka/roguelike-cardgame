@@ -12,7 +12,13 @@
                                       "rarity":  2,
                                       "description":  "歪んだ笑みを刻んだ仮面。被ったとき、笑っているのが自分か仮面か分からなくなる。",
                                       "effects":  [
-
+                                                      {
+                                                          "action":  "gainGold",
+                                                          "scope":   "self",
+                                                          "target":  null,
+                                                          "amount":  120,
+                                                          "trigger": "OnPickup"
+                                                      }
                                                   ],
                                       "implemented":  true
                                   }

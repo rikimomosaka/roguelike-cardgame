@@ -172,7 +172,7 @@
 }
 
 .mc-card-slot {
-  width: 128px;
+  width: var(--card-width);
   flex-shrink: 0;
   position: relative;
   margin: 0;
@@ -189,10 +189,6 @@
   background: transparent;
   cursor: pointer;
   transition: transform 0.12s ease, opacity 0.12s ease;
-}
-
-.mc-card-slot__btn > .card {
-  width: 100% !important;
 }
 
 .mc-card-slot__btn:hover:not(:disabled) {
@@ -398,7 +394,7 @@
 /* ---------- Discard picker ---------- */
 .mc-picker-body {
   display: grid;
-  grid-template-columns: repeat(5, 128px);
+  grid-template-columns: repeat(5, var(--card-width));
   gap: 10px;
   padding: 4px 2px;
   justify-content: start;
@@ -412,7 +408,7 @@
 }
 
 .mc-picker-item {
-  width: 128px;
+  width: var(--card-width);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -427,10 +423,6 @@
   border: none;
   cursor: pointer;
   transition: transform 0.12s ease;
-}
-
-.mc-picker-card > .card {
-  width: 100% !important;
 }
 
 .mc-picker-card:disabled {

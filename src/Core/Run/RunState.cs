@@ -165,6 +165,11 @@ public sealed record RunState(
         if (ActiveMerchant is not null) activeCount++;
         if (ActiveEvent is not null) activeCount++;
         if (ActiveActStartRelicChoice is not null) activeCount++;
+        // A resolved event may legitimately open a card reward. Treat that pair as
+        // one flow while keeping unresolved Event + Reward and every third Active*
+        // combination invalid.
+        if (ActiveEvent is { ChosenIndex: not null } && ActiveReward is not null)
+            activeCount--;
         if (activeCount > 1)
             return "at most one of ActiveBattle / ActiveReward / ActiveMerchant / ActiveEvent / ActiveActStartRelicChoice can be non-null";
         if (ActiveRestPending && activeCount > 0)
@@ -172,10 +177,22 @@ public sealed record RunState(
         if (ActiveRestCompleted && !ActiveRestPending)
             return "ActiveRestCompleted requires ActiveRestPending";
 
-        if (ActiveReward is { CardChoices: var cc } && cc.Length != 0 && cc.Length != 3)
-            return $"CardChoices must have length 0 or 3 (got {cc.Length})";
-        if (ActiveActStartRelicChoice is { RelicIds: var ids } && ids.Length != 3)
-            return $"ActStartRelicChoice.RelicIds must have length 3 (got {ids.Length})";
+        if (ActiveReward is { CardChoices: var cc })
+        {
+            if (cc.IsDefault)
+                return "CardChoices must not be default";
+            if (cc.Any(string.IsNullOrWhiteSpace))
+                return "CardChoices must not contain empty card IDs";
+            if (cc.Length != cc.Distinct(StringComparer.Ordinal).Count())
+                return "CardChoices must not contain duplicates";
+        }
+        if (ActiveActStartRelicChoice is { RelicIds: var ids })
+        {
+            if (ids.IsDefault)
+                return "ActStartRelicChoice.RelicIds must not be default";
+            if (ids.Length != 3)
+                return $"ActStartRelicChoice.RelicIds must have length 3 (got {ids.Length})";
+        }
         return null;
     }
 }

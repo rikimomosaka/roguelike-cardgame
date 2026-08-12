@@ -19,7 +19,8 @@ public class RewardEndpointsTests : IClassFixture<TempDataFactory>
         var client = _factory.CreateClient();
         await BattleTestHelpers.EnsureAccountAsync(client, accountId);
         BattleTestHelpers.WithAccount(client, accountId);
-        await BattleTestHelpers.StartRunAndMoveToEnemyAsync(client);
+        await BattleTestHelpers.StartRunAndMoveToEnemyAsync(
+            client, _factory.Services, accountId);
         var win = await client.PostAsJsonAsync("/api/v1/runs/current/battle/win", new { elapsedSeconds = 0 });
         win.EnsureSuccessStatusCode();
         return client;
@@ -210,6 +211,7 @@ public class RewardEndpointsTests : IClassFixture<TempDataFactory>
         await repo.SaveAsync("claim-relic-success", s with { ActiveReward = rewardWithRelic }, System.Threading.CancellationToken.None);
 
         int beforeMaxHp = s.MaxHp;
+        int beforeCurrentHp = s.CurrentHp;
 
         var res = await client.PostAsync("/api/v1/runs/current/reward/claim-relic", null);
         Assert.Equal(HttpStatusCode.NoContent, res.StatusCode);
@@ -217,8 +219,8 @@ public class RewardEndpointsTests : IClassFixture<TempDataFactory>
         var after = (await repo.TryLoadAsync("claim-relic-success", System.Threading.CancellationToken.None))!;
         Assert.Contains("extra_max_hp", after.Relics);
         Assert.True(after.ActiveReward!.RelicClaimed);
-        // Phase 10.5.L1.5: base relic JSON は effects=[] にリセット済みで、
-        // extra_max_hp は OnPickup 効果を持たない。MaxHp 据え置きを確認。
-        Assert.Equal(beforeMaxHp, after.MaxHp);
+        // OnPickupの最大HP増加は、最大値と現在値の両方へ即時反映する。
+        Assert.Equal(beforeMaxHp + 7, after.MaxHp);
+        Assert.Equal(beforeCurrentHp + 7, after.CurrentHp);
     }
 }

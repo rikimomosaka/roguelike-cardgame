@@ -47,7 +47,7 @@ public sealed class DebugController : ControllerBase
         {
             var finished = ActTransition.FinishRun(damaged, RunProgress.GameOver);
             var goMap = _runStart.RehydrateMap(finished.RngSeed, finished.CurrentAct);
-            var rec = RunHistoryBuilder.From(accountId, finished, goMap, finished.VisitedNodeIds.Length, RunProgress.GameOver);
+            var rec = RunHistoryBuilder.From(accountId, finished, goMap, RunProgress.GameOver);
             await _history.AppendAsync(accountId, rec, ct);
             await _bestiary.MergeAsync(accountId, rec, ct);
             await _saves.DeleteAsync(accountId, ct);

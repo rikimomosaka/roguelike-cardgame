@@ -33,7 +33,17 @@ public class EnemyAttackingResolverTests
         Potions: ImmutableArray<string>.Empty,
         EncounterId: "enc_test");
 
-    private static IRng Rng() => new FakeRng(new int[10], new double[0]);
+    private static BattleState MakePartyState(
+        CombatActor[] allies, params CombatActor[] enemies) =>
+        MakeState(allies[0], enemies) with { Allies = allies.ToImmutableArray() };
+
+    private static IRng Rng(params int[] values) =>
+        new FakeRng(values.Length == 0 ? new int[10] : values, new double[0]);
+
+    private static EnemyDefinition EnemyWithAttackEffects(
+        string id, params CardEffect[] effects) =>
+        new(id, id, $"img_{id}", 30, new EnemyPool(1, EnemyTier.Weak), "attack",
+            new[] { new MoveDefinition("attack", MoveKind.Attack, effects, "attack") });
 
     [Fact] public void Enemy_attack_scope_all_hits_hero()
     {
@@ -45,6 +55,84 @@ public class EnemyAttackingResolverTests
         var (next, events) = EnemyAttackingResolver.Resolve(s, Rng(), cat);
         Assert.Equal(65, next.Allies[0].CurrentHp); // 70 - 5
         Assert.Contains(events, e => e.Kind == BattleEventKind.DealDamage && e.Amount == 5);
+    }
+
+    [Fact]
+    public void Enemy_attack_scope_single_hits_only_lowest_living_ally_slot()
+    {
+        var hero = BattleFixtures.Hero(70, slotIndex: 1);
+        var summon = BattleFixtures.SummonActor("summon_inst", "test_summon", 0, hp: 10);
+        var enemy = BattleFixtures.Goblin() with { CurrentMoveId = "attack" };
+        var def = EnemyWithAttackEffects("goblin",
+            new CardEffect("attack", EffectScope.Single, EffectSide.Enemy, 5));
+
+        var (next, _) = EnemyAttackingResolver.Resolve(
+            MakePartyState(new[] { hero, summon }, enemy), Rng(),
+            BattleFixtures.MinimalCatalog(enemies: new[] { def }));
+
+        Assert.Equal(70, next.Allies.Single(a => a.InstanceId == hero.InstanceId).CurrentHp);
+        Assert.Equal(5, next.Allies.Single(a => a.InstanceId == summon.InstanceId).CurrentHp);
+    }
+
+    [Fact]
+    public void Enemy_single_target_stays_fixed_when_an_earlier_hit_kills_it()
+    {
+        var hero = BattleFixtures.Hero(70, slotIndex: 1);
+        var summon = BattleFixtures.SummonActor("summon_inst", "test_summon", 0, hp: 3);
+        var enemy = BattleFixtures.Goblin() with { CurrentMoveId = "attack" };
+        var def = EnemyWithAttackEffects("goblin",
+            new CardEffect("attack", EffectScope.Single, EffectSide.Enemy, 3),
+            new CardEffect("attack", EffectScope.Single, EffectSide.Enemy, 9));
+
+        var (next, events) = EnemyAttackingResolver.Resolve(
+            MakePartyState(new[] { hero, summon }, enemy), Rng(),
+            BattleFixtures.MinimalCatalog(enemies: new[] { def }));
+
+        Assert.Equal(0, next.Allies.Single(a => a.InstanceId == summon.InstanceId).CurrentHp);
+        Assert.Equal(70, next.Allies.Single(a => a.InstanceId == hero.InstanceId).CurrentHp);
+        Assert.Single(events, e => e.Kind == BattleEventKind.DealDamage);
+    }
+
+    [Fact]
+    public void Enemy_attack_scope_random_draws_again_for_each_attack_effect()
+    {
+        var hero = BattleFixtures.Hero(70, slotIndex: 0);
+        var summon = BattleFixtures.SummonActor("summon_inst", "test_summon", 1, hp: 10);
+        var enemy = BattleFixtures.Goblin() with { CurrentMoveId = "attack" };
+        var def = EnemyWithAttackEffects("goblin",
+            new CardEffect("attack", EffectScope.Random, EffectSide.Enemy, 3),
+            new CardEffect("attack", EffectScope.Random, EffectSide.Enemy, 4));
+
+        var (next, events) = EnemyAttackingResolver.Resolve(
+            MakePartyState(new[] { hero, summon }, enemy), Rng(1, 0),
+            BattleFixtures.MinimalCatalog(enemies: new[] { def }));
+
+        Assert.Equal(66, next.Allies.Single(a => a.InstanceId == hero.InstanceId).CurrentHp);
+        Assert.Equal(7, next.Allies.Single(a => a.InstanceId == summon.InstanceId).CurrentHp);
+        Assert.Equal(
+            new int?[] { 0, 1 },
+            events.Where(e => e.Kind == BattleEventKind.DealDamage).Select(e => e.HitIndex));
+        Assert.All(
+            events.Where(e => e.Kind == BattleEventKind.DealDamage),
+            e => Assert.Equal("random", e.Note));
+    }
+
+    [Fact]
+    public void Enemy_random_excludes_an_ally_killed_by_the_previous_hit()
+    {
+        var hero = BattleFixtures.Hero(70, slotIndex: 0);
+        var summon = BattleFixtures.SummonActor("summon_inst", "test_summon", 1, hp: 3);
+        var enemy = BattleFixtures.Goblin() with { CurrentMoveId = "attack" };
+        var def = EnemyWithAttackEffects("goblin",
+            new CardEffect("attack", EffectScope.Random, EffectSide.Enemy, 3),
+            new CardEffect("attack", EffectScope.Random, EffectSide.Enemy, 4));
+
+        var (next, _) = EnemyAttackingResolver.Resolve(
+            MakePartyState(new[] { hero, summon }, enemy), Rng(1, 0),
+            BattleFixtures.MinimalCatalog(enemies: new[] { def }));
+
+        Assert.Equal(66, next.Allies.Single(a => a.InstanceId == hero.InstanceId).CurrentHp);
+        Assert.Equal(0, next.Allies.Single(a => a.InstanceId == summon.InstanceId).CurrentHp);
     }
 
     [Fact] public void Per_effect_immediate_fire_with_two_attacks()
@@ -71,6 +159,9 @@ public class EnemyAttackingResolverTests
         Assert.Equal(64, next.Allies[0].CurrentHp);
         var dealCount = events.Count(e => e.Kind == BattleEventKind.DealDamage);
         Assert.Equal(2, dealCount);
+        Assert.Equal(
+            new int?[] { 0, 1 },
+            events.Where(e => e.Kind == BattleEventKind.DealDamage).Select(e => e.HitIndex));
     }
 
     [Fact] public void Enemy_block_self_increments_own_block()
@@ -159,9 +250,12 @@ public class EnemyAttackingResolverTests
             EncounterId: "enc_test");
         var cat = BattleFixtures.MinimalCatalog(
             enemies: new[] { BattleFixtures.GoblinDef(hp: 20, attack: 5) });
-        var (next, _) = EnemyAttackingResolver.Resolve(s, Rng(), cat);
+        var (next, events) = EnemyAttackingResolver.Resolve(s, Rng(), cat);
         // Both allies should take 5 damage
         Assert.Equal(65, next.Allies[0].CurrentHp); // hero: 70 - 5
         Assert.Equal(5, next.Allies[1].CurrentHp);  // summon: 10 - 5
+        Assert.All(
+            events.Where(e => e.Kind == BattleEventKind.DealDamage),
+            e => Assert.Equal(0, e.HitIndex));
     }
 }

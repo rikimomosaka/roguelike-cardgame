@@ -59,6 +59,52 @@ describe('apiRequest', () => {
     })
   })
 
+  it('uses a 4xx ProblemDetails title as the Error message while preserving body', async () => {
+    const body = JSON.stringify({
+      type: 'https://example.test/problems/skill',
+      title: '奥義を使えません。',
+      status: 400,
+    })
+    fetchMock.mockResolvedValue(new Response(body, {
+      status: 400,
+      headers: { 'Content-Type': 'application/problem+json' },
+    }))
+
+    await expect(apiRequest('POST', '/skill')).rejects.toMatchObject({
+      message: '奥義を使えません。',
+      status: 400,
+      body,
+    })
+  })
+
+  it('combines distinct ProblemDetails title and detail after normalizing control whitespace', async () => {
+    const body = JSON.stringify({
+      title: '入力エラー',
+      detail: '  ゲージが\n不足しています。  ',
+    })
+    fetchMock.mockResolvedValue(new Response(body, { status: 422 }))
+
+    await expect(apiRequest('POST', '/skill')).rejects.toMatchObject({
+      message: '入力エラー：ゲージが 不足しています。',
+    })
+  })
+
+  it.each([
+    { name: 'empty body', status: 400, body: '' },
+    { name: 'non-JSON body', status: 400, body: '<html>bad request</html>' },
+    { name: 'JSON primitive', status: 400, body: '"bad request"' },
+    { name: 'wrong field types', status: 400, body: '{"title":42,"detail":true}' },
+    { name: 'server ProblemDetails', status: 500, body: '{"title":"内部パス C:/secret"}' },
+  ])('falls back to HTTP status for $name', async ({ status, body }) => {
+    fetchMock.mockResolvedValue(new Response(body, { status }))
+
+    await expect(apiRequest('GET', '/failure')).rejects.toMatchObject({
+      message: `HTTP ${status}`,
+      status,
+      body,
+    })
+  })
+
   it('ApiError is instance of Error', async () => {
     fetchMock.mockResolvedValue(new Response('x', { status: 500 }))
     try {

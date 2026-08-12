@@ -349,6 +349,23 @@ public class EffectApplierTests
             && e.Amount == 1);
     }
 
+    [Fact]
+    public void GainMaxEnergy_saturates_instead_of_overflowing()
+    {
+        var state = BattleFixtures.MakeMinimalState() with
+        {
+            EnergyMax = int.MaxValue - 1,
+            Energy = 1,
+        };
+        var effect = new CardEffect("gainMaxEnergy", EffectScope.Self, null, 5);
+
+        var (after, _) = EffectApplier.Apply(
+            state, state.Allies[0], effect, _rng, _catalog);
+
+        Assert.Equal(int.MaxValue, after.EnergyMax);
+        Assert.Equal(1, after.Energy);
+    }
+
     // --- discard.Select 拡張 ---
 
     [Fact]

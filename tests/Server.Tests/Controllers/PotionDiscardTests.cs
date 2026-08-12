@@ -82,4 +82,65 @@ public class PotionDiscardTests : IClassFixture<TempDataFactory>
             .RootElement.GetProperty("run").GetProperty("potions");
         Assert.Equal("", potions[1].GetString());
     }
+
+    [Fact]
+    public async Task PotionUse_HealthPotion_HealsAndConsumesSlot()
+    {
+        var client = await StartRunAsync("erin");
+        var repo = _factory.Services.GetRequiredService<ISaveRepository>();
+        var state = await repo.TryLoadAsync("erin", CancellationToken.None);
+        Assert.NotNull(state);
+        await repo.SaveAsync("erin", state! with
+        {
+            CurrentHp = 40,
+            Potions = ImmutableArray.Create("health_potion", "", ""),
+        }, CancellationToken.None);
+
+        var response = await client.PostAsJsonAsync(
+            "/api/v1/runs/current/potion/use", new { slotIndex = 0 });
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        var updated = await repo.TryLoadAsync("erin", CancellationToken.None);
+        Assert.NotNull(updated);
+        Assert.Equal(55, updated!.CurrentHp);
+        Assert.Equal("", updated.Potions[0]);
+    }
+
+    [Fact]
+    public async Task PotionUse_BattleOnlyPotion_ReturnsConflictAndKeepsSlot()
+    {
+        var client = await StartRunAsync("frank");
+        await OverwritePotionsAsync("frank", ImmutableArray.Create("fire_potion", "", ""));
+
+        var response = await client.PostAsJsonAsync(
+            "/api/v1/runs/current/potion/use", new { slotIndex = 0 });
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        var repo = _factory.Services.GetRequiredService<ISaveRepository>();
+        var updated = await repo.TryLoadAsync("frank", CancellationToken.None);
+        Assert.NotNull(updated);
+        Assert.Equal("fire_potion", updated!.Potions[0]);
+    }
+
+    [Fact]
+    public async Task PotionUse_CompatibilityAlias_UsesSameOutsideBattleFlow()
+    {
+        var client = await StartRunAsync("grace");
+        var repo = _factory.Services.GetRequiredService<ISaveRepository>();
+        var state = await repo.TryLoadAsync("grace", CancellationToken.None);
+        Assert.NotNull(state);
+        await repo.SaveAsync("grace", state! with
+        {
+            CurrentHp = 20,
+            Potions = ImmutableArray.Create("health_potion", "", ""),
+        }, CancellationToken.None);
+
+        var response = await client.PostAsJsonAsync(
+            "/api/v1/runs/current/use-potion", new { slotIndex = 0 });
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        var updated = await repo.TryLoadAsync("grace", CancellationToken.None);
+        Assert.Equal(35, updated!.CurrentHp);
+        Assert.Equal("", updated.Potions[0]);
+    }
 }

@@ -15,6 +15,7 @@ public static partial class BattleEngine
     {
         if (state.Phase != BattlePhase.PlayerInput)
             throw new InvalidOperationException($"EndTurn requires Phase=PlayerInput, got {state.Phase}");
+        RejectWhileCardChoiceIsPending(state, "EndTurn");
 
         var events = new List<BattleEvent>
         {
@@ -90,7 +91,21 @@ public static partial class BattleEngine
         BattleState s, RoguelikeCardGame.Core.Battle.State.BattleOutcome outcome,
         List<BattleEvent> events, ref int order)
     {
-        s = s with { Phase = BattlePhase.Resolved, Outcome = outcome };
+        // 勝敗確定時は通常の TurnEndProcessor を通らず早期 return するため、
+        // ここでもターン限定のコンボ状態を同じ値へリセットする。
+        s = s with
+        {
+            Phase = BattlePhase.Resolved,
+            Outcome = outcome,
+            ComboCount = 0,
+            MaxComboThisTurn = 0,
+            LastPlayedOrigCost = null,
+            NextCardComboFreePass = false,
+            WildUsedInCurrentCombo = false,
+            UsedCharacterSkillIdsThisTurn = System.Collections.Immutable.ImmutableHashSet<string>.Empty,
+        };
+        s = BattleCardCostModifierLifecycle.Remove(
+            s, CardCostModifierDuration.UntilTurnEnd);
         events.Add(new BattleEvent(BattleEventKind.BattleEnd, Order: order, Note: outcome.ToString()));
         order++;
         return (s, events);

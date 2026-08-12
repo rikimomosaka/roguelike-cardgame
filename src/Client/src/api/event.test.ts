@@ -30,12 +30,14 @@ describe('event api', () => {
   })
 
   it('chooseEvent POSTs choiceIndex', async () => {
-    fetchMock.mockResolvedValue(new Response(null, { status: 204 }))
-    await chooseEvent('alice', 1)
+    const snapshot = { run: { currentHp: 65 }, map: { nodes: [] } }
+    fetchMock.mockResolvedValue(new Response(JSON.stringify(snapshot), { status: 200 }))
+    const result = await chooseEvent('alice', 1)
     const [url, init] = fetchMock.mock.calls[0]
     expect(url).toBe('/api/v1/event/choose')
     expect(init.method).toBe('POST')
     expect(JSON.parse(init.body as string)).toEqual({ choiceIndex: 1 })
     expect(init.headers['X-Account-Id']).toBe('alice')
+    expect(result).toEqual(snapshot)
   })
 })

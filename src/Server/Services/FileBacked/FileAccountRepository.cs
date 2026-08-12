@@ -14,6 +14,7 @@ namespace RoguelikeCardGame.Server.Services.FileBacked;
 public sealed class FileAccountRepository : IAccountRepository
 {
     private readonly string _dir;
+    private readonly SemaphoreSlim _createGate = new(initialCount: 1, maxCount: 1);
 
     public FileAccountRepository(IOptions<DataStorageOptions> options)
     {
@@ -27,37 +28,91 @@ public sealed class FileAccountRepository : IAccountRepository
     public Task<bool> ExistsAsync(string accountId, CancellationToken ct)
     {
         AccountIdValidator.Validate(accountId);
-        return Task.FromResult(File.Exists(PathFor(accountId)));
+        ct.ThrowIfCancellationRequested();
+        return Task.FromResult(FindCaseInsensitivePath(accountId) is not null);
     }
 
     public async Task CreateAsync(string accountId, DateTimeOffset nowUtc, CancellationToken ct)
     {
         AccountIdValidator.Validate(accountId);
-        Directory.CreateDirectory(_dir);
-        var path = PathFor(accountId);
-        if (File.Exists(path))
-            throw new AccountAlreadyExistsException(accountId);
+        await _createGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            Directory.CreateDirectory(_dir);
+            if (FindCaseInsensitivePath(accountId) is not null)
+                throw new AccountAlreadyExistsException(accountId);
 
-        var account = new Account(accountId, nowUtc);
-        var json = JsonSerializer.Serialize(account, JsonOptions.Default);
-        await WriteAtomicAsync(path, json, ct);
+            var path = PathFor(accountId);
+            var account = new Account(accountId, nowUtc);
+            var json = JsonSerializer.Serialize(account, JsonOptions.Default);
+            await WriteAtomicCreateAsync(path, json, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            _createGate.Release();
+        }
     }
 
     public async Task<Account?> GetAsync(string accountId, CancellationToken ct)
     {
         AccountIdValidator.Validate(accountId);
-        var path = PathFor(accountId);
-        if (!File.Exists(path)) return null;
-        var json = await File.ReadAllTextAsync(path, Encoding.UTF8, ct);
+        ct.ThrowIfCancellationRequested();
+        var path = FindCaseInsensitivePath(accountId);
+        if (path is null) return null;
+        var json = await File.ReadAllTextAsync(path, Encoding.UTF8, ct).ConfigureAwait(false);
         return JsonSerializer.Deserialize<Account>(json, JsonOptions.Default);
     }
 
     private string PathFor(string accountId) => Path.Combine(_dir, accountId + ".json");
 
-    private static async Task WriteAtomicAsync(string finalPath, string contents, CancellationToken ct)
+    private string? FindCaseInsensitivePath(string accountId)
     {
-        var tmp = finalPath + ".tmp";
-        await File.WriteAllTextAsync(tmp, contents, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), ct);
-        File.Move(tmp, finalPath, overwrite: true);
+        if (!Directory.Exists(_dir)) return null;
+
+        string? match = null;
+        foreach (var path in Directory.EnumerateFiles(_dir, "*", SearchOption.TopDirectoryOnly))
+        {
+            if (!string.Equals(Path.GetExtension(path), ".json", StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(
+                    Path.GetFileNameWithoutExtension(path), accountId,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (match is not null && !string.Equals(match, path, StringComparison.Ordinal))
+            {
+                throw new InvalidDataException(
+                    $"Case-insensitive duplicate account files exist for accountId: {accountId}");
+            }
+
+            match = path;
+        }
+
+        return match;
+    }
+
+    private static async Task WriteAtomicCreateAsync(
+        string finalPath, string contents, CancellationToken ct)
+    {
+        var directory = Path.GetDirectoryName(finalPath)
+            ?? throw new InvalidOperationException("Account path has no parent directory.");
+        var tmp = Path.Combine(
+            directory,
+            $".{Path.GetFileName(finalPath)}.{Guid.NewGuid():N}.tmp");
+
+        try
+        {
+            await File.WriteAllTextAsync(
+                    tmp, contents,
+                    new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), ct)
+                .ConfigureAwait(false);
+            // Never overwrite an account created after our existence check.
+            File.Move(tmp, finalPath, overwrite: false);
+        }
+        finally
+        {
+            if (File.Exists(tmp)) File.Delete(tmp);
+        }
     }
 }

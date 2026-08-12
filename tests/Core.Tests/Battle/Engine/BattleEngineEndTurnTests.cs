@@ -44,24 +44,30 @@ public class BattleEngineEndTurnTests
     [Fact] public void All_enemies_dead_yields_Victory()
     {
         var hero = BattleFixtures.Hero() with { AttackSingle = AttackPool.Empty.Add(99) };
-        var s = MakeState(hero, ImmutableArray.Create(BattleFixtures.Goblin(0, 5)));
+        var s = WithActiveCombo(
+            MakeState(hero, ImmutableArray.Create(BattleFixtures.Goblin(0, 5))));
         var cat = BattleFixtures.MinimalCatalog();
         var (next, events) = BattleEngine.EndTurn(s, Rng(), cat);
         Assert.Equal(BattleOutcome.Victory, next.Outcome);
         Assert.Equal(BattlePhase.Resolved, next.Phase);
-        Assert.Contains(events, e => e.Kind == BattleEventKind.BattleEnd);
+        var battleEnd = Assert.Single(events, e => e.Kind == BattleEventKind.BattleEnd);
+        Assert.Equal(events.Count - 1, battleEnd.Order);
+        AssertComboReset(next);
     }
 
     [Fact] public void Hero_killed_yields_Defeat()
     {
         var hero = BattleFixtures.Hero(hp: 2); // 2 HP
-        var s = MakeState(hero, ImmutableArray.Create(BattleFixtures.Goblin()));
+        var s = WithActiveCombo(
+            MakeState(hero, ImmutableArray.Create(BattleFixtures.Goblin())));
         var cat = BattleFixtures.MinimalCatalog(
             enemies: new[] { BattleFixtures.GoblinDef(hp: 20, attack: 5) });
         var (next, events) = BattleEngine.EndTurn(s, Rng(), cat);
         Assert.Equal(BattleOutcome.Defeat, next.Outcome);
         Assert.Equal(BattlePhase.Resolved, next.Phase);
-        Assert.Contains(events, e => e.Kind == BattleEventKind.BattleEnd);
+        var battleEnd = Assert.Single(events, e => e.Kind == BattleEventKind.BattleEnd);
+        Assert.Equal(events.Count - 1, battleEnd.Order);
+        AssertComboReset(next);
     }
 
     [Fact] public void Continues_to_next_turn_when_neither_side_dies()
@@ -74,7 +80,97 @@ public class BattleEngineEndTurnTests
         Assert.Equal(BattlePhase.PlayerInput, next.Phase);
         Assert.Equal(BattleOutcome.Pending, next.Outcome);
         Assert.Equal(2, next.Turn);
-        Assert.Equal(3, next.Energy); // refilled
+        Assert.Equal(3, next.Energy); // 持越し 0 + ターン開始時追加 3
+    }
+
+    [Fact]
+    public void EndTurn_carries_energy_while_still_discarding_and_redrawing_hand()
+    {
+        var oldHand = BattleFixtures.MakeBattleCard("strike", "old-hand");
+        var state = MakeState(
+            BattleFixtures.Hero(),
+            ImmutableArray.Create(BattleFixtures.Goblin(0, 50))) with
+        {
+            Energy = 2,
+            EnergyMax = 3,
+            Hand = ImmutableArray.Create(oldHand),
+        };
+
+        var (next, _) = BattleEngine.EndTurn(
+            state, Rng(), BattleFixtures.MinimalCatalog());
+
+        Assert.Equal(BattleOutcome.Pending, next.Outcome);
+        Assert.Equal(2, next.Turn);
+        Assert.Equal(5, next.Energy);
+        Assert.Equal(5, next.Hand.Length);
+        Assert.Contains(next.DiscardPile, card => card.InstanceId == oldHand.InstanceId);
+        Assert.DoesNotContain(next.Hand, card => card.InstanceId == oldHand.InstanceId);
+    }
+
+    [Fact]
+    public void OnTurnEnd_energy_gain_is_carried_before_next_turn_addition()
+    {
+        var relic = BattleFixtures.Relic(
+            "end-energy", "OnTurnEnd", true,
+            new CardEffect("gainEnergy", EffectScope.Self, null, 1));
+        var catalog = BattleFixtures.MinimalCatalog(relics: new[] { relic });
+        var state = MakeState(
+            BattleFixtures.Hero(),
+            ImmutableArray.Create(BattleFixtures.Goblin(0, 50))) with
+        {
+            Energy = 2,
+            EnergyMax = 3,
+            OwnedRelicIds = ImmutableArray.Create("end-energy"),
+        };
+
+        var (next, _) = BattleEngine.EndTurn(state, Rng(), catalog);
+
+        Assert.Equal(BattleOutcome.Pending, next.Outcome);
+        Assert.Equal(6, next.Energy); // 未使用2 + OnTurnEnd 1 + 次ターン3
+    }
+
+    [Fact]
+    public void Played_multi_hit_card_resolves_as_separate_hits_at_turn_end()
+    {
+        var doubleHit = new CardDefinition(
+            "double_hit", "Double Hit", null, CardRarity.Common, CardType.Attack,
+            Cost: 1, UpgradedCost: null,
+            Effects: new CardEffect[]
+            {
+                new("attack", EffectScope.Single, EffectSide.Enemy, 5),
+                new("attack", EffectScope.Single, EffectSide.Enemy, 5),
+            },
+            UpgradedEffects: null, Keywords: null);
+        var card = BattleFixtures.MakeBattleCard("double_hit", "double_hit_inst");
+        var enemy = BattleFixtures.Goblin(hp: 50) with
+        {
+            Block = BlockPool.Empty.Add(6),
+        };
+        var state = MakeState(
+            BattleFixtures.Hero(), ImmutableArray.Create(enemy),
+            draw: ImmutableArray<BattleCardInstance>.Empty) with
+        {
+            Energy = 3,
+            Hand = ImmutableArray.Create(card),
+        };
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { doubleHit });
+        var rng = Rng();
+
+        var (afterPlay, _) = BattleEngine.PlayCard(
+            state, handIndex: 0, targetEnemyIndex: 0, targetAllyIndex: 0,
+            rng, catalog);
+        Assert.Equal(new[] { 5, 5 }, afterPlay.Allies[0].AttackSingle.HitAmounts);
+
+        var (afterTurn, events) = BattleEngine.EndTurn(afterPlay, rng, catalog);
+
+        Assert.Equal(46, afterTurn.Enemies[0].CurrentHp);
+        var heroDamageEvents = events
+            .Where(e => e.Kind == BattleEventKind.DealDamage
+                && e.CasterInstanceId == afterPlay.Allies[0].InstanceId)
+            .ToList();
+        Assert.Equal(new int?[] { 0, 4 }, heroDamageEvents.Select(e => e.Amount));
+        Assert.Equal(new int?[] { 5, 1 }, heroDamageEvents.Select(e => e.BlockedAmount));
+        Assert.Equal(new int?[] { 0, 1 }, heroDamageEvents.Select(e => e.HitIndex));
     }
 
     [Fact] public void Hand_discarded_and_redrawn()
@@ -136,8 +232,9 @@ public class BattleEngineEndTurnTests
     {
         // Build a state mid-combo (simulating SuperWild played, FreePass active),
         // then call EndTurn → PlayerAttacking → EnemyAttacking → TurnEndProcessor → TurnStartProcessor.
-        // After EndTurn returns (Outcome=Pending), combo 3 fields should be reset.
-        var s = MakeStateWithCombo(combo: 3, lastOrigCost: 5, freePass: true);
+        // After EndTurn returns (Outcome=Pending), all combo fields should be reset.
+        var s = MakeStateWithCombo(
+            combo: 3, lastOrigCost: 5, freePass: true, wildUsed: true);
         var cat = BattleFixtures.MinimalCatalog();
 
         var (next, _) = BattleEngine.EndTurn(s, Rng(), cat);
@@ -148,11 +245,32 @@ public class BattleEngineEndTurnTests
         Assert.Equal(BattleOutcome.Pending, next.Outcome);
 
         Assert.Equal(0, next.ComboCount);
+        Assert.Equal(0, next.MaxComboThisTurn);
         Assert.Null(next.LastPlayedOrigCost);
         Assert.False(next.NextCardComboFreePass);
+        Assert.False(next.WildUsedInCurrentCombo);
     }
 
-    private static BattleState MakeStateWithCombo(int combo, int? lastOrigCost, bool freePass)
+    private static BattleState WithActiveCombo(BattleState state) => state with
+    {
+        ComboCount = 3,
+        MaxComboThisTurn = 5,
+        LastPlayedOrigCost = 2,
+        NextCardComboFreePass = true,
+        WildUsedInCurrentCombo = true,
+    };
+
+    private static void AssertComboReset(BattleState state)
+    {
+        Assert.Equal(0, state.ComboCount);
+        Assert.Equal(0, state.MaxComboThisTurn);
+        Assert.Null(state.LastPlayedOrigCost);
+        Assert.False(state.NextCardComboFreePass);
+        Assert.False(state.WildUsedInCurrentCombo);
+    }
+
+    private static BattleState MakeStateWithCombo(
+        int combo, int? lastOrigCost, bool freePass, bool wildUsed)
     {
         return new(
             Turn: 1, Phase: BattlePhase.PlayerInput, Outcome: BattleOutcome.Pending,
@@ -171,6 +289,7 @@ public class BattleEngineEndTurnTests
             NextCardComboFreePass: freePass,
             OwnedRelicIds: ImmutableArray<string>.Empty,
             Potions: ImmutableArray<string>.Empty,
-            EncounterId: "enc_test");
+            EncounterId: "enc_test",
+            WildUsedInCurrentCombo: wildUsed);
     }
 }

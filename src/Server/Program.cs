@@ -82,7 +82,7 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("E2E"))
 {
     app.MapOpenApi();
 }
@@ -103,6 +103,89 @@ app.Use(async (context, next) =>
         await context.Response.WriteAsync("エンコードされたパス区切り文字は許可されていません。");
         return;
     }
+    await next();
+});
+
+// Resolve the stored account first. Besides keeping filesystem-backed repositories portable
+// across case-sensitive and case-insensitive hosts, this prevents arbitrary unknown header
+// values from permanently allocating entries in BattleSessionStore's command-gate table.
+// Run state and battle state are both read-modify-write resources, so every mutation for the
+// same canonical account is serialized.
+app.Use(async (context, next) =>
+{
+    var request = context.Request;
+    bool isApiMutation = request.Path.StartsWithSegments(
+            new PathString("/api/v1"), StringComparison.OrdinalIgnoreCase)
+        && (HttpMethods.IsPost(request.Method)
+            || HttpMethods.IsPut(request.Method)
+            || HttpMethods.IsPatch(request.Method)
+            || HttpMethods.IsDelete(request.Method));
+
+    if (!request.Path.StartsWithSegments(
+            new PathString("/api/v1"), StringComparison.OrdinalIgnoreCase)
+        || !request.Headers.TryGetValue("X-Account-Id", out var rawAccountId))
+    {
+        await next();
+        return;
+    }
+
+    // Controllers consistently use the first header value; do the same so an additional
+    // header value cannot make middleware and controller resolve different identities.
+    var accountId = rawAccountId.FirstOrDefault();
+    if (string.IsNullOrWhiteSpace(accountId))
+    {
+        await next();
+        return;
+    }
+
+    Account? account;
+    try
+    {
+        var accounts = context.RequestServices.GetRequiredService<IAccountRepository>();
+        account = await accounts.GetAsync(accountId, context.RequestAborted);
+    }
+    catch (ArgumentException)
+    {
+        // Invalid values remain the controller's responsibility so its existing
+        // ProblemDetails/status stays unchanged.
+        await next();
+        return;
+    }
+
+    if (account is null)
+    {
+        bool isAccountCreation = HttpMethods.IsPost(request.Method)
+            && request.Path.Equals(
+                new PathString("/api/v1/accounts"), StringComparison.OrdinalIgnoreCase);
+        if (isApiMutation && !isAccountCreation)
+        {
+            // Do not let an unknown-ID mutation race account creation between this lookup
+            // and a controller lookup. Account creation itself has its own repository gate.
+            await Results.Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                title: $"アカウントが見つかりません: {accountId}")
+                .ExecuteAsync(context);
+            return;
+        }
+
+        // Reads and account creation keep their endpoint-specific response behavior.
+        await next();
+        return;
+    }
+
+    // Downstream repositories use account IDs as filenames. Always give them the exact stored
+    // spelling so Alice/alice behaves identically on Linux and Windows.
+    request.Headers["X-Account-Id"] = account.Id;
+
+    if (!isApiMutation)
+    {
+        await next();
+        return;
+    }
+
+    var sessions = context.RequestServices.GetRequiredService<BattleSessionStore>();
+    await using var commandLock = await sessions.AcquireCommandLockAsync(
+        account.Id, context.RequestAborted);
     await next();
 });
 

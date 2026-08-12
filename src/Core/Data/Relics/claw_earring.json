@@ -1,21 +1,40 @@
 {
-    "id":  "claw_earring",
-    "name":  "つめイヤリング",
-    "displayName":  null,
-    "activeVersion":  "v1",
-    "versions":  [
-                     {
-                         "version":  "v1",
-                         "createdAt":  "2026-05-02T03:29:22Z",
-                         "label":  "original",
-                         "spec":  {
-                                      "rarity":  1,
-                                      "description":  "[未実装] 鋭い爪をかたどった銀のイヤリング。鏡を覗くたび、内なる獣が静かに唸る。",
-                                      "effects":  [
-
-                                                  ],
-                                      "implemented":  false
-                                  }
-                     }
-                 ]
+  "id": "claw_earring",
+  "name": "つめイヤリング",
+  "displayName": null,
+  "activeVersion": "v2",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-05-02T03:29:22Z",
+      "label": "original",
+      "spec": {
+        "rarity": 1,
+        "description": "[未実装] 鋭い爪をかたどった銀のイヤリング。鏡を覗くたび、内なる獣が静かに唸る。",
+        "effects": [],
+        "implemented": false
+      }
+    },
+    {
+      "version": "v2",
+      "createdAt": "2026-08-08T00:00:00Z",
+      "label": "chance on-hit reference relic",
+      "spec": {
+        "rarity": 1,
+        "description": "攻撃が当たるたび、対象へ25%の確率で脱力1を与える。バリアやブロックでダメージが0でも判定する。",
+        "effects": [
+          {
+            "action": "debuff",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 1,
+            "name": "weak",
+            "trigger": "OnHit",
+            "chancePercent": 25
+          }
+        ],
+        "implemented": true
+      }
+    }
+  ]
 }

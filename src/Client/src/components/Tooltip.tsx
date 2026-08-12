@@ -2,11 +2,12 @@ import {
   createContext,
   useContext,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
 } from 'react'
-import type { MouseEvent, ReactNode } from 'react'
+import type { FocusEvent, MouseEvent, ReactNode } from 'react'
 import type { CardRarity } from './Card'
 import { CardDesc, extractCardDescRefs } from './CardDesc'
 import type { CardDescRef } from './CardDesc'
@@ -18,6 +19,8 @@ export type TooltipContent = {
   name: ReactNode
   rarity?: CardRarity
   rarityLabel?: string
+  /** Optional status line rendered between the tooltip title and description. */
+  statusLine?: ReactNode
   desc: ReactNode
   /**
    * 任意のフレーバーテキスト。指定された場合 desc の下に点線で区切り
@@ -30,7 +33,7 @@ export type TooltipContent = {
 type Position = { x: number; y: number }
 
 type Ctx = {
-  show: (content: TooltipContent, pos: Position) => void
+  show: (content: TooltipContent, pos: Position, id: string) => void
   move: (pos: Position) => void
   hide: () => void
 }
@@ -41,15 +44,16 @@ export function TooltipHost({ children }: { children: ReactNode }) {
   const [state, setState] = useState<{
     content: TooltipContent | null
     pos: Position
-  }>({ content: null, pos: { x: 0, y: 0 } })
+    id: string | null
+  }>({ content: null, pos: { x: 0, y: 0 }, id: null })
 
   const tipRef = useRef<HTMLDivElement | null>(null)
 
   const ctx = useMemo<Ctx>(
     () => ({
-      show: (content, pos) => setState({ content, pos }),
+      show: (content, pos, id) => setState({ content, pos, id }),
       move: (pos) => setState((s) => (s.content ? { ...s, pos } : s)),
-      hide: () => setState({ content: null, pos: { x: 0, y: 0 } }),
+      hide: () => setState({ content: null, pos: { x: 0, y: 0 }, id: null }),
     }),
     [],
   )
@@ -72,7 +76,7 @@ export function TooltipHost({ children }: { children: ReactNode }) {
     <TooltipContext.Provider value={ctx}>
       {children}
       {content ? (
-        <div ref={tipRef} className="tip is-on" role="tooltip">
+        <div id={state.id ?? undefined} ref={tipRef} className="tip is-on" role="tooltip">
           <div className="tip__head">
             <div className={`tip__name${content.rarity ? ` tip__name--${content.rarity}` : ''}`}>
               {content.name}
@@ -83,6 +87,9 @@ export function TooltipHost({ children }: { children: ReactNode }) {
               </div>
             ) : null}
           </div>
+          {content.statusLine ? (
+            <div className="tip__status">{content.statusLine}</div>
+          ) : null}
           <div className="tip__desc">
             {typeof content.desc === 'string' ? (
               <CardDesc text={content.desc} cardNames={cardNames} unitNames={unitNames} compress={false} />
@@ -109,8 +116,11 @@ export function TooltipHost({ children }: { children: ReactNode }) {
   )
 }
 
+// The hook must share TooltipContext's private instance with TooltipHost.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useTooltipTarget(content: TooltipContent | null) {
   const ctx = useContext(TooltipContext)
+  const tooltipId = useId()
   const showingRef = useRef(false)
   // Why: hover 中に content が動的に変わった (例: 右クリック長押しで強化版に
   //  切替) ときも tooltip を更新するため、最後のカーソル位置を ref に保持。
@@ -123,9 +133,9 @@ export function useTooltipTarget(content: TooltipContent | null) {
       showingRef.current = false
     } else if (content && showingRef.current && ctx) {
       // hover 中に content が変わった: 最新内容で再表示。
-      ctx.show(content, lastPosRef.current)
+      ctx.show(content, lastPosRef.current, tooltipId)
     }
-  }, [ctx, content])
+  }, [ctx, content, tooltipId])
   useEffect(() => {
     return () => {
       if (showingRef.current) {
@@ -140,7 +150,7 @@ export function useTooltipTarget(content: TooltipContent | null) {
         if (!ctx || !content) return
         const pos = { x: e.clientX, y: e.clientY }
         lastPosRef.current = pos
-        ctx.show(content, pos)
+        ctx.show(content, pos, tooltipId)
         showingRef.current = true
       },
       onMouseMove: (e: MouseEvent) => {
@@ -153,8 +163,22 @@ export function useTooltipTarget(content: TooltipContent | null) {
         ctx?.hide()
         showingRef.current = false
       },
+      onFocus: (e: FocusEvent<HTMLElement>) => {
+        if (!ctx || !content) return
+        const rect = e.currentTarget.getBoundingClientRect()
+        const pos = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+        lastPosRef.current = pos
+        ctx.show(content, pos, tooltipId)
+        showingRef.current = true
+      },
+      onBlur: (e: FocusEvent<HTMLElement>) => {
+        if (e.relatedTarget instanceof Node && e.currentTarget.contains(e.relatedTarget)) return
+        ctx?.hide()
+        showingRef.current = false
+      },
+      'aria-describedby': content ? tooltipId : undefined,
     }),
-    [ctx, content],
+    [ctx, content, tooltipId],
   )
 }
 

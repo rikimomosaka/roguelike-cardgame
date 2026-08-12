@@ -7,6 +7,7 @@ using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Map;
 using RoguelikeCardGame.Core.Merchant;
 using RoguelikeCardGame.Core.Random;
+using RoguelikeCardGame.Core.Relics;
 using RoguelikeCardGame.Core.Run;
 using Xunit;
 
@@ -83,6 +84,30 @@ public class MerchantInventoryGeneratorTests
             Catalog, Catalog.MerchantPrices!, s, new SequentialRng(4UL));
         foreach (var offer in inv.Relics)
             Assert.DoesNotContain(offer.Id, s.Relics);
+    }
+
+    [Fact]
+    public void Generate_ExcludesRelicsReservedByEveryActStartPool()
+    {
+        var prices = Catalog.MerchantPrices!;
+        var reserved = RelicPoolHelper.GetActStartReservedIds(Catalog);
+        var eligibleNormal = RelicPoolHelper.GetNormalAcquisitionRelics(Catalog)
+            .Where(relic => prices.Relics.ContainsKey(relic.Rarity))
+            .ToArray();
+        var onlyUnownedNormal = eligibleNormal.Take(2).Select(relic => relic.Id).ToArray();
+        var s = Base() with
+        {
+            Relics = eligibleNormal.Skip(2).Select(relic => relic.Id).ToArray(),
+        };
+
+        var inv = MerchantInventoryGenerator.Generate(
+            Catalog, prices, s, new SequentialRng(17UL));
+
+        Assert.Equal(2, inv.Relics.Length);
+        Assert.All(inv.Relics, offer => Assert.DoesNotContain(offer.Id, reserved));
+        Assert.Equal(
+            onlyUnownedNormal.OrderBy(id => id),
+            inv.Relics.Select(offer => offer.Id).OrderBy(id => id));
     }
 
     [Fact]

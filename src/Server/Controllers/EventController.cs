@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Events;
+using RoguelikeCardGame.Core.History;
 using RoguelikeCardGame.Core.Random;
 using RoguelikeCardGame.Core.Run;
 using RoguelikeCardGame.Server.Abstractions;
@@ -20,13 +21,23 @@ public sealed class EventController : ControllerBase
     private readonly ISaveRepository _saves;
     private readonly RunStartService _runStart;
     private readonly DataCatalog _data;
+    private readonly IHistoryRepository _history;
+    private readonly IBestiaryRepository _bestiary;
 
-    public EventController(IAccountRepository accounts, ISaveRepository saves, RunStartService runStart, DataCatalog data)
+    public EventController(
+        IAccountRepository accounts,
+        ISaveRepository saves,
+        RunStartService runStart,
+        DataCatalog data,
+        IHistoryRepository history,
+        IBestiaryRepository bestiary)
     {
         _accounts = accounts;
         _saves = saves;
         _runStart = runStart;
         _data = data;
+        _history = history;
+        _bestiary = bestiary;
     }
 
     [HttpGet("current")]
@@ -59,7 +70,12 @@ public sealed class EventController : ControllerBase
         if (s.ActiveEvent is null)
             return Problem(statusCode: StatusCodes.Status409Conflict, title: "イベントが発生していません。");
 
-        var rng = new SystemRng(unchecked((int)s.RngSeed ^ (int)s.PlaySeconds ^ 0x5E4E47));
+        var rng = new SystemRng(RunRngSeed.Derive(
+            s.RngSeed,
+            s.CurrentAct,
+            s.CurrentNodeId,
+            RunRngPurpose.EventChoice,
+            body.ChoiceIndex));
         RunState updated;
         try
         {
@@ -72,6 +88,18 @@ public sealed class EventController : ControllerBase
         catch (InvalidOperationException ex)
         {
             return Problem(statusCode: StatusCodes.Status409Conflict, title: ex.Message);
+        }
+
+        if (updated.CurrentHp <= 0)
+        {
+            var finished = ActTransition.FinishRun(updated, RunProgress.GameOver);
+            var defeatedMap = _runStart.RehydrateMap(finished.RngSeed, finished.CurrentAct);
+            var record = RunHistoryBuilder.From(
+                accountId, finished, defeatedMap, RunProgress.GameOver);
+            record = await _history.AppendAsync(accountId, record, ct);
+            await _bestiary.MergeAsync(accountId, record, ct);
+            await _saves.DeleteAsync(accountId, ct);
+            return Ok(RunSnapshotDtoMapper.ToResultDto(record));
         }
 
         updated = updated with { SavedAtUtc = DateTimeOffset.UtcNow };

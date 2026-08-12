@@ -67,7 +67,6 @@ export function RestScreen({ deck, completed, onHeal, onUpgrade, onClose }: Prop
                         description={disp.description}
                         upgradedDescription={disp.upgradedDescription}
                         upgraded={e.card.upgraded}
-                        width={128}
                       />
                       <span className="rs-picker-card__overlay" aria-hidden="true">
                         <span className="rs-picker-card__overlay-label">強化</span>
@@ -122,7 +121,6 @@ export function RestScreen({ deck, completed, onHeal, onUpgrade, onClose }: Prop
                     description={disp.description}
                     upgradedDescription={disp.upgradedDescription}
                     upgraded={false}
-                    width={128}
                   />
                   <span className="rs-confirm-arrow" aria-hidden="true">→</span>
                   <Card
@@ -133,7 +131,6 @@ export function RestScreen({ deck, completed, onHeal, onUpgrade, onClose }: Prop
                     description={disp.description}
                     upgradedDescription={disp.upgradedDescription}
                     upgraded={true}
-                    width={128}
                   />
                 </div>
               ) : null}
@@ -156,7 +153,20 @@ export function RestScreen({ deck, completed, onHeal, onUpgrade, onClose }: Prop
       width={640}
     >
       <div className="rs-fire" aria-hidden="true">
-        <img src="/icons/ui/rest_fire.png" alt="" draggable={false} />
+        <img
+          className="rs-fire__logs"
+          src="/icons/ui/rest_logs.png"
+          alt=""
+          draggable={false}
+        />
+        <span className="rs-fire__flame-viewport">
+          <img
+            className="rs-fire__flame"
+            src="/icons/ui/rest_flame.png?v=2"
+            alt=""
+            draggable={false}
+          />
+        </span>
       </div>
       <div className="rs-actions">
         <ul className="rs-choices">

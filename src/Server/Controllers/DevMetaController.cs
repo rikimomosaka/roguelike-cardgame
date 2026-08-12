@@ -45,6 +45,7 @@ public sealed class DevMetaController : ControllerBase
                 "attack", "block", "buff", "debuff", "heal", "draw", "discard",
                 "gainEnergy", "gainMaxEnergy", "exhaustCard",
                 "upgrade", "summon", "selfDamage", "addCard", "recoverFromDiscard",
+                "modifyCardCost",
                 // Phase 10.6.B Passive modifier actions (12 件)
                 "energyPerTurnBonus", "cardsDrawnPerTurnBonus",
                 "goldRewardMultiplier", "shopPriceMultiplier",
@@ -62,7 +63,7 @@ public sealed class DevMetaController : ControllerBase
             {
                 "OnPickup", "OnBattleStart", "OnBattleEnd",
                 "OnTurnStart", "OnTurnEnd", "OnPlayCard",
-                "OnEnemyDeath", "OnDamageReceived", "OnCombo",
+                "OnEnemyDeath", "OnDamageReceived", "OnHit", "OnCombo",
                 "OnMapTileResolved", "OnCardDiscarded", "OnCardExhausted",
                 // 以下は spec 列挙のみ、engine 発火は 10.6.A で実装
                 "OnEnterShop", "OnEnterRestSite", "OnRest",
@@ -86,6 +87,11 @@ public sealed class DevMetaController : ControllerBase
                 new { id = "dexterity", jp = "敏捷" },
                 new { id = "poison", jp = "毒" },
                 new { id = "omnistrike", jp = "拡散" },
+                new { id = "barrier", jp = "バリア" },
+                new { id = "lifesteal", jp = "吸血" },
+                new { id = "reflect", jp = "反射" },
+                new { id = "handCostReduction", jp = "手札コスト軽減" },
+                new { id = "handCostIncrease", jp = "手札コスト増加" },
             },
         });
     }

@@ -43,6 +43,49 @@ public class PowerTriggerProcessorTests
         Assert.Empty(after.DrawPile);
         Assert.Contains(events, e => e.Kind == BattleEventKind.Draw);
         Assert.Contains(events, e => e.Note != null && e.Note.Contains("power:power_demo"));
+        var drawEvent = Assert.Single(events, e => e.Kind == BattleEventKind.Draw);
+        Assert.Equal(CombatSourceKind.PowerEffect, drawEvent.Source?.Kind);
+        Assert.Equal("hero_inst", drawEvent.Source?.OwnerInstanceId);
+        Assert.Equal("hero_inst", drawEvent.Source?.ActorInstanceId);
+        Assert.Equal("power_demo", drawEvent.Source?.DefinitionId);
+        Assert.Equal("inst1", drawEvent.Source?.InstanceId);
+        Assert.Equal(0, drawEvent.Source?.EffectIndex);
+        Assert.Equal("self", drawEvent.Source?.Scope);
+    }
+
+    [Fact]
+    public void Attack_trigger_keeps_power_source_from_pool_through_damage()
+    {
+        var powerDef = MakePower("attack_power",
+            new CardEffect("attack", EffectScope.Single, EffectSide.Enemy, 6,
+                Trigger: "OnTurnStart"));
+        var power = new BattleCardInstance("power-inst-7", powerDef.Id, false, null);
+        var hero = BattleFixtures.Hero(slotIndex: 2);
+        var state = BattleFixtures.MakeStateWithHero(hero) with
+        {
+            PowerCards = ImmutableArray.Create(power),
+        };
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { powerDef });
+
+        var (queued, triggerEvents) = PowerTriggerProcessor.Fire(
+            state, "OnTurnStart", catalog, MakeRng(), orderStart: 0);
+
+        Assert.Empty(triggerEvents);
+        var hit = Assert.Single(queued.Allies[0].AttackSingle.Hits);
+        Assert.Equal(CombatSourceKind.PowerEffect, hit.Source.Kind);
+        Assert.Equal(2, hit.Source.OwnerSlot);
+        Assert.Equal(hero.InstanceId, hit.Source.OwnerInstanceId);
+        Assert.Equal(hero.InstanceId, hit.Source.ActorInstanceId);
+        Assert.Equal(powerDef.Id, hit.Source.DefinitionId);
+        Assert.Equal(power.InstanceId, hit.Source.InstanceId);
+        Assert.Equal(0, hit.Source.EffectIndex);
+        Assert.Equal("single", hit.Source.Scope);
+
+        var (_, damageEvents) = PlayerAttackingResolver.Resolve(
+            queued with { Phase = BattlePhase.PlayerAttacking }, MakeRng(), catalog);
+        var damage = Assert.Single(damageEvents, e => e.Kind == BattleEventKind.DealDamage);
+        Assert.Equal(hit.Source, damage.Source);
+        Assert.Equal(6, damage.ActualHpLoss);
     }
 
     [Fact]
@@ -225,5 +268,73 @@ public class PowerTriggerProcessorTests
             state, "OnTurnStart", catalog, MakeRng(), orderStart: 0);
 
         Assert.Equal(9, after.Allies[0].Block.RawTotal);
+    }
+
+    [Fact]
+    public void Triggered_cost_change_uses_explicit_playing_card_context()
+    {
+        var powerDef = MakePower(
+            "cost_power",
+            new CardEffect(
+                "modifyCardCost", EffectScope.Self, Side: null, Amount: -1,
+                Pile: "hand", Select: "random", Trigger: "OnPlayCard",
+                CostDuration: "untilPlayed", CardCount: 1));
+        var power = new BattleCardInstance(
+            "power-instance", powerDef.Id, false, CostOverride: null);
+        var playing = BattleFixtures.MakeBattleCard("strike", "playing");
+        var other = BattleFixtures.MakeBattleCard("defend", "other");
+        var state = BattleFixtures.MinimalState(
+            hand: ImmutableArray.Create(playing, other)) with
+        {
+            PowerCards = ImmutableArray.Create(power),
+        };
+        var catalog = BattleFixtures.MinimalCatalog(
+            cards: new[]
+            {
+                powerDef, BattleFixtures.Strike(), BattleFixtures.Defend(),
+            });
+
+        var (after, events) = PowerTriggerProcessor.Fire(
+            state, "OnPlayCard", catalog,
+            new FakeRng(new[] { 0 }, System.Array.Empty<double>()),
+            orderStart: 0, playingCardInstanceId: playing.InstanceId);
+
+        Assert.Empty(after.Hand[0].EffectiveCostModifiers);
+        Assert.Equal(-1,
+            Assert.Single(after.Hand[1].EffectiveCostModifiers).Amount);
+        Assert.Equal("other", Assert.Single(events).TargetInstanceId);
+    }
+
+    [Fact]
+    public void Trigger_without_play_resolution_context_does_not_exclude_hand_cards()
+    {
+        var powerDef = MakePower(
+            "turn_cost_power",
+            new CardEffect(
+                "modifyCardCost", EffectScope.Self, Side: null, Amount: -1,
+                Pile: "hand", Select: "all", Trigger: "OnTurnStart",
+                CostDuration: "untilTurnEnd"));
+        var power = new BattleCardInstance(
+            "power-instance", powerDef.Id, false, CostOverride: null);
+        var state = BattleFixtures.MinimalState(
+            hand: ImmutableArray.Create(
+                BattleFixtures.MakeBattleCard("strike", "first"),
+                BattleFixtures.MakeBattleCard("defend", "second"))) with
+        {
+            PowerCards = ImmutableArray.Create(power),
+        };
+        var catalog = BattleFixtures.MinimalCatalog(
+            cards: new[]
+            {
+                powerDef, BattleFixtures.Strike(), BattleFixtures.Defend(),
+            });
+
+        var (after, events) = PowerTriggerProcessor.Fire(
+            state, "OnTurnStart", catalog, MakeRng(), orderStart: 0);
+
+        Assert.All(after.Hand, card => Assert.Single(card.EffectiveCostModifiers));
+        Assert.Equal(
+            new[] { "first", "second" },
+            events.Select(e => e.TargetInstanceId));
     }
 }

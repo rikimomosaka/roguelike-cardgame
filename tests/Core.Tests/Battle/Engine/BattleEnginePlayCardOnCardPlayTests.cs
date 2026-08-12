@@ -83,4 +83,91 @@ public class BattleEnginePlayCardOnCardPlayTests
         Assert.Single(after.DiscardPile);
         Assert.Empty(after.SummonHeld);
     }
+
+    [Fact]
+    public void OnPlayCard_relic_random_cost_change_excludes_the_playing_card()
+    {
+        var relic = BattleFixtures.Relic(
+            "cost_relic", "OnPlayCard", true,
+            new CardEffect(
+                "modifyCardCost", EffectScope.Self, Side: null, Amount: -1,
+                Pile: "hand", Select: "random",
+                CostDuration: "untilPlayed", CardCount: 1));
+        var catalog = BattleFixtures.MinimalCatalog(
+            cards: new[] { BattleFixtures.Strike(), BattleFixtures.Defend() },
+            relics: new[] { relic });
+        var playing = BattleFixtures.MakeBattleCard("strike", "playing");
+        var remaining = BattleFixtures.MakeBattleCard("defend", "remaining");
+        var state = BattleFixtures.MinimalState(
+            hand: ImmutableArray.Create(playing, remaining),
+            ownedRelicIds: ImmutableArray.Create(relic.Id)) with { Energy = 1 };
+
+        // With the unfiltered two-card hand, RNG index 0 would select the
+        // in-flight card. The resolution context must leave only "remaining"
+        // eligible before the relic consumes this value.
+        var rng = new FakeRng(new[] { 0 }, System.Array.Empty<double>());
+        var (after, events) = BattleEngine.PlayCard(
+            state, handIndex: 0, targetEnemyIndex: 0, targetAllyIndex: 0,
+            rng, catalog);
+
+        var card = Assert.Single(after.Hand);
+        Assert.Equal("remaining", card.InstanceId);
+        Assert.Equal(-1, Assert.Single(card.EffectiveCostModifiers).Amount);
+        var modify = Assert.Single(
+            events, e => e.Kind == BattleEventKind.ModifyCardCost);
+        Assert.Equal("remaining", modify.TargetInstanceId);
+        Assert.Equal(CombatSourceKind.RelicEffect, modify.Source?.Kind);
+    }
+
+    [Fact]
+    public void Nested_OnCardDiscarded_relic_keeps_the_playing_card_excluded()
+    {
+        var discardCard = new CardDefinition(
+            "discard_skill", "Discard", null,
+            CardRarity.Common, CardType.Skill,
+            Cost: 0, UpgradedCost: null,
+            Effects: new[]
+            {
+                new CardEffect(
+                    "discard", EffectScope.Random, Side: null, Amount: 1,
+                    Select: "random"),
+            },
+            UpgradedEffects: null, Keywords: null);
+        var relic = BattleFixtures.Relic(
+            "discard_cost_relic", "OnCardDiscarded", true,
+            new CardEffect(
+                "modifyCardCost", EffectScope.Self, Side: null, Amount: -1,
+                Pile: "hand", Select: "random",
+                CostDuration: "untilPlayed", CardCount: 1));
+        var catalog = BattleFixtures.MinimalCatalog(
+            cards: new[]
+            {
+                discardCard, BattleFixtures.Strike(), BattleFixtures.Defend(),
+            },
+            relics: new[] { relic });
+        var playing = BattleFixtures.MakeBattleCard(discardCard.Id, "playing");
+        var discarded = BattleFixtures.MakeBattleCard("strike", "discarded");
+        var remaining = BattleFixtures.MakeBattleCard("defend", "remaining");
+        var state = BattleFixtures.MinimalState(
+            hand: ImmutableArray.Create(playing, discarded, remaining),
+            ownedRelicIds: ImmutableArray.Create(relic.Id));
+
+        // First 0 discards "discarded" from the eligible non-playing cards.
+        // Second 0 would point at "playing" if the nested trigger lost context.
+        var rng = new FakeRng(new[] { 0, 0 }, System.Array.Empty<double>());
+        var (after, events) = BattleEngine.PlayCard(
+            state, handIndex: 0, targetEnemyIndex: null,
+            targetAllyIndex: null, rng, catalog);
+
+        var card = Assert.Single(after.Hand);
+        Assert.Equal("remaining", card.InstanceId);
+        Assert.Equal(-1, Assert.Single(card.EffectiveCostModifiers).Amount);
+        Assert.Equal(
+            "remaining",
+            Assert.Single(events, e => e.Kind == BattleEventKind.ModifyCardCost)
+                .TargetInstanceId);
+        Assert.Equal(
+            new[] { "discarded", "playing" },
+            after.DiscardPile.Select(c => c.InstanceId));
+    }
 }

@@ -60,9 +60,8 @@ public static class EventResolver
 
     private static RunState GainRelic(RunState s, CardRarity rarity, DataCatalog catalog, IRng rng)
     {
-        var pool = catalog.Relics.Values
+        var pool = RelicPoolHelper.GetNormalAcquisitionRelics(catalog)
             .Where(r => r.Rarity == rarity && !s.Relics.Contains(r.Id))
-            .OrderBy(r => r.Id)
             .ToArray();
         if (pool.Length == 0) return s;
         var chosen = pool[rng.NextInt(0, pool.Length)];
@@ -74,7 +73,10 @@ public static class EventResolver
 
     private static RunState GrantCardReward(RunState s, DataCatalog catalog, IRng rng)
     {
-        var rt = catalog.RewardTables["act1"];
+        string rewardTableId = $"act{s.CurrentAct}";
+        if (!catalog.RewardTables.TryGetValue(rewardTableId, out var rt))
+            throw new InvalidOperationException(
+                $"RewardTable \"{rewardTableId}\" is not configured for the current act");
         var excl = ImmutableArray.CreateRange(s.Deck.Select(c => c.Id));
         var (reward, newRngState) = RewardGenerator.Generate(
             new RewardContext.FromEnemy(new EnemyPool(s.CurrentAct, EnemyTier.Weak)),

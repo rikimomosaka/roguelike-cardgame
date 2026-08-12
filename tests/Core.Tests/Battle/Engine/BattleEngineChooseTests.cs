@@ -149,6 +149,33 @@ public class BattleEngineChooseTests
             BattleEngine.PlayCard(state, handIndex: 0, null, null, Rng(), catalog));
     }
 
+    [Fact]
+    public void Pending_choice_blocks_turn_end_potion_and_target_commands_in_Core()
+    {
+        var state = BattleFixtures.MinimalState(
+            hand: ImmutableArray.Create(BattleFixtures.MakeBattleCard("strike", "s1"))) with
+        {
+            PendingCardPlay = new PendingCardPlay(
+                "s1", 0, false,
+                new PendingChoice("exhaustCard", "hand", 1,
+                    ImmutableArray.Create("candidate"))),
+        };
+        var catalog = BattleFixtures.MinimalCatalog();
+
+        var endTurn = Assert.Throws<System.InvalidOperationException>(() =>
+            BattleEngine.EndTurn(state, Rng(), catalog));
+        var potion = Assert.Throws<System.InvalidOperationException>(() =>
+            BattleEngine.UsePotion(state, 0, null, null, Rng(), catalog));
+        var target = Assert.Throws<System.InvalidOperationException>(() =>
+            BattleEngine.SetTarget(state, ActorSide.Enemy, 0));
+
+        Assert.Contains("PendingCardPlay", endTurn.Message);
+        Assert.Contains("PendingCardPlay", potion.Message);
+        Assert.Contains("PendingCardPlay", target.Message);
+        Assert.NotNull(state.PendingCardPlay);
+        Assert.Contains(state.Hand, card => card.InstanceId == "s1");
+    }
+
     // ===== Phase 10.5.M2-Choose T4: ResolveCardChoice tests =====
 
     [Fact]

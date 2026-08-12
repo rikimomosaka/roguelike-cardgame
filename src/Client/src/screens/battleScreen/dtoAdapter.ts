@@ -21,6 +21,7 @@ import type {
   UnitCatalog,
 } from '../../api/catalog'
 import type { CardRarity, CardType } from '../../components/Card'
+import { rarityCodeFromName, rarityCodeFromNumber } from '../../components/rarity'
 import type {
   BuffDemo,
   CharacterDemo,
@@ -44,26 +45,11 @@ export function hpLevel(cur: number, max: number): HpLv {
 // ---------------- Rarity helpers ----------------
 
 function cardRarityFromNumber(n: number): CardRarity {
-  switch (n) {
-    case 0: return 'c'
-    case 1: return 'r'
-    case 2: return 'e'
-    case 3: return 'l'
-    // Why: 5 は Phase 10.5.G で追加された CardRarity.Token。Token カードは
-    //   addCard effect で battle 中に手札に来るが、報酬・商人プールには
-    //   出現しない。Client は他のレアリティと同様 't' で表示し、
-    //   defaultRarityLabel('t') === 'TOKEN' としてラベル化する。
-    case 5: return 't'
-    default: return 'c'
-  }
+  return rarityCodeFromNumber(n)
 }
 
 function relicRarityFromString(rarity: string | undefined): CardRarity {
-  const r = (rarity ?? '').toLowerCase()
-  if (r === 'rare' || r === 'r') return 'r'
-  if (r === 'epic' || r === 'e') return 'e'
-  if (r === 'legendary' || r === 'l') return 'l'
-  return 'c'
+  return rarityCodeFromName(rarity) ?? 'c'
 }
 
 function cardTypeFromString(s: string | undefined): CardType {
@@ -168,6 +154,34 @@ export function toCharacterDemo(
   // 実アセットが配置されたら image を流し込むため、現状 undefined。
   // heightTier はカタログ (catalog 取得失敗時 5) から引く。
   const image = isHero ? '/characters/player_stand.png' : undefined
+  const animations: CharacterDemo['animations'] = isHero
+    ? {
+        idle: {
+          src: '/characters/player_idle.png?v=2',
+          frameWidth: 128,
+          frameHeight: 256,
+          frameCount: 8,
+          durationMs: 1200,
+          loop: true,
+        },
+        attack: {
+          src: '/characters/player_attack.png?v=1',
+          frameWidth: 192,
+          frameHeight: 256,
+          frameCount: 4,
+          durationMs: 240,
+          loop: false,
+        },
+        hurt: {
+          src: '/characters/player_hurt.png?v=1',
+          frameWidth: 192,
+          frameHeight: 256,
+          frameCount: 4,
+          durationMs: 300,
+          loop: false,
+        },
+      }
+    : undefined
   const heightTier = isHero
     ? characterDef?.heightTier ?? 5
     : enemyDef?.heightTier ?? unitDef?.heightTier ?? 5
@@ -179,6 +193,7 @@ export function toCharacterDemo(
     sprite,
     spriteKind,
     image,
+    animations,
     heightTier,
     hpCur: actor.currentHp,
     hpMax: actor.maxHp,
@@ -202,44 +217,55 @@ export function toIntentDemos(intent: IntentDto): IntentDemo[] {
   const list: IntentDemo[] = []
 
   const hasAttack =
-    (intent.attackSingle ?? 0) > 0 ||
-    (intent.attackRandom ?? 0) > 0 ||
-    (intent.attackAll ?? 0) > 0
+    (intent.attackHits ?? 0) > 0 ||
+    typeof intent.attackSingle === 'number' ||
+    typeof intent.attackRandom === 'number' ||
+    typeof intent.attackAll === 'number'
   // Why: tooltip は title (name) と body (desc) を別フィールドで描画する仕様。
   // body 側の文頭に行動名を含めると重複表示になるので、body は本文だけを書く。
   // 「通常攻撃」は「単体攻撃」と表記を変更 (ユーザ要望)。
   if (hasAttack) {
     const parts: string[] = []
-    const kinds: string[] = []
-    const damages: string[] = []
-    if (intent.attackSingle && intent.attackSingle > 0) {
-      parts.push('単体攻撃'); kinds.push('単体'); damages.push(String(intent.attackSingle))
+    const scopes: { label: string; amount: number; hits: number }[] = []
+    if (typeof intent.attackSingle === 'number') {
+      parts.push('単体攻撃')
+      scopes.push({
+        label: '単体攻撃',
+        amount: intent.attackSingle,
+        hits: intent.attackSingleHits ?? intent.attackHits ?? 1,
+      })
     }
-    if (intent.attackRandom && intent.attackRandom > 0) {
-      parts.push('ランダム攻撃'); kinds.push('ランダム'); damages.push(String(intent.attackRandom))
+    if (typeof intent.attackRandom === 'number') {
+      parts.push('ランダム攻撃')
+      scopes.push({
+        label: 'ランダム攻撃',
+        amount: intent.attackRandom,
+        hits: intent.attackRandomHits ?? intent.attackHits ?? 1,
+      })
     }
-    if (intent.attackAll && intent.attackAll > 0) {
-      parts.push('全体攻撃'); kinds.push('全体'); damages.push(String(intent.attackAll))
+    if (typeof intent.attackAll === 'number') {
+      parts.push('全体攻撃')
+      scopes.push({
+        label: '全体攻撃',
+        amount: intent.attackAll,
+        hits: intent.attackAllHits ?? intent.attackHits ?? 1,
+      })
     }
     // 攻撃 chip の icon は最も影響が大きい scope を優先:
     // attackAll > attackSingle > attackRandom
     let attackIcon = '⚔'
-    if (intent.attackAll && intent.attackAll > 0) {
+    if (typeof intent.attackAll === 'number') {
       attackIcon = '/icons/ui/attack_all.png'
-    } else if (intent.attackSingle && intent.attackSingle > 0) {
+    } else if (typeof intent.attackSingle === 'number') {
       attackIcon = '/icons/ui/attack.png'
-    } else if (intent.attackRandom && intent.attackRandom > 0) {
+    } else if (typeof intent.attackRandom === 'number') {
       attackIcon = '/icons/ui/attack_random.png'
     }
-    // Why: 攻撃説明は連続攻撃回数を含めた "n連続合計Xダメージで○○攻撃" 形式。
-    //  hits >= 2 のときのみ "n連続合計" 接頭。1 hit は素直に "Xダメージで○○攻撃"。
-    //  複数 scope (single/random/all) が混在する場合は "/" 区切りで列挙。
-    const hits = intent.attackHits ?? 0
-    const dmgStr = damages.join('/')
-    const kindStr = kinds.join('/')
-    const desc = hits >= 2
-      ? `ターン終了時に${hits}連続合計${dmgStr}ダメージで${kindStr}攻撃。`
-      : `ターン終了時に${dmgStr}ダメージで${kindStr}攻撃。`
+    const total = [intent.attackSingle, intent.attackRandom, intent.attackAll]
+      .reduce<number>((sum, amount) => sum + (amount ?? 0), 0)
+    const desc = `ターン終了時に${scopes
+      .map(scope => `${scope.label}：${scope.hits} HIT、合計${scope.amount}ダメージ`)
+      .join('／')}。`
     list.push({
       kind: 'attack',
       icon: attackIcon,
@@ -250,6 +276,10 @@ export function toIntentDemos(intent: IntentDto): IntentDemo[] {
         random: intent.attackRandom ?? undefined,
         all: intent.attackAll ?? undefined,
         hits: intent.attackHits ?? undefined,
+        singleHits: intent.attackSingleHits ?? undefined,
+        randomHits: intent.attackRandomHits ?? undefined,
+        allHits: intent.attackAllHits ?? undefined,
+        total,
       },
     })
   }
@@ -340,6 +370,21 @@ function statusMeta(id: string, amount: number): {
     case 'omnistrike':
       return { kind: 'buff', icon: '/icons/ui/attack_all.png', name: '拡散',
                desc: `全ての攻撃を全体攻撃に変更する。${amount}ターン残存。` }
+    case 'barrier':
+      return { kind: 'buff', icon: '/icons/ui/barrier.png', name: 'バリア',
+               desc: `正の攻撃を${amount}ヒット無効化する。ブロックは消費しない。` }
+    case 'lifesteal':
+      return { kind: 'buff', icon: '/icons/ui/lifesteal.png', name: '吸血',
+               desc: `攻撃で実際に減らしたHPの${amount}%を回復する。` }
+    case 'reflect':
+      return { kind: 'buff', icon: '/icons/ui/reflect.png', name: '反射',
+               desc: `攻撃を受けるたび、攻撃者へ${amount}の固定ダメージを返す。` }
+    case 'handCostReduction':
+      return { kind: 'buff', icon: '/icons/ui/intent_buff.png', name: '手札軽減',
+               desc: `手札にあるカードの現在コストを${amount}減らす。手札を離れると適用されない。` }
+    case 'handCostIncrease':
+      return { kind: 'debuff', icon: '/icons/ui/intent_debuff.png', name: '手札増加',
+               desc: `手札にあるカードの現在コストを${amount}増やす。手札を離れると適用されない。` }
     default:
       return { kind: 'buff', icon: '?', name: id, desc: '' }
   }
@@ -347,43 +392,17 @@ function statusMeta(id: string, amount: number): {
 
 // ---------------- toHandCardDemo ----------------
 
-/**
- * card のオリジナルコスト (CostOverride 無視) を返す。
- * 強化済みなら upgradedCost を優先。combo 判定で参照される値。
- */
-function origCostOf(
-  card: BattleCardInstanceDto,
-  catalog: CardCatalog | null,
-): number | null {
-  const def = catalog?.[card.cardDefinitionId]
-  if (!def) return null
-  if (card.isUpgraded && def.upgradedCost !== null && def.upgradedCost !== undefined) {
-    return def.upgradedCost
-  }
-  return def.cost ?? null
-}
-
 export function toHandCardDemo(
   card: BattleCardInstanceDto,
   catalog: CardCatalog | null,
   energy: number,
-  /** Server engine の state.lastPlayedOrigCost (combo 軽減判定用)。 */
-  lastPlayedOrigCost: number | null = null,
 ): HandCardDemo {
   const def = catalog?.[card.cardDefinitionId]
-  const orig = origCostOf(card, catalog)
-  const baseCost = card.costOverride ?? orig
-  // Why: BattleEngine.PlayCard と同じ combo 軽減ロジック (orig === lastPlayedOrigCost + 1)
-  // を再現することで、見た目のコストを実際の支払いコストに合わせる。Server 側は
-  // CostOverride とは独立に支払い時に -1 する (BattleEngine.PlayCard.cs:50-51 参照)。
-  const willCombo =
-    orig !== null && lastPlayedOrigCost !== null && orig === lastPlayedOrigCost + 1
-  const reducedCost =
-    baseCost !== null && baseCost !== undefined
-      ? Math.max(0, baseCost - (willCombo ? 1 : 0))
-      : null
-  const playable =
-    reducedCost !== null && reducedCost !== undefined && reducedCost <= energy
+  // Core has already applied card modifiers, hand-wide statuses and combo
+  // reduction. Never duplicate those game rules in the client.
+  const currentCost = card.currentCost
+  const originalCost = card.originalCost
+  const playable = currentCost !== null && currentCost <= energy
   // Why: 10.5.C で Server が hero context を反映した adjustedDescription を populate
   //   するようになった。null (戦闘外 catalog 等) のときは catalog の static description
   //   にフォールバックする。adjustedDescription/adjustedUpgradedDescription は marker
@@ -400,9 +419,9 @@ export function toHandCardDemo(
     //  Card 側の useTooltipTarget が effectiveUpgraded に応じて切替える。
     description,
     upgradedDescription,
-    cost: reducedCost ?? 'X',
-    // Why: 軽減発生時のみ表示用に元コストを露出。Card が "{orig}→{cost}" を描画する。
-    costOrig: willCombo && baseCost !== null && baseCost !== undefined ? baseCost : null,
+    cost: currentCost ?? 'X',
+    // 変更理由に関係なく上段=現在値、下段=コンボ参照用の元コスト。
+    costOrig: currentCost !== originalCost ? originalCost : null,
     type: cardTypeFromString(def?.cardType),
     rarity: def ? cardRarityFromNumber(def.rarity) : 'c',
     playable,

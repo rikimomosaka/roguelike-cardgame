@@ -11,7 +11,9 @@ public class CardKeywordsTests
         var meta = CardKeywords.Get("wild");
         Assert.NotNull(meta);
         Assert.Equal("ワイルド", meta!.Name);
-        Assert.Contains("コンボ", meta.Description);
+        Assert.Equal(
+            "このカード及び次に使うカードではコンボが途切れない。このコンボ中、以降のワイルドを無効にする。",
+            meta.Description);
     }
 
     [Fact]
@@ -20,6 +22,9 @@ public class CardKeywordsTests
         var meta = CardKeywords.Get("superwild");
         Assert.NotNull(meta);
         Assert.Equal("スーパーワイルド", meta!.Name);
+        Assert.Equal(
+            "このカード及び次に使うカードではコンボが途切れない。",
+            meta.Description);
     }
 
     [Fact]

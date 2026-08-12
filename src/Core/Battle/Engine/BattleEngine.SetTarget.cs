@@ -16,6 +16,7 @@ public static partial class BattleEngine
         if (state.Phase != BattlePhase.PlayerInput)
             throw new InvalidOperationException(
                 $"SetTarget requires Phase=PlayerInput, got {state.Phase}");
+        RejectWhileCardChoiceIsPending(state, "SetTarget");
 
         var pool = side == ActorSide.Ally ? state.Allies : state.Enemies;
 

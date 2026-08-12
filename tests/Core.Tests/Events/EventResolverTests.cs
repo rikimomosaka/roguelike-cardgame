@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using RoguelikeCardGame.Core.Battle.Definitions;
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Data;
@@ -108,6 +109,23 @@ public class EventResolverTests
     }
 
     [Fact]
+    public void ApplyChoice_GrantCardReward_UsesCurrentActRewardTable()
+    {
+        var tables = Catalog.RewardTables.ToDictionary(kv => kv.Key, kv => kv.Value);
+        tables["act1"] = WithWeakCardRarity(tables["act1"], common: 100, rare: 0, epic: 0);
+        tables["act2"] = WithWeakCardRarity(tables["act2"], common: 0, rare: 0, epic: 100);
+        var catalog = Catalog with { RewardTables = tables };
+        var inst = MakeInstance(new EventChoice("card",
+            null, ImmutableArray.Create<EventEffect>(new EventEffect.GrantCardReward())));
+        var s0 = Base() with { CurrentAct = 2, ActiveEvent = inst };
+
+        var s1 = EventResolver.ApplyChoice(s0, 0, catalog, new SequentialRng(1UL));
+
+        Assert.All(s1.ActiveReward!.CardChoices,
+            id => Assert.Equal(CardRarity.Epic, catalog.Cards[id].Rarity));
+    }
+
+    [Fact]
     public void ApplyChoice_AlreadyResolved_Throws()
     {
         var inst = MakeInstance(
@@ -131,6 +149,31 @@ public class EventResolverTests
         Assert.Single(s1.Relics);
         // OnPickup が発火していれば extra_max_hp / coin_purse のどちらかでも効果が見える
         Assert.True(s1.MaxHp >= s0.MaxHp);
+    }
+
+    [Fact]
+    public void ApplyChoice_GainRelicRandom_ExcludesEveryActStartReservedRelic()
+    {
+        var normalCommon = RelicPoolHelper.GetNormalAcquisitionRelics(Catalog)
+            .Where(relic => relic.Rarity == CardRarity.Common)
+            .ToArray();
+        var expected = normalCommon[0].Id;
+        var reserved = RelicPoolHelper.GetActStartReservedIds(Catalog);
+        Assert.Contains(reserved, id =>
+            Catalog.Relics.TryGetValue(id, out var relic)
+            && relic.Rarity == CardRarity.Common);
+
+        var inst = MakeInstance(new EventChoice("relic",
+            null, ImmutableArray.Create<EventEffect>(
+                new EventEffect.GainRelicRandom(CardRarity.Common))));
+        var alreadyOwned = normalCommon.Skip(1).Select(relic => relic.Id).ToArray();
+        var s0 = Base() with { ActiveEvent = inst, Relics = alreadyOwned };
+
+        var s1 = EventResolver.ApplyChoice(s0, 0, Catalog, new SequentialRng(29UL));
+
+        Assert.Contains(expected, s1.Relics);
+        Assert.All(s1.Relics.Except(alreadyOwned),
+            relicId => Assert.DoesNotContain(relicId, reserved));
     }
 
     [Fact]
@@ -190,4 +233,17 @@ public class EventResolverTests
         IReadOnlyList<CardEffect> effects,
         bool implemented = true) =>
         RelicCatalogTestHelpers.BuildCatalogWithFakeRelic(Catalog, id, effects, implemented);
+
+    private static RewardTable WithWeakCardRarity(
+        RewardTable table, int common, int rare, int epic)
+    {
+        var pools = table.Pools.ToDictionary(kv => kv.Key, kv => kv.Value);
+        pools[EnemyTier.Weak] = pools[EnemyTier.Weak] with
+        {
+            CommonPercent = common,
+            RarePercent = rare,
+            EpicPercent = epic,
+        };
+        return table with { Pools = pools };
+    }
 }

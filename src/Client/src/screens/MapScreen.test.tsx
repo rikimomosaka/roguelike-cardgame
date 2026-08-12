@@ -1,7 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AccountProvider } from '../context/AccountContext'
-import type { BattlePlaceholderStateDto, CardInstanceDto, RewardStateDto, RunSnapshotDto } from '../api/types'
+import type { BattlePlaceholderStateDto, CardInstanceDto, EventInstanceDto, RewardStateDto, RunSnapshotDto } from '../api/types'
 import { MapScreen } from './MapScreen'
 
 // BattleScreen は本番 API (Catalog 等) を叩くので、MapScreen 単体テストでは
@@ -75,6 +75,21 @@ function sampleReward(): RewardStateDto {
     relicId: null,
     relicClaimed: false,
     isBossReward: false,
+    rerollUsed: false,
+    rerollAvailable: false,
+  }
+}
+
+function sampleEvent(chosenIndex: number | null = null): EventInstanceDto {
+  return {
+    eventId: 'blessing_fountain',
+    name: 'Blessing Fountain',
+    startMessage: 'A mystical fountain offers its gifts.',
+    choices: [
+      { label: 'Drink', conditionSummary: null, conditionMet: true, resultMessage: 'Healed.' },
+      { label: 'Walk by', conditionSummary: null, conditionMet: true, resultMessage: 'Walked on.' },
+    ],
+    chosenIndex,
   }
 }
 
@@ -98,8 +113,20 @@ describe('MapScreen', () => {
         />
       </AccountProvider>,
     )
-    expect(screen.getByTestId('map-node-0')).toHaveAttribute('data-current', 'true')
-    expect(screen.getByTestId('map-node-1')).toHaveAttribute('data-selectable', 'true')
+    const current = screen.getByTestId('map-node-0')
+    const next = screen.getByTestId('map-node-1')
+
+    expect(current).toHaveAttribute('data-current', 'true')
+    expect(current).toHaveAttribute('aria-current', 'location')
+    expect(current).toHaveClass('is-current')
+    expect(current).not.toHaveClass('is-next')
+    expect(within(current).getByTestId('map-current-marker')).toHaveTextContent('現在地')
+    expect(screen.getAllByTestId('map-current-marker')).toHaveLength(1)
+
+    expect(next).toHaveAttribute('data-selectable', 'true')
+    expect(next).not.toHaveAttribute('aria-current')
+    expect(next).toHaveClass('is-next')
+    expect(within(next).queryByTestId('map-current-marker')).toBeNull()
     expect(screen.getByTestId('map-node-2')).toHaveAttribute('data-selectable', 'false')
   })
 
@@ -262,6 +289,83 @@ describe('MapScreen', () => {
     expect(screen.getByText('休息所')).toBeInTheDocument()
   })
 
+  it('keeps the next node inactive after an unfinished rest popup is closed', () => {
+    render(
+      <AccountProvider>
+        <MapScreen
+          snapshot={sampleSnapshot({ activeRestPending: true, activeRestCompleted: false })}
+          onExitToMenu={() => {}}
+          onAbandon={() => {}}
+        />
+      </AccountProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+
+    const next = screen.getByTestId('map-node-1')
+    expect(next).toHaveAttribute('data-selectable', 'false')
+    expect(next).not.toHaveClass('is-next')
+    expect(next).toBeDisabled()
+    expect(screen.getByTestId('map-node-0')).toHaveAttribute('data-reopen-reward', 'true')
+  })
+
+  it('activates the next node after a completed rest popup is closed', () => {
+    render(
+      <AccountProvider>
+        <MapScreen
+          snapshot={sampleSnapshot({ activeRestPending: true, activeRestCompleted: true })}
+          onExitToMenu={() => {}}
+          onAbandon={() => {}}
+        />
+      </AccountProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+
+    const next = screen.getByTestId('map-node-1')
+    expect(next).toHaveAttribute('data-selectable', 'true')
+    expect(next).toHaveClass('is-next')
+    expect(next).toBeEnabled()
+  })
+
+  it('keeps the next node inactive after an unresolved event popup is closed', () => {
+    render(
+      <AccountProvider>
+        <MapScreen
+          snapshot={sampleSnapshot({ activeEvent: sampleEvent() })}
+          onExitToMenu={() => {}}
+          onAbandon={() => {}}
+        />
+      </AccountProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+
+    const next = screen.getByTestId('map-node-1')
+    expect(next).toHaveAttribute('data-selectable', 'false')
+    expect(next).not.toHaveClass('is-next')
+    expect(next).toBeDisabled()
+  })
+
+  it('activates the next node after a resolved event popup is closed', () => {
+    render(
+      <AccountProvider>
+        <MapScreen
+          snapshot={sampleSnapshot({ activeEvent: sampleEvent(0) })}
+          onExitToMenu={() => {}}
+          onAbandon={() => {}}
+        />
+      </AccountProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+
+    const next = screen.getByTestId('map-node-1')
+    expect(next).toHaveAttribute('data-selectable', 'true')
+    expect(next).toHaveClass('is-next')
+    expect(next).toBeEnabled()
+  })
+
   it('shows DEBUG -10HP button and fires onDebugDamage', () => {
     const onDebugDamage = vi.fn()
     render(
@@ -352,6 +456,51 @@ describe('MapScreen', () => {
       </AccountProvider>,
     )
     expect(screen.getByText(/レリックを選ぶ/)).toBeDefined()
+  })
+
+  it('keeps the next node inactive after an act-start choice popup is closed without choosing', () => {
+    render(
+      <AccountProvider>
+        <MapScreen
+          snapshot={sampleSnapshot({ activeActStartRelicChoice: { relicIds: ['r1', 'r2', 'r3'] } })}
+          onExitToMenu={() => {}}
+          onAbandon={() => {}}
+        />
+      </AccountProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '閉じる' }))
+
+    const next = screen.getByTestId('map-node-1')
+    expect(next).toHaveAttribute('data-selectable', 'false')
+    expect(next).not.toHaveClass('is-next')
+    expect(next).toBeDisabled()
+  })
+
+  it('keeps a skippable merchant node flow unchanged', async () => {
+    const inventory = {
+      cards: [],
+      relics: [],
+      potions: [],
+      discardSlotUsed: false,
+      discardPrice: 75,
+    }
+    render(
+      <AccountProvider>
+        <MapScreen
+          snapshot={sampleSnapshot({ activeMerchant: inventory })}
+          onExitToMenu={() => {}}
+          onAbandon={() => {}}
+        />
+      </AccountProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Leave' }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('map-node-1')).toHaveAttribute('data-selectable', 'true')
+    })
+    expect(screen.getByTestId('map-node-1')).toHaveClass('is-next')
   })
 
   it('at act start (Start not visited, choice null), Start is the only clickable tile', () => {

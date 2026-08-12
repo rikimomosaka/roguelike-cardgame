@@ -44,6 +44,45 @@ public class RelicTriggerProcessorTests
         Assert.Single(events);
         Assert.Equal(BattleEventKind.GainBlock, events[0].Kind);
         Assert.Equal("relic:block_relic", events[0].Note);
+        Assert.Equal(CombatSourceKind.RelicEffect, events[0].Source?.Kind);
+        Assert.Equal(0, events[0].Source?.OwnerSlot);
+        Assert.Equal("hero_inst", events[0].Source?.OwnerInstanceId);
+        Assert.Equal("hero_inst", events[0].Source?.ActorInstanceId);
+        Assert.Equal("block_relic", events[0].Source?.DefinitionId);
+        Assert.Null(events[0].Source?.InstanceId);
+        Assert.Equal(0, events[0].Source?.EffectIndex);
+        Assert.Equal("self", events[0].Source?.Scope);
+    }
+
+    [Fact]
+    public void Attack_trigger_keeps_relic_source_from_pool_through_damage()
+    {
+        var relic = BattleFixtures.Relic("attack_relic", "OnTurnStart", true,
+            new CardEffect("attack", EffectScope.Single, EffectSide.Enemy, 4));
+        var hero = BattleFixtures.Hero(slotIndex: 3);
+        var state = BattleFixtures.MinimalState(
+            allies: ImmutableArray.Create(hero),
+            ownedRelicIds: ImmutableArray.Create(relic.Id));
+        var catalog = BattleFixtures.MinimalCatalog(relics: new[] { relic });
+
+        var (queued, triggerEvents) = RelicTriggerProcessor.Fire(
+            state, "OnTurnStart", catalog, MakeRng(), orderStart: 0);
+
+        Assert.Empty(triggerEvents);
+        var hit = Assert.Single(queued.Allies[0].AttackSingle.Hits);
+        Assert.Equal(CombatSourceKind.RelicEffect, hit.Source.Kind);
+        Assert.Equal(3, hit.Source.OwnerSlot);
+        Assert.Equal(hero.InstanceId, hit.Source.OwnerInstanceId);
+        Assert.Equal(hero.InstanceId, hit.Source.ActorInstanceId);
+        Assert.Equal(relic.Id, hit.Source.DefinitionId);
+        Assert.Equal(0, hit.Source.EffectIndex);
+        Assert.Equal("single", hit.Source.Scope);
+
+        var (_, damageEvents) = PlayerAttackingResolver.Resolve(
+            queued with { Phase = BattlePhase.PlayerAttacking }, MakeRng(), catalog);
+        var damage = Assert.Single(damageEvents, e => e.Kind == BattleEventKind.DealDamage);
+        Assert.Equal(hit.Source, damage.Source);
+        Assert.Equal(4, damage.ActualHpLoss);
     }
 
     [Fact]

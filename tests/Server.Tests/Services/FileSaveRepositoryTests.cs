@@ -84,13 +84,17 @@ public class FileSaveRepositoryTests : IDisposable
     [Fact]
     public async Task Delete_ExistingAccount_RemovesFile()
     {
-        await _repo.SaveAsync("to-delete", FreshRun(), CancellationToken.None);
+        await _repo.SaveAsync("to-delete", FreshRun(seed: 1), CancellationToken.None);
+        await _repo.SaveAsync("to-delete", FreshRun(seed: 2), CancellationToken.None);
         var path = Path.Combine(_tempRoot, "saves", "to-delete.json");
+        var backup = path + ".bak";
         Assert.True(File.Exists(path));
+        Assert.True(File.Exists(backup));
 
         await _repo.DeleteAsync("to-delete", CancellationToken.None);
 
         Assert.False(File.Exists(path));
+        Assert.False(File.Exists(backup));
         Assert.Null(await _repo.TryLoadAsync("to-delete", CancellationToken.None));
     }
 
@@ -104,8 +108,53 @@ public class FileSaveRepositoryTests : IDisposable
     public async Task Save_DoesNotLeaveTmpFile()
     {
         await _repo.SaveAsync("tidy", FreshRun(), CancellationToken.None);
-        var tmp = Path.Combine(_tempRoot, "saves", "tidy.json.tmp");
-        Assert.False(File.Exists(tmp));
+        var saves = Path.Combine(_tempRoot, "saves");
+        Assert.Empty(Directory.GetFiles(saves, "tidy.json.tmp.*"));
+    }
+
+    [Fact]
+    public async Task Save_InvalidState_ThrowsAndPreservesExistingSave()
+    {
+        await _repo.SaveAsync("valid", FreshRun(seed: 10), CancellationToken.None);
+        var invalid = FreshRun(seed: 20) with { PotionSlotCount = 2 };
+
+        await Assert.ThrowsAsync<RunStateSerializerException>(() =>
+            _repo.SaveAsync("valid", invalid, CancellationToken.None));
+
+        var loaded = await _repo.TryLoadAsync("valid", CancellationToken.None);
+        Assert.NotNull(loaded);
+        Assert.Equal(10UL, loaded!.RngSeed);
+    }
+
+    [Fact]
+    public async Task TryLoad_CorruptPrimary_RecoversValidBackupAndHealsPrimary()
+    {
+        await _repo.SaveAsync("recover", FreshRun(seed: 100), CancellationToken.None);
+        await _repo.SaveAsync("recover", FreshRun(seed: 200), CancellationToken.None);
+        var primary = Path.Combine(_tempRoot, "saves", "recover.json");
+        await File.WriteAllTextAsync(primary, "{ corrupt", CancellationToken.None);
+
+        var recovered = await _repo.TryLoadAsync("recover", CancellationToken.None);
+
+        Assert.NotNull(recovered);
+        Assert.Equal(100UL, recovered!.RngSeed);
+        var healedJson = await File.ReadAllTextAsync(primary, CancellationToken.None);
+        Assert.Equal(100UL, RunStateSerializer.Deserialize(healedJson).RngSeed);
+    }
+
+    [Fact]
+    public async Task TryLoad_MissingPrimary_RecoversBackup()
+    {
+        await _repo.SaveAsync("recover-missing", FreshRun(seed: 1), CancellationToken.None);
+        await _repo.SaveAsync("recover-missing", FreshRun(seed: 2), CancellationToken.None);
+        var primary = Path.Combine(_tempRoot, "saves", "recover-missing.json");
+        File.Delete(primary);
+
+        var recovered = await _repo.TryLoadAsync("recover-missing", CancellationToken.None);
+
+        Assert.NotNull(recovered);
+        Assert.Equal(1UL, recovered!.RngSeed);
+        Assert.True(File.Exists(primary));
     }
 
     [Theory]
@@ -125,12 +174,25 @@ public class FileSaveRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task TryLoad_V1Json_ReturnsNull()
+    public async Task TryLoad_UnsupportedSave_ThrowsInsteadOfLookingLikeNoSave()
     {
         Directory.CreateDirectory(Path.Combine(_tempRoot, "saves"));
         var v1 = "{\"schemaVersion\":1,\"currentAct\":1,\"currentTileIndex\":0,\"currentHp\":80,\"maxHp\":80,\"gold\":99,\"deck\":[],\"relics\":[],\"potions\":[],\"playSeconds\":0,\"rngSeed\":0,\"savedAtUtc\":\"2026-04-21T00:00:00+00:00\",\"progress\":\"InProgress\"}";
         await File.WriteAllTextAsync(Path.Combine(_tempRoot, "saves", "v1user.json"), v1);
-        var loaded = await _repo.TryLoadAsync("v1user", CancellationToken.None);
-        Assert.Null(loaded);
+        await Assert.ThrowsAsync<FileSaveRepositoryException>(() =>
+            _repo.TryLoadAsync("v1user", CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task TryLoad_WhenPrimaryAndBackupAreCorrupt_Throws()
+    {
+        await _repo.SaveAsync("both-corrupt", FreshRun(seed: 1), CancellationToken.None);
+        await _repo.SaveAsync("both-corrupt", FreshRun(seed: 2), CancellationToken.None);
+        var primary = Path.Combine(_tempRoot, "saves", "both-corrupt.json");
+        await File.WriteAllTextAsync(primary, "{ corrupt");
+        await File.WriteAllTextAsync(primary + ".bak", "{ also-corrupt");
+
+        await Assert.ThrowsAsync<FileSaveRepositoryException>(() =>
+            _repo.TryLoadAsync("both-corrupt", CancellationToken.None));
     }
 }

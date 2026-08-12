@@ -55,19 +55,27 @@ internal static class SideStatusCountdown
                 actor = FindActor(s, aid)!;
                 int newAmount = actor.GetStatus(id) - 1;
                 ImmutableDictionary<string, int> newStatuses;
+                var newStatusSources = actor.StatusSources;
                 if (newAmount <= 0)
                 {
+                    var statusSource = actor.GetStatusSource(id);
                     newStatuses = actor.Statuses.Remove(id);
+                    newStatusSources = newStatusSources.Remove(id);
                     events.Add(new BattleEvent(
                         BattleEventKind.RemoveStatus, Order: order++,
-                        TargetInstanceId: aid, Note: id));
+                        TargetInstanceId: aid, Note: id,
+                        Source: statusSource));
                 }
                 else
                 {
                     newStatuses = actor.Statuses.SetItem(id, newAmount);
                     // countdown では ApplyStatus event は発火しない (旧 spec §5-2 を踏襲)
                 }
-                s = ReplaceActor(s, aid, actor with { Statuses = newStatuses });
+                s = ReplaceActor(s, aid, actor with
+                {
+                    Statuses = newStatuses,
+                    StatusSources = newStatusSources,
+                });
             }
         }
 
