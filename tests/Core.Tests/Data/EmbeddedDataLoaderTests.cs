@@ -63,6 +63,29 @@ public class EmbeddedDataLoaderTests
     }
 
     [Fact]
+    public void Cost_change_trial_content_is_loaded()
+    {
+        var catalog = EmbeddedDataLoader.LoadCatalog();
+
+        var card = catalog.Cards["reward_rare_10"];
+        var cardCostEffect = Assert.Single(card.Effects, e => e.Action == "modifyCardCost");
+        Assert.Equal(-1, cardCostEffect.Amount);
+        Assert.Equal("hand", cardCostEffect.Pile);
+        Assert.Equal("all", cardCostEffect.Select);
+        Assert.Equal("untilPlayed", cardCostEffect.CostDuration);
+
+        var potion = catalog.Potions["swift_potion"];
+        Assert.Contains(potion.Effects, e =>
+            e.Action == "buff" && e.Name == "handCostReduction" && e.Amount == 1);
+
+        var relic = catalog.Relics["lantern"];
+        Assert.True(relic.Implemented);
+        Assert.Contains(relic.Effects, e =>
+            e.Action == "buff" && e.Name == "handCostReduction" &&
+            e.Trigger == "OnBattleStart" && e.Amount == 1);
+    }
+
+    [Fact]
     public void NonHealthPotions_AreNotUsableOutsideBattle()
     {
         var catalog = EmbeddedDataLoader.LoadCatalog();
@@ -78,10 +101,10 @@ public class EmbeddedDataLoaderTests
         var catalog = EmbeddedDataLoader.LoadCatalog();
         // Phase 10.6.B: lucky_die を削除 (37→36)。gamble_dice v2 で reroll 効果を移管 (false→true で +1、合計 20 維持)
         Assert.Equal(36, catalog.Relics.Count);
-        // 24 files are implemented; 12 remain explicit placeholders.
+        // 25 files are implemented; 11 remain explicit placeholders.
         var trueCount = catalog.Relics.Values.Count(r => r.Implemented);
         var falseCount = catalog.Relics.Values.Count(r => !r.Implemented);
-        Assert.Equal(24, trueCount);
-        Assert.Equal(12, falseCount);
+        Assert.Equal(25, trueCount);
+        Assert.Equal(11, falseCount);
     }
 }

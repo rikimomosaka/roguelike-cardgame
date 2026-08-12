@@ -17,6 +17,14 @@
                                                           "action":  "block",
                                                           "scope":  "self",
                                                           "amount":  20
+                                                      },
+                                                      {
+                                                          "action":  "modifyCardCost",
+                                                          "scope":  "self",
+                                                          "amount":  -1,
+                                                          "pile":  "hand",
+                                                          "select":  "all",
+                                                          "costDuration":  "untilPlayed"
                                                       }
                                                   ]
                                   }

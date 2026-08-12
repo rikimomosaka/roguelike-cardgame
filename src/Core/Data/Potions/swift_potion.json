@@ -2,5 +2,8 @@
   "id": "swift_potion",
   "name": "スウィフトポーション",
   "rarity": 1,
-  "effects": [{ "action": "draw", "scope": "self", "amount": 3, "battleOnly": true }]
+  "effects": [
+    { "action": "draw", "scope": "self", "amount": 3, "battleOnly": true },
+    { "action": "buff", "scope": "self", "name": "handCostReduction", "amount": 1, "battleOnly": true }
+  ]
 }
