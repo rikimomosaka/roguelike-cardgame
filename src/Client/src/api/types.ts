@@ -713,6 +713,8 @@ export type BattleActionResponseDto = {
   steps: BattleEventStepDto[]
 }
 
+export type EnemyTier = 'Weak' | 'Strong' | 'Elite' | 'Boss'
+
 export type EnemyCatalogEntryDto = {
   id: string
   name: string
@@ -731,6 +733,12 @@ export type EnemyCatalogEntryDto = {
   deck?: UnitDeckEntryDto[] | null
   /** 先制行動（登場時に発動するカード ID、記載順） */
   openingActions?: string[]
+  /** 生息地（出現する幕）。 */
+  act?: number
+  /** ポジション（雑魚・強敵・エリート・ボス）。 */
+  tier?: EnemyTier
+  /** 図鑑用のキャラクター説明。 */
+  description?: string | null
 }
 
 export type UnitCatalogEntryDto = {

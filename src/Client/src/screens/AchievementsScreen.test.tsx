@@ -96,6 +96,10 @@ describe('AchievementsScreen', () => {
       jaw_worm: {
         id: 'jaw_worm', name: 'アギトムシ', imageId: 'jaw_worm', hp: 42,
         initialMoveId: 'chomp', heightTier: 3,
+        attack: 7, defense: 5, energyPerTurn: 1, drawPerTurn: 3,
+        act: 1, tier: 'Weak', description: '顎で噛みつく虫。',
+        deck: [{ cardId: 'strike', count: 2, upgraded: false, priority: 0 }],
+        openingActions: [],
       },
     })
   })
@@ -284,8 +288,32 @@ describe('AchievementsScreen', () => {
     fireEvent.click(screen.getByRole('tab', { name: /^モンスター/ }))
     expect(await screen.findByText('アギトムシ')).toBeInTheDocument()
     expect(container.querySelector(
-      '.achievements__tile--enemy img[src="/characters/enemies/jaw_worm.png"]',
+      '.achievements__character-cell--monster img[src="/characters/enemies/jaw_worm.png"]',
     )).toBeInTheDocument()
+  })
+
+  it('shows monster stats, habitat, description, opening actions and a deck list modal', async () => {
+    vi.spyOn(bestiaryApi, 'getBestiary').mockResolvedValueOnce({
+      ...emptyBestiary,
+      encounteredEnemyIds: ['jaw_worm'],
+    })
+    const { container } = render(
+      <TooltipHost>
+        <AchievementsScreen accountId="a" onBack={() => { }} />
+      </TooltipHost>,
+    )
+    fireEvent.click(await screen.findByRole('tab', { name: /^モンスター/ }))
+    expect(await screen.findByText('アギトムシ')).toBeInTheDocument()
+
+    const cell = container.querySelector('.achievements__character-cell--monster')!
+    expect(cell.querySelector('.actor-stats__item--attack')).toHaveTextContent('攻撃力7')
+    expect(cell).toHaveTextContent('生息地：Act 1')
+    expect(cell).toHaveTextContent('ポジション：通常（弱）')
+    expect(cell).toHaveTextContent('顎で噛みつく虫。')
+    expect(cell).toHaveTextContent('初期行動（先制行動）')
+
+    fireEvent.click(screen.getByRole('button', { name: 'アギトムシの行動デッキ（2枚）を表示' }))
+    expect(screen.getByRole('dialog', { name: 'アギトムシの行動デッキ (2枚)' })).toBeInTheDocument()
   })
 
   it('does not expose an undiscovered enemy name or image', async () => {

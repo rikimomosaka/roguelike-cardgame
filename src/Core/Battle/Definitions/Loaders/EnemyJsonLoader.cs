@@ -104,7 +104,8 @@ public static class EnemyJsonLoader
                     AiProfileId: aiProfileId,
                     Attack: ParseOptionalIntInRange(root, "attack", 0, 0, int.MaxValue, id),
                     Defense: ParseOptionalIntInRange(root, "defense", 0, 0, int.MaxValue, id),
-                    OpeningActions: ParseOpeningActions(root, id));
+                    OpeningActions: ParseOpeningActions(root, id),
+                    Description: ParseOptionalDescription(root, id));
             }
             catch (EnemyJsonException) { throw; }
             catch (Exception ex)
@@ -113,6 +114,17 @@ public static class EnemyJsonLoader
                 throw new EnemyJsonException($"敵 JSON のパースに失敗しました {where}: {ex.Message}", ex);
             }
         }
+    }
+
+    /// <summary>図鑑用のキャラクター説明（任意）。</summary>
+    private static string? ParseOptionalDescription(JsonElement root, string? id)
+    {
+        if (!root.TryGetProperty("description", out var el) || el.ValueKind == JsonValueKind.Null)
+            return null;
+        if (el.ValueKind != JsonValueKind.String)
+            throw new EnemyJsonException($"description は文字列である必要があります (enemy id={id})。");
+        var text = el.GetString();
+        return string.IsNullOrWhiteSpace(text) ? null : text;
     }
 
     /// <summary>先制行動: "openingActions": ["cardId", ...]（記載順に実行）。</summary>

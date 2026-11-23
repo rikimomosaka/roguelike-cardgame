@@ -240,4 +240,27 @@ public class EnemyJsonLoaderDeckTests
         }
         """));
     }
+
+    [Fact]
+    public void Description_is_optional_and_loaded_for_the_bestiary()
+    {
+        var withDescription = EnemyJsonLoader.Parse("""
+        {
+          "id":"e6","name":"敵 6","imageId":"e6",
+          "hp":30,"act":2,"tier":"Elite","aiProfileId":"low_cost_combo",
+          "deck":[{"cardId":"enemy_strike"}],
+          "description":"洞窟に棲む。"
+        }
+        """);
+        var without = EnemyJsonLoader.Parse("""
+        {
+          "id":"e7","name":"敵 7","imageId":"e7",
+          "hp":30,"act":1,"tier":"Weak","aiProfileId":"low_cost_combo",
+          "deck":[{"cardId":"enemy_strike"}]
+        }
+        """);
+
+        Assert.Equal("洞窟に棲む。", withDescription.Description);
+        Assert.Null(without.Description);
+    }
 }

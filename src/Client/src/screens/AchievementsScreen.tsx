@@ -1,10 +1,11 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { getBestiary } from '../api/bestiary'
 import { getHistory } from '../api/history'
-import type { BestiaryCharacterDto, BestiaryDto, RunResultDto } from '../api/types'
+import type { BestiaryCharacterDto, BestiaryDto, EnemyCatalogEntryDto, EnemyTier, RunResultDto } from '../api/types'
 import { Card, type CardRarity, type CardType } from '../components/Card'
 import { ActorStats, formatActorStats } from '../components/ActorStats'
 import { CardDesc, type CardDescTerm } from '../components/CardDesc'
+import { DeckListModal } from '../components/DeckListModal'
 import { cardDisplay } from '../components/cardDisplay'
 import type { CardPoolClass, CharacterClass } from '../api/catalog'
 import { optionalRarityCodeFromNumber, rarityCodeFromName, rarityCodeFromNumber } from '../components/rarity'
@@ -203,9 +204,7 @@ export function AchievementsScreen({ accountId, onBack }: Props) {
               discovered={new Set(bestiary.discoveredPotionIds)} />
           )}
           {tab === 'enemies' && (
-            <TilesTab
-              title="モンスター"
-              kind="enemy"
+            <MonstersTab
               allIds={bestiary.allKnownEnemyIds}
               discovered={new Set(bestiary.encounteredEnemyIds)} />
           )}
@@ -361,7 +360,8 @@ function CharactersTab({ players, allies }: {
   const [classFilter, setClassFilter] = useState<CharacterClassFilter>('all')
   const [query, setQuery] = useState('')
   const [discoveryFilter, setDiscoveryFilter] = useState<DiscoveryFilter>('all')
-  const { names: cardNames } = useCardCatalog()
+  const { names: cardNames, catalog: cardCatalog } = useCardCatalog()
+  const [deckPreview, setDeckPreview] = useState<BestiaryCharacterDto | null>(null)
   const sourceCharacters = filter === 'player' ? players : allies
   const classFiltered = filter === 'player' && classFilter !== 'all'
     ? sourceCharacters.filter(character => character.characterClass === classFilter)
@@ -410,9 +410,9 @@ function CharactersTab({ players, allies }: {
         >
           味方
         </button>
-      </div>
       {filter === 'player' && (
-        <div className="achievements__filter-row" role="group" aria-label="キャラクタークラスで絞り込み">
+        // 種別とクラスを 1 行にまとめ、キャラクター枠の縦幅を確保する。
+        <div className="achievements__filter-group" role="group" aria-label="キャラクタークラスで絞り込み">
           <span className="achievements__filter-label">クラス</span>
           {CHARACTER_CLASS_FILTERS.map(option => (
             <button
@@ -428,21 +428,36 @@ function CharactersTab({ players, allies }: {
           ))}
         </div>
       )}
+      </div>
       <div className="achievements__scroll">
         {characters.length === 0 && <p className="achievements__empty">該当するキャラクターはいません。</p>}
         <div className="achievements__character-grid">
           {characters.map(character => (
-            <CharacterTile key={character.id} character={character} cardNames={cardNames} />
+            <CharacterTile
+              key={character.id}
+              character={character}
+              cardNames={cardNames}
+              onOpenDeck={() => setDeckPreview(character)}
+            />
           ))}
         </div>
       </div>
+      {deckPreview ? (
+        <DeckListModal
+          title={`${deckPreview.name}の初期デッキ (${deckPreview.deck?.length ?? 0}枚)`}
+          cardIds={deckPreview.deck ?? []}
+          catalog={cardCatalog}
+          onClose={() => setDeckPreview(null)}
+        />
+      ) : null}
     </div>
   )
 }
 
-function CharacterTile({ character, cardNames }: {
+function CharacterTile({ character, cardNames, onOpenDeck }: {
   character: BestiaryCharacterDto
   cardNames: Record<string, string>
+  onOpenDeck: () => void
 }) {
   const deck = aggregateDeck(character.deck ?? [], cardNames)
   const characterClass = character.characterClass ?? null
@@ -539,7 +554,12 @@ function CharacterTile({ character, cardNames }: {
             <p>{character.description}</p>
           </CharacterTextSection>
           <section className="achievements__character-section achievements__character-deck">
-            <h3>初期デッキ {character.deck?.length ?? 0}枚</h3>
+            <DeckHeading
+              label={`初期デッキ ${character.deck?.length ?? 0}枚`}
+              ariaLabel={`${character.name}の初期デッキ（${character.deck?.length ?? 0}枚）を表示`}
+              disabled={deck.length === 0}
+              onOpen={onOpenDeck}
+            />
             {deck.length > 0 ? (
               <ul>
                 {deck.map(entry => (
@@ -581,6 +601,28 @@ function CharacterTile({ character, cardNames }: {
         </div>
       )}
     </div>
+  )
+}
+
+/** デッキ欄の見出し。押すとカード一覧（キャラクター選択と同じモーダル）を開く。 */
+function DeckHeading({ label, ariaLabel, disabled, onOpen }: {
+  label: string
+  ariaLabel: string
+  disabled: boolean
+  onOpen: () => void
+}) {
+  return (
+    <button
+      type="button"
+      className="achievements__deck-open"
+      onClick={onOpen}
+      disabled={disabled}
+      aria-haspopup="dialog"
+      aria-label={ariaLabel}
+    >
+      <span>{label}</span>
+      <span className="achievements__deck-open-hint">カードを確認</span>
+    </button>
   )
 }
 
@@ -844,6 +886,214 @@ function BestiaryTile({ kind, id, isDiscovered, displayName, description, rarity
           <span>???</span>
         )}
       </div>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------
+   Monsters tab — プレイヤーキャラと同じ枠で、能力値・生息地・ポジション・
+   説明・初期行動（先制行動）・行動デッキを表示する。
+   ------------------------------------------------------------------ */
+type EnemyTierFilter = 'all' | EnemyTier
+
+const ENEMY_TIER_LABEL: Record<EnemyTier, string> = {
+  Weak: '通常（弱）',
+  Strong: '通常（強）',
+  Elite: 'エリート',
+  Boss: 'ボス',
+}
+
+const ENEMY_TIER_FILTERS: { value: EnemyTierFilter; label: string }[] = [
+  { value: 'all', label: 'すべて' },
+  { value: 'Weak', label: ENEMY_TIER_LABEL.Weak },
+  { value: 'Strong', label: ENEMY_TIER_LABEL.Strong },
+  { value: 'Elite', label: ENEMY_TIER_LABEL.Elite },
+  { value: 'Boss', label: ENEMY_TIER_LABEL.Boss },
+]
+
+function expandEnemyDeck(enemy: EnemyCatalogEntryDto): string[] {
+  return (enemy.deck ?? []).flatMap(entry => Array.from({ length: entry.count }, () => entry.cardId))
+}
+
+function tierOrder(tier: EnemyTier | undefined): number {
+  return tier === 'Weak' ? 0 : tier === 'Strong' ? 1 : tier === 'Elite' ? 2 : tier === 'Boss' ? 3 : 9
+}
+
+function MonstersTab({ allIds, discovered }: { allIds: string[]; discovered: Set<string> }) {
+  const { catalog: enemyCatalog } = useEnemyCatalog()
+  const { names: cardNames, catalog: cardCatalog } = useCardCatalog()
+  const [query, setQuery] = useState('')
+  const [discoveryFilter, setDiscoveryFilter] = useState<DiscoveryFilter>('all')
+  const [tierFilter, setTierFilter] = useState<EnemyTierFilter>('all')
+  const [deckPreview, setDeckPreview] = useState<EnemyCatalogEntryDto | null>(null)
+
+  const normalizedQuery = query.trim().toLocaleLowerCase('ja')
+  const monsters = allIds
+    .map(id => ({ id, enemy: enemyCatalog?.[id] ?? null, isDiscovered: discovered.has(id) }))
+    .sort((a, b) => (a.enemy?.act ?? 99) - (b.enemy?.act ?? 99)
+      || tierOrder(a.enemy?.tier) - tierOrder(b.enemy?.tier)
+      || a.id.localeCompare(b.id))
+    .filter(entry => {
+      const matchesDiscovery = discoveryFilter === 'all'
+        || (discoveryFilter === 'discovered' ? entry.isDiscovered : !entry.isDiscovered)
+      const matchesTier = tierFilter === 'all' || entry.enemy?.tier === tierFilter
+      const matchesQuery = normalizedQuery.length === 0
+        || (entry.isDiscovered
+          && (entry.enemy?.name ?? entry.id).toLocaleLowerCase('ja').includes(normalizedQuery))
+      return matchesDiscovery && matchesTier && matchesQuery
+    })
+  const discoveredCount = monsters.filter(entry => entry.isDiscovered).length
+
+  return (
+    <div className="achievements__panel achievements__panel--monsters">
+      <div className="achievements__panel-title-row">
+        <div className="achievements__panel-title">▸ MONSTERS</div>
+        <p className="achievements__count">{discoveredCount} / {monsters.length} 発見</p>
+      </div>
+      <ArchiveTools
+        label="モンスター"
+        query={query}
+        onQuery={setQuery}
+        discovery={discoveryFilter}
+        onDiscovery={setDiscoveryFilter}
+      />
+      <div className="achievements__filter-row" role="group" aria-label="ポジションで絞り込み">
+        <span className="achievements__filter-label">ポジション</span>
+        {ENEMY_TIER_FILTERS.map(option => (
+          <button
+            key={option.value}
+            type="button"
+            aria-pressed={tierFilter === option.value}
+            className={'achievements__filter-chip'
+              + (tierFilter === option.value ? ' achievements__filter-chip--active' : '')}
+            onClick={() => setTierFilter(option.value)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+      <div className="achievements__scroll">
+        {monsters.length === 0 && <p className="achievements__empty">該当するモンスターはいません。</p>}
+        <div className="achievements__character-grid">
+          {monsters.map(entry => (
+            <MonsterTile
+              key={entry.id}
+              id={entry.id}
+              enemy={entry.enemy}
+              isDiscovered={entry.isDiscovered}
+              cardNames={cardNames}
+              cardCatalog={cardCatalog}
+              onOpenDeck={() => { if (entry.enemy) setDeckPreview(entry.enemy) }}
+            />
+          ))}
+        </div>
+      </div>
+      {deckPreview ? (
+        <DeckListModal
+          title={`${deckPreview.name}の行動デッキ (${expandEnemyDeck(deckPreview).length}枚)`}
+          cardIds={expandEnemyDeck(deckPreview)}
+          catalog={cardCatalog}
+          emptyText="行動デッキは空です。"
+          onClose={() => setDeckPreview(null)}
+        />
+      ) : null}
+    </div>
+  )
+}
+
+function MonsterTile({ id, enemy, isDiscovered, cardNames, cardCatalog, onOpenDeck }: {
+  id: string
+  enemy: EnemyCatalogEntryDto | null
+  isDiscovered: boolean
+  cardNames: Record<string, string>
+  cardCatalog: ReturnType<typeof useCardCatalog>['catalog']
+  onOpenDeck: () => void
+}) {
+  const shown = isDiscovered && enemy !== null ? enemy : null
+  const image = shown?.imageId ? `/characters/enemies/${shown.imageId}.png` : null
+  const deckIds = shown ? expandEnemyDeck(shown) : []
+  const deck = aggregateDeck(deckIds, cardNames)
+  const openingActions = shown?.openingActions ?? []
+  return (
+    <div
+      className={'achievements__character-cell achievements__character-cell--monster'
+        + (shown ? '' : ' is-locked')}
+      data-enemy-id={id}
+    >
+      <div className="achievements__character-summary">
+        <div className="achievements__character-portrait achievements__character-portrait--monster">
+          {shown && image ? (
+            <img
+              src={image}
+              alt=""
+              draggable={false}
+              onError={event => {
+                event.currentTarget.hidden = true
+                event.currentTarget.nextElementSibling?.removeAttribute('hidden')
+              }}
+            />
+          ) : null}
+          <span className="achievements__character-glyph" aria-hidden="true" hidden={!!(shown && image)}>
+            {shown ? '☠' : '?'}
+          </span>
+          {shown?.tier ? (
+            <span className="achievements__character-class-badge">{ENEMY_TIER_LABEL[shown.tier]}</span>
+          ) : null}
+        </div>
+        <div className="achievements__character-identity">
+          <strong className="achievements__character-name">{shown ? shown.name : '???'}</strong>
+          {shown && (
+            <ActorStats
+              className="achievements__character-stats"
+              stats={{
+                hp: shown.hp,
+                energyPerTurn: shown.energyPerTurn,
+                drawPerTurn: shown.drawPerTurn,
+                attack: shown.attack,
+                defense: shown.defense,
+              }}
+            />
+          )}
+        </div>
+      </div>
+      {shown && (
+        <div className="achievements__character-details">
+          <CharacterTextSection label="生息地・ポジション">
+            <p>
+              生息地：{shown.act ? `Act ${shown.act}` : '不明'}<br />
+              ポジション：{shown.tier ? ENEMY_TIER_LABEL[shown.tier] : '不明'}
+            </p>
+          </CharacterTextSection>
+          <CharacterTextSection label="キャラクター説明">
+            <p>{shown.description?.trim() || 'キャラクター説明は未設定です。'}</p>
+          </CharacterTextSection>
+          <CharacterTextSection label="初期行動（先制行動）">
+            {openingActions.length === 0 ? <p>なし</p> : openingActions.map((cardId, index) => (
+              <div key={`${cardId}-${index}`} className="achievements__character-action">
+                <strong>{cardCatalog?.[cardId]?.displayName ?? cardCatalog?.[cardId]?.name ?? cardId}</strong>
+                <CharacterAbilityDescription text={cardCatalog?.[cardId]?.description ?? ''} />
+              </div>
+            ))}
+          </CharacterTextSection>
+          <section className="achievements__character-section achievements__character-deck">
+            <DeckHeading
+              label={`行動デッキ ${deckIds.length}枚`}
+              ariaLabel={`${shown.name}の行動デッキ（${deckIds.length}枚）を表示`}
+              disabled={deckIds.length === 0}
+              onOpen={onOpenDeck}
+            />
+            {deck.length > 0 ? (
+              <ul>
+                {deck.map(item => (
+                  <li key={item.id}>
+                    <span>{item.name}</span><strong>×{item.count}</strong>
+                  </li>
+                ))}
+              </ul>
+            ) : <p>行動デッキは空です。</p>}
+          </section>
+        </div>
+      )}
     </div>
   )
 }

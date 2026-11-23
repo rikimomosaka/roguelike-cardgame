@@ -1017,3 +1017,79 @@
     transition-duration: 0.001ms !important;
   }
 }
+
+/* ---------- デッキ欄の見出しボタン（押すとカード一覧モーダル） ---------- */
+.achievements__deck-open {
+  width: 100%;
+  margin: 0 0 5px;
+  padding: 0 0 4px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  border: 0;
+  border-bottom: 1px solid rgba(201, 152, 90, 0.32);
+  background: transparent;
+  color: var(--gold-soft);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.achievements__deck-open-hint {
+  color: var(--fg-muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.achievements__deck-open:hover:not(:disabled) .achievements__deck-open-hint,
+.achievements__deck-open:focus-visible .achievements__deck-open-hint {
+  color: var(--gold);
+  text-decoration: underline;
+}
+
+.achievements__deck-open:disabled {
+  cursor: default;
+}
+
+/* ---------- モンスター枠 ---------- */
+.achievements__character-cell--monster { --character-accent: #a3213a; }
+
+.achievements__character-portrait--monster img {
+  object-fit: contain;
+  object-position: center bottom;
+}
+
+/* ---------- 1 画面に左右 2 体がちょうど収まる高さ ----------
+   スクロール領域の高さ（コンテナクエリ）から 1 枠の高さを決める。
+   3 体目以降はスクロールで見る。 */
+.achievements__scroll {
+  container-type: size;
+}
+
+.achievements__character-grid .achievements__character-cell {
+  height: 100cqh;
+  min-height: 0;
+}
+
+.achievements__character-grid .achievements__character-details {
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+/* 種別チップの右に同じ行でクラス絞り込みを並べる。 */
+.achievements__filter-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 18px;
+  padding-left: 18px;
+  border-left: 1px solid var(--border-dark);
+}
+
+.achievements__tools {
+  padding-block: 5px;
+}

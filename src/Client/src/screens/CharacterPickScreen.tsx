@@ -3,14 +3,12 @@ import type { ReactNode } from 'react'
 import { fetchCharacterCatalog, getCardCatalog } from '../api/catalog'
 import type { CardCatalog, CharacterCatalog, CharacterClass } from '../api/catalog'
 import { startNewRun } from '../api/runs'
-import type { CharacterCatalogEntryDto, CharacterSkillCatalogEntryDto, RunSnapshotDto } from '../api/types'
+import type { CharacterSkillCatalogEntryDto, RunSnapshotDto } from '../api/types'
 import { Button } from '../components/Button'
-import { Card } from '../components/Card'
-import type { CardType } from '../components/Card'
 import { ActorStats } from '../components/ActorStats'
+import { DeckListModal } from '../components/DeckListModal'
 import { CardDesc } from '../components/CardDesc'
 import type { CardDescTerm } from '../components/CardDesc'
-import { rarityCodeFromNumber } from '../components/rarity'
 import { useTooltipTarget } from '../components/Tooltip'
 import {
   DEFAULT_CHARACTER_PORTRAIT,
@@ -292,9 +290,10 @@ export function CharacterPickScreen({
           </Button>
         </div>
       </footer>
-      {deckPreviewCharacterId && characters && cards ? (
-        <InitialDeckModal
-          character={characters[deckPreviewCharacterId]}
+      {deckPreviewCharacterId && characters?.[deckPreviewCharacterId] && cards ? (
+        <DeckListModal
+          title={`${characters[deckPreviewCharacterId].name}の初期デッキ (${characters[deckPreviewCharacterId].deck?.length ?? 0}枚)`}
+          cardIds={characters[deckPreviewCharacterId].deck ?? []}
           catalog={cards}
           onClose={() => setDeckPreviewCharacterId(null)}
         />
@@ -368,66 +367,6 @@ function renderCharacterTerm(term: CardDescTerm, rendered: ReactNode, key: numbe
   )
 }
 
-function InitialDeckModal({
-  character,
-  catalog,
-  onClose,
-}: {
-  character?: CharacterCatalogEntryDto
-  catalog: CardCatalog
-  onClose: () => void
-}) {
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [onClose])
-
-  if (!character) return null
-  const deck = character.deck ?? []
-  return (
-    <div className="character-pick__deck-backdrop" onClick={onClose} role="presentation">
-      <div
-        className="character-pick__deck-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="character-pick-deck-title"
-        onClick={event => event.stopPropagation()}
-      >
-        <header className="character-pick__deck-modal-header">
-          <span id="character-pick-deck-title">{character.name}の初期デッキ ({deck.length}枚)</span>
-          <button type="button" onClick={onClose} aria-label="閉じる">×</button>
-        </header>
-        {deck.length === 0 ? (
-          <p className="character-pick__deck-modal-empty">初期デッキは空です。</p>
-        ) : (
-          <ul className="character-pick__deck-modal-list">
-            {deck.map((cardId, index) => {
-              const definition = catalog[cardId]
-              return (
-                <li key={`${cardId}-${index}`}>
-                  <Card
-                    name={definition?.displayName ?? definition?.name ?? cardId}
-                    cost={definition?.cost ?? 'X'}
-                    costOriginal={definition?.cost ?? null}
-                    type={cardTypeCode(definition?.cardType ?? 'Skill')}
-                    rarity={rarityCodeFromNumber(definition?.rarity ?? 0)}
-                    poolClass={definition?.poolClass ?? null}
-                    description={definition?.description ?? ''}
-                    upgradedDescription={definition?.upgradedDescription ?? null}
-                  />
-                </li>
-              )
-            })}
-          </ul>
-        )}
-      </div>
-    </div>
-  )
-}
-
 function classLabel(characterClass: CharacterClass): string {
   return CHARACTER_CLASSES.find(entry => entry.id === characterClass)?.label ?? characterClass
 }
@@ -442,13 +381,3 @@ function aggregateDeck(ids: readonly string[], catalog: CardCatalog) {
   }))
 }
 
-function cardTypeCode(value: string): CardType {
-  switch (value.toLowerCase()) {
-    case 'attack': return 'attack'
-    case 'power': return 'power'
-    case 'unit': return 'unit'
-    case 'curse': return 'curse'
-    case 'status': return 'status'
-    default: return 'skill'
-  }
-}

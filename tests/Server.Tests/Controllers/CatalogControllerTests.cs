@@ -116,6 +116,9 @@ public class CatalogControllerTests : IClassFixture<TempDataFactory>
         Assert.True(jw.GetProperty("attack").GetInt32() > 0);
         Assert.True(jw.GetProperty("deck").GetArrayLength() > 0);
         Assert.Equal(JsonValueKind.Array, jw.GetProperty("openingActions").ValueKind);
+        // 図鑑用: 生息地（幕）とポジション。
+        Assert.Equal(1, jw.GetProperty("act").GetInt32());
+        Assert.Equal("Weak", jw.GetProperty("tier").GetString());
     }
 
     [Fact]

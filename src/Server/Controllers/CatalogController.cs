@@ -57,7 +57,11 @@ public sealed class CatalogController : ControllerBase
         int DrawPerTurn = 0,
         int HandLimit = 0,
         IReadOnlyList<UnitDeckEntryDto>? Deck = null,
-        IReadOnlyList<string>? OpeningActions = null);
+        IReadOnlyList<string>? OpeningActions = null,
+        // 図鑑表示用: 生息地（幕）・ポジション（Weak/Strong/Elite/Boss）・説明。
+        int Act = 0,
+        string Tier = "Weak",
+        string? Description = null);
 
     public sealed record UnitCatalogEntryDto(
         string Id,
@@ -177,7 +181,10 @@ public sealed class CatalogController : ControllerBase
                     ? def.EffectiveDeck.Select(entry => new UnitDeckEntryDto(
                         entry.CardId, entry.Count, entry.Upgraded, entry.Priority)).ToArray()
                     : null,
-                OpeningActions: def.EffectiveOpeningActions.ToArray());
+                OpeningActions: def.EffectiveOpeningActions.ToArray(),
+                Act: def.Pool.Act,
+                Tier: def.Pool.Tier.ToString(),
+                Description: def.Description);
         }
         return Ok(result);
     }

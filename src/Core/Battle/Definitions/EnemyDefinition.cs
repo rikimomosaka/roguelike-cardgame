@@ -25,7 +25,8 @@ public sealed record EnemyDefinition(
     string? AiProfileId = null,
     int Attack = 0,
     int Defense = 0,
-    IReadOnlyList<string>? OpeningActions = null)
+    IReadOnlyList<string>? OpeningActions = null,
+    string? Description = null)
     : CombatActorDefinition(Id, Name, ImageId, Hp, HeightTier, InitialMoveId, Moves)
 {
     /// <summary>通常行動デッキ（共通カード＋固有カード）。先制行動はここに含めない。</summary>
