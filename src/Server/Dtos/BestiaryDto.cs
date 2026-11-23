@@ -32,7 +32,12 @@ public sealed record BestiaryCharacterDto(
     string TraitDescription,
     IReadOnlyList<BestiaryCharacterActionDto> Actions,
     IReadOnlyList<BestiarySummonCardDto> SummonCards,
-    string? CharacterClass = null);
+    string? CharacterClass = null,
+    // 能力値: 行動力(エナジー回復量)・知力(ドロー枚数)・攻撃力・守備力。体力は MaxHp。
+    int EnergyPerTurn = 0,
+    int DrawPerTurn = 0,
+    int Attack = 0,
+    int Defense = 0);
 
 public sealed record BestiaryCharacterActionDto(
     string Category,

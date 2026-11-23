@@ -52,7 +52,7 @@ public class CatalogControllerTests : IClassFixture<TempDataFactory>
         // 攻撃の基本は使用者の攻撃力を参照する（戦闘外は使用者不明のため変数表示）。
         Assert.Equal("敵単体に[V:X|自身の攻撃力]アタック。", strike.GetProperty("description").GetString());
         // upgraded: 攻撃力の 1.5 倍
-        Assert.Equal("敵単体に[V:X|自身の攻撃力の1.5倍]アタック。", strike.GetProperty("upgradedDescription").GetString());
+        Assert.Equal("敵単体に[V:X|自身の攻撃力×1.5]アタック。", strike.GetProperty("upgradedDescription").GetString());
     }
 
     [Fact]

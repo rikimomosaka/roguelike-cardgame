@@ -319,4 +319,19 @@ describe('CardDesc', () => {
     expect(num?.classList.contains('card-desc-num--up')).toBe(false)
     expect(num?.classList.contains('card-desc-num--down')).toBe(false)
   })
+
+  it('shows a resolved stat reference as a number on the card face', () => {
+    const { container } = render(<CardDesc text="敵全体に[R:7|up:自身の攻撃力]アタック。" />)
+    const num = container.querySelector('.card-desc-num')
+    expect(num?.textContent).toBe('7')
+    expect(num).toHaveClass('card-desc-num--up')
+    expect(container.textContent).not.toContain('Xは')
+  })
+
+  it('reveals the stat reference in expanded text such as tooltips', () => {
+    const { container } = render(
+      <CardDesc text="敵全体に[R:9|:自身の攻撃力×1.5]アタック。" compress={false} />,
+    )
+    expect(container.textContent).toBe('敵全体にX(Xは自身の攻撃力×1.5)アタック。')
+  })
 })

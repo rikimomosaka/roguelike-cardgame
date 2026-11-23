@@ -130,6 +130,56 @@
   text-align: center;
 }
 
+/* カード（左）と説明（右）を横並びにし、ページ送りは下段に全幅で置く。 */
+.battle-replay__entry:has(.battle-replay__pager) {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 14px;
+  row-gap: 6px;
+}
+
+.battle-replay__entry:has(.battle-replay__pager):not(:has(.battle-replay__card)) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* 予定行動のページ送り（◀ n/N ▶）。 */
+.battle-replay__pager {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.battle-replay__page-button {
+  min-width: 34px;
+  min-height: 22px;
+  padding: 0 6px;
+  border: 1px solid var(--fg-muted);
+  border-radius: 3px;
+  background: linear-gradient(180deg, rgba(119, 68, 33, 0.55), rgba(39, 21, 13, 0.96));
+  color: var(--gold-soft);
+  font: 11px var(--font-body);
+  cursor: pointer;
+}
+
+.battle-replay__page-button:hover:not(:disabled) {
+  border-color: var(--gold);
+}
+
+.battle-replay__page-button:disabled {
+  cursor: default;
+  opacity: 0.38;
+}
+
+.battle-replay__page-label {
+  min-width: 40px;
+  color: #fff;
+  text-align: center;
+  font: 12px var(--font-digit);
+  font-variant-numeric: tabular-nums;
+}
+
 .battle-replay__entry--externalEffect {
   border-color: rgba(105, 190, 238, 0.75);
   background: rgba(12, 24, 32, 0.94);

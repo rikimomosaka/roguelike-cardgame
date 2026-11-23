@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { BattleReplayEntryDto } from '../../api/types'
 import './BattleReplayControls.css'
@@ -29,9 +30,24 @@ function normalizedFeedLabel(feedState: string): string {
   return 'LIVE'
 }
 
+/** 内部用の注記（例: "remaining=3"）を読める文に置き換える。 */
+function describeEffectNote(kind: string, amount: number | null, description: string): string {
+  const remaining = description.match(/^remaining=(-?\d+)$/)
+  if (remaining) {
+    if (kind === 'ComboGaugeChanged') {
+      const delta = amount === null ? '' : amount >= 0 ? `+${amount}` : `${amount}`
+      return `コンボゲージ${delta}（合計 ${remaining[1]}）`
+    }
+    return `残り ${remaining[1]}`
+  }
+  return description
+}
+
 function describeEffect(entry: BattleReplayEntryDto): string[] {
   return entry.effects.map(effect => {
-    if (effect.description) return effect.description
+    if (effect.description) {
+      return describeEffectNote(effect.kind, effect.amount, effect.description)
+    }
     const status = effect.statusId ? ` ${effect.statusId}` : ''
     const amount = effect.amount === null ? '' : ` ${effect.amount}`
     return `${effect.kind}${status}${amount}`
@@ -41,7 +57,15 @@ function describeEffect(entry: BattleReplayEntryDto): string[] {
 function describeIntent(entry: BattleReplayEntryDto): string[] {
   return entry.intents.map(intent => {
     const hits = intent.hits > 1 ? `×${intent.hits}` : ''
-    return `${intent.scope} ${intent.amount}${hits}`
+    const kind = intent.kind === 'attack' ? 'アタック'
+      : intent.kind === 'block' ? 'ブロック'
+        : intent.kind
+    const scope = intent.scope === 'all' ? '全体'
+      : intent.scope === 'single' ? '単体'
+        : intent.scope === 'random' ? 'ランダム'
+          : intent.scope === 'self' ? '自身'
+            : intent.scope
+    return `${scope}に${kind} ${intent.amount}${hits}`
   })
 }
 
@@ -64,7 +88,44 @@ export function BattleReplayControls({
   renderCard,
 }: Props) {
   const clampedPosition = Math.max(0, Math.min(position, entries.length))
-  const current = clampedPosition > 0 ? entries[clampedPosition - 1] : null
+  // ページ送りで任意の行動（予定カード）を閲覧できる。再生位置が進んだら追従に戻す。
+  const [browseIndex, setBrowseIndex] = useState<number | null>(null)
+  useEffect(() => {
+    setBrowseIndex(null)
+  }, [clampedPosition])
+  const followIndex = clampedPosition > 0 ? clampedPosition - 1 : null
+  const viewIndex = browseIndex !== null && browseIndex < entries.length
+    ? browseIndex
+    : followIndex
+  const current = viewIndex !== null ? entries[viewIndex] ?? null : null
+  const canPage = !playing && entries.length > 0
+  const pageTo = (index: number) =>
+    setBrowseIndex(Math.max(0, Math.min(entries.length - 1, index)))
+  const pager = entries.length > 0 ? (
+    <div className="battle-replay__pager">
+      <button
+        type="button"
+        className="battle-replay__page-button"
+        onClick={() => pageTo((viewIndex ?? 0) - 1)}
+        disabled={!canPage || viewIndex === null || viewIndex <= 0}
+        aria-label="前の行動を表示"
+      >
+        ◀
+      </button>
+      <span className="battle-replay__page-label" aria-label={`表示中の行動 ${viewIndex === null ? 0 : viewIndex + 1}/${entries.length}`}>
+        {viewIndex === null ? '-' : viewIndex + 1}/{entries.length}
+      </span>
+      <button
+        type="button"
+        className="battle-replay__page-button"
+        onClick={() => pageTo(viewIndex === null ? 0 : viewIndex + 1)}
+        disabled={!canPage || (viewIndex !== null && viewIndex >= entries.length - 1)}
+        aria-label="次の行動を表示"
+      >
+        ▶
+      </button>
+    </div>
+  ) : null
   const feedLabel = normalizedFeedLabel(feedState)
   const effectLines = current ? describeEffect(current) : []
   const intentLines = current ? describeIntent(current) : []
@@ -116,10 +177,12 @@ export function BattleReplayControls({
             ))}
             {current.note ? <div className="battle-replay__note">{current.note}</div> : null}
           </div>
+          {pager}
         </div>
       ) : (
         <div className="battle-replay__entry battle-replay__entry--empty" aria-live="polite">
           {loading ? '行動を読み込み中…' : '再生を開始できます。'}
+          {pager}
         </div>
       )}
 
@@ -131,7 +194,7 @@ export function BattleReplayControls({
           onClick={onRestart}
           disabled={entries.length === 0}
         >
-          最初から再生
+          最初から
         </button>
         <button
           type="button"

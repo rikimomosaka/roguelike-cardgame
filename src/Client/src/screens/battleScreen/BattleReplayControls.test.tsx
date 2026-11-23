@@ -68,7 +68,7 @@ describe('BattleReplayControls', () => {
     expect(screen.getByLabelText('行動状態 READY')).toBeInTheDocument()
     expect(screen.queryByLabelText('再生進捗')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '戻る' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '最初から再生' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '最初から' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'スキップ' })).toBeDisabled()
   })
 
@@ -173,5 +173,55 @@ describe('BattleReplayControls', () => {
     rerender(<BattleReplayControls {...props} position={2} />)
     expect(screen.getByText('活力ポーションから受けた効果')).toBeInTheDocument()
     expect(screen.getByText('発生元: 冒険者（活力ポーション）')).toBeInTheDocument()
+  })
+
+  it('pages through every planned card and explains combo gauge notes', () => {
+    const play = (sequence: number, name: string) => entry({
+      sequence,
+      commandId: `command-${sequence}`,
+      card: {
+        cardInstanceId: `c${sequence}`,
+        definitionId: `card_${sequence}`,
+        displayName: name,
+        cardType: 'Attack',
+        rarity: 'Token',
+        isUpgraded: false,
+        originalCost: 1,
+        currentCost: 1,
+        paidCost: 1,
+        description: '',
+        costChanges: [],
+      },
+      effects: [{
+        kind: 'ComboGaugeChanged',
+        sourceActorInstanceId: 'enemy-1',
+        targetParticipantId: null,
+        targetActorInstanceId: null,
+        amount: 1,
+        statusId: null,
+        description: `remaining=${sequence}`,
+      }],
+    })
+    render(
+      <BattleReplayControls
+        subjectName="スライム"
+        feedState="complete"
+        entries={[play(1, '通常攻撃'), play(2, '硬化')]}
+        position={2}
+        playing={false}
+        speed={1}
+        {...callbacks}
+      />,
+    )
+
+    expect(screen.getByText('硬化')).toBeInTheDocument()
+    expect(screen.getByText('コンボゲージ+1（合計 2）')).toBeInTheDocument()
+    expect(screen.queryByText(/remaining=/)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '次の行動を表示' })).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('button', { name: '前の行動を表示' }))
+    expect(screen.getByText('通常攻撃')).toBeInTheDocument()
+    expect(screen.getByLabelText('表示中の行動 1/2')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '前の行動を表示' })).toBeDisabled()
   })
 })

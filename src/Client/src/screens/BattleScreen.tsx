@@ -1793,6 +1793,8 @@ export function BattleComboControls({
   ultimateUsesThisTurn,
   tacticalUnconfigured,
   ultimateUnconfigured,
+  tacticalHidden = false,
+  ultimateHidden = false,
   finisherRecord,
   onOpenFinisherRecord,
   tacticalDisabledReason,
@@ -1814,6 +1816,9 @@ export function BattleComboControls({
   ultimateUsesThisTurn?: number
   tacticalUnconfigured?: boolean
   ultimateUnconfigured?: boolean
+  /** 戦技・奥義を持たない参加者（敵など）の表示中は UI ごと隠す。 */
+  tacticalHidden?: boolean
+  ultimateHidden?: boolean
   finisherRecord?: FinisherRecordDto | null
   onOpenFinisherRecord?: () => void
   tacticalDisabledReason?: string
@@ -1821,6 +1826,7 @@ export function BattleComboControls({
 }) {
   return (
     <div className="battle__combo-controls">
+      {tacticalHidden ? <div className="battle__combo-skill-placeholder" aria-hidden="true" /> : (
       <ComboSkillControl
         kind="tactical"
         disabled={tacticalDisabled}
@@ -1835,6 +1841,7 @@ export function BattleComboControls({
         unconfigured={tacticalUnconfigured}
         disabledReason={tacticalDisabledReason}
       />
+      )}
       <div className="battle__combo-column">
         <ComboChip
           count={count}
@@ -1855,6 +1862,7 @@ export function BattleComboControls({
           </button>
         ) : null}
       </div>
+      {ultimateHidden ? <div className="battle__combo-skill-placeholder" aria-hidden="true" /> : (
       <ComboSkillControl
         kind="ultimate"
         disabled={ultimateDisabled}
@@ -1869,6 +1877,7 @@ export function BattleComboControls({
         unconfigured={ultimateUnconfigured}
         disabledReason={ultimateDisabledReason}
       />
+      )}
     </div>
   )
 }
@@ -4211,6 +4220,8 @@ export function BattleScreen({
       <div
         className={`battle${((slotAnim.hitIds?.length ?? 0) + (slotAnim.blockedIds?.length ?? 0)) > 0 ? ' is-impacting' : ''}`}
         data-act={snapshot.run.currentAct}
+        // 敵の行動再生中はプレイヤーUIを敵用の装飾に切り替える。
+        data-ui-owner={replayView?.actor.side === 'Enemy' ? 'enemy' : undefined}
       >
         <div className="battle__pattern" />
         <div className="battle__content" data-presentation="shake">
@@ -4225,6 +4236,11 @@ export function BattleScreen({
               READY {readyParticipants}/{participantCount}
             </span>
           </div>
+          {replayView?.actor.side === 'Enemy' ? (
+            <div className="battle-enemy-view-badge" role="status">
+              敵の行動 ― {replayView.subjectName}
+            </div>
+          ) : null}
           <div className="battle__chars">
             <div className="battle__side battle__side--player">
               {playerSlots.map((c, i) => {
@@ -4506,6 +4522,8 @@ export function BattleScreen({
             ultimateSkill={ultimateSkill}
             tacticalUnconfigured={viewingReplay && !tacticalSkill}
             ultimateUnconfigured={viewingReplay && !ultimateSkill}
+            tacticalHidden={viewingReplay && !tacticalSkill}
+            ultimateHidden={viewingReplay && !ultimateSkill}
             tacticalDisabledReason={tacticalDisabledReason}
             ultimateDisabledReason={ultimateDisabledReason}
             tacticalUsesThisTurn={displayedState.characterSkillUsesThisTurn?.tactical ??

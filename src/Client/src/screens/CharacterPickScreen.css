@@ -257,9 +257,12 @@
 
 .character-pick__resources {
   grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 5px;
+  display: block;
+}
+
+.character-pick__resources .actor-stats {
+  gap: 4px;
+  font-size: 10px;
 }
 
 .character-pick__resource {

@@ -610,20 +610,25 @@ public static class CardTextFormatter
                 "selfDefense" => context.DefensePower,
                 _ => null,
             };
-            if (stat is { } statValue)
-            {
-                return AmountToken(
-                    e with
-                    {
-                        Amount = Battle.Engine.AmountSourceEvaluator.Scale(statValue, e.AmountScalePercent),
-                        AmountSource = null,
-                        AmountScalePercent = null,
-                    },
-                    context);
-            }
             var label = AmountSourceJp(e.AmountSource);
             if (e.AmountScalePercent is { } pct && pct != 100)
-                label += $"の{FormatScale(pct)}倍";
+                label += $"×{FormatScale(pct)}";
+            if (stat is { } statValue)
+            {
+                // [R:値|修飾:参照ラベル]。カード面は値（上振れ/下振れ色付き）、
+                // ポップアップでは「X(Xは参照ラベル)」と表示し、固定値カードと見分けられるようにする。
+                var resolved = e with
+                {
+                    Amount = Battle.Engine.AmountSourceEvaluator.Scale(statValue, e.AmountScalePercent),
+                    AmountSource = null,
+                    AmountScalePercent = null,
+                };
+                int adjustedStat = AdjustAmount(resolved, context);
+                string statModifier = adjustedStat > resolved.Amount
+                    ? "up"
+                    : adjustedStat < resolved.Amount ? "down" : "";
+                return $"[R:{adjustedStat}|{statModifier}:{label}]";
+            }
             // 1 個目変数は X (将来 Y/Z 採番予定。本フェーズでは X 固定)
             return $"[V:X|{label}]";
         }

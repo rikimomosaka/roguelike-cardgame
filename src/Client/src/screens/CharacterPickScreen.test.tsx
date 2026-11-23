@@ -119,9 +119,12 @@ describe('CharacterPickScreen', () => {
     const { container } = renderPicker()
 
     expect(await screen.findByRole('button', { name: '冒険者を選択' })).toBeInTheDocument()
-    expect(screen.getByText('HP 80')).toBeInTheDocument()
-    expect(screen.getByText('ENERGY +3')).toBeInTheDocument()
-    expect(screen.getByText('DRAW 5')).toBeInTheDocument()
+    // 能力値: 体力・行動力・知力・攻撃力・守備力。
+    expect(container.querySelector('.actor-stats__item--hp')).toHaveTextContent('体力80')
+    expect(container.querySelector('.actor-stats__item--energyPerTurn')).toHaveTextContent('行動力3')
+    expect(container.querySelector('.actor-stats__item--drawPerTurn')).toHaveTextContent('知力5')
+    expect(container.querySelector('.actor-stats__item--attack')).toHaveTextContent('攻撃力')
+    expect(container.querySelector('.actor-stats__item--defense')).toHaveTextContent('守備力')
     expect(screen.getByText('攻撃を得意とする冒険者。')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '特性：連閃' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '戦技：刃風展開' })).toBeInTheDocument()
@@ -138,9 +141,6 @@ describe('CharacterPickScreen', () => {
     expect(container.querySelector('.character-pick__portrait img')).toHaveAttribute(
       'src', '/characters/portraits/default.png',
     )
-    expect(screen.getByText('HP 80')).toHaveClass('character-pick__resource')
-    expect(screen.getByText('ENERGY +3')).toHaveClass('character-pick__resource')
-    expect(screen.getByText('DRAW 5')).toHaveClass('character-pick__resource')
     expect(screen.getByRole('button', { name: '冒険者を選択' })).toHaveClass(
       'character-pick__select',
     )

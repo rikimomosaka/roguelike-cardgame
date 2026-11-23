@@ -1,0 +1,36 @@
+.actor-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 6px;
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.actor-stats__item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  padding: 1px 5px;
+  border: 1px solid rgba(201, 152, 90, 0.45);
+  border-radius: 3px;
+  background: rgba(16, 9, 6, 0.55);
+  white-space: nowrap;
+}
+
+.actor-stats__item dt {
+  margin: 0;
+  color: var(--fg-muted, #b9a58a);
+}
+
+.actor-stats__item dd {
+  margin: 0;
+  color: var(--gold-soft, #f3d79a);
+  font-variant-numeric: tabular-nums;
+}
+
+.actor-stats__item--hp dd { color: #8ee28e; }
+.actor-stats__item--energyPerTurn dd { color: #ffd54f; }
+.actor-stats__item--drawPerTurn dd { color: #9fd3ff; }
+.actor-stats__item--attack dd { color: #ff9a8a; }
+.actor-stats__item--defense dd { color: #a8c8ff; }

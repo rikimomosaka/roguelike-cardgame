@@ -7,6 +7,7 @@ import type { CharacterCatalogEntryDto, CharacterSkillCatalogEntryDto, RunSnapsh
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import type { CardType } from '../components/Card'
+import { ActorStats } from '../components/ActorStats'
 import { CardDesc } from '../components/CardDesc'
 import type { CardDescTerm } from '../components/CardDesc'
 import { rarityCodeFromNumber } from '../components/rarity'
@@ -196,9 +197,15 @@ export function CharacterPickScreen({
                       <span>{classLabel(character.characterClass ?? 'Striker')}</span>
                     </span>
                     <span className="character-pick__resources" aria-label="開始時の能力値">
-                      <span className="character-pick__resource character-pick__resource--hp">HP {character.maxHp}</span>
-                      <span className="character-pick__resource character-pick__resource--energy">ENERGY +{character.energyPerTurn ?? 3}</span>
-                      <span className="character-pick__resource character-pick__resource--draw">DRAW {character.drawPerTurn ?? 5}</span>
+                      <ActorStats
+                        stats={{
+                          hp: character.maxHp,
+                          energyPerTurn: character.energyPerTurn ?? 3,
+                          drawPerTurn: character.drawPerTurn ?? 5,
+                          attack: character.attack ?? 0,
+                          defense: character.defense ?? 0,
+                        }}
+                      />
                     </span>
                     <span className="character-pick__selection-mark">
                       {selected ? '選択中' : '選択する'}

@@ -76,8 +76,13 @@ public class ActorStatAmountTests
         var known = CardTextFormatter.Format(card, upgraded: false,
             new CardActorContext(Strength: 2, Weak: 0, Dexterity: 0) { AttackPower = 6 });
 
-        Assert.Contains("[V:X|自身の攻撃力の1.5倍]", unknown);
-        Assert.Contains("[N:11|up]", known); // floor(6 * 1.5) + 筋力2
+        Assert.Contains("[V:X|自身の攻撃力×1.5]", unknown);
+        // 値（floor(6 * 1.5) + 筋力2）と、ポップアップで示す参照元ラベルを両方持つ。
+        Assert.Contains("[R:11|up:自身の攻撃力×1.5]", known);
+
+        var noModifier = CardTextFormatter.Format(card, upgraded: false,
+            new CardActorContext(Strength: 0, Weak: 0, Dexterity: 0) { AttackPower = 6 });
+        Assert.Contains("[R:9|:自身の攻撃力×1.5]", noModifier);
     }
 
     [Fact]

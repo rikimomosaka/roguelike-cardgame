@@ -190,7 +190,8 @@ type Props = {
 }
 
 // [N:5] / [K:wild] / [S:strength] / [T:OnTurnStart] / [V:X|手札の数] / [C:strike] / [U:wisp]
-const MARKER_RE = /\[(N|K|S|T|V|C|U):([^\]|]+)(?:\|([^\]]+))?\]/g
+// [R:6|up:自身の攻撃力] = 戦闘中に解決済みの能力値参照（値|上振れ下振れ:参照ラベル）
+const MARKER_RE = /\[(N|K|S|T|V|C|U|R):([^\]|]+)(?:\|([^\]]+))?\]/g
 
 /**
  * カード description のリッチテキスト描画。
@@ -219,7 +220,7 @@ export function CardDesc({
             key={lineIdx}
             className={`card-desc-line-plain${isUsageLimitReachedLine(line) ? ' card-desc-line--usage-limit-reached' : ''}`}
           >
-            {renderLine(line, cardNames, unitNames, disabledKeywords, renderTerm)}
+            {renderLine(line, cardNames, unitNames, disabledKeywords, renderTerm, true)}
             {lineIdx < lines.length - 1 ? '\n' : null}
           </span>
         ))}
@@ -362,6 +363,7 @@ function renderLine(
   unitNames: Record<string, string>,
   disabledKeywords: readonly string[],
   renderTerm?: (term: CardDescTerm, rendered: ReactNode, key: number) => ReactNode,
+  revealStatRefs = false,
 ): ReactNode[] {
   const parts: ReactNode[] = []
   let lastIndex = 0
@@ -371,7 +373,7 @@ function renderLine(
     const idx = m.index ?? 0
     if (idx > lastIndex) parts.push(line.slice(lastIndex, idx))
     const [, kind, value, extra] = m
-    parts.push(renderMarker(kind, value, extra, cardNames, unitNames, disabledKeywords, key++, renderTerm))
+    parts.push(renderMarker(kind, value, extra, cardNames, unitNames, disabledKeywords, key++, renderTerm, revealStatRefs))
     lastIndex = idx + m[0].length
   }
   if (lastIndex < line.length) parts.push(line.slice(lastIndex))
@@ -387,6 +389,7 @@ function renderMarker(
   disabledKeywords: readonly string[],
   key: number,
   renderTerm?: (term: CardDescTerm, rendered: ReactNode, key: number) => ReactNode,
+  revealStatRefs = false,
 ): ReactNode {
   switch (kind) {
     case 'N': {
@@ -453,6 +456,29 @@ function renderMarker(
       return (
         <span key={key} className="card-desc-var">
           {value}(Xは{label})
+        </span>
+      )
+    }
+    case 'R': {
+      // 能力値参照。カード面（圧縮表示）は具体値、ポップアップ等の展開表示では
+      // 「X(Xは自身の攻撃力)」として参照元を示し、固定値カードと見分けられるようにする。
+      const raw = extra ?? ''
+      const separator = raw.indexOf(':')
+      const modifier = separator >= 0 ? raw.slice(0, separator) : ''
+      const label = separator >= 0 ? raw.slice(separator + 1) : raw
+      if (revealStatRefs) {
+        return (
+          <span key={key} className="card-desc-var" data-stat-ref={label}>
+            X(Xは{label})
+          </span>
+        )
+      }
+      const cls = ['card-desc-num']
+      if (modifier === 'up') cls.push('card-desc-num--up')
+      else if (modifier === 'down') cls.push('card-desc-num--down')
+      return (
+        <span key={key} className={cls.join(' ')} data-stat-ref={label}>
+          {value}
         </span>
       )
     }

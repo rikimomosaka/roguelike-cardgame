@@ -3,6 +3,7 @@ import { getBestiary } from '../api/bestiary'
 import { getHistory } from '../api/history'
 import type { BestiaryCharacterDto, BestiaryDto, RunResultDto } from '../api/types'
 import { Card, type CardRarity, type CardType } from '../components/Card'
+import { ActorStats, formatActorStats } from '../components/ActorStats'
 import { CardDesc, type CardDescTerm } from '../components/CardDesc'
 import { cardDisplay } from '../components/cardDisplay'
 import type { CardPoolClass, CharacterClass } from '../api/catalog'
@@ -480,7 +481,16 @@ function CharacterTile({ character }: { character: BestiaryCharacterDto }) {
             {character.isDiscovered ? character.name : '???'}
           </strong>
           {character.isDiscovered && (
-            <span className="achievements__character-stat">HP {character.maxHp}</span>
+            <ActorStats
+              className="achievements__character-stats"
+              stats={{
+                hp: character.maxHp,
+                energyPerTurn: character.energyPerTurn ?? 0,
+                drawPerTurn: character.drawPerTurn ?? 0,
+                attack: character.attack ?? 0,
+                defense: character.defense ?? 0,
+              }}
+            />
           )}
         </div>
       </div>
@@ -629,7 +639,13 @@ function TilesTab({ title, kind, allIds, discovered }: {
       kind === 'relic' ? (relicCatalog?.[id]?.description ?? null)
       : kind === 'potion' ? (potionCatalog?.[id]?.description ?? null)
       : enemyCatalog?.[id]
-        ? `最大HP ${enemyCatalog[id].hp} / 攻撃力 ${enemyCatalog[id].attack ?? 0} / 守備力 ${enemyCatalog[id].defense ?? 0}`
+        ? formatActorStats({
+          hp: enemyCatalog[id].hp,
+          energyPerTurn: enemyCatalog[id].energyPerTurn ?? 0,
+          drawPerTurn: enemyCatalog[id].drawPerTurn ?? 0,
+          attack: enemyCatalog[id].attack ?? 0,
+          defense: enemyCatalog[id].defense ?? 0,
+        })
         : null
     const imageSrc = kind === 'enemy' && enemyCatalog?.[id]?.imageId
       ? `/characters/enemies/${enemyCatalog[id].imageId}.png`

@@ -1145,7 +1145,7 @@ public class BattleStateDtoMapperTests : IClassFixture<TempDataFactory>
 
             var strike = allCards.FirstOrDefault(c => c.CardDefinitionId == "basic_attack");
             Assert.NotNull(strike);
-            Assert.Equal("敵単体に[N:6]アタック。", strike!.AdjustedDescription);
+            Assert.Equal("敵単体に[R:6|:自身の攻撃力]アタック。", strike!.AdjustedDescription);
         }
         finally
         {
@@ -1179,7 +1179,7 @@ public class BattleStateDtoMapperTests : IClassFixture<TempDataFactory>
             Assert.NotNull(strike);
             // 6 + 2 = 8、base 6 と異なるので up 修飾。
             // Phase 10.5.M6.4: 数字 marker 前後 space 全削除
-            Assert.Equal("敵単体に[N:8|up]アタック。", strike!.AdjustedDescription);
+            Assert.Equal("敵単体に[R:8|up:自身の攻撃力]アタック。", strike!.AdjustedDescription);
         }
         finally
         {
@@ -1210,7 +1210,7 @@ public class BattleStateDtoMapperTests : IClassFixture<TempDataFactory>
             Assert.NotNull(strike);
             // 6 * 0.75 = 4.5 → floor 4、base 6 と異なるので down 修飾。
             // Phase 10.5.M6.4: 数字 marker 前後 space 全削除
-            Assert.Equal("敵単体に[N:4|down]アタック。", strike!.AdjustedDescription);
+            Assert.Equal("敵単体に[R:4|down:自身の攻撃力]アタック。", strike!.AdjustedDescription);
         }
         finally
         {
@@ -1240,7 +1240,7 @@ public class BattleStateDtoMapperTests : IClassFixture<TempDataFactory>
             var defend = allCards.FirstOrDefault(c => c.CardDefinitionId == "basic_defense");
             Assert.NotNull(defend);
             // dexterity=3 で 5 + 3 = 8、base 5 と異なるので up 修飾。
-            Assert.Contains("|up]", defend!.AdjustedDescription);
+            Assert.Contains("|up:自身の守備力]", defend!.AdjustedDescription);
         }
         finally
         {
@@ -1540,7 +1540,7 @@ public class BattleStateDtoMapperTests : IClassFixture<TempDataFactory>
             var strike = allCards.FirstOrDefault(c => c.CardDefinitionId == "basic_attack");
             Assert.NotNull(strike);
             Assert.NotNull(strike!.AdjustedUpgradedDescription);
-            Assert.Equal("敵単体に[N:9]アタック。", strike.AdjustedUpgradedDescription);
+            Assert.Equal("敵単体に[R:9|:自身の攻撃力×1.5]アタック。", strike.AdjustedUpgradedDescription);
         }
         finally
         {

@@ -76,7 +76,9 @@ public sealed class CatalogController : ControllerBase
         string? TraitDescription = null,
         IReadOnlyList<CharacterSkillCatalogEntryDto>? Skills = null,
         IReadOnlyList<string>? OwnedRelicIds = null,
-        IReadOnlyList<string>? Potions = null);
+        IReadOnlyList<string>? Potions = null,
+        int Attack = 0,
+        int Defense = 0);
 
     public sealed record UnitDeckEntryDto(
         string CardId,
@@ -99,7 +101,9 @@ public sealed class CatalogController : ControllerBase
         int EnergyPerTurn = 3,
         int DrawPerTurn = 5,
         string? TraitName = null,
-        string? TraitEffects = null);
+        string? TraitEffects = null,
+        int Attack = 0,
+        int Defense = 0);
 
     public sealed record CharacterSkillCatalogEntryDto(
         string Id,
@@ -222,7 +226,9 @@ public sealed class CatalogController : ControllerBase
                     skill.RequiresCardsInHand,
                     skill.EffectiveUsesPerTurn)).ToArray(),
                 def.EffectiveOwnedRelicIds.ToArray(),
-                def.EffectivePotions.ToArray());
+                def.EffectivePotions.ToArray(),
+                def.Attack,
+                def.Defense);
         }
         return Ok(result);
     }
@@ -252,7 +258,9 @@ public sealed class CatalogController : ControllerBase
                 def.EnergyPerTurn,
                 def.DrawPerTurn,
                 def.Trait?.Name,
-                FormatCharacterTraitEffects(def.Trait));
+                FormatCharacterTraitEffects(def.Trait),
+                def.Attack,
+                def.Defense);
         }
         return Ok(result);
     }

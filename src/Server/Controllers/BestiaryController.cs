@@ -79,7 +79,11 @@ public sealed class BestiaryController : ControllerBase
                         skill.Cost.Energy,
                         skill.Cost.ComboGauge)).ToArray(),
                 SummonCards: Array.Empty<BestiarySummonCardDto>(),
-                CharacterClass: character.CharacterClass.ToString()))
+                CharacterClass: character.CharacterClass.ToString(),
+                EnergyPerTurn: character.EnergyPerTurn,
+                DrawPerTurn: character.DrawPerTurn,
+                Attack: character.Attack,
+                Defense: character.Defense))
             .ToArray();
 
         var allies = (_data.Units?.Values ?? Array.Empty<UnitDefinition>())
@@ -112,7 +116,11 @@ public sealed class BestiaryController : ControllerBase
                             ? CardTextFormatter.Format(card, upgraded: true)
                             : null,
                         card.PoolClass?.ToString()))
-                    .ToArray()))
+                    .ToArray(),
+                EnergyPerTurn: unit.EnergyPerTurn,
+                DrawPerTurn: unit.DrawPerTurn,
+                Attack: unit.Attack,
+                Defense: unit.Defense))
             .ToArray();
 
         var dto = new BestiaryDto(

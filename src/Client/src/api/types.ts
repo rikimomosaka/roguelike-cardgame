@@ -239,6 +239,12 @@ export type BestiaryCharacterDto = {
   actions: BestiaryCharacterActionDto[]
   summonCards: BestiarySummonCardDto[]
   characterClass?: import('./catalog').CharacterClass | null
+  /** 行動力（エナジー回復量）。 */
+  energyPerTurn?: number
+  /** 知力（ドロー枚数）。 */
+  drawPerTurn?: number
+  attack?: number
+  defense?: number
 }
 
 export type BestiaryCharacterActionDto = {
@@ -740,6 +746,8 @@ export type UnitCatalogEntryDto = {
   skills?: CharacterSkillCatalogEntryDto[]
   ownedRelicIds?: string[]
   potions?: string[]
+  attack?: number
+  defense?: number
 }
 
 export type UnitDeckEntryDto = {
@@ -767,6 +775,8 @@ export type CharacterCatalogEntryDto = {
   traitName?: string | null
   /** Marker-bearing passive effect text formatted by the server like a card description. */
   traitEffects?: string | null
+  attack?: number
+  defense?: number
 }
 
 export type CharacterSkillCatalogEntryDto = {

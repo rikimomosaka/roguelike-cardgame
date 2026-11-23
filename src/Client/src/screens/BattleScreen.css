@@ -2738,3 +2738,66 @@ html[data-motion='reduced'] .playing-card {
   color: var(--gold-soft);
   outline: none;
 }
+
+/* ================= 敵の行動再生: 敵用 UI 装飾 =================
+   敵の行動再生中は、同じ位置のプレイヤー UI を敵のカード資源で表示する。
+   見分けが付くよう、赤黒の禍々しい装飾へ切り替える（data-ui-owner="enemy"）。 */
+.battle[data-ui-owner="enemy"] .battle__content {
+  box-shadow:
+    inset 0 0 160px 50px rgba(90, 0, 18, 0.62),
+    inset 0 0 40px 6px rgba(150, 10, 40, 0.45);
+}
+
+.battle[data-ui-owner="enemy"] .energy {
+  background:
+    radial-gradient(circle at 50% 38%, rgba(255, 70, 90, 0.42) 0%, rgba(110, 10, 60, 0.55) 45%, transparent 72%),
+    radial-gradient(circle at 50% 50%, #2a0612 0%, #090006 100%);
+  border-color: #a3213a;
+  box-shadow:
+    0 0 10px rgba(220, 30, 60, 0.75),
+    0 0 22px rgba(120, 0, 80, 0.6);
+  color: #ff8a8a;
+  text-shadow: 0 0 6px rgba(255, 40, 70, 0.8), 0 2px 0 #000;
+}
+
+.battle[data-ui-owner="enemy"] .pile__sym--img {
+  filter:
+    brightness(0.85)
+    drop-shadow(0 0 3px rgba(255, 40, 70, 0.95))
+    drop-shadow(0 0 9px rgba(170, 0, 40, 0.85));
+}
+
+.battle[data-ui-owner="enemy"] .pile__num {
+  color: #ff8a8a;
+}
+
+.battle[data-ui-owner="enemy"] .hand > .card {
+  filter: drop-shadow(0 0 7px rgba(190, 0, 35, 0.75));
+}
+
+.battle[data-ui-owner="enemy"] .battle__combo-column {
+  filter: hue-rotate(-35deg) saturate(1.4);
+}
+
+/* READY はプレイヤーの操作なので、敵表示中は出さない。 */
+.battle[data-ui-owner="enemy"] .end-turn {
+  visibility: hidden;
+}
+
+.battle-enemy-view-badge {
+  position: absolute;
+  top: 16px;
+  left: 20px;
+  z-index: var(--z-hud);
+  padding: 3px 16px;
+  border: 1px solid #a3213a;
+  border-radius: 3px;
+  background: linear-gradient(180deg, rgba(70, 0, 16, 0.94), rgba(20, 0, 8, 0.94));
+  box-shadow: 0 0 12px rgba(200, 20, 50, 0.6);
+  color: #ffb3b3;
+  font-family: var(--font-label);
+  font-size: 12px;
+  letter-spacing: 2px;
+  white-space: nowrap;
+  pointer-events: none;
+}
