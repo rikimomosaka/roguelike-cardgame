@@ -1,17 +1,20 @@
+/* 能力値: 1 行 1 項目（ラベル左・値右）。キャラ選択とアーカイブスで同じ見た目。 */
 .actor-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px 6px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 3px;
   margin: 0;
-  font-size: 11px;
-  line-height: 1.2;
+  width: 100%;
+  font-size: 13px;
+  line-height: 1.25;
 }
 
 .actor-stats__item {
-  display: inline-flex;
+  display: flex;
   align-items: baseline;
-  gap: 3px;
-  padding: 1px 5px;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 8px;
   border: 1px solid rgba(201, 152, 90, 0.45);
   border-radius: 3px;
   background: rgba(16, 9, 6, 0.55);
@@ -26,6 +29,8 @@
 .actor-stats__item dd {
   margin: 0;
   color: var(--gold-soft, #f3d79a);
+  font-size: 15px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 

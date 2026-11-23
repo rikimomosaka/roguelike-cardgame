@@ -3,13 +3,14 @@ import './ActorStats.css'
 /**
  * キャラクター共通の能力値。操作キャラ・味方・敵のすべてが持つ。
  * 体力=HP、行動力=ターン開始時のエナジー回復量、知力=ターン開始時のドロー枚数。
+ * 値が無い（古いサーバー等で未送信）場合は 0 と誤表示せず「—」にする。
  */
 export type ActorStatValues = {
-  hp: number
-  energyPerTurn: number
-  drawPerTurn: number
-  attack: number
-  defense: number
+  hp: number | null | undefined
+  energyPerTurn: number | null | undefined
+  drawPerTurn: number | null | undefined
+  attack: number | null | undefined
+  defense: number | null | undefined
 }
 
 const STAT_ROWS: ReadonlyArray<{
@@ -24,11 +25,16 @@ const STAT_ROWS: ReadonlyArray<{
   { key: 'defense', label: '守備力', hint: '守備力参照カードの基準値' },
 ]
 
-// eslint-disable-next-line react-refresh/only-export-components
-export function formatActorStats(stats: ActorStatValues): string {
-  return STAT_ROWS.map(row => `${row.label} ${stats[row.key]}`).join(' / ')
+function displayValue(value: number | null | undefined): string {
+  return typeof value === 'number' ? String(value) : '—'
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
+export function formatActorStats(stats: ActorStatValues): string {
+  return STAT_ROWS.map(row => `${row.label} ${displayValue(stats[row.key])}`).join(' / ')
+}
+
+/** 能力値を 1 行 1 項目で表示する（キャラ選択・アーカイブス共通）。 */
 export function ActorStats({ stats, className }: {
   stats: ActorStatValues
   className?: string
@@ -41,7 +47,7 @@ export function ActorStats({ stats, className }: {
       {STAT_ROWS.map(row => (
         <div key={row.key} className={`actor-stats__item actor-stats__item--${row.key}`} title={row.hint}>
           <dt>{row.label}</dt>
-          <dd>{stats[row.key]}</dd>
+          <dd>{displayValue(stats[row.key])}</dd>
         </div>
       ))}
     </dl>

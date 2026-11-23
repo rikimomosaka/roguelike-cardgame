@@ -260,10 +260,7 @@
   display: block;
 }
 
-.character-pick__resources .actor-stats {
-  gap: 4px;
-  font-size: 10px;
-}
+/* 能力値は ActorStats の共通表示（1 行 1 項目）をそのまま使う。 */
 
 .character-pick__resource {
   min-width: 0;

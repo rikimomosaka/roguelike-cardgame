@@ -239,6 +239,9 @@ export type BestiaryCharacterDto = {
   actions: BestiaryCharacterActionDto[]
   summonCards: BestiarySummonCardDto[]
   characterClass?: import('./catalog').CharacterClass | null
+  /** 特性名と書式付き効果文（[K:..]/[S:..] マーカー入り）。 */
+  traitName?: string | null
+  traitEffects?: string | null
   /** 行動力（エナジー回復量）。 */
   energyPerTurn?: number
   /** 知力（ドロー枚数）。 */

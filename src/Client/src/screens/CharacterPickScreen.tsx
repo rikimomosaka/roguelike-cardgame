@@ -200,10 +200,10 @@ export function CharacterPickScreen({
                       <ActorStats
                         stats={{
                           hp: character.maxHp,
-                          energyPerTurn: character.energyPerTurn ?? 3,
-                          drawPerTurn: character.drawPerTurn ?? 5,
-                          attack: character.attack ?? 0,
-                          defense: character.defense ?? 0,
+                          energyPerTurn: character.energyPerTurn,
+                          drawPerTurn: character.drawPerTurn,
+                          attack: character.attack,
+                          defense: character.defense,
                         }}
                       />
                     </span>
@@ -216,7 +216,7 @@ export function CharacterPickScreen({
                       <h2>キャラクター説明</h2>
                       <p>{character.description?.trim() || 'キャラクター説明は未設定です。'}</p>
                     </section>
-                    <section>
+                    <section className="character-pick__ability">
                       <h2>特性{character.traitName ? `：${character.traitName}` : ''}</h2>
                       <CharacterAbilityText text={
                         character.traitEffects?.trim()

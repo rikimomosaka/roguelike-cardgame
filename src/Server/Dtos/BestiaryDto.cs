@@ -37,7 +37,10 @@ public sealed record BestiaryCharacterDto(
     int EnergyPerTurn = 0,
     int DrawPerTurn = 0,
     int Attack = 0,
-    int Defense = 0);
+    int Defense = 0,
+    // 特性名と書式付き効果文（戦技・奥義と同じくキーワード補足を表示するため）。
+    string? TraitName = null,
+    string? TraitEffects = null);
 
 public sealed record BestiaryCharacterActionDto(
     string Category,

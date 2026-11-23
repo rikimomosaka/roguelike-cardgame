@@ -440,6 +440,12 @@
   text-align: center;
 }
 
+/* 能力値はキャラ選択と同じ ActorStats（1 行 1 項目）。ポートレート列の幅に合わせる。 */
+.achievements__character-identity .actor-stats {
+  align-self: stretch;
+  text-align: left;
+}
+
 .achievements__character-stat {
   min-width: 88px;
   padding: 4px 8px;

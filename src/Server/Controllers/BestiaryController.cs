@@ -83,7 +83,9 @@ public sealed class BestiaryController : ControllerBase
                 EnergyPerTurn: character.EnergyPerTurn,
                 DrawPerTurn: character.DrawPerTurn,
                 Attack: character.Attack,
-                Defense: character.Defense))
+                Defense: character.Defense,
+                TraitName: character.Trait?.Name,
+                TraitEffects: CatalogController.FormatCharacterTraitEffects(character.Trait)))
             .ToArray();
 
         var allies = (_data.Units?.Values ?? Array.Empty<UnitDefinition>())

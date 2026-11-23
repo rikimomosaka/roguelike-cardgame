@@ -71,6 +71,13 @@ public class BestiaryControllerTests : IClassFixture<TempDataFactory>
         Assert.Equal(80, player.MaxHp);
         Assert.Equal("Striker", player.CharacterClass);
         Assert.Contains("連閃", player.TraitDescription);
+        // 能力値（体力以外）と、キーワード補足用の書式付き特性文が図鑑にも渡る。
+        Assert.Equal(3, player.EnergyPerTurn);
+        Assert.Equal(5, player.DrawPerTurn);
+        Assert.Equal(6, player.Attack);
+        Assert.Equal(5, player.Defense);
+        Assert.Equal("連閃", player.TraitName);
+        Assert.Contains("[S:afterimage]", player.TraitEffects);
         Assert.Contains(player.Actions, action => action.Category == "戦技");
         Assert.Contains(player.Actions, action => action.Category == "奥義");
         Assert.False(string.IsNullOrWhiteSpace(player.Description));
@@ -81,6 +88,10 @@ public class BestiaryControllerTests : IClassFixture<TempDataFactory>
         Assert.False(ally.IsDiscovered);
         Assert.Null(ally.CharacterClass);
         Assert.Equal(30, ally.MaxHp);
+        Assert.Equal(3, ally.Attack);
+        Assert.Equal(3, ally.Defense);
+        Assert.True(ally.EnergyPerTurn > 0);
+        Assert.True(ally.DrawPerTurn > 0);
         Assert.Null(ally.LifetimeTurns);
         Assert.Equal(4, ally.Actions.Count);
         Assert.Contains(ally.Actions, action =>

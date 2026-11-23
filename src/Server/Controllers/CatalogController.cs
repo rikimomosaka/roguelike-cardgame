@@ -338,7 +338,7 @@ public sealed class CatalogController : ControllerBase
     /// skills. Trigger metadata is kept here because it belongs to CharacterTraitDefinition,
     /// not to an individual CardEffect.
     /// </summary>
-    private static string? FormatCharacterTraitEffects(CharacterTraitDefinition? trait)
+    internal static string? FormatCharacterTraitEffects(CharacterTraitDefinition? trait)
     {
         if (trait is null) return null;
 

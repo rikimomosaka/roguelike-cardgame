@@ -485,10 +485,10 @@ function CharacterTile({ character }: { character: BestiaryCharacterDto }) {
               className="achievements__character-stats"
               stats={{
                 hp: character.maxHp,
-                energyPerTurn: character.energyPerTurn ?? 0,
-                drawPerTurn: character.drawPerTurn ?? 0,
-                attack: character.attack ?? 0,
-                defense: character.defense ?? 0,
+                energyPerTurn: character.energyPerTurn,
+                drawPerTurn: character.drawPerTurn,
+                attack: character.attack,
+                defense: character.defense,
               }}
             />
           )}
@@ -496,8 +496,13 @@ function CharacterTile({ character }: { character: BestiaryCharacterDto }) {
       </div>
       {character.isDiscovered && character.kind === 'player' && (
         <div className="achievements__character-details">
-          <CharacterTextSection label="特性">
-            <p>{character.traitDescription}</p>
+          <CharacterTextSection label={`特性${character.traitName ? `：${character.traitName}` : ''}`}>
+            {/* 戦技・奥義と同じく、キーワード・状態異常の補足を出せる書式付き文面で表示する。 */}
+            <CharacterAbilityDescription text={
+              character.traitEffects?.trim()
+              || character.traitDescription?.trim()
+              || '特性は未実装です。'
+            } />
           </CharacterTextSection>
           {character.actions.map(action => (
             <CharacterTextSection
@@ -641,10 +646,10 @@ function TilesTab({ title, kind, allIds, discovered }: {
       : enemyCatalog?.[id]
         ? formatActorStats({
           hp: enemyCatalog[id].hp,
-          energyPerTurn: enemyCatalog[id].energyPerTurn ?? 0,
-          drawPerTurn: enemyCatalog[id].drawPerTurn ?? 0,
-          attack: enemyCatalog[id].attack ?? 0,
-          defense: enemyCatalog[id].defense ?? 0,
+          energyPerTurn: enemyCatalog[id].energyPerTurn,
+          drawPerTurn: enemyCatalog[id].drawPerTurn,
+          attack: enemyCatalog[id].attack,
+          defense: enemyCatalog[id].defense,
         })
         : null
     const imageSrc = kind === 'enemy' && enemyCatalog?.[id]?.imageId
