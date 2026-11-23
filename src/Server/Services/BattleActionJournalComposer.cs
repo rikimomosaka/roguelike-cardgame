@@ -269,7 +269,29 @@ internal static class BattleActionJournalComposer
         {
             StateBeforePlanning = before,
         };
-        return CpuPlanning(before, planning, catalog, $"{commandPrefix}:enemy");
+        var drafts = CpuPlanning(before, planning, catalog, $"{commandPrefix}:enemy").ToList();
+
+        // 敵の計画はターン開始時に完結しているため、各敵の最後の記録で
+        // 再生フィードを完了（READY + COMPLETE）にする。これが無いと
+        // クライアントの再生が LIVE のまま次の行動を待ち続ける。
+        var lastIndexByParticipant = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (int index = 0; index < drafts.Count; index++)
+        {
+            if (drafts[index].ParticipantId is { } participantId)
+                lastIndexByParticipant[participantId] = index;
+        }
+        foreach (var (participantId, index) in lastIndexByParticipant)
+        {
+            var draft = drafts[index];
+            drafts[index] = draft with
+            {
+                FeedChanges = (draft.FeedChanges ?? Array.Empty<BattleReplayFeedChange>())
+                    .Append(new BattleReplayFeedChange(
+                        participantId, IsReady: true, IsComplete: true))
+                    .ToArray(),
+            };
+        }
+        return drafts;
     }
 
     public static IReadOnlyList<BattleActionDraft> CpuPlanning(
@@ -307,12 +329,18 @@ internal static class BattleActionJournalComposer
                         entry.CasterInstanceId,
                         action.ActorInstanceId,
                         StringComparison.Ordinal))?.ComboCountAfter;
+                string? replayEnemyParticipantId = null;
                 if (!BattleParticipantAccess.TryGet(
                         stateBefore, action.ParticipantId, out var sourceParticipant))
                 {
                     // カード制御の敵の計画行動（BattleState.EnemyPlanningActions）。
-                    BattleParticipantAccess.TryGetEnemy(
-                        stateBefore, action.ParticipantId, out sourceParticipant);
+                    // 再生時に敵の手札・山札・エナジーをプレイヤーUIの位置へ表示するため、
+                    // 記録の前後状態にだけ敵参加者のカード資源を含める。
+                    if (BattleParticipantAccess.TryGetEnemy(
+                            stateBefore, action.ParticipantId, out sourceParticipant))
+                    {
+                        replayEnemyParticipantId = action.ParticipantId;
+                    }
                 }
                 drafts.Add(new BattleActionDraft(
                     Turn: action.Turn > 0 ? action.Turn : stateBefore.Turn,
@@ -337,8 +365,10 @@ internal static class BattleActionJournalComposer
                             id, IsReady: false, IsComplete: null))
                         .ToArray(),
                     SelectedInstanceIds: action.SelectedInstanceIds,
-                    StateBefore: BattleStateDtoMapper.ToDto(stateBefore, catalog),
-                    StateAfter: BattleStateDtoMapper.ToDto(stateAfter, catalog),
+                    StateBefore: BattleStateDtoMapper.ToDto(
+                        stateBefore, catalog, replayEnemyParticipantId),
+                    StateAfter: BattleStateDtoMapper.ToDto(
+                        stateAfter, catalog, replayEnemyParticipantId),
                     Source: CreateSource(
                         stateBefore,
                         sourceParticipant,

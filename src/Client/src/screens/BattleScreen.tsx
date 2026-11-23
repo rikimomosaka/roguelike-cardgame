@@ -685,6 +685,11 @@ type BattleReplayViewState = {
 type ReplayActionCardState = {
   demo: HandCardDemo
   stage: 'idle' | 'centering' | 'holding' | 'leaving'
+  /** .app-stage (1280×720) ローカル座標。手札位置 → 中央 → 捨札。 */
+  startX: number
+  startY: number
+  destX: number
+  destY: number
 }
 
 type ReenactCardState = {
@@ -3496,7 +3501,12 @@ export function BattleScreen({
       setReplayActionBaseline(before)
       setReplayActionInProgress(true)
       if (entry.card) {
-        setReplayActionCard({ demo: toReplayCardDemo(entry.card, cardCatalog), stage: 'idle' })
+        const replayDemo = toReplayCardDemo(entry.card, cardCatalog)
+        setReplayActionCard({
+          demo: replayDemo,
+          stage: 'idle',
+          ...measureReplayCardPath(replayDemo.instanceId),
+        })
         if (!await waitReplay(16)) return
         setReplayActionCard(current => current ? { ...current, stage: 'centering' } : null)
         if (!await waitReplay(200)) return
@@ -3568,6 +3578,22 @@ export function BattleScreen({
     replayView?.position,
     replayView?.speed,
   ])
+
+  // 再生カードの移動経路を .app-stage ローカル座標 (1280×720) で求める。
+  // 手札にあるカードはその位置から、無ければ手札中央付近から出し、捨札へ送る。
+  function measureReplayCardPath(cardInstanceId: string | undefined) {
+    const appRect = (document.querySelector('.app-stage') as HTMLElement | null)
+      ?.getBoundingClientRect()
+    const toLocal = (rect: DOMRect) => ({
+      x: appRect ? (rect.left + rect.width / 2 - appRect.left) / (appRect.width / 1280) : rect.left + rect.width / 2,
+      y: appRect ? (rect.top + rect.height / 2 - appRect.top) / (appRect.height / 720) : rect.top + rect.height / 2,
+    })
+    const handEl = cardInstanceId ? handCardRefs.current.get(cardInstanceId) : undefined
+    const start = handEl ? toLocal(handEl.getBoundingClientRect()) : { x: 640, y: 620 }
+    const discardEl = discardPileRef.current
+    const dest = discardEl ? toLocal(discardEl.getBoundingClientRect()) : { x: 120, y: 640 }
+    return { startX: start.x, startY: start.y, destX: dest.x, destY: dest.y }
+  }
 
   function beginBattleCommand(): boolean {
     if (animating || busyRef.current) return false
@@ -4744,13 +4770,14 @@ export function BattleScreen({
           data-play-stage={replayActionCard.stage}
           data-leaving-mode="discard"
           style={{
-            '--start-x': '50%',
-            '--start-y': '82%',
+            // Why: translate の % はカード自身の大きさ基準になり左上に出てしまうため px で指定する。
+            '--start-x': `${replayActionCard.startX}px`,
+            '--start-y': `${replayActionCard.startY}px`,
             '--start-rot': '0deg',
-            '--center-x': '50%',
-            '--center-y': '50%',
-            '--dest-x': '12%',
-            '--dest-y': '85%',
+            '--center-x': '640px',
+            '--center-y': '360px',
+            '--dest-x': `${replayActionCard.destX}px`,
+            '--dest-y': `${replayActionCard.destY}px`,
           } as CSSProperties}
         >
           <BattleCardVisual card={replayActionCard.demo} detailsDisabled ariaHidden />

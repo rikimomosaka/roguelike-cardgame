@@ -249,6 +249,20 @@ public static class BattleParticipantAccess
     }
 
     /// <summary>
+    /// 敵参加者を表示用に root へ投影する（コスト・コンボ等の表示計算用、state 本体は不変）。
+    /// </summary>
+    public static BattleState ProjectEnemyToRoot(
+        BattleState state,
+        string participantId)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        if (!TryGetEnemy(state, participantId, out var participant))
+            throw new InvalidOperationException(
+                $"Enemy participant '{participantId}' does not exist.");
+        return MirrorPrimary(state, participant);
+    }
+
+    /// <summary>
     /// <see cref="BattleState.Participants"/> に属さない参加者（敵参加者）を一時的に root へ投影する。
     /// 処理後は <see cref="CaptureRootResources"/> で取り出し、
     /// <see cref="RestoreRoot"/> で投影前の root へ戻す。

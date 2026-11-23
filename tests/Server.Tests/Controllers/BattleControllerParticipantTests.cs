@@ -115,6 +115,19 @@ public sealed class BattleControllerParticipantTests : IClassFixture<TempDataFac
             });
             // 予約した攻撃・ブロックが「予定」として記録される。
             Assert.Contains(replay.Entries, entry => entry.Intents.Count > 0);
+            // 計画はターン開始時に完結しているので、再生フィードは完了済み。
+            Assert.Equal("complete", replay.FeedState);
+            // 再生時にプレイヤーUIを敵のカード資源へ切り替えられるよう、
+            // 記録の前状態に敵参加者（手札など）が含まれる。
+            var first = replay.Entries[0];
+            var replayedEnemy = Assert.Single(
+                first.StateBefore!.Participants!,
+                participant => participant.ParticipantId == enemyParticipant.ParticipantId);
+            Assert.Contains(replayedEnemy.Hand, card =>
+                card.InstanceId == first.Card!.CardInstanceId);
+            // ライブ状態には敵の手札を公開しない。
+            Assert.DoesNotContain(started.State.Participants!, participant =>
+                participant.ParticipantId == enemyParticipant.ParticipantId);
         }
     }
 

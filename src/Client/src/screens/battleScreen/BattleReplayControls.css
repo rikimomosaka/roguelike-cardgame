@@ -110,16 +110,14 @@
 }
 
 .battle-replay__entry {
-  position: absolute;
-  left: 50%;
-  /* Keep the Ready/NoLegalAction entry above the transport controls. */
-  bottom: 86px;
-  /* Match the tactical/combo/ultimate control width instead of extending
-     beyond the two skill buttons at the sides. */
+  /* Why: 以前は absolute + 固定 bottom だったため、操作ボタンが複数行に
+     折り返すと行動表示（カード画像）が「戻る」等のボタン行を覆い、再生後に
+     戦闘へ戻れなくなっていた。通常フローで操作ボタンの真上に積む。 */
+  position: relative;
+  margin-bottom: 6px;
   width: 100%;
   min-height: 54px;
   box-sizing: border-box;
-  transform: translateX(-50%);
   padding: 9px 12px;
   display: flex;
   align-items: center;

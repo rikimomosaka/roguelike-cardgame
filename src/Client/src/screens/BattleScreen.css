@@ -2715,6 +2715,17 @@ html[data-motion='reduced'] .playing-card {
   width: 65px;
 }
 
+/* 敵: 名前と重ならないよう、頭上の行動予告と対象三角（▼）の間に置く。 */
+.battle__side--enemy .status-replay-button {
+  left: 50%;
+  top: -80px;
+  transform: translateX(-50%);
+}
+.battle__side--enemy .battle__slot:has(.status-replay-button) .status-name {
+  right: 0;
+  width: 100px;
+}
+
 .status-replay-button[data-feed-state="ready"] {
   border-color: #78ce80;
   color: #b8f3bd;

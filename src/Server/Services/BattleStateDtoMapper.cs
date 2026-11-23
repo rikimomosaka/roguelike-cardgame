@@ -15,7 +15,14 @@ namespace RoguelikeCardGame.Server.Services;
 /// <summary>Maps authoritative Core battle values to transport DTOs.</summary>
 internal static class BattleStateDtoMapper
 {
-    public static BattleStateDto ToDto(BattleState state, DataCatalog data)
+    /// <param name="replayEnemyParticipantId">
+    /// 行動再生の記録用。指定した敵参加者のカード資源を Participants に含める
+    /// （ライブ状態では敵の手札を公開しないため、通常は null）。
+    /// </param>
+    public static BattleStateDto ToDto(
+        BattleState state,
+        DataCatalog data,
+        string? replayEnemyParticipantId = null)
     {
         var primary = BattleParticipantAccess.GetPrimary(state);
         var hero = state.Allies.FirstOrDefault(actor => string.Equals(
@@ -96,9 +103,7 @@ internal static class BattleStateDtoMapper
                             .CandidateInstanceIds.ToArray())),
             CharacterSkillsRestricted: hero?.GetStatus(BattleStatusIds.Seal) > 0,
             ActionRevision: state.ActionRevision,
-            Participants: BattleParticipantAccess.EffectiveParticipants(state)
-                .Select(participant => ToParticipantDto(state, participant, data))
-                .ToList(),
+            Participants: ParticipantDtos(state, data, replayEnemyParticipantId),
             FinisherRecord: ToFinisherRecordDto(state, primary, hero, data),
             ComboCarryoverPending: state.ComboCarryoverPending,
             EnemyParticipants: state.EnemyParticipants.IsDefaultOrEmpty
@@ -115,17 +120,36 @@ internal static class BattleStateDtoMapper
                     .ToList());
     }
 
+    private static List<BattleParticipantDto> ParticipantDtos(
+        BattleState state,
+        DataCatalog data,
+        string? replayEnemyParticipantId)
+    {
+        var list = BattleParticipantAccess.EffectiveParticipants(state)
+            .Select(participant => ToParticipantDto(state, participant, data))
+            .ToList();
+        if (replayEnemyParticipantId is not null
+            && BattleParticipantAccess.TryGetEnemy(
+                state, replayEnemyParticipantId, out var enemyParticipant))
+        {
+            list.Add(ToParticipantDto(state, enemyParticipant, data, isEnemy: true));
+        }
+        return list;
+    }
+
     private static BattleParticipantDto ToParticipantDto(
         BattleState state,
         BattleParticipantState participant,
-        DataCatalog data)
+        DataCatalog data,
+        bool isEnemy = false)
     {
         // Cost, combo and usage projections still use the battle engine's root
         // compatibility fields. Project only for this DTO calculation; the
         // authoritative state itself is never mutated.
-        var projected = BattleParticipantAccess.ProjectToRoot(
-            state, participant.ParticipantId);
-        var owner = state.Allies.FirstOrDefault(actor =>
+        var projected = isEnemy
+            ? BattleParticipantAccess.ProjectEnemyToRoot(state, participant.ParticipantId)
+            : BattleParticipantAccess.ProjectToRoot(state, participant.ParticipantId);
+        var owner = (isEnemy ? state.Enemies : state.Allies).FirstOrDefault(actor =>
             string.Equals(
                 actor.InstanceId,
                 participant.ActorInstanceId,
