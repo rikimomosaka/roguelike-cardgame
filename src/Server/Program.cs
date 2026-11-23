@@ -37,6 +37,7 @@ builder.Services.AddSingleton<IDungeonMapGenerator, DungeonMapGenerator>();
 builder.Services.AddSingleton<DataCatalogProvider>();
 builder.Services.AddTransient<DataCatalog>(sp =>
     sp.GetRequiredService<DataCatalogProvider>().Current);
+builder.Services.AddSingleton<DevContentService>();
 
 // DevCardWriter: override / base / backup の disk I/O を担うヘルパ (DEV 専用)。
 // 本番環境でも DI に登録するが、controller 側で IsDevelopment ガードしているので呼ばれない。
@@ -59,7 +60,16 @@ builder.Services.AddSingleton<DevRelicWriter>(sp =>
     var backupRoot = Path.Combine(repoRoot, "data-local", "backups");
     return new DevRelicWriter(overrideRoot, baseRelicsDir, backupRoot);
 });
-builder.Services.AddSingleton<RunStartService>();
+builder.Services.AddSingleton<RunStartService>(sp =>
+{
+    var provider = sp.GetRequiredService<DataCatalogProvider>();
+    return new RunStartService(
+        sp.GetRequiredService<IDungeonMapGenerator>(),
+        provider.CurrentMapConfig,
+        sp.GetRequiredService<ISaveRepository>(),
+        catalogSource: () => provider.Current,
+        mapConfigSource: () => provider.CurrentMapConfig);
+});
 builder.Services.AddSingleton<BattleSessionStore>();
 
 const string CorsPolicyName = "ClientCors";

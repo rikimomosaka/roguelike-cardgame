@@ -147,8 +147,47 @@ public static class RewardGenerator
         EnemyPool pool, RewardRngState rngState,
         ImmutableArray<string> exclusions,
         RewardTable table, DataCatalog data, IRng rng,
-        RunState runState)
+        RunState runState) =>
+        RegenerateCardChoices(
+            pool,
+            rngState,
+            exclusions,
+            table,
+            data,
+            rng,
+            runState,
+            CardPoolRules.IsClassRewardFor);
+
+    /// <summary>
+    /// Generates card choices from the shared Universal reward pool. This is used
+    /// by event rewards and intentionally does not mutate <see cref="RewardRngState"/>.
+    /// </summary>
+    public static ImmutableArray<string> RegenerateUniversalCardChoices(
+        EnemyPool pool, RewardRngState rngState,
+        ImmutableArray<string> exclusions,
+        RewardTable table, DataCatalog data, IRng rng,
+        RunState runState) =>
+        RegenerateCardChoices(
+            pool,
+            rngState,
+            exclusions,
+            table,
+            data,
+            rng,
+            runState,
+            CardPoolRules.IsUniversalRewardFor);
+
+    private static ImmutableArray<string> RegenerateCardChoices(
+        EnemyPool pool, RewardRngState rngState,
+        ImmutableArray<string> exclusions,
+        RewardTable table, DataCatalog data, IRng rng,
+        RunState runState,
+        Func<CardDefinition, CharacterDefinition, bool> isEligible)
     {
+        if (!data.Characters.TryGetValue(runState.CharacterId, out var character))
+            throw new InvalidOperationException(
+                $"Character \"{runState.CharacterId}\" is not configured in the data catalog");
+
         int targetCount = PassiveModifiers.ApplyRewardCardChoicesBonus(3, runState, data);
         var entry = table.Pools[pool.Tier];
         int commonPct = entry.CommonPercent;
@@ -160,7 +199,7 @@ public static class RewardGenerator
 
         var available = data.Cards.Values
             .Where(c => c.Rarity is CardRarity.Common or CardRarity.Rare or CardRarity.Epic)
-            .Where(c => c.Id.StartsWith("reward_", StringComparison.Ordinal))
+            .Where(c => isEligible(c, character))
             .Where(c => !exclusions.Contains(c.Id))
             .OrderBy(c => c.Id, StringComparer.Ordinal)
             .GroupBy(c => c.Rarity)

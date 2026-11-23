@@ -1,32 +1,53 @@
 {
-    "id":  "reward_rare_08",
-    "name":  "双剣連撃",
-    "displayName":  null,
-    "activeVersion":  "v1",
-    "versions":  [
-                     {
-                         "version":  "v1",
-                         "createdAt":  "2026-05-01T03:54:50Z",
-                         "label":  "original",
-                         "spec":  {
-                                      "rarity":  2,
-                                      "cardType":  "Attack",
-                                      "cost":  2,
-                                      "effects":  [
-                                                      {
-                                                          "action":  "attack",
-                                                          "scope":  "single",
-                                                          "side":  "enemy",
-                                                          "amount":  8
-                                                      },
-                                                      {
-                                                          "action":  "attack",
-                                                          "scope":  "single",
-                                                          "side":  "enemy",
-                                                          "amount":  8
-                                                      }
-                                                  ]
-                                  }
-                     }
-                 ]
+  "id": "guardian_rare_covering_hand",
+  "name": "かばい手",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Guardian",
+  "eligibleCharacterIds": [
+    "guardian_mireille"
+  ],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 2,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "single",
+            "side": "ally",
+            "amount": 8
+          },
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "cover",
+            "amount": 2
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "block",
+            "scope": "single",
+            "side": "ally",
+            "amount": 11
+          },
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "cover",
+            "amount": 2
+          }
+        ]
+      }
+    }
+  ]
 }

@@ -1,0 +1,53 @@
+{
+  "id": "universal_epic_breakthrough",
+  "name": "突破口",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Universal",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 3,
+        "cardType": "Attack",
+        "cost": 2,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 12
+          },
+          {
+            "action": "debuff",
+            "scope": "single",
+            "side": "enemy",
+            "name": "vulnerable",
+            "amount": 2
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "attack",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 16
+          },
+          {
+            "action": "debuff",
+            "scope": "single",
+            "side": "enemy",
+            "name": "vulnerable",
+            "amount": 3
+          }
+        ]
+      }
+    }
+  ]
+}

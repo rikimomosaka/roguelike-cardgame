@@ -1,0 +1,37 @@
+{
+  "id": "universal_common_rebrace",
+  "name": "構え直し",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Universal",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 7
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 10
+          }
+        ]
+      }
+    }
+  ]
+}

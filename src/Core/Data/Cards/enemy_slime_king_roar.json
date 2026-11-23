@@ -1,0 +1,26 @@
+{
+  "id": "enemy_slime_king_roar",
+  "name": "咆哮",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy slime_king unique (from move roar)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "strength",
+            "amount": 5
+          }
+        ]
+      }
+    }
+  ]
+}

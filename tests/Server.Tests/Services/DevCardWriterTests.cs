@@ -107,6 +107,56 @@ public class DevCardWriterTests : IDisposable
     }
 
     [Fact]
+    public void WriteBaseWithBackup_replaces_existing_file_found_by_root_id()
+    {
+        var baseDir = Path.Combine(_tempRoot, "base");
+        var backupDir = Path.Combine(_tempRoot, "backups");
+        Directory.CreateDirectory(baseDir);
+        var numberedPath = Path.Combine(baseDir, "reward_common_01.json");
+        File.WriteAllText(numberedPath, """{ "id": "striker_common_step_in", "old": true }""");
+
+        var w = new DevCardWriter(_tempRoot, baseDir, backupDir);
+        const string promoted = """{ "id": "striker_common_step_in", "new": true }""";
+
+        Assert.Contains("\"old\": true", w.ReadBase("striker_common_step_in"));
+        w.WriteBaseWithBackup("striker_common_step_in", promoted);
+
+        Assert.Equal(promoted, File.ReadAllText(numberedPath));
+        Assert.False(File.Exists(Path.Combine(baseDir, "striker_common_step_in.json")));
+        var backups = Directory.GetFiles(Path.Combine(backupDir, "cards"), "reward_common_01-*.json");
+        Assert.Single(backups);
+        Assert.Contains("\"old\": true", File.ReadAllText(backups[0]));
+    }
+
+    [Fact]
+    public void Base_operations_throw_when_root_id_is_duplicated()
+    {
+        var baseDir = Path.Combine(_tempRoot, "base");
+        Directory.CreateDirectory(baseDir);
+        File.WriteAllText(Path.Combine(baseDir, "first.json"), "{\"id\":\"duplicate\"}");
+        File.WriteAllText(Path.Combine(baseDir, "second.json"), "{\"id\":\"duplicate\"}");
+        var w = new DevCardWriter(_tempRoot, baseDir);
+
+        Assert.Throws<InvalidOperationException>(() => w.ReadBase("duplicate"));
+        Assert.Throws<InvalidOperationException>(() => w.WriteBaseWithBackup("duplicate", "{}"));
+        Assert.Throws<InvalidOperationException>(() => w.DeleteBaseWithBackup("duplicate"));
+    }
+
+    [Fact]
+    public void WriteBaseWithBackup_does_not_overwrite_file_name_owned_by_another_id()
+    {
+        var baseDir = Path.Combine(_tempRoot, "base");
+        Directory.CreateDirectory(baseDir);
+        var occupiedPath = Path.Combine(baseDir, "new_card.json");
+        File.WriteAllText(occupiedPath, "{\"id\":\"other_card\"}");
+        var w = new DevCardWriter(_tempRoot, baseDir);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            w.WriteBaseWithBackup("new_card", "{\"id\":\"new_card\"}"));
+        Assert.Equal("{\"id\":\"other_card\"}", File.ReadAllText(occupiedPath));
+    }
+
+    [Fact]
     public void ReadBase_returns_null_without_baseCardsDir()
     {
         Assert.Null(_writer.ReadBase("strike"));

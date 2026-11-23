@@ -1,0 +1,24 @@
+{
+  "id": "wisp_aegis",
+  "name": "\u71D0\u76FE",
+  "displayName": null,
+    "poolKinds":  [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "wisp cpu deck",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          { "action": "block", "scope": "self", "amount": 3 }
+        ],
+        "upgradedEffects": [
+          { "action": "block", "scope": "self", "amount": 5 }
+        ]
+      }
+    }
+  ]
+}

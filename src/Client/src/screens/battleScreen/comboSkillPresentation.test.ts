@@ -36,7 +36,7 @@ describe('getComboSkillAvailability', () => {
     })
   })
 
-  it('uses independent gauge thresholds of 3 and 10', () => {
+  it('uses independent gauge thresholds of 3 and 6', () => {
     expect(getComboSkillAvailability({ ...ready, comboGauge: 2 })).toEqual({
       tacticalDisabled: true,
       ultimateDisabled: true,
@@ -45,15 +45,22 @@ describe('getComboSkillAvailability', () => {
       tacticalDisabled: false,
       ultimateDisabled: true,
     })
-    expect(getComboSkillAvailability({ ...ready, comboGauge: 9 })).toEqual({
+    expect(getComboSkillAvailability({ ...ready, comboGauge: 5 })).toEqual({
       tacticalDisabled: false,
       ultimateDisabled: true,
     })
   })
 
-  it('disables only the ultimate when the hand is empty', () => {
+  it('allows the ultimate with an empty hand when resources are available', () => {
     expect(getComboSkillAvailability({ ...ready, handCount: 0 })).toEqual({
       tacticalDisabled: false,
+      ultimateDisabled: false,
+    })
+  })
+
+  it('disables both skills while 封印 is active', () => {
+    expect(getComboSkillAvailability({ ...ready, skillsRestricted: true })).toEqual({
+      tacticalDisabled: true,
       ultimateDisabled: true,
     })
   })
@@ -69,9 +76,9 @@ describe('getComboSkillAvailability', () => {
 describe('combo skill presentation constants', () => {
   it('keeps the exact skill explanations', () => {
     expect(TACTICAL_SKILL_DESCRIPTION)
-      .toBe('1ターンに1度、自身の攻撃+1と拡散+1を得る。拡散がある間、攻撃はすべて全体攻撃になる。')
+      .toBe('自身に筋力1を付与。\n自身に拡散1を付与。')
     expect(ULTIMATE_SKILL_DESCRIPTION)
-      .toBe('発動時の手札それぞれに、その時点のコストと同量の軽減をこのターン終了まで与える。カードを使うと軽減は失われる。')
+      .toBe('3枚引く。\n自身に節制3を付与。')
   })
 
   it.each([

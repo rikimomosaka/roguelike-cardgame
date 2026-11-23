@@ -24,4 +24,6 @@ public class BattleEventKindTests
     [Fact] public void Exhaust_value_is_16()      => Assert.Equal(16, (int)BattleEventKind.Exhaust);
     [Fact] public void GainEnergy_value_is_17()   => Assert.Equal(17, (int)BattleEventKind.GainEnergy);
     [Fact] public void Summon_value_is_18()       => Assert.Equal(18, (int)BattleEventKind.Summon);
+    [Fact] public void Shuffle_is_appended_as_36()=> Assert.Equal(36, (int)BattleEventKind.Shuffle);
+    [Fact] public void GainAttack_is_appended_as_37()=> Assert.Equal(37, (int)BattleEventKind.GainAttack);
 }

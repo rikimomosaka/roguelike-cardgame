@@ -1,0 +1,26 @@
+{
+  "id": "enemy_iron_golem_b_hammer_swing",
+  "name": "鉄槌",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy iron_golem_b unique (from move hammer_swing)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 15
+          }
+        ]
+      }
+    }
+  ]
+}

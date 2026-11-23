@@ -9,6 +9,8 @@ import type { DevMeta } from '../../api/dev'
 
 const meta: DevMeta = {
   cardTypes: ['Attack', 'Skill'],
+  cardAbilities: ['finisher', 'reprise', 'contingency'],
+  contingencyTriggerTimings: ['TurnStart', 'BeforeEnemyAttack', 'ComboReached'],
   rarities: [
     { value: 1, label: 'Common' },
     { value: 2, label: 'Rare' },
@@ -30,7 +32,7 @@ const meta: DevMeta = {
   ],
   amountSources: ['handCount'],
   keywords: [{ id: 'wild', name: 'ワイルド', description: '...' }],
-  statuses: [{ id: 'weak', jp: '脱力' }],
+  statuses: [{ id: 'weak', jp: '脱力', kind: 'Debuff' }],
 }
 
 afterEach(() => {

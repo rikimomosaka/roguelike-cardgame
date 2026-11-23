@@ -70,7 +70,12 @@ public class PowerTriggerProcessorTests
         var (queued, triggerEvents) = PowerTriggerProcessor.Fire(
             state, "OnTurnStart", catalog, MakeRng(), orderStart: 0);
 
-        Assert.Empty(triggerEvents);
+        var gain = Assert.Single(triggerEvents);
+        Assert.Equal(BattleEventKind.GainAttack, gain.Kind);
+        Assert.Equal(hero.InstanceId, gain.TargetInstanceId);
+        Assert.Equal(6, gain.Amount);
+        Assert.StartsWith("single", gain.Note);
+        Assert.Equal(CombatSourceKind.PowerEffect, gain.Source?.Kind);
         var hit = Assert.Single(queued.Allies[0].AttackSingle.Hits);
         Assert.Equal(CombatSourceKind.PowerEffect, hit.Source.Kind);
         Assert.Equal(2, hit.Source.OwnerSlot);

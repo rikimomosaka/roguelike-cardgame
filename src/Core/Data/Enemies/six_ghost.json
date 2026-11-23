@@ -4,140 +4,39 @@
   "imageId": "six_ghost",
   "hp": 250,
   "act": 1,
-  "heightTier": 5,
+  "heightTier": 9,
   "tier": "Boss",
-  "initialMoveId": "embolden",
-  "moves": [
+  "attack": 2,
+  "defense": 1,
+  "initialEnergy": 0,
+  "energyPerTurn": 1,
+  "drawPerTurn": 3,
+  "handLimit": 5,
+  "aiProfileId": "low_cost_combo",
+  "deck": [
     {
-      "id": "embolden",
-      "kind": "Buff",
-      "nextMoveId": "divider",
-      "effects": [
-        {
-          "action": "buff",
-          "scope": "self",
-          "name": "strength",
-          "amount": 1
-        }
-      ]
+      "cardId": "enemy_six_ghost_embolden",
+      "count": 2
     },
     {
-      "id": "divider",
-      "kind": "Multi",
-      "nextMoveId": "sear",
-      "effects": [
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 6
-        },
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 6
-        },
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 6
-        },
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 6
-        },
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 6
-        },
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 6
-        }
-      ]
+      "cardId": "enemy_six_ghost_divider",
+      "count": 2
     },
     {
-      "id": "sear",
-      "kind": "Attack",
-      "nextMoveId": "tackle",
-      "effects": [
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 6
-        }
-      ]
+      "cardId": "enemy_six_ghost_sear",
+      "count": 2
     },
     {
-      "id": "tackle",
-      "kind": "Attack",
-      "nextMoveId": "inferno",
-      "effects": [
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 5
-        },
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 5
-        }
-      ]
+      "cardId": "enemy_six_ghost_tackle",
+      "count": 2
     },
     {
-      "id": "inferno",
-      "kind": "Multi",
-      "nextMoveId": "sear",
-      "effects": [
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 2
-        },
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 2
-        },
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 2
-        },
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 2
-        },
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 2
-        },
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 2
-        }
-      ]
+      "cardId": "enemy_six_ghost_inferno",
+      "count": 2
+    },
+    {
+      "cardId": "enemy_common_attack",
+      "count": 2
     }
   ]
 }

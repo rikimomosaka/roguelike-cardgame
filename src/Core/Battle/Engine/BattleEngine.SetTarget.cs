@@ -13,6 +13,38 @@ public static partial class BattleEngine
     /// </summary>
     public static BattleState SetTarget(BattleState state, ActorSide side, int slotIndex)
     {
+        RejectIfParticipantReady(state, participantId: null, "SetTarget");
+        var next = SetTargetCore(state, side, slotIndex);
+        if (!next.Participants.IsDefaultOrEmpty)
+        {
+            next = BattleParticipantAccess.CommitRootToParticipant(
+                next, next.Participants[0].ParticipantId);
+        }
+        return IncrementActionRevision(next);
+    }
+
+    public static BattleState SetTarget(
+        BattleState state,
+        string participantId,
+        ActorSide side,
+        int slotIndex)
+    {
+        if (!BattleParticipantAccess.TryGet(state, participantId, out _))
+            throw new InvalidOperationException(
+                $"Battle participant '{participantId}' does not exist.");
+        RejectIfParticipantReady(state, participantId, "SetTarget");
+        var projected = BattleParticipantAccess.ProjectToRoot(state, participantId);
+        var processed = SetTargetCore(projected, side, slotIndex);
+        var committed = BattleParticipantAccess.CommitRootToParticipant(
+            processed, participantId);
+        return IncrementActionRevision(committed);
+    }
+
+    private static BattleState SetTargetCore(
+        BattleState state,
+        ActorSide side,
+        int slotIndex)
+    {
         if (state.Phase != BattlePhase.PlayerInput)
             throw new InvalidOperationException(
                 $"SetTarget requires Phase=PlayerInput, got {state.Phase}");

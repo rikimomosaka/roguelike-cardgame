@@ -10,11 +10,17 @@
                          "label":  "original",
                          "spec":  {
                                       "rarity":  1,
-                                      "description":  "[未実装] 古い獣骨を磨いて作った野趣あふれるイヤリング。冷たい風にも怯まなくなる。",
+                                      "description":  "古い獣骨を磨いて作った野趣あふれるイヤリング。冷たい風にも怯まなくなる。",
                                       "effects":  [
-
+                                                      {
+                                                          "action": "buff",
+                                                          "scope": "self",
+                                                          "name": "barrier",
+                                                          "amount": 1,
+                                                          "trigger": "OnBattleStart"
+                                                      }
                                                   ],
-                                      "implemented":  false
+                                      "implemented":  true
                                   }
                      }
                  ]

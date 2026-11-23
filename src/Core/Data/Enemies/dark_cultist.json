@@ -6,33 +6,29 @@
   "act": 1,
   "heightTier": 5,
   "tier": "Weak",
-  "initialMoveId": "incantation",
-  "moves": [
+  "attack": 6,
+  "defense": 3,
+  "initialEnergy": 0,
+  "energyPerTurn": 1,
+  "drawPerTurn": 3,
+  "handLimit": 5,
+  "aiProfileId": "low_cost_combo",
+  "deck": [
     {
-      "id": "incantation",
-      "kind": "Buff",
-      "nextMoveId": "dark_strike",
-      "effects": [
-        {
-          "action": "buff",
-          "scope": "self",
-          "name": "strength",
-          "amount": 3
-        }
-      ]
+      "cardId": "enemy_dark_cultist_incantation",
+      "count": 2
     },
     {
-      "id": "dark_strike",
-      "kind": "Attack",
-      "nextMoveId": "incantation",
-      "effects": [
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 6
-        }
-      ]
+      "cardId": "enemy_dark_cultist_dark_strike",
+      "count": 2
+    },
+    {
+      "cardId": "enemy_common_attack",
+      "count": 6
+    },
+    {
+      "cardId": "enemy_common_defend",
+      "count": 2
     }
   ]
 }

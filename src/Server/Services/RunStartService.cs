@@ -17,7 +17,8 @@ namespace RoguelikeCardGame.Server.Services;
 public sealed class RunStartService
 {
     private readonly IDungeonMapGenerator _generator;
-    private readonly MapGenerationConfig _mapConfig;
+    private readonly Func<MapGenerationConfig> _mapConfigSource;
+    private readonly Func<DataCatalog> _catalogSource;
     private readonly ISaveRepository _saves;
     private readonly Func<DateTimeOffset> _now;
     private readonly Func<int> _seedSource;
@@ -27,10 +28,13 @@ public sealed class RunStartService
         MapGenerationConfig mapConfig,
         ISaveRepository saves,
         Func<DateTimeOffset>? now = null,
-        Func<int>? seedSource = null)
+        Func<int>? seedSource = null,
+        Func<DataCatalog>? catalogSource = null,
+        Func<MapGenerationConfig>? mapConfigSource = null)
     {
         _generator = generator;
-        _mapConfig = mapConfig;
+        _mapConfigSource = mapConfigSource ?? (() => mapConfig);
+        _catalogSource = catalogSource ?? EmbeddedDataLoader.LoadCatalog;
         _saves = saves;
         _now = now ?? (() => DateTimeOffset.UtcNow);
         _seedSource = seedSource ?? (() => System.Random.Shared.Next());
@@ -41,8 +45,25 @@ public sealed class RunStartService
     /// 制約が厳しい seed ではその範囲で成功できないことがあるため、外側でも seed 自体を振り直す。</summary>
     private const int MaxSeedAttempts = 10;
 
-    public async Task<(RunState state, DungeonMap map)> StartAsync(string accountId, CancellationToken ct)
+    public Task<(RunState state, DungeonMap map)> StartAsync(
+        string accountId,
+        CancellationToken ct) => StartAsync(accountId, "default", ct);
+
+    public async Task<(RunState state, DungeonMap map)> StartAsync(
+        string accountId,
+        string characterId,
+        CancellationToken ct)
     {
+        if (string.IsNullOrWhiteSpace(characterId))
+            throw new ArgumentException("Character ID must not be empty.", nameof(characterId));
+
+        // Validate before consuming a seed, generating a map, or touching the save.
+        var catalog = _catalogSource();
+        if (!catalog.TryGetCharacter(characterId, out _))
+            throw new ArgumentException(
+                $"Character '{characterId}' was not found.", nameof(characterId));
+
+        var mapConfig = _mapConfigSource();
         int seed = 0;
         DungeonMap? map = null;
         MapGenerationException? last = null;
@@ -52,7 +73,7 @@ public sealed class RunStartService
             var act1Seed = unchecked((int)(uint)ActMapSeedHelper.Derive((ulong)(uint)seed, 1));
             try
             {
-                map = _generator.Generate(new SystemRng(act1Seed), _mapConfig);
+                map = _generator.Generate(new SystemRng(act1Seed), mapConfig);
                 break;
             }
             catch (MapGenerationException ex)
@@ -64,8 +85,6 @@ public sealed class RunStartService
         // Phase 10.6.B T8: lazy resolve に切替。ここでは pre-resolve しない。
         // NodeEffectResolver.Resolve が Unknown マスに踏み込んだ時点で解決し cache に追記する。
         var resolutions = ImmutableDictionary<int, TileKind>.Empty;
-        var catalog = EmbeddedDataLoader.LoadCatalog();
-
         // Encounter 用に seed+2..+5 を割り当てる (seed+1 は以前 UnknownResolver で使用していたが不要になった)。
         var queueWeak = EncounterQueue.Initialize(
             new EnemyPool(Act: 1, Tier: EnemyTier.Weak), catalog, new SystemRng(unchecked(seed + 2)));
@@ -76,8 +95,9 @@ public sealed class RunStartService
         var queueBoss = EncounterQueue.Initialize(
             new EnemyPool(Act: 1, Tier: EnemyTier.Boss), catalog, new SystemRng(unchecked(seed + 5)));
 
-        var state = RunState.NewSoloRun(
+        var state = RunState.NewPartyRun(
             catalog,
+            new[] { characterId },
             rngSeed: unchecked((ulong)(uint)seed),
             startNodeId: map.StartNodeId,
             unknownResolutions: resolutions,
@@ -103,7 +123,7 @@ public sealed class RunStartService
     {
         var derived = ActMapSeedHelper.Derive(rngSeed, act);
         int seed = unchecked((int)(uint)derived);
-        return _generator.Generate(new SystemRng(seed), _mapConfig);
+        return _generator.Generate(new SystemRng(seed), _mapConfigSource());
     }
 
     /// <summary>

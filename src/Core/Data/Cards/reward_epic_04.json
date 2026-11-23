@@ -1,38 +1,63 @@
 {
-    "id":  "reward_epic_04",
-    "name":  "三段斬り",
-    "displayName":  null,
-    "activeVersion":  "v1",
-    "versions":  [
-                     {
-                         "version":  "v1",
-                         "createdAt":  "2026-05-01T03:54:50Z",
-                         "label":  "original",
-                         "spec":  {
-                                      "rarity":  3,
-                                      "cardType":  "Attack",
-                                      "cost":  2,
-                                      "effects":  [
-                                                      {
-                                                          "action":  "attack",
-                                                          "scope":  "single",
-                                                          "side":  "enemy",
-                                                          "amount":  12
-                                                      },
-                                                      {
-                                                          "action":  "attack",
-                                                          "scope":  "single",
-                                                          "side":  "enemy",
-                                                          "amount":  12
-                                                      },
-                                                      {
-                                                          "action":  "attack",
-                                                          "scope":  "single",
-                                                          "side":  "enemy",
-                                                          "amount":  12
-                                                      }
-                                                  ]
-                                  }
-                     }
-                 ]
+  "id": "striker_epic_form_copy",
+  "name": "型写し",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Striker",
+  "eligibleCharacterIds": [
+    "default"
+  ],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 3,
+        "cardType": "Skill",
+        "cost": 1,
+        "usesPerTurn": 1,
+        "upgradedUsesPerTurn": 1,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 4
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 6
+          }
+        ],
+        "abilities": [
+          {
+            "type": "reprise",
+            "filter": {
+              "cardTypes": [
+                "Attack"
+              ],
+              "maxOriginalCost": 1
+            }
+          }
+        ],
+        "upgradedAbilities": [
+          {
+            "type": "reprise",
+            "filter": {
+              "cardTypes": [
+                "Attack"
+              ],
+              "maxOriginalCost": 2
+            }
+          }
+        ]
+      }
+    }
+  ]
 }

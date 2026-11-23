@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getCurrentRun, startNewRun } from '../api/runs'
+import { getCurrentRun } from '../api/runs'
 import type { RunSnapshotDto } from '../api/types'
 import { Button } from '../components/Button'
 import { useAccount } from '../context/AccountContext'
@@ -8,56 +8,73 @@ import './MainMenuScreen.css'
 type Props = {
   onOpenSettings: () => void
   onLogout: () => void
-  onStartRun?: (snapshot: RunSnapshotDto) => void
+  onStartRun?: (snapshot: RunSnapshotDto) => void | Promise<void>
+  onPickCharacter?: (force: boolean) => void
   hasCurrentRun?: boolean
   onAchievements: () => void
 }
 
 type ComingSoonKind = 'multi' | null
 
-export function MainMenuScreen({ onOpenSettings, onLogout, onStartRun, hasCurrentRun, onAchievements }: Props) {
+export function MainMenuScreen({
+  onOpenSettings,
+  onLogout,
+  onStartRun,
+  onPickCharacter,
+  hasCurrentRun,
+  onAchievements,
+}: Props) {
   const { accountId } = useAccount()
   const [snapshot, setSnapshot] = useState<RunSnapshotDto | null>(null)
   const [dialog, setDialog] = useState<ComingSoonKind>(null)
   const [singleDialog, setSingleDialog] = useState(false)
-  const [pending, setPending] = useState(false)
+  const [runLookup, setRunLookup] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [transitioning, setTransitioning] = useState(false)
 
   useEffect(() => {
     if (!accountId) return
     let cancelled = false
     getCurrentRun(accountId)
-      .then((snap) => { if (!cancelled) setSnapshot(snap) })
-      .catch(() => { /* hasRun=false のまま */ })
+      .then((snap) => {
+        if (cancelled) return
+        setSnapshot(snap)
+        setRunLookup('ready')
+      })
+      .catch(() => { if (!cancelled) setRunLookup('error') })
     return () => { cancelled = true }
   }, [accountId])
 
   const effectiveHasRun =
     hasCurrentRun ?? (snapshot !== null && snapshot.run.progress === 'InProgress')
 
-  async function startFresh(force: boolean) {
-    if (!accountId || pending) return
-    setPending(true)
-    try {
-      const snap = await startNewRun(accountId, force)
-      onStartRun?.(snap)
-    } finally {
-      setPending(false)
-      setSingleDialog(false)
-    }
+  function openCharacterPick(force: boolean) {
+    setSingleDialog(false)
+    onPickCharacter?.(force)
   }
 
   function handleSingle() {
     if (effectiveHasRun && snapshot) {
       setSingleDialog(true)
     } else {
-      void startFresh(false)
+      openCharacterPick(false)
     }
   }
 
-  function continueRun() {
-    if (snapshot) onStartRun?.(snapshot)
+  async function continueRun() {
+    if (!snapshot || transitioning) return
+    setTransitioning(true)
     setSingleDialog(false)
+    try {
+      await onStartRun?.(snapshot)
+    } finally {
+      setTransitioning(false)
+    }
   }
+
+  const currentNode = snapshot?.map.nodes.find(node => node.id === snapshot.run.currentNodeId)
+  const hpPercent = snapshot?.run.maxHp
+    ? Math.max(0, Math.min(100, snapshot.run.currentHp / snapshot.run.maxHp * 100))
+    : 0
 
   return (
     <main className="main-menu">
@@ -68,7 +85,11 @@ export function MainMenuScreen({ onOpenSettings, onLogout, onStartRun, hasCurren
           <span className="main-menu__account-mark" aria-hidden="true">▸</span>
           <span className="main-menu__account">{accountId}</span>
         </span>
-        {effectiveHasRun && <p className="main-menu__badge">保存済みラン有り</p>}
+        <div className="main-menu__save-state" aria-live="polite">
+          {runLookup === 'loading' && <span>RUN DATA 確認中…</span>}
+          {runLookup === 'error' && <span>RUN DATAを確認できません</span>}
+          {effectiveHasRun && <p className="main-menu__badge">保存済みラン有り</p>}
+        </div>
       </header>
 
       <div className="main-menu__center">
@@ -80,14 +101,34 @@ export function MainMenuScreen({ onOpenSettings, onLogout, onStartRun, hasCurren
 
         <div className="main-menu__divider" aria-hidden="true" />
 
+        {effectiveHasRun && snapshot && (
+          <section className="main-menu__run-card" aria-label="進行中のラン">
+            <div className="main-menu__run-head">
+              <strong>ACT {snapshot.run.currentAct ?? 1}</strong>
+              <span>FLOOR {currentNode?.row ?? snapshot.run.currentNodeId ?? 0}</span>
+              <span>{snapshot.run.characterId || 'PARTY'}</span>
+            </div>
+            <div className="main-menu__run-stats">
+              <span>HP {snapshot.run.currentHp ?? 0}/{snapshot.run.maxHp ?? 0}</span>
+              <span>GOLD {snapshot.run.gold ?? 0}</span>
+              <span>DECK {snapshot.run.deck?.length ?? 0}</span>
+              <span>TIME {formatPlayTime(snapshot.run.playSeconds ?? 0)}</span>
+            </div>
+            <span className="main-menu__run-hp" aria-hidden="true">
+              <span style={{ width: `${hpPercent}%` }} />
+            </span>
+          </section>
+        )}
+
         <nav className="main-menu__buttons">
           <button
             type="button"
             className="main-menu__btn main-menu__btn--primary"
-            onClick={effectiveHasRun ? continueRun : () => void startFresh(false)}
+            onClick={effectiveHasRun ? () => void continueRun() : () => openCharacterPick(false)}
+            disabled={transitioning}
           >
             <span className="main-menu__btn-mark" aria-hidden="true">▸</span>
-            {effectiveHasRun ? 'つづきから' : 'はじめから'}
+            {transitioning ? '読み込み中…' : effectiveHasRun ? 'つづきから' : 'はじめから'}
           </button>
           <button
             type="button"
@@ -141,11 +182,17 @@ export function MainMenuScreen({ onOpenSettings, onLogout, onStartRun, hasCurren
       {singleDialog && (
         <div role="dialog" aria-label="ソロプレイ" className="main-menu__dialog">
           <p>進行中のランがあります。どうしますか？</p>
-          <Button onClick={continueRun}>続きから</Button>
-          <Button variant="danger" onClick={() => void startFresh(true)}>新規で上書き</Button>
+          <Button onClick={() => void continueRun()} disabled={transitioning}>続きから</Button>
+          <Button variant="danger" onClick={() => openCharacterPick(true)}>新規で上書き</Button>
           <Button variant="secondary" onClick={() => setSingleDialog(false)}>キャンセル</Button>
         </div>
       )}
     </main>
   )
+}
+
+function formatPlayTime(totalSeconds: number): string {
+  const minutes = Math.floor(Math.max(0, totalSeconds) / 60)
+  const seconds = Math.max(0, totalSeconds) % 60
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }

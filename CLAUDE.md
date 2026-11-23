@@ -16,6 +16,14 @@ cd src/Client && npm run dev
 dotnet test
 ```
 
+### テスト実行の注意
+
+- フロントのテスト（`npx vitest run` / `npx playwright test`）は **大文字ドライブのパス（`C:\...`）から**実行する。
+  小文字の `c:\...` を作業ディレクトリにすると vitest が二重ロードされ、全ファイルが
+  `Cannot read properties of undefined (reading 'config')` で失敗する（コードの問題ではない）。
+- 開発サーバーと Server.Tests は `data-local/dev-overrides/`（git 管理外）の上書きデータを読み込む。
+  上書きはエントリ全体を置き換えるので、定義に項目を追加したら上書きファイル側も更新する。
+
 ## 技術スタック
 
 - **Core**: C# .NET 10 クラスライブラリ（純粋ゲームロジック、将来Udon#移植対象）
@@ -52,14 +60,18 @@ roguelike-cardgame/
 
 ## 進行中の仕様変更（必読）
 
-- **敵AIのカード化・キャラクター能力値システム**（2026-11-23 提案、未実装）:
-  [docs/proposed-enemy-card-ai-and-character-stats.md](docs/proposed-enemy-card-ai-and-character-stats.md)
-  - 敵の固定Move方式を、CPU味方と共通のカード使用・行動予約方式へ移行する方針。
-  - 敵のカード選択は既存 `CpuCardPlayPolicy` / `BattleCpuPlanningCoordinator` を共通利用し、敵専用AIを新設・複製しない。
-  - 敵の通常戦闘中のバフ・デバフだけ予約時に反映せず、実行時に反映する。プレイヤー側の予約時即時処理は変更しない。
-  - 能力値参照効果は実行時の有効値を参照する（既存 `AmountSource` は使用時固定なので流用不可）。
-  - 先制行動は通常デッキと独立したプールで、登場時に即時解決する。
-  - 同文書 §5 の未決事項は、ユーザーの回答なしに仕様化しない。実装した部分は `current-*` 仕様書へ移す。
+- **敵AIのカード化・キャラクター能力値システム**（2026-11-23 開始、一部実装）:
+  - 実装済みの現行仕様: [docs/current-enemy-card-ai-spec.md](docs/current-enemy-card-ai-spec.md)
+  - 全体方針・残り段階・未決事項: [docs/proposed-enemy-card-ai-and-character-stats.md](docs/proposed-enemy-card-ai-and-character-stats.md)
+  - 敵34体は全てカード制御（`deck`）。デッキは旧Moveから自動生成した初期値で、手動調整する前提。敵用カードは `Data/Cards/enemy_*.json`（Token）。
+  - 敵のカード選択は既存 `CpuCardPlayPolicy` を共通利用し、敵専用AIを新設・複製しない。
+  - 敵の行動予測: ターン開始時に敵の行動を一度実際に行い、戦場効果は反映せず `PlannedEffects` に記録して頭上に表示。敵行動時はその記録を「非攻撃 → 攻撃」の順に再現実行する。ドロー等の手札系だけ予約時に即時。プレイヤー側の予約時即時処理は変更しない。
+  - 攻撃力・守備力は筋力・敏捷とは別の能力値（敵・味方・プレイヤーが初期値 `attack`/`defense` を持ち、図鑑に載せる）。カードは `amountSource: "selfAttack"/"selfDefense"` で参照し、そこに筋力・敏捷が加わる。敵の予約では実行時の値を使う。
+  - 倍率は `amountScalePercent`（例: 強攻撃=150）。初期デッキの「攻撃の基本」「防御の基本」も能力値参照。
+  - 敵の計画行動は味方CPUと同じ行動記録としてジャーナルに残り、敵の「行動」ボタンから再生できる（開発確認用）。
+  - 行動力（エナジー）に上限は設けない。敵の単体攻撃対象は現行ルール（最小Slot）。
+  - 先制行動（`openingActions`）は通常デッキと独立し、最初の手札を配った直後・他の全処理の前に即時解決する。
+  - 提案書 §5 の未決事項は、ユーザーの回答なしに仕様化しない。実装した部分は `current-*` 仕様書へ移す。
 - `docs/current-*.md` が現行仕様の正本。`proposed-*.md` は未承認・未実装の提案。
 
 ## コーディング規約

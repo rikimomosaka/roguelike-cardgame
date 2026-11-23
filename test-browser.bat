@@ -23,6 +23,10 @@ call npx playwright install chromium
 if errorlevel 1 exit /b 1
 
 :browser_ready
+echo === Auditing raster asset boundaries ===
+powershell -NoProfile -ExecutionPolicy Bypass -File "%ROOT%tools\AuditRasterAssets.ps1"
+if errorlevel 1 exit /b 1
+
 echo === Running isolated browser E2E on Server 5115 / Client 5174 ===
 call npm run test:e2e
 set "RESULT=%errorlevel%"

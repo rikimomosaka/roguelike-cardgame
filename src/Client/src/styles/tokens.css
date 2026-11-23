@@ -34,6 +34,13 @@
   --gold-border: #a88a2a;
   --gold-soft: #e8c87a;
 
+  /* ---------- Character / acquisition classes ---------- */
+  --class-striker: #d9533f;
+  --class-guardian: #38a7b7;
+  --class-tactician: #8ebc45;
+  --class-enhancer: #9267d3;
+  --class-universal: #e2d3a0;
+
   /* ---------- Rarity: COMMON ---------- */
   --rarity-c: #eaeaea;
   --rarity-c-border: #8a6a3a;
@@ -77,26 +84,23 @@
   --intent-heal: #8fd08f;
   --intent-unknown: #8a6a3a;
 
-  /* ---------- Card type gradients ---------- */
-  --card-type-attack: linear-gradient(180deg, #6a2a1a 0%, #3a1a10 100%);
-  --card-type-skill:  linear-gradient(180deg, #2a4a3a 0%, #10201a 100%);
-  --card-type-power:  linear-gradient(180deg, #4a2a5a 0%, #1a1025 100%);
-  --card-type-curse:  linear-gradient(180deg, #3a1a3a 0%, #1a1025 100%);
-  --card-type-status: linear-gradient(180deg, #2a2a2a 0%, #101010 100%);
-
   /* ---------- Typography ---------- */
   --font-body: 'DotGothic16', 'Courier New', monospace;
   --font-label: 'Pixelify Sans', 'Courier New', monospace;
   --font-digit: 'Silkscreen', 'Courier New', monospace;
 
-  --fs-xs: 10px;
-  --fs-sm: 12px;
-  --fs-md: 14px;
-  --fs-lg: 16px;
-  --fs-xl: 19px;
-  --fs-2xl: 24px;
-  --fs-3xl: 32px;
-  --fs-hero: 44px;
+  /* UI scale intentionally changes interface typography and controls, not the
+     canonical card geometry or the 1280x720 game coordinate system. */
+  --ui-scale-factor: 1;
+
+  --fs-xs: calc(10px * var(--ui-scale-factor));
+  --fs-sm: calc(12px * var(--ui-scale-factor));
+  --fs-md: calc(14px * var(--ui-scale-factor));
+  --fs-lg: calc(16px * var(--ui-scale-factor));
+  --fs-xl: calc(19px * var(--ui-scale-factor));
+  --fs-2xl: calc(24px * var(--ui-scale-factor));
+  --fs-3xl: calc(32px * var(--ui-scale-factor));
+  --fs-hero: calc(44px * var(--ui-scale-factor));
 
   --ls-label: 2.5px;      /* Pixelify Sans caps */
   --ls-tight: 0.5px;
@@ -124,6 +128,24 @@
   --glow-danger: 0 0 10px rgba(217, 97, 74, 0.45);
   --text-shadow-pixel: -1px 0 0 #000, 1px 0 0 #000, 0 -1px 0 #000, 0 1px 0 #000;
 
+  /* ---------- Motion ---------- */
+  --motion-instant: 60ms;
+  --motion-fast: 120ms;
+  --motion-standard: 190ms;
+  --motion-normal: var(--motion-standard);
+  --motion-slow: 320ms;
+  --motion-screen: 460ms;
+  --motion-dramatic: 680ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --ease-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
+  --ease-impact: cubic-bezier(0.2, 0.9, 0.2, 1.25);
+  --motion-pixel-steps: steps(6, end);
+
+  /* Shared focus treatment. It remains visible even when motion and flashes
+     are disabled. */
+  --focus-ring: 0 0 0 2px var(--bg-0), 0 0 0 4px var(--gold-warm);
+
   /* ---------- Z-index layers ---------- */
   --z-bg: 0;
   --z-stage: 2;
@@ -132,12 +154,33 @@
   --z-overlay-modal: 20;
   --z-picker: 30;
   --z-confirm: 40;
+  --z-screen-transition: 500;
   --z-topbar: 200;
   --z-tooltip: 10000;  /* always on top */
 
   /* ---------- Stage dimensions ---------- */
-  --stage-max-width: 1200px;
+  --stage-width: 1280px;
+  --stage-height: 720px;
+  --stage-max-width: 1280px;
   --stage-aspect: 16 / 9;
+}
+
+html[data-motion='reduced'] {
+  --motion-instant: 40ms;
+  --motion-fast: 70ms;
+  --motion-standard: 110ms;
+  --motion-slow: 160ms;
+  --motion-screen: 190ms;
+  --motion-dramatic: 220ms;
+}
+
+html[data-motion='off'] {
+  --motion-instant: 1ms;
+  --motion-fast: 1ms;
+  --motion-standard: 1ms;
+  --motion-slow: 1ms;
+  --motion-screen: 1ms;
+  --motion-dramatic: 1ms;
 }
 
 /* =============================================================

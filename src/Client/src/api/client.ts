@@ -51,6 +51,7 @@ function problemDetailsMessage(status: number, body: string): string {
 export type ApiRequestOptions = {
   accountId?: string
   body?: unknown
+  keepalive?: boolean
 }
 
 export async function apiRequest<T>(
@@ -69,6 +70,7 @@ export async function apiRequest<T>(
     method,
     headers,
     body: opts?.body !== undefined ? JSON.stringify(opts.body) : undefined,
+    keepalive: opts?.keepalive,
   })
 
   if (!response.ok) {

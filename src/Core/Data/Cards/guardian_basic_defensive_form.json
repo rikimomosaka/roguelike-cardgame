@@ -1,0 +1,57 @@
+{
+  "id": "guardian_basic_defensive_form",
+  "name": "守勢構え",
+  "displayName": null,
+  "poolKinds": [
+    "Basic"
+  ],
+  "poolClass": "Guardian",
+  "eligibleCharacterIds": [
+    "guardian_mireille"
+  ],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Skill",
+        "cost": 2,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 7
+          },
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "defensiveStance",
+            "amount": 1
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 10
+          },
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "defensiveStance",
+            "amount": 1
+          }
+        ],
+        "keywords": [
+          "wild"
+        ],
+        "upgradedKeywords": [
+          "superwild"
+        ]
+      }
+    }
+  ]
+}

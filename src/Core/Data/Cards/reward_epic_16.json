@@ -1,0 +1,64 @@
+{
+  "id": "enhancer_epic_grand_resonance",
+  "name": "大共鳴",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Enhancer",
+  "eligibleCharacterIds": [
+    "enhancer_lyra"
+  ],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 3,
+        "cardType": "Skill",
+        "cost": 2,
+        "effects": [
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "resonance",
+            "amount": 2
+          },
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "vigor",
+            "amount": 1
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "resonance",
+            "amount": 2
+          },
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "vigor",
+            "amount": 1
+          },
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 8
+          }
+        ],
+        "keywords": [
+          "exhaust"
+        ],
+        "upgradedKeywords": [
+          "exhaust"
+        ]
+      }
+    }
+  ]
+}

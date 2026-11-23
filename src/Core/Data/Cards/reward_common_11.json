@@ -1,0 +1,53 @@
+{
+  "id": "tactician_common_prepared_shield",
+  "name": "仕込み盾",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Tactician",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 8
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 11
+          }
+        ],
+        "abilities": [
+          {
+            "type": "contingency",
+            "trigger": {
+              "timing": "BeforeEnemyAttack"
+            }
+          }
+        ],
+        "upgradedAbilities": [
+          {
+            "type": "contingency",
+            "trigger": {
+              "timing": "BeforeEnemyAttack"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

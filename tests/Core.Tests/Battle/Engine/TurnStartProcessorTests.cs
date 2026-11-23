@@ -141,9 +141,15 @@ public class TurnStartProcessorTests
         // ハンドに既に 0 枚、山札 2 枚、捨札 5 枚 → 5 枚ドロー要求
         // 山札 2 枚 ドロー → 山札 0 枚 → 捨札 5 枚をシャッフルして山札へ → 残り 3 枚ドロー
         var rng = new FakeRng(new int[] { 0, 0, 0, 0, 0 }, new double[0]); // Fisher-Yates 用
-        var (next, _) = TurnStartProcessor.Process(s, rng, BattleFixtures.MinimalCatalog());
+        var (next, events) = TurnStartProcessor.Process(
+            s, rng, BattleFixtures.MinimalCatalog());
         Assert.Equal(5, next.Hand.Length);
         Assert.Empty(next.DiscardPile);
+        var shuffle = Assert.Single(
+            events, battleEvent => battleEvent.Kind == BattleEventKind.Shuffle);
+        Assert.Equal(5, shuffle.Amount);
+        Assert.True(shuffle.Order < Assert.Single(
+            events, battleEvent => battleEvent.Kind == BattleEventKind.TurnStart).Order);
     }
 
     [Fact] public void Stops_when_both_piles_empty()

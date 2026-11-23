@@ -1,0 +1,61 @@
+{
+  "id": "enhancer_basic_self_attunement",
+  "name": "自己調律",
+  "displayName": null,
+  "poolKinds": [
+    "Basic"
+  ],
+  "poolClass": "Enhancer",
+  "eligibleCharacterIds": [
+    "enhancer_lyra"
+  ],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Power",
+        "cost": 2,
+        "effects": [
+          {
+            "action": "buff",
+            "scope": "self",
+            "statusChanges": [
+              {
+                "name": "vigor",
+                "amount": 1
+              },
+              {
+                "name": "strength",
+                "amount": 1
+              }
+            ]
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "buff",
+            "scope": "self",
+            "statusChanges": [
+              {
+                "name": "vigor",
+                "amount": 1
+              },
+              {
+                "name": "strength",
+                "amount": 1
+              },
+              {
+                "name": "dexterity",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

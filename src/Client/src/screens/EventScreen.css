@@ -45,6 +45,18 @@
 .ev-frame[data-event='shady_merchant'] .ev-bg {
   background-image: url('/backgrounds/events/shady_merchant.png');
 }
+.ev-frame[data-event='forgotten_forge'] .ev-bg {
+  background-image: url('/backgrounds/events/forgotten_forge.png');
+}
+.ev-frame[data-event='moonlit_garden'] .ev-bg {
+  background-image: url('/backgrounds/events/moonlit_garden.png');
+}
+.ev-frame[data-event='sealed_vault'] .ev-bg {
+  background-image: url('/backgrounds/events/sealed_vault.png');
+}
+.ev-frame[data-event='lost_caravan'] .ev-bg {
+  background-image: url('/backgrounds/events/lost_caravan.png');
+}
 
 /* Top half: narrative window (semi-opaque scroll-style box) */
 .ev-narrative-wrap {
@@ -55,6 +67,16 @@
   border-radius: var(--radius-sm);
   -webkit-backdrop-filter: blur(2px);
   backdrop-filter: blur(2px);
+}
+
+.ev-phase {
+  display: block;
+  margin: 0 4px 7px;
+  color: var(--gold-deep);
+  font-family: var(--font-label);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
 }
 
 /* ---- Narrative ---- */
@@ -73,6 +95,12 @@
   color: var(--gold);
   font-style: normal;
   text-shadow: 0 0 6px rgba(255, 213, 79, 0.3);
+}
+
+.ev-error {
+  margin: 8px 4px 0;
+  color: var(--state-danger-soft);
+  font-size: 12px;
 }
 
 /* ---- Actions row (choices + inline close button) ---- */
@@ -168,6 +196,44 @@
   letter-spacing: 1px;
   color: var(--fg);
   text-shadow: 0 1px 0 #000;
+}
+
+.ev-choice__pending {
+  margin-left: 18px;
+  color: var(--gold-soft);
+  font-family: var(--font-label);
+  font-size: 10px;
+  letter-spacing: 2px;
+}
+
+.ev-choice--pending,
+.ev-choice--pending:disabled {
+  filter: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px rgba(232, 200, 122, 0.25), 0 0 18px rgba(201, 152, 90, 0.28);
+  animation: ev-choice-waiting 0.9s steps(2, end) infinite;
+}
+
+.ev-frame[data-state='resolved'] .ev-narrative-wrap {
+  animation: ev-result-in 260ms steps(4, end) both;
+}
+
+@keyframes ev-choice-waiting {
+  50% { box-shadow: 0 0 0 2px rgba(232, 200, 122, 0.35), 0 0 24px rgba(201, 152, 90, 0.42); }
+}
+
+@keyframes ev-result-in {
+  from { opacity: 0.45; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ev-choice,
+  .ev-choice--pending,
+  .ev-frame[data-state='resolved'] .ev-narrative-wrap {
+    animation: none;
+    transition: none;
+  }
 }
 
 .ev-choice__label::before {

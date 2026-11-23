@@ -6,32 +6,29 @@
   "act": 1,
   "heightTier": 2,
   "tier": "Weak",
-  "initialMoveId": "dive",
-  "moves": [
+  "attack": 6,
+  "defense": 3,
+  "initialEnergy": 0,
+  "energyPerTurn": 1,
+  "drawPerTurn": 3,
+  "handLimit": 5,
+  "aiProfileId": "low_cost_combo",
+  "deck": [
     {
-      "id": "dive",
-      "kind": "Attack",
-      "nextMoveId": "flutter",
-      "effects": [
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 6
-        }
-      ]
+      "cardId": "enemy_cave_bat_b_dive",
+      "count": 2
     },
     {
-      "id": "flutter",
-      "kind": "Defend",
-      "nextMoveId": "dive",
-      "effects": [
-        {
-          "action": "block",
-          "scope": "self",
-          "amount": 3
-        }
-      ]
+      "cardId": "enemy_cave_bat_b_flutter",
+      "count": 2
+    },
+    {
+      "cardId": "enemy_common_attack",
+      "count": 6
+    },
+    {
+      "cardId": "enemy_common_defend",
+      "count": 2
     }
   ]
 }

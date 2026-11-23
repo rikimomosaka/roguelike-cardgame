@@ -1,5 +1,9 @@
 /* src/Client/src/index.css */
-* { box-sizing: border-box; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
 /* Project art direction: every in-game raster asset is pixel art. Keep sprite
    edges crisp even when responsive layout scales an image away from its source size. */
@@ -8,7 +12,8 @@ canvas.pixel-art {
   image-rendering: pixelated;
 }
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   width: 100%;
@@ -20,9 +25,44 @@ html, body {
   user-select: none;
 }
 
-input, textarea, [contenteditable="true"] {
+html {
+  color-scheme: dark;
+  font-family: var(--font-body);
+}
+
+body {
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: var(--fs-md);
+  line-height: 1.45;
+}
+
+input,
+textarea,
+[contenteditable='true'] {
   -webkit-user-select: text;
   user-select: text;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+[role='button'],
+a[href],
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:where(button, [role='button'], a[href], input, select, textarea):focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 #root {
@@ -36,11 +76,58 @@ input, textarea, [contenteditable="true"] {
 
 .app-stage {
   position: relative;
+  isolation: isolate;
+  contain: layout paint style;
   flex-shrink: 0;
-  width: 1280px;
-  height: 720px;
+  width: var(--stage-width, 1280px);
+  height: var(--stage-height, 720px);
+  --app-stage-height: var(--stage-height, 720px);
   overflow: hidden;
-  background: var(--bg, #14171a);
+  background: var(--bg-0, #0a0604);
   transform: scale(var(--app-scale, 1));
   transform-origin: center center;
+}
+
+.app-stage.app-stage--workbench {
+  width: 100vw;
+  height: 100vh;
+  --app-stage-height: 100vh;
+  transform: none;
+}
+
+/* Explicit motion-off is an accessibility guarantee for every screen,
+   including older animations that have not migrated to motion tokens yet. */
+html[data-motion='off'] .app-stage *,
+html[data-motion='off'] .app-stage *::before,
+html[data-motion='off'] .app-stage *::after {
+  scroll-behavior: auto !important;
+  animation-delay: 0ms !important;
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  transition-delay: 0ms !important;
+  transition-duration: 1ms !important;
+}
+
+html[data-shake='off'] [data-presentation='shake'],
+html[data-flash='off'] [data-presentation='flash'] {
+  animation: none !important;
+}
+
+html[data-motion='reduced'] [data-motion='decorative'] {
+  animation: none !important;
+}
+
+/* The operating-system preference selects the reduced profile through
+   PresentationProvider. Do not blanket-collapse every animation here: combat
+   sprite frames and hit-state transitions carry gameplay meaning. Individual
+   components reduce travel distance, shake and decorative loops instead. */
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion]) {
+    --motion-instant: 40ms;
+    --motion-fast: 70ms;
+    --motion-standard: 110ms;
+    --motion-slow: 160ms;
+    --motion-screen: 190ms;
+    --motion-dramatic: 220ms;
+  }
 }

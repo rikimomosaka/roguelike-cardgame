@@ -1,41 +1,26 @@
 {
-    "id":  "honeycomb_stone",
-    "name":  "ハニカムストーン",
-    "displayName":  null,
-    "activeVersion":  "v2",
-    "versions":  [
-                     {
-                         "version":  "v1",
-                         "createdAt":  "2026-05-02T03:29:22Z",
-                         "label":  "original",
-                         "spec":  {
-                                      "rarity":  1,
-                                      "description":  "[未実装] 蜜蜂の巣を思わせる多孔質の石。指で撫でると、心がじんわり温まる。",
-                                      "effects":  [
-
-                                                  ],
-                                      "implemented":  false
-                                  }
-                     },
-                     {
-                         "version":  "v2",
-                         "createdAt":  "2026-08-08T00:00:00Z",
-                         "label":  "barrier reference relic",
-                         "spec":  {
-                                      "rarity":  1,
-                                      "description":  "戦闘開始時にバリアを2得る。バリアは正の攻撃1ヒットを無効化する。",
-                                      "effects":  [
-                                                      {
-                                                          "action":  "buff",
-                                                          "scope":  "self",
-                                                          "target":  null,
-                                                          "amount":  2,
-                                                          "name":  "barrier",
-                                                          "trigger":  "OnBattleStart"
-                                                      }
-                                                  ],
-                                      "implemented":  true
-                                  }
-                     }
-                 ]
+  "id": "honeycomb_stone",
+  "name": "\u30CF\u30CB\u30AB\u30E0\u30B9\u30C8\u30FC\u30F3",
+  "displayName": null,
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "spec": {
+        "rarity": 1,
+        "description": "\u516D\u89D2\u5F62\u306E\u7D50\u6676\u304C\u91CD\u306A\u308B\u9EC4\u91D1\u8272\u306E\u77F3\u3002\u885D\u6483\u3092\u871C\u306E\u3088\u3046\u306B\u53D7\u3051\u6B62\u3081\u308B\u3002",
+        "effects": [
+          {
+            "action": "buff",
+            "scope": "self",
+            "target": null,
+            "amount": 2,
+            "name": "barrier",
+            "trigger": "OnBattleStart"
+          }
+        ],
+        "implemented": true
+      }
+    }
+  ]
 }

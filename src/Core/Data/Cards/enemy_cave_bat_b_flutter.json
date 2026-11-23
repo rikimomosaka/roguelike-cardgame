@@ -1,0 +1,25 @@
+{
+  "id": "enemy_cave_bat_b_flutter",
+  "name": "羽ばたき",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy cave_bat_b unique (from move flutter)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 3
+          }
+        ]
+      }
+    }
+  ]
+}

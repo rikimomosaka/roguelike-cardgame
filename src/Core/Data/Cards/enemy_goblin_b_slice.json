@@ -1,0 +1,26 @@
+{
+  "id": "enemy_goblin_b_slice",
+  "name": "切り裂き",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy goblin_b unique (from move slice)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 7
+          }
+        ]
+      }
+    }
+  ]
+}

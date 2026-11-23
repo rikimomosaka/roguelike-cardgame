@@ -1,0 +1,26 @@
+{
+  "id": "enemy_louse_red_bite",
+  "name": "噛みつき",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy louse_red unique (from move bite)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 6
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Map;
 using RoguelikeCardGame.Core.Random;
 using RoguelikeCardGame.Core.Run;
@@ -62,6 +64,85 @@ public class RunStartServiceTests
         Assert.Null(await saves.TryLoadAsync("bob", CancellationToken.None));
     }
 
+    [Fact]
+    public async Task StartAsync_SelectedCharacter_InitializesRootAndHostFromThatDefinition()
+    {
+        var embedded = EmbeddedDataLoader.LoadCatalog();
+        var selected = embedded.Characters["default"] with
+        {
+            Id = "selected-character",
+            MaxHp = 123,
+            StartingGold = 456,
+        };
+        var characters = new Dictionary<string, CharacterDefinition>(embedded.Characters)
+        {
+            [selected.Id] = selected,
+        };
+        var catalog = embedded with { Characters = characters };
+        var gen = new FlakeyGenerator(failFirst: 0, success: StubMap());
+        var saves = new InMemorySaveRepository();
+        var service = new RunStartService(
+            gen,
+            MapGenerationConfigLoader.LoadAct1(),
+            saves,
+            now: () => FixedNow,
+            seedSource: () => 77,
+            catalogSource: () => catalog);
+
+        var (state, _) = await service.StartAsync(
+            "selected-account",
+            selected.Id,
+            CancellationToken.None);
+
+        Assert.Equal(selected.Id, state.CharacterId);
+        Assert.Equal(selected.MaxHp, state.CurrentHp);
+        Assert.Equal(selected.MaxHp, state.MaxHp);
+        Assert.Equal(selected.StartingGold, state.Gold);
+        var host = Assert.Single(state.PartyMembers);
+        Assert.Equal(state.HostMemberId, host.MemberId);
+        Assert.Equal(selected.Id, host.CharacterId);
+        Assert.Equal(selected.MaxHp, host.CurrentHp);
+        Assert.Equal(selected.StartingGold, host.Gold);
+        Assert.Equal(selected.Deck, host.Deck.Select(card => card.Id).ToArray());
+        Assert.Equal(1, saves.SaveCalls);
+    }
+
+    [Fact]
+    public async Task StartAsync_UnknownCharacter_DoesNotConsumeSeedGenerateMapOrSave()
+    {
+        var catalog = EmbeddedDataLoader.LoadCatalog();
+        var gen = new FlakeyGenerator(failFirst: 0, success: StubMap());
+        var saves = new InMemorySaveRepository();
+        var seedCalls = 0;
+        var mapConfigCalls = 0;
+        var service = new RunStartService(
+            gen,
+            MapGenerationConfigLoader.LoadAct1(),
+            saves,
+            seedSource: () =>
+            {
+                seedCalls++;
+                return 77;
+            },
+            catalogSource: () => catalog,
+            mapConfigSource: () =>
+            {
+                mapConfigCalls++;
+                return MapGenerationConfigLoader.LoadAct1();
+            });
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.StartAsync(
+            "unknown-account",
+            "missing-character",
+            CancellationToken.None));
+
+        Assert.Equal(0, seedCalls);
+        Assert.Equal(0, mapConfigCalls);
+        Assert.Equal(0, gen.Calls);
+        Assert.Equal(0, saves.SaveCalls);
+        Assert.Null(await saves.TryLoadAsync("unknown-account", CancellationToken.None));
+    }
+
     private sealed class FlakeyGenerator : IDungeonMapGenerator
     {
         private readonly int _failFirst;
@@ -97,9 +178,11 @@ public class RunStartServiceTests
     private sealed class InMemorySaveRepository : ISaveRepository
     {
         private readonly Dictionary<string, RunState> _store = new();
+        public int SaveCalls { get; private set; }
 
         public Task SaveAsync(string accountId, RunState state, CancellationToken ct)
         {
+            SaveCalls++;
             _store[accountId] = state;
             return Task.CompletedTask;
         }

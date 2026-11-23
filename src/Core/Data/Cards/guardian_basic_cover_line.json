@@ -1,0 +1,51 @@
+{
+  "id": "guardian_basic_cover_line",
+  "name": "護衛線",
+  "displayName": null,
+  "poolKinds": [
+    "Basic"
+  ],
+  "poolClass": "Guardian",
+  "eligibleCharacterIds": [
+    "guardian_mireille"
+  ],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Skill",
+        "cost": 3,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 9
+          },
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "cover",
+            "amount": 1
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 13
+          },
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "cover",
+            "amount": 2
+          }
+        ]
+      }
+    }
+  ]
+}

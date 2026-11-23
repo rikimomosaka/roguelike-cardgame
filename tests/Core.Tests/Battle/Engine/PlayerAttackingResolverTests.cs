@@ -46,6 +46,37 @@ public class PlayerAttackingResolverTests
         Assert.Equal(20, next.Enemies[1].CurrentHp);
     }
 
+    [Fact]
+    public void Required_player_death_from_reflect_stops_later_allied_attackers()
+    {
+        var hero = BattleFixtures.Hero(currentHp: 1, maxHp: 20) with
+        {
+            AttackSingle = AttackPool.Empty.Add(1),
+        };
+        var wisp = BattleFixtures.SummonActor(
+            "wisp", "wisp", slotIndex: 1, hp: 30) with
+        {
+            AttackSingle = AttackPool.Empty.Add(5),
+        };
+        var enemy = BattleFixtures.Goblin(hp: 20) with
+        {
+            Statuses = BattleFixtures.Goblin().Statuses
+                .SetItem("reflect", 1),
+        };
+        var state = MakeState(hero, enemy) with
+        {
+            Allies = [hero, wisp],
+        };
+
+        var (next, events) = PlayerAttackingResolver.Resolve(
+            state, Rng(), BattleFixtures.MinimalCatalog());
+
+        Assert.False(next.Allies[0].IsAlive);
+        Assert.Equal(19, next.Enemies[0].CurrentHp);
+        Assert.Single(events, battleEvent =>
+            battleEvent.Kind == BattleEventKind.AttackFire);
+    }
+
     [Fact] public void Single_hits_keep_the_final_selected_target_and_stop_after_it_dies()
     {
         var hero = BattleFixtures.Hero() with
@@ -68,7 +99,7 @@ public class PlayerAttackingResolverTests
         Assert.Equal(0, hits[0].HitIndex);
     }
 
-    [Fact] public void Single_is_a_no_op_when_its_fixed_target_is_already_dead()
+    [Fact] public void Single_retargets_when_its_fixed_target_died_before_the_actor_chain()
     {
         var hero = BattleFixtures.Hero() with
         {
@@ -84,8 +115,8 @@ public class PlayerAttackingResolverTests
             MakeState(hero, deadTarget, survivor) with { TargetEnemyIndex = 0 },
             Rng(), BattleFixtures.MinimalCatalog());
 
-        Assert.Equal(20, next.Enemies[1].CurrentHp);
-        Assert.DoesNotContain(events, e => e.Kind == BattleEventKind.AttackFire);
+        Assert.Equal(10, next.Enemies[1].CurrentHp);
+        Assert.Equal(2, events.Count(e => e.Kind == BattleEventKind.AttackFire));
     }
 
     [Fact] public void All_attack_hits_every_enemy()

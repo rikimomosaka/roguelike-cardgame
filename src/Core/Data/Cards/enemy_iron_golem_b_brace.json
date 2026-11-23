@@ -1,0 +1,25 @@
+{
+  "id": "enemy_iron_golem_b_brace",
+  "name": "踏ん張り",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy iron_golem_b unique (from move brace)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 14
+          }
+        ]
+      }
+    }
+  ]
+}

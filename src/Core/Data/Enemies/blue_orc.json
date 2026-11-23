@@ -6,45 +6,33 @@
   "act": 1,
   "heightTier": 6,
   "tier": "Strong",
-  "initialMoveId": "slash",
-  "moves": [
+  "attack": 8,
+  "defense": 10,
+  "initialEnergy": 0,
+  "energyPerTurn": 1,
+  "drawPerTurn": 3,
+  "handLimit": 5,
+  "aiProfileId": "low_cost_combo",
+  "deck": [
     {
-      "id": "slash",
-      "kind": "Attack",
-      "nextMoveId": "shield_up",
-      "effects": [
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 8
-        }
-      ]
+      "cardId": "enemy_blue_orc_slash",
+      "count": 2
     },
     {
-      "id": "shield_up",
-      "kind": "Defend",
-      "nextMoveId": "war_cry",
-      "effects": [
-        {
-          "action": "block",
-          "scope": "self",
-          "amount": 10
-        }
-      ]
+      "cardId": "enemy_blue_orc_shield_up",
+      "count": 2
     },
     {
-      "id": "war_cry",
-      "kind": "Buff",
-      "nextMoveId": "slash",
-      "effects": [
-        {
-          "action": "buff",
-          "scope": "self",
-          "name": "strength",
-          "amount": 1
-        }
-      ]
+      "cardId": "enemy_blue_orc_war_cry",
+      "count": 2
+    },
+    {
+      "cardId": "enemy_common_attack",
+      "count": 4
+    },
+    {
+      "cardId": "enemy_common_defend",
+      "count": 2
     }
   ]
 }

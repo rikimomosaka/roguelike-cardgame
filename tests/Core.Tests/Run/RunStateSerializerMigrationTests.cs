@@ -85,6 +85,11 @@ public class RunStateSerializerMigrationTests
         json = System.Text.RegularExpressions.Regex.Replace(json, ",\"encounteredEnemyIds\":\\[[^\\]]*\\]", "");
         // Phase 8 journeyLog フィールドも v4 にはないので削除
         json = System.Text.RegularExpressions.Regex.Replace(json, ",\"journeyLog\":\\[[^\\]]*\\]", "");
-        return json;
+        // v8 party ownership fields also did not exist in v4. Removing the whole
+        // structured value via JsonNode keeps the fixture faithful as it evolves.
+        var root = System.Text.Json.Nodes.JsonNode.Parse(json)!.AsObject();
+        root.Remove("hostMemberId");
+        root.Remove("partyMembers");
+        return root.ToJsonString();
     }
 }

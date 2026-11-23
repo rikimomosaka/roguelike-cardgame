@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import './Button.css'
 
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   children: ReactNode

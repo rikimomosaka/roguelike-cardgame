@@ -1,0 +1,61 @@
+{
+  "id": "tactician_basic_counterplan",
+  "name": "迎撃伏策",
+  "displayName": null,
+  "poolKinds": [
+    "Basic"
+  ],
+  "poolClass": "Tactician",
+  "eligibleCharacterIds": [
+    "tactician_yuno"
+  ],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Skill",
+        "cost": 2,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 8
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 11
+          }
+        ],
+        "keywords": [
+          "wild"
+        ],
+        "upgradedKeywords": [
+          "superwild"
+        ],
+        "abilities": [
+          {
+            "type": "contingency",
+            "trigger": {
+              "timing": "BeforeEnemyAttack"
+            }
+          }
+        ],
+        "upgradedAbilities": [
+          {
+            "type": "contingency",
+            "trigger": {
+              "timing": "BeforeEnemyAttack"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

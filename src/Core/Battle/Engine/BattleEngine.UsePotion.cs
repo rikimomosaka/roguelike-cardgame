@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using RoguelikeCardGame.Core.Battle.Events;
 using RoguelikeCardGame.Core.Battle.State;
 using RoguelikeCardGame.Core.Data;
@@ -23,6 +24,62 @@ public static partial class BattleEngine
         IRng rng,
         DataCatalog catalog)
     {
+        RejectIfParticipantReady(state, participantId: null, "UsePotion");
+        var (next, events) = UsePotionForActor(
+            state,
+            casterActorInstanceId: null,
+            potionIndex,
+            targetEnemyIndex,
+            targetAllyIndex,
+            rng,
+            catalog);
+        if (!next.Participants.IsDefaultOrEmpty)
+        {
+            next = BattleParticipantAccess.CommitRootToParticipant(
+                next, next.Participants[0].ParticipantId);
+        }
+        (next, events) = ApplyOutcomeAfterPlanningCommand(next, events);
+        return (IncrementActionRevision(next), events);
+    }
+
+    public static (BattleState, IReadOnlyList<BattleEvent>) UsePotion(
+        BattleState state,
+        string participantId,
+        int potionIndex,
+        int? targetEnemyIndex,
+        int? targetAllyIndex,
+        IRng rng,
+        DataCatalog catalog)
+    {
+        if (!BattleParticipantAccess.TryGet(state, participantId, out var participant))
+            throw new InvalidOperationException(
+                $"Battle participant '{participantId}' does not exist.");
+        RejectIfParticipantReady(state, participantId, "UsePotion");
+        var projected = BattleParticipantAccess.ProjectToRoot(state, participantId);
+        var (processed, events) = UsePotionForActor(
+            projected,
+            participant.ActorInstanceId,
+            potionIndex,
+            targetEnemyIndex,
+            targetAllyIndex,
+            rng,
+            catalog);
+        var committed = BattleParticipantAccess.CommitRootToParticipant(
+            processed, participantId);
+        (committed, events) = ApplyOutcomeAfterPlanningCommand(
+            committed, events);
+        return (IncrementActionRevision(committed), events);
+    }
+
+    private static (BattleState, IReadOnlyList<BattleEvent>) UsePotionForActor(
+        BattleState state,
+        string? casterActorInstanceId,
+        int potionIndex,
+        int? targetEnemyIndex,
+        int? targetAllyIndex,
+        IRng rng,
+        DataCatalog catalog)
+    {
         if (state.Phase != BattlePhase.PlayerInput)
             throw new InvalidOperationException(
                 $"UsePotion requires Phase=PlayerInput, got {state.Phase}");
@@ -38,17 +95,27 @@ public static partial class BattleEngine
 
         if (!catalog.TryGetPotion(potionId, out var def))
             throw new InvalidOperationException($"potion '{potionId}' not in catalog");
+        if (PotionUsageTracker.HasReachedLimit(state, def.Id, def.UsesPerTurn))
+            throw new InvalidOperationException(
+                $"potion '{def.Id}' has reached its per-turn usage limit");
 
-        var owner = ProvisionalSoloHeroOwnerResolver.Resolve(state);
-        if (owner is null)
-            throw new InvalidOperationException("hero not available");
-        var caster = owner.Hero;
+        var caster = casterActorInstanceId is null
+            ? ProvisionalSoloHeroOwnerResolver.Resolve(state)?.Hero
+            : state.Allies.FirstOrDefault(actor =>
+                actor.IsAlive
+                && string.Equals(
+                    actor.InstanceId,
+                    casterActorInstanceId,
+                    StringComparison.Ordinal));
+        if (caster is null)
+            throw new InvalidOperationException("potion owner is not available");
 
         var s = state with
         {
             TargetEnemyIndex = targetEnemyIndex ?? state.TargetEnemyIndex,
             TargetAllyIndex = targetAllyIndex ?? state.TargetAllyIndex,
         };
+        s = PotionUsageTracker.MarkUsed(s, def.Id, def.UsesPerTurn);
 
         var useSource = new CombatSource(
             CombatSourceKind.PotionEffect,
@@ -85,9 +152,13 @@ public static partial class BattleEngine
                     Source = ev.Source ?? source,
                 });
             }
-            owner = ProvisionalSoloHeroOwnerResolver.Resolve(s);
-            if (owner is null) break;
-            caster = owner.Hero;
+            caster = s.Allies.FirstOrDefault(actor =>
+                actor.IsAlive
+                && string.Equals(
+                    actor.InstanceId,
+                    caster.InstanceId,
+                    StringComparison.Ordinal));
+            if (caster is null) break;
         }
 
         s = s with { Potions = s.Potions.SetItem(potionIndex, "") };

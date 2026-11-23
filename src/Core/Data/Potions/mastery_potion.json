@@ -1,0 +1,8 @@
+{
+  "id": "mastery_potion",
+  "name": "熟練ポーション",
+  "rarity": 2,
+  "effects": [
+    { "action": "buff", "scope": "self", "name": "mastery", "amount": 2, "battleOnly": true }
+  ]
+}

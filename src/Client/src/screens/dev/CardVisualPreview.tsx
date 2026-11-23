@@ -8,10 +8,12 @@
 import { Card } from '../../components/Card'
 import type { CardRarity, CardType } from '../../components/Card'
 import type { CardSpec } from './DevSpecTypes'
+import type { CardPoolClass } from '../../api/catalog'
 
 type Props = {
   cardName: string
   displayName: string | null
+  poolClass?: CardPoolClass | null
   spec: CardSpec
   /** preview API から得た normal 用 auto-text (override 無し時に Card に渡る). */
   normalAutoText: string
@@ -41,6 +43,7 @@ const CARDTYPE_TO_LOWER: Record<string, CardType> = {
 export function CardVisualPreview({
   cardName,
   displayName,
+  poolClass = null,
   spec,
   normalAutoText,
   upgradedAutoText,
@@ -51,8 +54,10 @@ export function CardVisualPreview({
   const isUpgradable =
     spec.upgradedCost !== null ||
     (spec.upgradedEffects !== null && spec.upgradedEffects.length > 0) ||
-    (spec.upgradedKeywords !== null && spec.upgradedKeywords.length > 0) ||
-    spec.upgradedDescription !== null
+    spec.upgradedKeywords !== null ||
+    spec.upgradedAbilities !== null ||
+    spec.upgradedDescription !== null ||
+    spec.upgradedUsesPerTurn !== null
 
   const normalCost: number | string = spec.cost ?? 'X'
   const upgradedCost: number | string =
@@ -72,6 +77,7 @@ export function CardVisualPreview({
           cost={normalCost}
           type={type}
           rarity={rarity}
+          poolClass={poolClass}
           upgraded={false}
           description={normalDesc}
           upgradedDescription={isUpgradable ? upgradedDesc : null}
@@ -89,6 +95,7 @@ export function CardVisualPreview({
               cost={upgradedCost}
               type={type}
               rarity={rarity}
+              poolClass={poolClass}
               upgraded={true}
               description={normalDesc}
               upgradedDescription={upgradedDesc}

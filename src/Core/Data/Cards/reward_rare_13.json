@@ -1,0 +1,47 @@
+{
+  "id": "enhancer_rare_regeneration_treatment",
+  "name": "再生処置",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Enhancer",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 2,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "buff",
+            "scope": "single",
+            "side": "ally",
+            "name": "regeneration",
+            "amount": 3
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "buff",
+            "scope": "single",
+            "side": "ally",
+            "name": "regeneration",
+            "amount": 4
+          }
+        ],
+        "keywords": [
+          "exhaust"
+        ],
+        "upgradedKeywords": [
+          "exhaust"
+        ]
+      }
+    }
+  ]
+}

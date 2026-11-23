@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting;
 using RoguelikeCardGame.Core.Cards;
+using RoguelikeCardGame.Core.Battle.Statuses;
+using RoguelikeCardGame.Core.Data;
 
 namespace RoguelikeCardGame.Server.Controllers;
 
@@ -40,59 +42,26 @@ public sealed class DevMetaController : ControllerBase
             // Phase 10.5.M3: drawCards / retainSelf / exhaustSelf を一覧から外す。
             //   - drawCards は formatter / engine で draw alias として動作維持
             //   - retainSelf / exhaustSelf は keyword "wait" / "exhaust" 化、formatter alias は残す
-            effectActions = new[]
-            {
-                "attack", "block", "buff", "debuff", "heal", "draw", "discard",
-                "gainEnergy", "gainMaxEnergy", "exhaustCard",
-                "upgrade", "summon", "selfDamage", "addCard", "recoverFromDiscard",
-                "modifyCardCost",
-                // Phase 10.6.B Passive modifier actions (12 件)
-                "energyPerTurnBonus", "cardsDrawnPerTurnBonus",
-                "goldRewardMultiplier", "shopPriceMultiplier",
-                "rewardCardChoicesBonus", "rewardRerollAvailable",
-                "unknownTileWeightDelta",
-                "restHealBonus",
-            },
+            effectActions = ContentAuthoringCatalog.EffectActions,
+            cardAbilities = ContentAuthoringCatalog.CardAbilityTypes,
+            contingencyTriggerTimings = ContentAuthoringCatalog.ContingencyTriggerTimings,
             effectScopes = new[] { "self", "single", "random", "all" },
             effectSides = new[] { "enemy", "ally" },
             piles = new[] { "hand", "draw", "discard", "exhaust" },
             selectModes = new[] { "random", "choose", "all" },
             // Phase 10.5.L1.5: relic と power を統一した trigger リスト (18 値)。
             // engine 発火が実装済みのもの (12) と spec 列挙のみ (6: 10.6 で実装) を含む。
-            triggers = new[]
-            {
-                "OnPickup", "OnBattleStart", "OnBattleEnd",
-                "OnTurnStart", "OnTurnEnd", "OnPlayCard",
-                "OnEnemyDeath", "OnDamageReceived", "OnHit", "OnCombo",
-                "OnMapTileResolved", "OnCardDiscarded", "OnCardExhausted",
-                // 以下は spec 列挙のみ、engine 発火は 10.6.A で実装
-                "OnEnterShop", "OnEnterRestSite", "OnRest",
-                "OnRewardGenerated", "OnCardAddedToDeck",
-                // Passive は 10.6.B (modifier system)
-                "Passive",
-            },
-            amountSources = new[]
-            {
-                "handCount", "drawPileCount", "discardPileCount", "exhaustPileCount",
-                "selfHp", "selfHpLost", "selfBlock", "comboCount", "energy", "powerCardCount",
-            },
+            triggers = ContentAuthoringCatalog.Triggers,
+            amountSources = ContentAuthoringCatalog.AmountSources,
             keywords = CardKeywords.All.Values
                 .Select(k => new { id = k.Id, name = k.Name, description = k.Description })
                 .ToArray(),
-            statuses = new object[]
+            statuses = StatusDefinition.All.Select(status => new
             {
-                new { id = "weak", jp = "脱力" },
-                new { id = "vulnerable", jp = "脆弱" },
-                new { id = "strength", jp = "筋力" },
-                new { id = "dexterity", jp = "敏捷" },
-                new { id = "poison", jp = "毒" },
-                new { id = "omnistrike", jp = "拡散" },
-                new { id = "barrier", jp = "バリア" },
-                new { id = "lifesteal", jp = "吸血" },
-                new { id = "reflect", jp = "反射" },
-                new { id = "handCostReduction", jp = "手札コスト軽減" },
-                new { id = "handCostIncrease", jp = "手札コスト増加" },
-            },
+                id = status.Id,
+                jp = BattleStatusTextCatalog.Get(status.Id).Name,
+                kind = status.Kind.ToString(),
+            }),
         });
     }
 }

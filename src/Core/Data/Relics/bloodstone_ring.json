@@ -1,0 +1,21 @@
+{
+  "id": "bloodstone_ring",
+  "name": "血晶の指輪",
+  "displayName": null,
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-17T00:00:00Z",
+      "label": "initial",
+      "spec": {
+        "rarity": 2,
+        "description": "敵が倒れるたび赤い宝石に灯がともり、傷口を静かに塞いでいく。",
+        "effects": [
+          { "action": "heal", "scope": "self", "amount": 3, "trigger": "OnEnemyDeath" }
+        ],
+        "implemented": true
+      }
+    }
+  ]
+}

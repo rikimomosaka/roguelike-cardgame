@@ -6,46 +6,33 @@
   "act": 1,
   "heightTier": 6,
   "tier": "Elite",
-  "initialMoveId": "bellow",
-  "moves": [
+  "attack": 6,
+  "defense": 3,
+  "initialEnergy": 0,
+  "energyPerTurn": 1,
+  "drawPerTurn": 3,
+  "handLimit": 5,
+  "aiProfileId": "low_cost_combo",
+  "deck": [
     {
-      "id": "bellow",
-      "kind": "Buff",
-      "nextMoveId": "rush",
-      "effects": [
-        {
-          "action": "buff",
-          "scope": "self",
-          "name": "strength",
-          "amount": 2
-        }
-      ]
+      "cardId": "enemy_hobgoblin_bellow",
+      "count": 2
     },
     {
-      "id": "rush",
-      "kind": "Attack",
-      "nextMoveId": "skull_bash",
-      "effects": [
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 14
-        }
-      ]
+      "cardId": "enemy_hobgoblin_rush",
+      "count": 2
     },
     {
-      "id": "skull_bash",
-      "kind": "Attack",
-      "nextMoveId": "rush",
-      "effects": [
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 6
-        }
-      ]
+      "cardId": "enemy_hobgoblin_skull_bash",
+      "count": 2
+    },
+    {
+      "cardId": "enemy_common_attack",
+      "count": 4
+    },
+    {
+      "cardId": "enemy_common_defend",
+      "count": 2
     }
   ]
 }

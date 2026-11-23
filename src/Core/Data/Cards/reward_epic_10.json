@@ -1,30 +1,65 @@
 {
-    "id":  "reward_epic_10",
-    "name":  "戦略的布陣",
-    "displayName":  null,
-    "activeVersion":  "v1",
-    "versions":  [
-                     {
-                         "version":  "v1",
-                         "createdAt":  "2026-05-01T03:54:50Z",
-                         "label":  "original",
-                         "spec":  {
-                                      "rarity":  3,
-                                      "cardType":  "Skill",
-                                      "cost":  1,
-                                      "effects":  [
-                                                      {
-                                                          "action":  "drawCards",
-                                                          "scope":  "self",
-                                                          "amount":  2
-                                                      },
-                                                      {
-                                                          "action":  "block",
-                                                          "scope":  "self",
-                                                          "amount":  8
-                                                      }
-                                                  ]
-                                  }
-                     }
-                 ]
+  "id": "tactician_epic_venomous_finale",
+  "name": "毒計終幕",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Tactician",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 3,
+        "cardType": "Attack",
+        "cost": 3,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 6
+          },
+          {
+            "action": "debuff",
+            "scope": "single",
+            "side": "enemy",
+            "name": "poison",
+            "amount": 0,
+            "amountSource": "maxComboThisTurn"
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "attack",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 9
+          },
+          {
+            "action": "debuff",
+            "scope": "single",
+            "side": "enemy",
+            "name": "poison",
+            "amount": 0,
+            "amountSource": "maxComboThisTurn"
+          }
+        ],
+        "abilities": [
+          {
+            "type": "finisher"
+          }
+        ],
+        "upgradedAbilities": [
+          {
+            "type": "finisher"
+          }
+        ]
+      }
+    }
+  ]
 }

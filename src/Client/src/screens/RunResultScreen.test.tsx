@@ -37,11 +37,13 @@ describe('RunResultScreen', () => {
   })
 
   it('shows outcome, act reached, nodes, play seconds', () => {
-    render(<RunResultScreen result={sample} onReturnToMenu={vi.fn()} />)
+    const { container } = render(<RunResultScreen result={sample} onReturnToMenu={vi.fn()} />)
     expect(screen.getByText(/Cleared/)).toBeDefined()
     expect(screen.getByText(/Act 3/)).toBeDefined()
     expect(screen.getByText(/42/)).toBeDefined()
     expect(screen.getByText(/01:02:05/)).toBeDefined()
+    expect(container.querySelector('.rr')).toHaveAttribute('data-outcome', 'cleared')
+    expect(container.querySelectorAll('.rr__reveal')).toHaveLength(4)
   })
 
   it('calls onReturnToMenu', () => {

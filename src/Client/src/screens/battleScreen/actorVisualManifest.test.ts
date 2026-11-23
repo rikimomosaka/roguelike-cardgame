@@ -1,0 +1,83 @@
+import { describe, expect, it } from 'vitest'
+import {
+  actorSizeClassForTier,
+  PLAYABLE_ACTOR_VISUAL_IDS,
+  resolveActorImpactAnchorY,
+  resolveActorImpactCenterRatio,
+  resolveActorStageProfile,
+  resolveActorVisual,
+} from './actorVisualManifest'
+
+describe('actorVisualManifest', () => {
+  it.each(PLAYABLE_ACTOR_VISUAL_IDS)('provides a complete motion set for %s', (id) => {
+    const visual = resolveActorVisual({
+      isHero: true,
+      characterId: id,
+      side: 'Ally',
+    })
+
+    expect(visual?.image).toBe(`/characters/${id}_stand.png`)
+    expect(visual?.portrait).toBe(`/characters/portraits/${id}.png`)
+    expect(visual?.animations?.idle?.frameCount).toBe(8)
+    expect(visual?.animations?.idle?.durationMs).toBe(1600)
+    expect(visual?.animations?.attack?.frameCount).toBe(4)
+    expect(visual?.animations?.attack?.frameWidth).toBe(384)
+    expect(visual?.animations?.attack?.durationMs).toBe(480)
+    expect(visual?.animations?.hurt?.frameCount).toBe(4)
+    expect(visual?.animations?.hurt?.durationMs).toBe(440)
+  })
+
+  it('routes enemy and summon art to separate asset namespaces', () => {
+    expect(resolveActorVisual({
+      isHero: false,
+      imageId: 'slime_king',
+      side: 'Enemy',
+    })?.image).toBe('/characters/enemies/slime_king.png')
+    expect(resolveActorVisual({
+      isHero: false,
+      imageId: 'wisp',
+      side: 'Ally',
+    })?.image).toBe('/characters/units/wisp.png')
+  })
+
+  it('falls back to the striker visual for an unknown hero id', () => {
+    expect(resolveActorVisual({
+      isHero: true,
+      characterId: 'future_character',
+      side: 'Ally',
+    })?.image).toBe('/characters/default_stand.png')
+  })
+
+  it('classifies height tiers into stable presentation sizes', () => {
+    expect(actorSizeClassForTier(1)).toBe('small')
+    expect(actorSizeClassForTier(3)).toBe('small')
+    expect(actorSizeClassForTier(4)).toBe('medium')
+    expect(actorSizeClassForTier(6)).toBe('medium')
+    expect(actorSizeClassForTier(7)).toBe('large')
+    expect(actorSizeClassForTier(10)).toBe('large')
+  })
+
+  it.each([
+    ['/characters/enemies/cave_bat_a.png', 0.42],
+    ['/characters/enemies/cave_bat_b.png', 0.42],
+    ['/characters/units/wisp.png', 0.38],
+    ['/characters/enemies/six_ghost.png', 0.18],
+  ] as const)('lifts airborne art while leaving grounded art untouched: %s', (image, liftRatio) => {
+    expect(resolveActorStageProfile(image)).toEqual({ airborne: true, liftRatio })
+    expect(resolveActorStageProfile('/characters/enemies/slime.png')).toEqual({
+      airborne: false,
+      liftRatio: 0,
+    })
+  })
+
+  it('anchors impact feedback to the visible silhouette instead of the PNG canvas centre', () => {
+    expect(resolveActorImpactCenterRatio('/characters/enemies/cave_bat_a.png')).toBe(0.773)
+    expect(resolveActorImpactCenterRatio('/characters/enemies/louse_red.png')).toBe(0.748)
+    expect(resolveActorImpactCenterRatio('/characters/default_stand.png')).toBe(0.533)
+    expect(resolveActorImpactCenterRatio('/characters/enemies/future_enemy.png')).toBe(0.6)
+    // Cave bat A: tier 2 => 82px display height and 34px flight lift.
+    expect(resolveActorImpactAnchorY('/characters/enemies/cave_bat_a.png', 82)).toBe(143)
+    // A grounded louse remains close to its small visible body near the floor.
+    expect(resolveActorImpactAnchorY('/characters/enemies/louse_red.png', 60)).toBe(181)
+  })
+})

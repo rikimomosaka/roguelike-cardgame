@@ -1,0 +1,25 @@
+{
+  "id": "enemy_louse_red_curl",
+  "name": "丸まる",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy louse_red unique (from move curl)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 3
+          }
+        ]
+      }
+    }
+  ]
+}

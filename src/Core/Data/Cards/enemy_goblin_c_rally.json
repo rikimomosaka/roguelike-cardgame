@@ -1,0 +1,26 @@
+{
+  "id": "enemy_goblin_c_rally",
+  "name": "鼓舞",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy goblin_c unique (from move rally)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "strength",
+            "amount": 1
+          }
+        ]
+      }
+    }
+  ]
+}

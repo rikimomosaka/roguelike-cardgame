@@ -1,0 +1,26 @@
+{
+  "id": "enemy_sleeping_dragon_wake",
+  "name": "目覚め",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy sleeping_dragon unique (from move wake)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "strength",
+            "amount": 3
+          }
+        ]
+      }
+    }
+  ]
+}

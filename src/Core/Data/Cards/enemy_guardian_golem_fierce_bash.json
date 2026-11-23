@@ -1,0 +1,26 @@
+{
+  "id": "enemy_guardian_golem_fierce_bash",
+  "name": "猛撃",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy guardian_golem unique (from move fierce_bash)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 32
+          }
+        ]
+      }
+    }
+  ]
+}

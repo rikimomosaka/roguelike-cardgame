@@ -13,7 +13,8 @@ public sealed record DevCardDto(
     string Name,
     string? DisplayName,
     string ActiveVersion,
-    IReadOnlyList<DevCardVersionDto> Versions);
+    IReadOnlyList<DevCardVersionDto> Versions,
+    string? PoolClass = null);
 
 /// <summary>
 /// Card の各 version エントリ。spec は JSON 文字列のまま (UI 側で表示)。

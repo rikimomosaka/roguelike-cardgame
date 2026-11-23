@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Immutable;
 using RoguelikeCardGame.Core.Battle.Engine;
 using RoguelikeCardGame.Core.Battle.State;
@@ -61,6 +62,183 @@ public class BattleEnginePlayCardComboTests
         Assert.False(next.NextCardComboFreePass);
     }
 
+    [Fact]
+    public void Max_combo_trait_fires_before_the_threshold_card_effects()
+    {
+        var finisher = new CardDefinition(
+            "threshold-card", "threshold-card", null,
+            CardRarity.Common, CardType.Skill,
+            Cost: 3, UpgradedCost: null,
+            Effects: new[]
+            {
+                new CardEffect(
+                    "buff", EffectScope.Self, null, 1,
+                    Name: "vigor"),
+            },
+            UpgradedEffects: null,
+            Keywords: null);
+        var trait = new CharacterTraitDefinition(
+            "combo-trait", "combo-trait",
+            CharacterTraitTrigger.OnComboReached,
+            new[]
+            {
+                new CardEffect(
+                    "buff", EffectScope.Self, null, 1,
+                    Name: "afterimage"),
+            },
+            Threshold: 4,
+            UsesPerTurn: 1);
+        var character = new CharacterDefinition(
+            "combo-character", "combo-character", 80, 0, 3,
+            new[] { finisher.Id },
+            Trait: trait);
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { finisher }) with
+        {
+            Characters = new System.Collections.Generic.Dictionary<string, CharacterDefinition>
+            {
+                [character.Id] = character,
+            },
+        };
+        var state = Make(
+            ImmutableArray.Create(
+                new BattleCardInstance("threshold-instance", finisher.Id, false, null)),
+            lastOrigCost: 2,
+            combo: 3,
+            energy: 5) with
+        {
+            CharacterId = character.Id,
+            MaxComboThisTurn = 3,
+        };
+
+        var (next, events) = BattleEngine.PlayCard(
+            state, 0, 0, 0, Rng(), catalog);
+
+        Assert.Equal(4, next.MaxComboThisTurn);
+        Assert.Equal(1, next.Allies[0].GetStatus("afterimage"));
+        Assert.Equal(1, next.Allies[0].GetStatus("vigor"));
+        int traitEventIndex = events.ToList().FindIndex(battleEvent =>
+            battleEvent.Kind == RoguelikeCardGame.Core.Battle.Events.BattleEventKind.CharacterTraitTriggered);
+        int cardEffectIndex = events.ToList().FindIndex(battleEvent =>
+            battleEvent.Kind == RoguelikeCardGame.Core.Battle.Events.BattleEventKind.ApplyStatus
+            && battleEvent.Note == "vigor");
+        Assert.InRange(traitEventIndex, 0, int.MaxValue);
+        Assert.True(cardEffectIndex > traitEventIndex);
+    }
+
+    [Fact]
+    public void Card_usage_limit_is_shared_by_definition_and_resets_on_turn_end()
+    {
+        var def = new CardDefinition(
+            "limited",
+            "limited",
+            null,
+            CardRarity.Common,
+            CardType.Skill,
+            Cost: 0,
+            UpgradedCost: null,
+            Effects: new CardEffect[]
+            {
+                new("attack", EffectScope.Single, EffectSide.Enemy, 1),
+                new("retainSelf", EffectScope.Self, null, 0),
+            },
+            UpgradedEffects: null,
+            Keywords: null,
+            UsesPerTurn: 1);
+        var card = new BattleCardInstance("limited-1", def.Id, false, null);
+        var secondCopy = new BattleCardInstance("limited-2", def.Id, false, null);
+        var state = Make(ImmutableArray.Create(card, secondCopy), energy: 0);
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { def });
+
+        var (afterFirst, _) = BattleEngine.PlayCard(state, 0, 0, 0, Rng(), catalog);
+        Assert.Equal(1, afterFirst.CardUsesThisTurn[def.Id]);
+        Assert.Throws<InvalidOperationException>(() =>
+            BattleEngine.PlayCard(afterFirst, 0, 0, 0, Rng(), catalog));
+        Assert.Throws<InvalidOperationException>(() =>
+            BattleEngine.PlayCard(afterFirst, 1, 0, 0, Rng(), catalog));
+
+        var reset = afterFirst with { CardUsesThisTurn = ImmutableDictionary<string, int>.Empty };
+        var (afterReset, _) = BattleEngine.PlayCard(reset, 0, 0, 0, Rng(), catalog);
+        Assert.Equal(1, afterReset.CardUsesThisTurn[def.Id]);
+    }
+
+    [Fact]
+    public void Normal_and_upgraded_copies_share_the_same_definition_usage_count()
+    {
+        var def = new CardDefinition(
+            "shared-limit", "shared-limit", null,
+            CardRarity.Common, CardType.Skill,
+            Cost: 0, UpgradedCost: 0,
+            Effects: new[] { new CardEffect("retainSelf", EffectScope.Self, null, 0) },
+            UpgradedEffects: null,
+            Keywords: null,
+            UsesPerTurn: 1,
+            UpgradedUsesPerTurn: 1);
+        var normal = new BattleCardInstance("shared-normal", def.Id, false, null);
+        var upgraded = new BattleCardInstance("shared-upgraded", def.Id, true, null);
+        var state = Make(ImmutableArray.Create(normal, upgraded), energy: 0);
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { def });
+
+        var (afterNormal, _) = BattleEngine.PlayCard(
+            state, 0, 0, 0, Rng(), catalog);
+
+        Assert.Equal(1, afterNormal.CardUsesThisTurn[def.Id]);
+        Assert.Throws<InvalidOperationException>(() =>
+            BattleEngine.PlayCard(afterNormal, 1, 0, 0, Rng(), catalog));
+    }
+
+    [Fact]
+    public void Temperance_and_extravagance_persist_across_turns_and_each_drop_after_a_play()
+    {
+        var def = CardWithCost("status-cost", 3);
+        var card = new BattleCardInstance("status-cost-instance", def.Id, false, null);
+        var hero = BattleFixtures.Hero() with
+        {
+            Statuses = ImmutableDictionary<string, int>.Empty
+                .Add("handCostReduction", 3)
+                .Add("handCostIncrease", 2),
+        };
+        var state = Make(ImmutableArray.Create(card), energy: 10) with
+        {
+            Allies = ImmutableArray.Create(hero),
+        };
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { def });
+
+        var (afterTurnEnd, _) = TurnEndProcessor.Process(state, Rng(), catalog);
+        Assert.Equal(3, afterTurnEnd.Allies[0].GetStatus("handCostReduction"));
+        Assert.Equal(2, afterTurnEnd.Allies[0].GetStatus("handCostIncrease"));
+
+        var (afterPlay, events) = BattleEngine.PlayCard(
+            state, 0, 0, 0, Rng(), catalog);
+
+        Assert.Equal(2, Assert.Single(events, e => e.Kind == RoguelikeCardGame.Core.Battle.Events.BattleEventKind.PlayCard).Amount);
+        Assert.Equal(2, afterPlay.Allies[0].GetStatus("handCostReduction"));
+        Assert.Equal(1, afterPlay.Allies[0].GetStatus("handCostIncrease"));
+    }
+
+    [Fact]
+    public void Upgraded_card_uses_its_own_usage_limit_instead_of_the_normal_limit()
+    {
+        var def = new CardDefinition(
+            "limited", "limited", null, CardRarity.Common, CardType.Skill,
+            Cost: 0,
+            UpgradedCost: 0,
+            Effects: new[] { new CardEffect("retainSelf", EffectScope.Self, null, 0) },
+            UpgradedEffects: null,
+            Keywords: null,
+            UsesPerTurn: 1,
+            UpgradedUsesPerTurn: 2);
+        var card = new BattleCardInstance("limited-upgraded", def.Id, true, null);
+        var state = Make(ImmutableArray.Create(card), energy: 0);
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { def });
+
+        var (afterFirst, _) = BattleEngine.PlayCard(state, 0, 0, 0, Rng(), catalog);
+        var (afterSecond, _) = BattleEngine.PlayCard(afterFirst, 0, 0, 0, Rng(), catalog);
+
+        Assert.Equal(2, afterSecond.CardUsesThisTurn[def.Id]);
+        Assert.Throws<InvalidOperationException>(() =>
+            BattleEngine.PlayCard(afterSecond, 0, 0, 0, Rng(), catalog));
+    }
+
     [Fact] public void Normal_no_match_resets_combo_to_one()
     {
         var def = CardWithCost("c5", 5);
@@ -73,6 +251,77 @@ public class BattleEnginePlayCardComboTests
         Assert.Equal(2, next.MaxComboThisTurn);
         Assert.Equal(5, next.LastPlayedOrigCost);
         Assert.Equal(5, next.Energy);
+    }
+
+    [Fact]
+    public void Combo_carryover_opening_continues_any_cost_without_cost_reduction()
+    {
+        var def = CardWithCost("carryover-c5", 5);
+        var card = new BattleCardInstance("carryover-instance", def.Id, false, null);
+        var state = Make(
+                ImmutableArray.Create(card),
+                lastOrigCost: null,
+                combo: 3,
+                energy: 10)
+            with
+            {
+                MaxComboThisTurn = 3,
+                ComboCarryoverPending = true,
+            };
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { def });
+
+        Assert.False(BattleCardCostCalculator.IsComboReductionEligible(
+            state, card, def, state.Allies[0]));
+        Assert.False(BattleCardCostCalculator.IsComboContinuationWithoutContinuity(
+            state, card, def));
+        var projectedCost = BattleCardCostCalculator.EvaluateForHand(
+            state, card, def, state.Allies[0]);
+        Assert.True(projectedCost.ComboContinues);
+        Assert.False(projectedCost.ComboRingHighlighted);
+        Assert.False(projectedCost.ComboReductionEligible);
+
+        var (next, _) = BattleEngine.PlayCard(
+            state, 0, 0, 0, Rng(), catalog);
+
+        Assert.Equal(5, next.Energy);
+        Assert.Equal(4, next.ComboCount);
+        Assert.Equal(4, next.MaxComboThisTurn);
+        Assert.Equal(5, next.LastPlayedOrigCost);
+        Assert.False(next.ComboCarryoverPending);
+    }
+
+    [Fact]
+    public void Combo_carryover_from_zero_accepts_any_opening_cost_without_reduction()
+    {
+        var def = CardWithCost("carryover-zero-c5", 5);
+        var card = new BattleCardInstance("carryover-zero-instance", def.Id, false, null);
+        var state = Make(
+                ImmutableArray.Create(card),
+                lastOrigCost: null,
+                combo: 0,
+                energy: 10)
+            with
+            {
+                MaxComboThisTurn = 0,
+                ComboCarryoverPending = true,
+            };
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { def });
+
+        var projectedCost = BattleCardCostCalculator.EvaluateForHand(
+            state, card, def, state.Allies[0]);
+        Assert.True(projectedCost.ComboContinues);
+        Assert.False(projectedCost.ComboRingHighlighted);
+        Assert.False(projectedCost.ComboReductionEligible);
+        Assert.Equal(5, projectedCost.PayableCost);
+
+        var (next, _) = BattleEngine.PlayCard(
+            state, 0, 0, 0, Rng(), catalog);
+
+        Assert.Equal(5, next.Energy);
+        Assert.Equal(1, next.ComboCount);
+        Assert.Equal(1, next.MaxComboThisTurn);
+        Assert.Equal(5, next.LastPlayedOrigCost);
+        Assert.False(next.ComboCarryoverPending);
     }
 
     [Fact]
@@ -526,6 +775,25 @@ public class BattleEnginePlayCardComboTests
         Assert.Equal(expectedPayCost, events[0].Amount);
     }
 
+    [Fact]
+    public void Active_wild_continues_combo_without_requiring_cost_reduction()
+    {
+        var def = CardWithCost("active-wild", 4, keywords: new[] { "wild" });
+        var card = new BattleCardInstance("active-wild-instance", def.Id, false, null);
+        var state = Make(
+            ImmutableArray.Create(card),
+            lastOrigCost: 1,
+            combo: 2,
+            wildUsed: false,
+            energy: 5);
+
+        var result = BattleCardCostCalculator.EvaluateForHand(
+            state, card, def, BattleFixtures.Hero());
+
+        Assert.False(result.ComboReductionEligible);
+        Assert.True(result.ComboContinues);
+    }
+
     [Theory]
     [InlineData("wild")]
     [InlineData("superwild")]
@@ -592,5 +860,46 @@ public class BattleEnginePlayCardComboTests
         Assert.Equal(0, afterTwo.Energy);
         Assert.All(afterTwo.DiscardPile,
             card => Assert.Empty(card.EffectiveCostModifiers));
+    }
+
+    [Fact]
+    public void PlayCard_event_captures_the_authoritative_post_play_combo_count()
+    {
+        var one = CardWithCost("combo-one", 1);
+        var two = CardWithCost("combo-two", 2);
+        var state = Make(
+            ImmutableArray.Create(
+                new BattleCardInstance("one", one.Id, false, null),
+                new BattleCardInstance("two", two.Id, false, null)),
+            energy: 5);
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { one, two });
+
+        var (afterFirst, firstEvents) = BattleEngine.PlayCard(
+            state, 0, 0, 0, Rng(), catalog);
+        var (_, secondEvents) = BattleEngine.PlayCard(
+            afterFirst, 0, 0, 0, Rng(), catalog);
+
+        Assert.Equal(1, firstEvents[0].ComboCountAfter);
+        Assert.Equal(2, secondEvents[0].ComboCountAfter);
+        Assert.All(firstEvents.Skip(1), battleEvent =>
+            Assert.Null(battleEvent.ComboCountAfter));
+    }
+
+    [Fact]
+    public void Broken_combo_reports_one_instead_of_the_previous_state_count()
+    {
+        var low = CardWithCost("combo-break", 1);
+        var state = Make(
+            ImmutableArray.Create(
+                new BattleCardInstance("break", low.Id, false, null)),
+            lastOrigCost: 3,
+            combo: 9,
+            energy: 5);
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { low });
+
+        var (_, events) = BattleEngine.PlayCard(
+            state, 0, 0, 0, Rng(), catalog);
+
+        Assert.Equal(1, events[0].ComboCountAfter);
     }
 }

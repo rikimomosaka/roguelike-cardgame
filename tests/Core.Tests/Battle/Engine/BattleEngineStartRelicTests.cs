@@ -84,6 +84,36 @@ public class BattleEngineStartRelicTests
     }
 
     [Fact]
+    public void Start_with_lethal_OnBattleStart_relic_resolves_defeat()
+    {
+        var relic = BattleFixtures.Relic(
+            "fatal-battle-start", "OnBattleStart", true,
+            new CardEffect("selfDamage", EffectScope.Self, null, 5));
+        var catalog = BattleFixtures.MinimalCatalog(relics: [relic]);
+        var run = MakeRun([relic.Id]) with
+        {
+            CurrentHp = 1,
+            MaxHp = 20,
+        };
+
+        var (state, events) = BattleEngine.Start(
+            run, "enc_test", MakeRng(), catalog);
+
+        Assert.Equal(
+            RoguelikeCardGame.Core.Battle.State.BattleOutcome.Defeat,
+            state.Outcome);
+        Assert.Equal(
+            RoguelikeCardGame.Core.Battle.State.BattlePhase.Resolved,
+            state.Phase);
+        Assert.False(state.Allies[0].IsAlive);
+        Assert.True(Assert.Single(state.Participants).IsReady);
+        Assert.Equal(
+            events.Count - 1,
+            Assert.Single(events, battleEvent =>
+                battleEvent.Kind == BattleEventKind.BattleEnd).Order);
+    }
+
+    [Fact]
     public void Start_snapshots_OwnedRelicIds_from_RunState()
     {
         var relic = BattleFixtures.Relic("bs", "OnBattleStart");

@@ -1,21 +1,26 @@
 {
-    "id":  "skull_mushroom",
-    "name":  "ドクロキノコ",
-    "displayName":  null,
-    "activeVersion":  "v1",
-    "versions":  [
-                     {
-                         "version":  "v1",
-                         "createdAt":  "2026-05-02T03:29:22Z",
-                         "label":  "original",
-                         "spec":  {
-                                      "rarity":  1,
-                                      "description":  "[未実装] 笠にドクロ模様が浮かぶ妖しいキノコ。一口齧れば、危険にも冷静でいられる。",
-                                      "effects":  [
-
-                                                  ],
-                                      "implemented":  false
-                                  }
-                     }
-                 ]
+  "id": "skull_mushroom",
+  "name": "\u30C9\u30AF\u30ED\u30AD\u30CE\u30B3",
+  "displayName": null,
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "spec": {
+        "rarity": 1,
+        "description": "\u7B20\u306B\u30C9\u30AF\u30ED\u6A21\u69D8\u304C\u6D6E\u304B\u3076\u5996\u3057\u3044\u30AD\u30CE\u30B3\u3002\u30AB\u30B5\u306E\u90E8\u5206\u306F\u52DD\u624B\u306B\u518D\u751F\u3059\u308B\u3002",
+        "effects": [
+          {
+            "action": "debuff",
+            "scope": "all",
+            "side": "enemy",
+            "name": "poison",
+            "amount": 2,
+            "trigger": "OnBattleStart"
+          }
+        ],
+        "implemented": true
+      }
+    }
+  ]
 }

@@ -1,0 +1,26 @@
+{
+  "id": "enemy_blue_orc_war_cry",
+  "name": "雄叫び",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy blue_orc unique (from move war_cry)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "strength",
+            "amount": 1
+          }
+        ]
+      }
+    }
+  ]
+}

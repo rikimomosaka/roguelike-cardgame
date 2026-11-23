@@ -99,6 +99,24 @@ public class RestActionsTests
     }
 
     [Fact]
+    public void PreviewHeal_matches_actual_result_and_exposes_passive_bonus()
+    {
+        var s = PendingRunAt(currentHp: 30, maxHp: 80,
+            relics: ImmutableArray.Create("warm_blanket"));
+
+        var preview = RestActions.PreviewHeal(s, Catalog());
+        var actual = RestActions.Heal(s, Catalog());
+
+        Assert.Equal(30, preview.CurrentHpBefore);
+        Assert.Equal(80, preview.MaxHpBefore);
+        Assert.Equal(30, preview.BasePercent);
+        Assert.Equal(24, preview.BaseHealAmount);
+        Assert.Equal(10, preview.PassiveBonusAmount);
+        Assert.Equal(actual.CurrentHp, preview.CurrentHpAfter);
+        Assert.Equal(actual.MaxHp, preview.MaxHpAfter);
+    }
+
+    [Fact]
     public void Heal_WithoutPending_Throws()
     {
         var s = PendingRunAt(20, 80) with { ActiveRestPending = false };

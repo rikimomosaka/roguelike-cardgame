@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using RoguelikeCardGame.Core.Battle.Definitions;
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Data;
@@ -173,6 +174,28 @@ public class RewardActionsTests
     }
 
     [Fact]
+    public void Reroll_UniversalReward_ThrowsEvenWithCapability()
+    {
+        var fake = RelicCatalogTestHelpers.BuildCatalogWithFakeRelic(BaseCatalog,
+            "die", new[] { new CardEffect("rewardRerollAvailable", EffectScope.Self, null, 1, Trigger: "Passive") });
+        var s0 = Sample(gold: 50, "die");
+        var reward = SampleReward(gold: 50) with
+        {
+            CardChoices = ImmutableArray.Create("reward_common_01"),
+            CardStatus = CardRewardStatus.Pending,
+            CardPoolKind = CardRewardPoolKind.Universal,
+        };
+        var s1 = s0 with { ActiveReward = reward };
+
+        var error = Assert.Throws<System.InvalidOperationException>(() =>
+            RewardActions.Reroll(s1, fake, new SequentialRng(1UL),
+                new EnemyPool(1, EnemyTier.Weak), fake.RewardTables["act1"]));
+
+        Assert.Contains("class", error.Message, System.StringComparison.OrdinalIgnoreCase);
+        Assert.False(s1.ActiveReward!.RerollUsed);
+    }
+
+    [Fact]
     public void Reroll_Successful_RegeneratesChoicesAndMarksUsed()
     {
         var fake = RelicCatalogTestHelpers.BuildCatalogWithFakeRelic(BaseCatalog,
@@ -194,5 +217,43 @@ public class RewardActionsTests
             id => Assert.Contains(id, s2.SeenCardBaseIds));
         Assert.Equal(3, s2.ActiveReward!.CardChoices.Length); // bonus 無しなので 3 枚
         Assert.Equal(CardRewardStatus.Pending, s2.ActiveReward!.CardStatus);
+    }
+
+    [Fact]
+    public void Reroll_When_class_reward_pool_is_empty_marks_cards_claimed()
+    {
+        var withRelic = RelicCatalogTestHelpers.BuildCatalogWithFakeRelic(BaseCatalog,
+            "reroll",
+            new[] { new CardEffect("rewardRerollAvailable", EffectScope.Self, null, 1, Trigger: "Passive") });
+        var emptyPool = withRelic with
+        {
+            Cards = withRelic.Cards.ToDictionary(
+                pair => pair.Key,
+                pair => pair.Value with
+                {
+                    PoolKinds = System.Array.Empty<CardPoolKind>(),
+                    PoolClass = null,
+                    EligibleCharacterIds = null,
+                }),
+        };
+        var state = Sample(gold: 50, "reroll") with
+        {
+            ActiveReward = SampleReward() with
+            {
+                CardChoices = ImmutableArray.Create("reward_common_01"),
+                CardStatus = CardRewardStatus.Pending,
+            },
+        };
+
+        var next = RewardActions.Reroll(
+            state,
+            emptyPool,
+            new SequentialRng(1UL),
+            new EnemyPool(1, EnemyTier.Weak),
+            emptyPool.RewardTables["act1"]);
+
+        Assert.Empty(next.ActiveReward!.CardChoices);
+        Assert.Equal(CardRewardStatus.Claimed, next.ActiveReward.CardStatus);
+        Assert.True(next.ActiveReward.RerollUsed);
     }
 }

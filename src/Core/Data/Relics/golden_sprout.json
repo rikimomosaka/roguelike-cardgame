@@ -1,0 +1,21 @@
+{
+  "id": "golden_sprout",
+  "name": "黄金の芽",
+  "displayName": null,
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-17T00:00:00Z",
+      "label": "initial",
+      "spec": {
+        "rarity": 1,
+        "description": "新しい技を覚えるたび小さな葉が開き、金色の雫を実らせる。",
+        "effects": [
+          { "action": "gainGold", "scope": "self", "amount": 5, "trigger": "OnCardAddedToDeck" }
+        ],
+        "implemented": true
+      }
+    }
+  ]
+}

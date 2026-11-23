@@ -37,8 +37,16 @@ public static class PotionJsonLoader
                 var rarity = (CardRarity)rawRarity;
 
                 var effects = ParseEffects(root, "effects", id);
+                var usesPerTurn = 0;
+                if (root.TryGetProperty("usesPerTurn", out var usesEl) &&
+                    (usesEl.ValueKind != JsonValueKind.Number ||
+                     !usesEl.TryGetInt32(out usesPerTurn)))
+                    throw new PotionJsonException(
+                        $"usesPerTurn must be an integer (potion id={id})。");
+                if (usesPerTurn < 0)
+                    throw new PotionJsonException($"usesPerTurn must be >= 0 (potion id={id})。");
 
-                return new PotionDefinition(id, name, rarity, effects);
+                return new PotionDefinition(id, name, rarity, effects, usesPerTurn);
             }
             catch (PotionJsonException)
             {

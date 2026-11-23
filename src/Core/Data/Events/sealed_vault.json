@@ -1,0 +1,32 @@
+{
+  "id": "sealed_vault",
+  "name": "封印された宝物庫",
+  "tiers": [2, 3],
+  "rarity": "rare",
+  "startMessage": "幾重もの鎖に閉ざされた宝物庫から、古い魔力と金属の匂いが漏れている。",
+  "choices": [
+    {
+      "label": "鎖を引きちぎる（15ダメージ、レアレリック獲得）",
+      "condition": { "type": "minHp", "amount": 16 },
+      "effects": [
+        { "type": "takeDamage", "amount": 15 },
+        { "type": "gainRelicRandom", "rarity": 2 }
+      ],
+      "resultMessage": "鎖は鋭く腕を裂いたが、扉の奥から見事なレリックを持ち帰った。"
+    },
+    {
+      "label": "古い解除装置を買う（120ゴールド支払う）",
+      "condition": { "type": "minGold", "amount": 120 },
+      "effects": [
+        { "type": "payGold", "amount": 120 },
+        { "type": "gainRelicRandom", "rarity": 2 }
+      ],
+      "resultMessage": "解除装置は一度だけ火花を散らし、宝物庫の封印を鮮やかに解いた。"
+    },
+    {
+      "label": "封印に触れず立ち去る",
+      "effects": [],
+      "resultMessage": "欲望を振り払い、重い扉を背にして歩き出した。"
+    }
+  ]
+}

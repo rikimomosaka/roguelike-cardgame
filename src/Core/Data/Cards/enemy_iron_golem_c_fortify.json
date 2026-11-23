@@ -1,0 +1,31 @@
+{
+  "id": "enemy_iron_golem_c_fortify",
+  "name": "要塞化",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy iron_golem_c unique (from move fortify)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 6
+          },
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 10
+          }
+        ]
+      }
+    }
+  ]
+}

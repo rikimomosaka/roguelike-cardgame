@@ -1,0 +1,8 @@
+{
+  "id": "regeneration_potion",
+  "name": "再生ポーション",
+  "rarity": 1,
+  "effects": [
+    { "action": "buff", "scope": "self", "name": "regeneration", "amount": 5, "battleOnly": true }
+  ]
+}

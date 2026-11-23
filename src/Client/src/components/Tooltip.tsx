@@ -22,12 +22,33 @@ export type TooltipContent = {
   /** Optional status line rendered between the tooltip title and description. */
   statusLine?: ReactNode
   desc: ReactNode
+  /** Keyword ids rendered with disabled styling in card descriptions. */
+  disabledKeywords?: readonly string[]
+  /** Status自身の説明など、同じ定義を二段目へ重複表示したくない場合に使う。 */
+  suppressRefs?: boolean
+  /** 本文中に同じ用語が現れても、自分自身の定義だけは二段目へ重複表示しない。 */
+  selfReference?: Pick<CardDescRef, 'kind' | 'id'>
   /**
    * 任意のフレーバーテキスト。指定された場合 desc の下に点線で区切り
    * 斜体・薄灰色で描画される (RelicVisualPreview と同じレイアウト)。
    * Phase 10.5.M6.3。
    */
   flavor?: string
+  /** A separate panel rendered to the right of a card's normal description. */
+  costBreakdown?: TooltipCostBreakdown
+}
+
+export type TooltipCostChange = {
+  kind: 'fixed' | 'modifier' | 'status' | 'combo' | 'unknown'
+  value: number
+  sourceId: string | null
+  sourceName: string | null
+}
+
+export type TooltipCostBreakdown = {
+  originalCost: number
+  currentCost: number
+  changes: readonly TooltipCostChange[]
 }
 
 type Position = { x: number; y: number }
@@ -61,7 +82,19 @@ export function TooltipHost({ children }: { children: ReactNode }) {
   useEffect(() => {
     const el = tipRef.current
     if (!el || !state.content) return
-    const { left, top } = computePlacement(state.pos)
+    const costPanel = el.querySelector<HTMLElement>('.tip__cost-panel')
+    const { left, top, costPanelSide } = computePlacement(
+      state.pos,
+      !!state.content.costBreakdown,
+      {
+        baseWidth: el.offsetWidth,
+        baseHeight: el.offsetHeight,
+        panelWidth: costPanel?.offsetWidth ?? 0,
+        panelHeight: costPanel?.offsetHeight ?? 0,
+      },
+    )
+    if (costPanelSide) el.dataset.costSide = costPanelSide
+    else delete el.dataset.costSide
     el.style.setProperty('--tip-left', `${left}px`)
     el.style.setProperty('--tip-top', `${top}px`)
   }, [state])
@@ -76,7 +109,13 @@ export function TooltipHost({ children }: { children: ReactNode }) {
     <TooltipContext.Provider value={ctx}>
       {children}
       {content ? (
-        <div id={state.id ?? undefined} ref={tipRef} className="tip is-on" role="tooltip">
+        <div
+          id={state.id ?? undefined}
+          ref={tipRef}
+          className="tip is-on"
+          role="tooltip"
+          data-cost-side={preferredCostPanelSide(state.pos, !!content.costBreakdown) ?? undefined}
+        >
           <div className="tip__head">
             <div className={`tip__name${content.rarity ? ` tip__name--${content.rarity}` : ''}`}>
               {content.name}
@@ -92,7 +131,13 @@ export function TooltipHost({ children }: { children: ReactNode }) {
           ) : null}
           <div className="tip__desc">
             {typeof content.desc === 'string' ? (
-              <CardDesc text={content.desc} cardNames={cardNames} unitNames={unitNames} compress={false} />
+              <CardDesc
+                text={content.desc}
+                cardNames={cardNames}
+                unitNames={unitNames}
+                disabledKeywords={content.disabledKeywords}
+                compress={false}
+              />
             ) : (
               content.desc
             )}
@@ -107,13 +152,72 @@ export function TooltipHost({ children }: { children: ReactNode }) {
           ) : null}
           {/* Phase 10.5.M2: description に含まれる keyword / status / cardref の
               詳細定義を二段目 popup として並べる。 */}
-          {typeof content.desc === 'string' ? (
-            <TipRefs refs={extractCardDescRefs(content.desc, cardNames)} />
+          {typeof content.desc === 'string' && !content.suppressRefs ? (
+            <TipRefs
+              refs={extractCardDescRefs(content.desc, cardNames).filter(
+                ref => ref.kind !== content.selfReference?.kind || ref.id !== content.selfReference.id,
+              )}
+            />
+          ) : null}
+          {content.costBreakdown ? (
+            <CostBreakdownPanel breakdown={content.costBreakdown} />
           ) : null}
         </div>
       ) : null}
     </TooltipContext.Provider>
   )
+}
+
+function CostBreakdownPanel({ breakdown }: { breakdown: TooltipCostBreakdown }) {
+  return (
+    <aside className="tip__cost-panel" aria-label="コスト変更の内訳">
+      <div className="tip__cost-title">コスト変更</div>
+      <div className="tip__cost-base">コスト{breakdown.originalCost}</div>
+      {breakdown.changes.map((change, index) => (
+        <div className="tip__cost-line" key={`${change.kind}:${change.sourceId ?? ''}:${index}`}>
+          <span className="tip__cost-arrow" aria-hidden="true">→</span>
+          <CostChangeText change={change} />
+        </div>
+      ))}
+      <div className="tip__cost-result">＝{breakdown.currentCost}コスト</div>
+    </aside>
+  )
+}
+
+function CostChangeText({ change }: { change: TooltipCostChange }) {
+  const sourceName = change.sourceName ?? change.sourceId ?? '効果'
+  if (change.kind === 'fixed') {
+    return (
+      <span>
+        <span className="tip__cost-source">[{sourceName}]</span>
+        によりコスト<span className="tip__cost-value">{change.value}</span>に変更
+      </span>
+    )
+  }
+  if (change.kind === 'combo') {
+    return (
+      <span>
+        コンボによりコスト
+        <span className="tip__cost-value tip__cost-value--reduced">{formatSigned(change.value)}</span>
+      </span>
+    )
+  }
+  const source = change.kind === 'status'
+    ? `[${sourceName}]`
+    : `「${sourceName}」`
+  return (
+    <span>
+      <span className="tip__cost-source">{source}</span>
+      によりコスト
+      <span className={`tip__cost-value ${change.value < 0 ? 'tip__cost-value--reduced' : 'tip__cost-value--increased'}`}>
+        {formatSigned(change.value)}
+      </span>
+    </span>
+  )
+}
+
+function formatSigned(value: number): string {
+  return value > 0 ? `+${value}` : String(value)
 }
 
 // The hook must share TooltipContext's private instance with TooltipHost.
@@ -196,7 +300,16 @@ function TipRefs({ refs }: { refs: CardDescRef[] }) {
           {/* card は名前のみ (cardref として識別補助)。
               keyword / status は desc を併記。
               unit は extractCardDescRefs 側で除外済 (M6.9)。 */}
-          {r.kind === 'card' ? null : <div className="tip__ref-desc">{r.desc}</div>}
+          {r.kind === 'card' ? null : (
+            <div className="tip__ref-desc">
+              <CardDesc
+                text={r.desc}
+                cardNames={{}}
+                unitNames={{}}
+                compress={false}
+              />
+            </div>
+          )}
         </div>
       ))}
     </div>
@@ -216,15 +329,63 @@ function defaultRarityLabel(r: CardRarity): string {
 const OFFSET = 14
 const TIP_W = 300
 const TIP_H_EST = 120
+const COST_PANEL_W = 270
+const COST_PANEL_GAP = 8
 
-function computePlacement({ x, y }: Position): { left: number; top: number } {
-  if (typeof window === 'undefined') return { left: x + OFFSET, top: y + OFFSET }
+type TooltipMeasurement = {
+  baseWidth: number
+  baseHeight: number
+  panelWidth: number
+  panelHeight: number
+}
+
+type CostPanelSide = 'left' | 'right'
+
+function preferredCostPanelSide(
+  { x }: Position,
+  hasCostBreakdown: boolean,
+  baseWidth = TIP_W,
+  panelWidth = COST_PANEL_W,
+): CostPanelSide | null {
+  if (!hasCostBreakdown || typeof window === 'undefined' || window.innerWidth < 700) return null
+  const rightSpace = window.innerWidth - x - OFFSET - 8
+  const leftSpace = x - OFFSET - 8
+  const totalWidth = baseWidth + COST_PANEL_GAP + panelWidth
+  if (rightSpace >= totalWidth) return 'right'
+  if (leftSpace >= totalWidth) return 'left'
+  return rightSpace >= leftSpace ? 'right' : 'left'
+}
+
+function computePlacement(
+  { x, y }: Position,
+  hasCostBreakdown = false,
+  measured?: TooltipMeasurement,
+): { left: number; top: number; costPanelSide: CostPanelSide | null } {
+  if (typeof window === 'undefined') {
+    return { left: x + OFFSET, top: y + OFFSET, costPanelSide: null }
+  }
   const vw = window.innerWidth
   const vh = window.innerHeight
-  const flipX = x + OFFSET + TIP_W > vw - 8
-  const flipY = y + OFFSET + TIP_H_EST > vh - 8
+  const stacked = hasCostBreakdown && vw < 700
+  const baseWidth = measured?.baseWidth || TIP_W
+  const baseHeight = measured?.baseHeight || TIP_H_EST
+  const panelWidth = measured?.panelWidth || COST_PANEL_W
+  const panelHeight = measured?.panelHeight || 210
+  const costPanelSide = preferredCostPanelSide(
+    { x, y }, hasCostBreakdown, baseWidth, panelWidth,
+  )
+  const estimatedHeight = stacked
+    ? baseHeight + COST_PANEL_GAP + panelHeight
+    : Math.max(baseHeight, hasCostBreakdown ? panelHeight : 0)
+  const regularFlipX = x + OFFSET + baseWidth > vw - 8
+  const rawLeft = costPanelSide === 'left' || (!costPanelSide && regularFlipX)
+    ? x - OFFSET - baseWidth
+    : x + OFFSET
+  const maxBaseLeft = Math.max(8, vw - 8 - baseWidth)
+  const flipY = y + OFFSET + estimatedHeight > vh - 8
   return {
-    left: flipX ? Math.max(8, x - OFFSET - TIP_W) : x + OFFSET,
-    top: flipY ? Math.max(8, y - OFFSET - TIP_H_EST) : y + OFFSET,
+    left: Math.min(maxBaseLeft, Math.max(8, rawLeft)),
+    top: flipY ? Math.max(8, y - OFFSET - estimatedHeight) : y + OFFSET,
+    costPanelSide,
   }
 }

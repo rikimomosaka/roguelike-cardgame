@@ -1,0 +1,25 @@
+{
+  "id": "enemy_blue_orc_shield_up",
+  "name": "盾構え",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy blue_orc unique (from move shield_up)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 10
+          }
+        ]
+      }
+    }
+  ]
+}

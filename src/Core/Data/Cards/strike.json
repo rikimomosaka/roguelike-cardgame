@@ -2,6 +2,7 @@
     "id":  "strike",
     "name":  "ストライク",
     "displayName":  null,
+    "poolKinds":  [],
     "activeVersion":  "v1",
     "versions":  [
                      {

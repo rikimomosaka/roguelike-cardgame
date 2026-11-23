@@ -264,7 +264,9 @@ public class RewardGeneratorTests
             UpgradedCost: null,
             Effects: System.Array.Empty<CardEffect>(),
             UpgradedEffects: null,
-            Keywords: null);
+            Keywords: null,
+            PoolClass: CardPoolClass.Striker,
+            PoolKinds: new[] { CardPoolKind.Reward });
         var augmentedCards = baseCat.Cards
             .Concat(new[] { new System.Collections.Generic.KeyValuePair<string, CardDefinition>(
                 tokenCard.Id, tokenCard) })
@@ -325,12 +327,18 @@ public class RewardGeneratorTests
     [Fact]
     public void RegenerateCardChoicesForReward_WhenPoolHasOneEligibleCard_ReturnsItAndStops()
     {
+        var s = Sample();
+        var character = BaseCatalog.Characters[s.CharacterId];
+        var onlyCard = BaseCatalog.Cards.Values
+            .Where(card => CardPoolRules.IsClassRewardFor(card, character))
+            .Where(card => card.Rarity == CardRarity.Common)
+            .OrderBy(card => card.Id, StringComparer.Ordinal)
+            .First();
         var reducedCards = BaseCatalog.Cards
-            .Where(pair => !pair.Key.StartsWith("reward_", StringComparison.Ordinal)
-                || pair.Key == "reward_common_01")
+            .Where(pair => !CardPoolRules.IsClassRewardFor(pair.Value, character)
+                || pair.Key == onlyCard.Id)
             .ToDictionary(pair => pair.Key, pair => pair.Value);
         var catalog = BaseCatalog with { Cards = reducedCards };
-        var s = Sample();
 
         var picks = RewardGenerator.RegenerateCardChoicesForReward(
             new EnemyPool(1, EnemyTier.Weak),
@@ -341,17 +349,18 @@ public class RewardGeneratorTests
             new SequentialRng(99UL),
             s);
 
-        Assert.Equal(new[] { "reward_common_01" }, picks);
+        Assert.Equal(new[] { onlyCard.Id }, picks);
     }
 
     [Fact]
     public void RegenerateCardChoicesForReward_WhenPoolIsEmpty_ReturnsEmpty()
     {
+        var s = Sample();
+        var character = BaseCatalog.Characters[s.CharacterId];
         var reducedCards = BaseCatalog.Cards
-            .Where(pair => !pair.Key.StartsWith("reward_", StringComparison.Ordinal))
+            .Where(pair => !CardPoolRules.IsClassRewardFor(pair.Value, character))
             .ToDictionary(pair => pair.Key, pair => pair.Value);
         var catalog = BaseCatalog with { Cards = reducedCards };
-        var s = Sample();
 
         var picks = RewardGenerator.RegenerateCardChoicesForReward(
             new EnemyPool(1, EnemyTier.Weak),
@@ -368,11 +377,12 @@ public class RewardGeneratorTests
     [Fact]
     public void GenerateFromEnemy_WhenCardPoolIsEmpty_MarksCardRewardResolved()
     {
+        var s = Sample();
+        var character = BaseCatalog.Characters[s.CharacterId];
         var reducedCards = BaseCatalog.Cards
-            .Where(pair => !pair.Key.StartsWith("reward_", StringComparison.Ordinal))
+            .Where(pair => !CardPoolRules.IsClassRewardFor(pair.Value, character))
             .ToDictionary(pair => pair.Key, pair => pair.Value);
         var catalog = BaseCatalog with { Cards = reducedCards };
-        var s = Sample();
 
         var (reward, _) = RewardGenerator.Generate(
             new RewardContext.FromEnemy(new EnemyPool(1, EnemyTier.Weak)),
@@ -423,4 +433,80 @@ public class RewardGeneratorTests
             s);
         Assert.Equal(3, picks.Length); // bonus 無しなので 3 枚
     }
+
+    [Fact]
+    public void RegenerateCardChoicesForReward_UsesOnlyCurrentCharactersClassRewardPool()
+    {
+        var catalog = CatalogWithCards(
+            PoolCard("plain_class_1", CardPoolClass.Striker),
+            PoolCard("plain_class_2", CardPoolClass.Striker),
+            PoolCard("plain_class_3", CardPoolClass.Striker),
+            PoolCard("reward_universal", CardPoolClass.Universal),
+            PoolCard("reward_wrong_class", CardPoolClass.Guardian),
+            PoolCard("reward_restricted", CardPoolClass.Striker, new[] { "another_character" }),
+            PoolCard("reward_external", null, poolKinds: Array.Empty<CardPoolKind>()));
+        var run = Sample();
+
+        var picks = RewardGenerator.RegenerateCardChoicesForReward(
+            new EnemyPool(1, EnemyTier.Weak),
+            run.RewardRngState,
+            ImmutableArray<string>.Empty,
+            catalog.RewardTables["act1"],
+            catalog,
+            new SequentialRng(13UL),
+            run);
+
+        Assert.Equal(3, picks.Length);
+        Assert.All(picks, id => Assert.StartsWith("plain_class_", id, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void RegenerateUniversalCardChoices_UsesOnlyUniversalRewardPool()
+    {
+        var catalog = CatalogWithCards(
+            PoolCard("universal_1", CardPoolClass.Universal),
+            PoolCard("universal_2", CardPoolClass.Universal),
+            PoolCard("universal_3", CardPoolClass.Universal),
+            PoolCard("reward_class", CardPoolClass.Striker),
+            PoolCard("reward_restricted", CardPoolClass.Universal, new[] { "another_character" }));
+        var run = Sample();
+
+        var picks = RewardGenerator.RegenerateUniversalCardChoices(
+            new EnemyPool(1, EnemyTier.Weak),
+            run.RewardRngState,
+            ImmutableArray<string>.Empty,
+            catalog.RewardTables["act1"],
+            catalog,
+            new SequentialRng(17UL),
+            run);
+
+        Assert.Equal(3, picks.Length);
+        Assert.All(picks, id => Assert.StartsWith("universal_", id, StringComparison.Ordinal));
+    }
+
+    private static DataCatalog CatalogWithCards(params CardDefinition[] cards) =>
+        BaseCatalog with
+        {
+            Cards = cards.ToDictionary(card => card.Id, StringComparer.Ordinal),
+        };
+
+    private static CardDefinition PoolCard(
+        string id,
+        CardPoolClass? poolClass,
+        IReadOnlyList<string>? eligibleCharacterIds = null,
+        IReadOnlyList<CardPoolKind>? poolKinds = null) =>
+        new(
+            Id: id,
+            Name: id,
+            DisplayName: null,
+            Rarity: CardRarity.Common,
+            CardType: CardType.Skill,
+            Cost: 1,
+            UpgradedCost: null,
+            Effects: Array.Empty<CardEffect>(),
+            UpgradedEffects: null,
+            Keywords: null,
+            PoolClass: poolClass,
+            PoolKinds: poolKinds ?? new[] { CardPoolKind.Reward },
+            EligibleCharacterIds: eligibleCharacterIds);
 }

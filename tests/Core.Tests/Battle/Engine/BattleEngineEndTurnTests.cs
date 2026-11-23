@@ -70,6 +70,27 @@ public class BattleEngineEndTurnTests
         AssertComboReset(next);
     }
 
+    [Fact]
+    public void Dead_hero_yields_Defeat_even_when_an_allied_summon_is_alive()
+    {
+        var hero = BattleFixtures.Hero(hp: 10) with { CurrentHp = 0 };
+        var summon = BattleFixtures.SummonActor("token-1", "wisp", slotIndex: 1, hp: 10);
+        var state = MakeState(
+            hero,
+            ImmutableArray.Create(BattleFixtures.Goblin())) with
+        {
+            Allies = ImmutableArray.Create(hero, summon),
+        };
+
+        var (next, events) = BattleEngine.EndTurn(
+            state, Rng(), BattleFixtures.MinimalCatalog());
+
+        Assert.Equal(BattleOutcome.Defeat, next.Outcome);
+        Assert.Equal(BattlePhase.Resolved, next.Phase);
+        Assert.Contains(next.Allies, ally => ally.DefinitionId == "wisp" && ally.IsAlive);
+        Assert.Equal(events.Count - 1, Assert.Single(events, e => e.Kind == BattleEventKind.BattleEnd).Order);
+    }
+
     [Fact] public void Continues_to_next_turn_when_neither_side_dies()
     {
         var hero = BattleFixtures.Hero();

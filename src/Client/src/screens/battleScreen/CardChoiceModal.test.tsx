@@ -194,7 +194,8 @@ describe('CardChoiceModal List mode', () => {
     )
     expect(screen.getByText('炎')).toBeTruthy()
     // upgraded → 名前末尾に "+"
-    expect(screen.getByText('氷+')).toBeTruthy()
+    expect(screen.getByText('氷')).toBeTruthy()
+    expect(screen.getByText('+')).toBeTruthy()
   })
 
   it('clicking row selects, confirm sends id', async () => {
@@ -213,5 +214,61 @@ describe('CardChoiceModal List mode', () => {
     fireEvent.click(screen.getByText('炎'))
     fireEvent.click(screen.getByText('確定'))
     await waitFor(() => expect(onConfirm).toHaveBeenCalledWith(['d1']))
+  })
+
+  it('labels a recover-from-exhaust choice explicitly', () => {
+    const pending: PendingCardPlayDto = {
+      ...drawPending,
+      choice: {
+        ...drawPending.choice,
+        action: 'recoverFromExhaust',
+        pile: 'exhaust',
+        candidateInstanceIds: ['d1'],
+      },
+    }
+
+    render(
+      <CardChoiceModal
+        pending={pending}
+        hand={[]}
+        exhaustPile={[drawPile[0]]}
+        cardNames={{ fire: 'Fire' }}
+        cardTypeOf={typeOf}
+        cardRarityOf={rarityOf}
+        onConfirm={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('dialog', { name: /除外から戻すカードを選ぶ/ })).toBeTruthy()
+  })
+
+  it('keeps an armed Contingency visibly marked when Exhaust is a choice source', () => {
+    const pending: PendingCardPlayDto = {
+      ...drawPending,
+      choice: {
+        ...drawPending.choice,
+        pile: 'exhaust',
+        candidateInstanceIds: ['d1'],
+      },
+    }
+    const armedCard: BattleCardInstanceDto = {
+      ...drawPile[0],
+      isContingencyArmed: true,
+      contingencyTriggerText: 'ターン開始時',
+    }
+
+    render(
+      <CardChoiceModal
+        pending={pending}
+        hand={[]}
+        exhaustPile={[armedCard]}
+        cardNames={{ fire: '炎' }}
+        cardTypeOf={typeOf}
+        cardRarityOf={rarityOf}
+        onConfirm={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('伏策待機中：ターン開始時')).toBeTruthy()
   })
 })

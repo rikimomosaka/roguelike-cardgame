@@ -123,15 +123,23 @@
   flex-direction: column;
   gap: 14px;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   min-height: 0;
+  overflow-y: auto;
+  padding: 4px 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-mid) transparent;
 }
+
+.settings-screen__body::-webkit-scrollbar { width: 6px; }
+.settings-screen__body::-webkit-scrollbar-thumb { background: var(--border-mid); }
 
 .settings-screen__section {
   width: min(720px, 90%);
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .settings-screen__section-title {
@@ -270,17 +278,56 @@
   letter-spacing: 2px;
   cursor: pointer;
   border-radius: var(--radius-sm);
-  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+  transition:
+    border-color var(--motion-fast) linear,
+    color var(--motion-fast) linear,
+    background-color var(--motion-fast) linear,
+    transform var(--motion-fast) var(--ease-standard);
 }
 
 .settings-screen__choice:hover {
   border-color: var(--fg-dim);
   color: var(--gold-deep);
+  transform: translateY(-1px);
 }
 
 .settings-screen__choice.is-on {
   border-color: var(--gold-deep);
   background: rgba(201, 152, 90, 0.12);
+  color: var(--gold-soft);
+}
+
+.settings-screen__presentation-note {
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 3px 4px 0;
+  color: var(--fg-dim);
+  font-family: var(--font-label);
+  font-size: var(--fs-xs);
+  letter-spacing: 1px;
+}
+
+.settings-screen__reset {
+  flex-shrink: 0;
+  padding: 4px 9px;
+  border: 1px solid var(--border-dark);
+  border-radius: var(--radius-sm);
+  background: rgba(10, 6, 4, 0.35);
+  color: var(--fg-muted);
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  letter-spacing: 1px;
+  transition:
+    border-color var(--motion-fast) linear,
+    color var(--motion-fast) linear;
+}
+
+.settings-screen__reset:hover {
+  border-color: var(--gold-deep);
   color: var(--gold-soft);
 }
 

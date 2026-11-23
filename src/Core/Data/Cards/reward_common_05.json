@@ -1,26 +1,37 @@
 {
-    "id":  "reward_common_05",
-    "name":  "重撃",
-    "displayName":  null,
-    "activeVersion":  "v1",
-    "versions":  [
-                     {
-                         "version":  "v1",
-                         "createdAt":  "2026-05-01T03:54:50Z",
-                         "label":  "original",
-                         "spec":  {
-                                      "rarity":  1,
-                                      "cardType":  "Attack",
-                                      "cost":  2,
-                                      "effects":  [
-                                                      {
-                                                          "action":  "attack",
-                                                          "scope":  "single",
-                                                          "side":  "enemy",
-                                                          "amount":  14
-                                                      }
-                                                  ]
-                                  }
-                     }
-                 ]
+  "id": "guardian_common_parry",
+  "name": "受け流し",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Guardian",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Skill",
+        "cost": 0,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 3
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 5
+          }
+        ]
+      }
+    }
+  ]
 }

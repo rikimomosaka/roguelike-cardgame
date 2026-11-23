@@ -12,6 +12,10 @@
   pointer-events: auto;
 }
 
+.popup[data-state='exiting'] {
+  pointer-events: none;
+}
+
 .popup--modal   { z-index: var(--z-overlay-modal); }
 .popup--picker  { z-index: var(--z-picker); }
 .popup--confirm { z-index: var(--z-confirm); }
@@ -28,6 +32,14 @@
   -webkit-backdrop-filter: blur(1.5px);
 }
 
+.popup[data-state='entering'] .popup__dim {
+  animation: popup-dim-enter var(--motion-standard) linear both;
+}
+
+.popup[data-state='exiting'] .popup__dim {
+  animation: popup-dim-exit var(--motion-standard) linear both;
+}
+
 .popup--confirm .popup__dim {
   background: radial-gradient(
     ellipse at 50% 45%,
@@ -42,7 +54,10 @@
   /* TopBar は z-index 200 でモーダル(20)より上に乗るため、
      パネル全体を TopBar の下側へ少し押し下げて上端が重ならないようにする。 */
   top: calc(50% + 36px);
-  transform: translate(-50%, -50%);
+  transform: translate(
+    calc(-50% + var(--popup-offset-x, 0px)),
+    calc(-50% + var(--popup-offset-y, 0px))
+  );
   max-height: min(82%, calc(100% - 160px));
   display: flex;
   flex-direction: column;
@@ -58,6 +73,16 @@
   color: var(--fg);
   font-family: var(--font-body);
   overflow: hidden;
+  outline: none;
+  will-change: opacity, clip-path;
+}
+
+.popup[data-state='entering'] .popup__panel {
+  animation: popup-panel-enter var(--motion-standard) var(--motion-pixel-steps) both;
+}
+
+.popup[data-state='exiting'] .popup__panel {
+  animation: popup-panel-exit var(--motion-standard) var(--motion-pixel-steps) both;
 }
 
 .popup__panel--picker {
@@ -84,6 +109,15 @@
   padding: 16px 22px 14px;
   background: linear-gradient(180deg, rgba(58, 36, 16, 0.6), rgba(10, 6, 4, 0.3));
   border-bottom: 1px solid var(--border-mid);
+}
+
+.popup__head--draggable {
+  cursor: grab;
+  touch-action: none;
+}
+
+.popup__head--draggable:active {
+  cursor: grabbing;
 }
 
 .popup__head-main {
@@ -175,3 +209,41 @@
 .popup__foot--start  { justify-content: flex-start; }
 .popup__foot--center { justify-content: center; }
 .popup__foot--end    { justify-content: flex-end; }
+
+@keyframes popup-dim-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes popup-dim-exit {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes popup-panel-enter {
+  from {
+    opacity: 0;
+    clip-path: inset(46% 8% 46% 8%);
+    filter: brightness(1.5);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0);
+    filter: brightness(1);
+  }
+}
+
+@keyframes popup-panel-exit {
+  from {
+    opacity: 1;
+    clip-path: inset(0);
+  }
+  to {
+    opacity: 0;
+    clip-path: inset(48% 5% 48% 5%);
+  }
+}
+
+html[data-flash='off'] .popup__panel {
+  filter: none !important;
+}

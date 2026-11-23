@@ -1,0 +1,29 @@
+{
+  "id": "moonlit_mirror",
+  "name": "月影の鏡",
+  "displayName": null,
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-17T00:00:00Z",
+      "label": "initial",
+      "spec": {
+        "rarity": 2,
+        "description": "月光だけを映す古鏡。迫る危険を淡い光で押し返す。",
+        "effects": [
+          {
+            "action": "buff",
+            "scope": "self",
+            "statusChanges": [
+              { "name": "reflect", "amount": 2 },
+              { "name": "barrier", "amount": 1 }
+            ],
+            "trigger": "OnBattleStart"
+          }
+        ],
+        "implemented": true
+      }
+    }
+  ]
+}

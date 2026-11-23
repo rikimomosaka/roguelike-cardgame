@@ -10,11 +10,16 @@
                          "label":  "original",
                          "spec":  {
                                       "rarity":  1,
-                                      "description":  "[未実装] 容量たっぷりの大型カバン。なんでも詰め込める安心感が、肩の力を抜いてくれる。",
+                                      "description":  "容量たっぷりの大型カバン。なんでも詰め込める安心感が、肩の力を抜いてくれる。",
                                       "effects":  [
-
+                                                      {
+                                                          "action": "cardsDrawnPerTurnBonus",
+                                                          "scope": "self",
+                                                          "amount": 1,
+                                                          "trigger": "Passive"
+                                                      }
                                                   ],
-                                      "implemented":  false
+                                      "implemented":  true
                                   }
                      }
                  ]

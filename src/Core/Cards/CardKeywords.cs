@@ -28,6 +28,14 @@ public static class CardKeywords
         //  色は status と同じオレンジ系で「動詞的な作用」を表現。
         ["summon"] = new("summon", "召喚",
             "指定されたユニットを味方として呼び出す。"),
+        ["momentum"] = new("momentum", "乗勢",
+            "効果の実行時、自身のこのターンの最大コンボがX以上であれば適用される。"),
+        ["finisher"] = new("finisher", "終撃",
+            "効果の適用後、このカードを含むこのコンボ中の全てのアタックカードを残光としてこのターン中保存し、現在コンボを0にする。"),
+        ["reprise"] = new("reprise", "再演",
+            "再演条件を満たし、この戦闘中に最後に効果の解決を完了した自身のカード1枚の効果を再実行する。"),
+        ["contingency"] = new("contingency", "伏策",
+            "使用時は効果が実行されず、発動待ちとして除外する。伏策条件を満たした時に効果を実行し、捨札へ移動する。"),
     };
 
     public static KeywordMeta? Get(string id) =>

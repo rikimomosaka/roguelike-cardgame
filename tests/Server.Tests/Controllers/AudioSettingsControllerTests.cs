@@ -13,7 +13,7 @@ public class AudioSettingsControllerTests : IClassFixture<TempDataFactory>
 
     public AudioSettingsControllerTests(TempDataFactory factory) => _factory = factory;
 
-    private sealed record AudioDto(int SchemaVersion, int Master, int Bgm, int Se, int Ambient);
+    private sealed record AudioDto(int SchemaVersion, int Master, int Bgm, int Se, int Voice);
 
     private async Task EnsureAccountAsync(HttpClient client, string id)
     {
@@ -59,7 +59,7 @@ public class AudioSettingsControllerTests : IClassFixture<TempDataFactory>
         Assert.Equal(80, dto!.Master);
         Assert.Equal(70, dto.Bgm);
         Assert.Equal(80, dto.Se);
-        Assert.Equal(60, dto.Ambient);
+        Assert.Equal(80, dto.Voice);
     }
 
     [Fact]
@@ -70,7 +70,7 @@ public class AudioSettingsControllerTests : IClassFixture<TempDataFactory>
         WithAccount(client, "bob");
 
         var put = await client.PutAsJsonAsync("/api/v1/audio-settings",
-            new AudioDto(1, Master: 10, Bgm: 20, Se: 30, Ambient: 40));
+            new AudioDto(2, Master: 10, Bgm: 20, Se: 30, Voice: 40));
         Assert.Equal(HttpStatusCode.NoContent, put.StatusCode);
 
         var got = await client.GetFromJsonAsync<AudioDto>("/api/v1/audio-settings");
@@ -85,7 +85,7 @@ public class AudioSettingsControllerTests : IClassFixture<TempDataFactory>
         WithAccount(client, "carol");
 
         var res = await client.PutAsJsonAsync("/api/v1/audio-settings",
-            new AudioDto(1, Master: 200, Bgm: 0, Se: 0, Ambient: 0));
+            new AudioDto(2, Master: 200, Bgm: 0, Se: 0, Voice: 0));
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
     }
 
@@ -94,7 +94,48 @@ public class AudioSettingsControllerTests : IClassFixture<TempDataFactory>
     {
         var client = WithAccount(_factory.CreateClient(), "ghost");
         var res = await client.PutAsJsonAsync("/api/v1/audio-settings",
-            new AudioDto(1, 50, 50, 50, 50));
+            new AudioDto(2, 50, 50, 50, 50));
         Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
+    }
+
+    [Fact]
+    public async Task Put_WrongSchemaVersion_Returns400()
+    {
+        var client = _factory.CreateClient();
+        await EnsureAccountAsync(client, "schema-check");
+        WithAccount(client, "schema-check");
+
+        var res = await client.PutAsJsonAsync("/api/v1/audio-settings",
+            new AudioDto(1, 50, 50, 50, 50));
+
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+    }
+
+    [Fact]
+    public async Task Put_UnknownOrMissingProperty_Returns400()
+    {
+        var client = _factory.CreateClient();
+        await EnsureAccountAsync(client, "strict-audio");
+        WithAccount(client, "strict-audio");
+
+        var unknown = await client.PutAsJsonAsync("/api/v1/audio-settings", new
+        {
+            schemaVersion = 2,
+            master = 50,
+            bgm = 50,
+            se = 50,
+            voice = 50,
+            ambient = 50,
+        });
+        var missing = await client.PutAsJsonAsync("/api/v1/audio-settings", new
+        {
+            schemaVersion = 2,
+            master = 50,
+            bgm = 50,
+            se = 50,
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, unknown.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, missing.StatusCode);
     }
 }

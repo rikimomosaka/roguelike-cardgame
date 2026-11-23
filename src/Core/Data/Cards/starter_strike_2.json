@@ -2,6 +2,7 @@
     "id":  "starter_strike_2",
     "name":  "強打",
     "displayName":  null,
+    "poolKinds":  [],
     "activeVersion":  "v1",
     "versions":  [
                      {

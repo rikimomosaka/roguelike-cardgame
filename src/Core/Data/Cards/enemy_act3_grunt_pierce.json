@@ -1,0 +1,26 @@
+{
+  "id": "enemy_act3_grunt_pierce",
+  "name": "刺突",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy act3_grunt unique (from move pierce)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 13
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "id": "enemy_guardian_golem_defensive_mode",
+  "name": "防御形態",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy guardian_golem unique (from move defensive_mode)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 20
+          }
+        ]
+      }
+    }
+  ]
+}

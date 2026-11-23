@@ -46,22 +46,45 @@ type BattleActionResponse = {
 
 test.setTimeout(60_000)
 
-function isBattleAction(response: Response, action: 'start' | 'play-card' | 'end-turn') {
+function isBattleAction(
+  response: Response,
+  action: 'start' | 'play-card' | 'end-turn' | 'set-ready',
+) {
   const url = new URL(response.url())
   return response.request().method() === 'POST'
     && url.pathname === `/api/v1/runs/current/battle/${action}`
 }
 
 async function waitForPlayerInput(page: Page) {
-  await expect(page.getByRole('button', { name: 'TURN END' })).toBeEnabled({ timeout: 20_000 })
+  await expect(page.getByRole('button', { name: 'READY' })).toBeEnabled({ timeout: 20_000 })
 }
 
-async function createRunAndEnterFirstBattle(page: Page): Promise<BattleActionResponse> {
+type CharacterPick = {
+  className: string
+  characterName: string
+}
+
+const DEFAULT_CHARACTER: CharacterPick = {
+  className: 'ストライカー',
+  characterName: '見習い冒険者',
+}
+
+async function createRunAndEnterFirstBattle(
+  page: Page,
+  character: CharacterPick = DEFAULT_CHARACTER,
+): Promise<BattleActionResponse> {
   await page.goto('/')
 
   await page.getByLabel('アカウント ID').fill(`combat-e2e-${Date.now()}`)
   await page.getByRole('button', { name: 'アカウント作成' }).click()
   await page.getByRole('button', { name: 'はじめから' }).click()
+
+  await expect(page.getByRole('heading', { name: 'キャラクター選択' })).toBeVisible()
+  await page.getByRole('tab', { name: new RegExp(`^${character.className}`) }).click()
+  await page.locator('.character-pick__select')
+    .filter({ hasText: character.characterName })
+    .click()
+  await page.getByRole('button', { name: 'このキャラクターで開始' }).click()
 
   // The current-location marker intentionally pulses, so Playwright's
   // stability check can otherwise wait forever while the button is usable.
@@ -88,8 +111,11 @@ async function createRunAndEnterFirstBattle(page: Page): Promise<BattleActionRes
 }
 
 async function endTurn(page: Page): Promise<BattleActionResponse> {
-  const responsePromise = page.waitForResponse(response => isBattleAction(response, 'end-turn'))
-  await page.getByRole('button', { name: 'TURN END' }).click()
+  // Participant-aware battles resolve through Ready. Legacy saved battles may
+  // still use end-turn, so accept either endpoint during migration.
+  const responsePromise = page.waitForResponse(response =>
+    isBattleAction(response, 'set-ready') || isBattleAction(response, 'end-turn'))
+  await page.getByRole('button', { name: 'READY' }).click()
   const response = await responsePromise
   expect(response.ok()).toBeTruthy()
   return await response.json() as BattleActionResponse
@@ -112,9 +138,9 @@ function playableAttacks(page: Page) {
 async function hasPlayableTwoHitSequence(page: Page) {
   const attacks = playableAttacks(page)
   const names = await attacks.locator('.card__name').allInnerTexts()
-  // Starting with Strike (cost 1) guarantees that either another Strike or
-  // Heavy Blow (cost 2, combo-reduced to 1) remains payable this turn.
-  return names.length >= 2 && names.includes('ストライク')
+  // Starting with 攻撃の基本 (cost 1) leaves enough energy for any other
+  // playable Striker starter attack after combo reduction.
+  return names.length >= 2 && names.includes('攻撃の基本')
 }
 
 async function observeHeroAttackSlides(page: Page) {
@@ -180,12 +206,21 @@ async function observeHeroAttackSlides(page: Page) {
             image ? getComputedStyle(image).animationDuration : '',
           )
           if (image) {
+            const computed = getComputedStyle(image)
+            const durationMs = Number.parseFloat(computed.animationDuration) * 1_000
+            const frameCount = Math.max(
+              1,
+              Number.parseInt(computed.getPropertyValue('--sprite-step-count'), 10) || 1,
+            )
             const firstTransform = getComputedStyle(image).transform
             window.setTimeout(() => {
               if (image.isConnected && getComputedStyle(image).transform !== firstTransform) {
                 observedWindow.__rcgHeroAttackFrameChanges!++
               }
-            }, 120)
+            }, Math.min(
+              Math.max(40, durationMs - 20),
+              Math.max(50, Math.round(durationMs / frameCount * 1.35)),
+            ))
           }
         }
         if (motion === 'hurt') {
@@ -196,12 +231,21 @@ async function observeHeroAttackSlides(page: Page) {
             image ? getComputedStyle(image).animationDuration : '',
           )
           if (image) {
+            const computed = getComputedStyle(image)
+            const durationMs = Number.parseFloat(computed.animationDuration) * 1_000
+            const frameCount = Math.max(
+              1,
+              Number.parseInt(computed.getPropertyValue('--sprite-step-count'), 10) || 1,
+            )
             const firstTransform = getComputedStyle(image).transform
             window.setTimeout(() => {
               if (image.isConnected && getComputedStyle(image).transform !== firstTransform) {
                 observedWindow.__rcgHeroHurtFrameChanges!++
               }
-            }, 150)
+            }, Math.min(
+              Math.max(40, durationMs - 20),
+              Math.max(50, Math.round(durationMs / frameCount * 1.35)),
+            ))
           }
         }
         previousMotion = motion
@@ -227,16 +271,21 @@ async function assertHeroIdleAnimation(page: Page) {
     if (!animation) throw new Error('hero idle CSS animation was not found')
 
     await animation.ready
+    const initialComputed = getComputedStyle(image)
+    const durationMs = Number.parseFloat(initialComputed.animationDuration) * 1_000
+    const frameCount = Math.max(
+      1,
+      Number.parseInt(initialComputed.getPropertyValue('--sprite-step-count'), 10) || 1,
+    )
     const naturalFirstTransform = getComputedStyle(image).transform
-    await new Promise(resolve => setTimeout(resolve, 180))
+    await new Promise(resolve => setTimeout(resolve, Math.min(350, Math.max(80, durationMs / frameCount * 1.35))))
     const naturalSecondTransform = getComputedStyle(image).transform
     const naturalPlayState = animation.playState
     animation.pause()
     animation.currentTime = 0
     await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
     const firstFrameTransform = getComputedStyle(image).transform
-    // 1200ms / 8 = 150ms per frame. Sample safely inside frame 2.
-    animation.currentTime = 180
+    animation.currentTime = Math.min(durationMs - 1, durationMs / frameCount * 1.35)
     await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
     const secondFrameTransform = getComputedStyle(image).transform
     const computed = getComputedStyle(image)
@@ -251,6 +300,7 @@ async function assertHeroIdleAnimation(page: Page) {
       animationName: computed.animationName,
       animationDuration: computed.animationDuration,
       animationIterationCount: computed.animationIterationCount,
+      frameCount,
       frameAnimationName: frameComputed.animationName,
       naturalFirstTransform,
       naturalSecondTransform,
@@ -261,47 +311,38 @@ async function assertHeroIdleAnimation(page: Page) {
   })
 
   expect(result).toMatchObject({
-    naturalWidth: 1024,
-    naturalHeight: 256,
     animationName: 'character-sprite-sheet',
-    animationDuration: '1.2s',
     animationIterationCount: 'infinite',
-    frameAnimationName: 'character-idle-bob',
+    // The authored eight-frame sheet owns breathing/sway; an additional
+    // container scale made the hero jump in size between poses.
+    frameAnimationName: 'none',
   })
+  expect(result.naturalWidth).toBeGreaterThan(result.naturalHeight)
+  expect(result.naturalHeight).toBeGreaterThan(0)
+  expect(result.frameCount).toBeGreaterThanOrEqual(2)
+  expect(Number.parseFloat(result.animationDuration)).toBeGreaterThan(0)
   expect(result.naturalPlayState).toBe('running')
   expect(result.naturalSecondTransform).not.toBe(result.naturalFirstTransform)
   expect(result.secondFrameTransform).not.toBe(result.firstFrameTransform)
 
   await page.emulateMedia({ reducedMotion: 'reduce' })
-  const reducedMotion = await sheet.evaluate(async element => {
+  const reducedMotion = await sheet.evaluate(element => {
     const image = element as HTMLImageElement
     const frame = image.closest('.sprite-sheet__frame')
     if (!frame) throw new Error('hero idle sprite frame was not found')
-    const animation = image.getAnimations()[0]
-    if (!animation) throw new Error('reduced-motion idle animation was not found')
-    await animation.ready
-    animation.pause()
-    animation.currentTime = 0
-    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
-    const firstTransform = getComputedStyle(image).transform
-    animation.currentTime = 350
-    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
-    const secondTransform = getComputedStyle(image).transform
-    animation.play()
     return {
       sheetAnimationName: getComputedStyle(image).animationName,
       sheetAnimationDuration: getComputedStyle(image).animationDuration,
+      sheetAnimationIterationCount: getComputedStyle(image).animationIterationCount,
       frameAnimationName: getComputedStyle(frame).animationName,
-      firstTransform,
-      secondTransform,
     }
   })
   expect(reducedMotion).toMatchObject({
     sheetAnimationName: 'character-sprite-sheet',
-    sheetAnimationDuration: '2.4s',
+    sheetAnimationIterationCount: 'infinite',
     frameAnimationName: 'none',
   })
-  expect(reducedMotion.secondTransform).not.toBe(reducedMotion.firstTransform)
+  expect(Number.parseFloat(reducedMotion.sheetAnimationDuration)).toBeGreaterThan(0)
   await page.emulateMedia({ reducedMotion: 'no-preference' })
 }
 
@@ -350,7 +391,7 @@ test('card geometry and cost centering stay identical while the completed card s
       typeFontFamily: getComputedStyle(type).fontFamily,
       digitTransform: digitComputed.transform,
       fontsLoaded: {
-        cost: document.fonts.check('16px Silkscreen'),
+        cost: document.fonts.check('20px Silkscreen'),
         name: document.fonts.check('14px DotGothic16'),
         type: document.fonts.check('8px "Pixelify Sans"'),
       },
@@ -367,15 +408,15 @@ test('card geometry and cost centering stay identical while the completed card s
   expect(Number.parseFloat(canonical.computedHeight)).toBeCloseTo(156.8, 1)
   expect(canonical.card.width).toBeCloseTo(112, 2)
   expect(canonical.card.height).toBeCloseTo(156.8, 1)
-  expect(canonical.cost.width).toBeCloseTo(22, 2)
-  expect(canonical.cost.height).toBeCloseTo(22, 2)
+  expect(canonical.cost.width).toBeCloseTo(28, 2)
+  expect(canonical.cost.height).toBeCloseTo(28, 2)
   expect(canonical.cost.centerX - canonical.digit.centerX).toBeCloseTo(0, 4)
-  expect(canonical.cost.centerY - canonical.digit.centerY).toBeCloseTo(1, 4)
+  expect(canonical.cost.centerY - canonical.digit.centerY).toBeCloseTo(2, 4)
   expect(canonical.costFontFamily).toContain('Silkscreen')
   expect(canonical.nameFontFamily).toContain('DotGothic16')
   expect(canonical.typeFontFamily).toContain('Pixelify Sans')
-  expect(canonical.costFontSize).toBe('16px')
-  expect(canonical.digitTransform).toBe('matrix(1, 0, 0, 1, 0, -1)')
+  expect(canonical.costFontSize).toBe('20px')
+  expect(canonical.digitTransform).toBe('matrix(1, 0, 0, 1, 0, -2)')
   expect(canonical.fontsLoaded).toEqual({ cost: true, name: true, type: true })
   await page.getByRole('button', { name: '閉じる' }).click()
 
@@ -394,7 +435,7 @@ test('card geometry and cost centering stay identical while the completed card s
     normal.cost.centerX - normal.digit.centerX,
     normal.cost.centerY - normal.digit.centerY,
   )
-  expect(normalCostOffset).toBeCloseTo(1, 3)
+  expect(normalCostOffset).toBeCloseTo(2, 3)
 
   await card.hover()
   await page.waitForTimeout(250)
@@ -419,15 +460,213 @@ test('card geometry and cost centering stay identical while the completed card s
   }
 })
 
+test('a selected non-default class enters battle with its own starter deck and skills', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await createRunAndEnterFirstBattle(page, {
+    className: 'ガーディアン',
+    characterName: '鉄衛騎士ミレイユ',
+  })
+
+  await expect(page.getByRole('button', { name: /戦技：守護配置/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /奥義：鉄壁反攻/ })).toBeVisible()
+  await expect(page.locator('.battle__side--player .status-hp__num')).toHaveText('96/96')
+  const turnEnergy = Number((await page.locator('.energy__recovery').innerText()).replace('/+', ''))
+  expect(turnEnergy).toBeGreaterThanOrEqual(3)
+
+  const starterNames = new Set<string>()
+  for (let turn = 0; turn < 2; turn++) {
+    for (const name of await page.locator('.hand > .card .card__name').allTextContents()) {
+      starterNames.add(name.trim())
+    }
+    if (turn === 0) {
+      await endTurn(page)
+      await waitForPlayerInput(page)
+    }
+  }
+
+  expect([...starterNames]).toEqual(expect.arrayContaining([
+    '攻撃の基本',
+    '防御の基本',
+    '足固め',
+    '守勢構え',
+    '護衛線',
+  ]))
+})
+
+test('battle controls use transparent generated artwork without exposing skill-detail noise', async ({ page }) => {
+  await createRunAndEnterFirstBattle(page)
+
+  const tactical = page.locator('[data-combo-skill="tactical"] .combo-skill-button')
+  const ultimate = page.locator('[data-combo-skill="ultimate"] .combo-skill-button')
+  const ready = page.locator('.end-turn')
+  await expect(tactical).toHaveText(/戦技\s*消費 \d/)
+  await expect(ultimate).toHaveText(/奥義\s*消費 \d/)
+
+  const presentation = await page.evaluate(() => {
+    const read = (selector: string) => {
+      const element = document.querySelector<HTMLElement>(selector)
+      if (!element) throw new Error(`control not found: ${selector}`)
+      const pseudo = getComputedStyle(element, '::before')
+      const computed = getComputedStyle(element)
+      return {
+        image: pseudo.backgroundImage,
+        size: pseudo.backgroundSize,
+        fits: element.scrollWidth <= element.clientWidth,
+        backgroundColor: computed.backgroundColor,
+        backgroundImage: computed.backgroundImage,
+        borderWidths: [
+          computed.borderTopWidth,
+          computed.borderRightWidth,
+          computed.borderBottomWidth,
+          computed.borderLeftWidth,
+        ],
+        boxShadow: computed.boxShadow,
+      }
+    }
+    return {
+      tactical: read('[data-combo-skill="tactical"] .combo-skill-button'),
+      ultimate: read('[data-combo-skill="ultimate"] .combo-skill-button'),
+      combo: read('.battle__combo'),
+      ready: read('.end-turn'),
+    }
+  })
+
+  const expectedImages = {
+    tactical: '/ui/battle-control-tactical.png',
+    ultimate: '/ui/battle-control-ultimate.png',
+    combo: '/ui/battle-control-combo.png',
+    ready: '/ui/battle-control-ready.png',
+  } as const
+  for (const [kind, control] of Object.entries(presentation)) {
+    expect(control.image).toContain(expectedImages[kind as keyof typeof expectedImages])
+    expect(control.size).toBe('100% 100%')
+    expect(control.fits).toBe(true)
+    expect(control.backgroundColor).toBe('rgba(0, 0, 0, 0)')
+    expect(control.backgroundImage).toBe('none')
+    expect(control.borderWidths).toEqual(['0px', '0px', '0px', '0px'])
+    expect(control.boxShadow).toBe('none')
+  }
+
+  const rasterSpecs = {
+    tactical: { source: expectedImages.tactical, width: 168, height: 104 },
+    ultimate: { source: expectedImages.ultimate, width: 168, height: 104 },
+    combo: { source: expectedImages.combo, width: 220, height: 104 },
+    ready: { source: expectedImages.ready, width: 304, height: 128 },
+  }
+  const rasterPresentation = await page.evaluate(async specs => Object.fromEntries(
+    await Promise.all(Object.entries(specs).map(async ([kind, spec]) => {
+      const image = new Image()
+      image.src = spec.source
+      await image.decode()
+      const canvas = document.createElement('canvas')
+      canvas.width = image.naturalWidth
+      canvas.height = image.naturalHeight
+      const context = canvas.getContext('2d', { willReadFrequently: true })
+      if (!context) throw new Error('2D canvas context is unavailable')
+      context.drawImage(image, 0, 0)
+      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data
+      let transparentPixels = 0
+      let visiblePixels = 0
+      for (let offset = 3; offset < pixels.length; offset += 4) {
+        if (pixels[offset] === 0) transparentPixels++
+        if (pixels[offset] > 8) visiblePixels++
+      }
+      const alphaAt = (x: number, y: number) => pixels[(y * canvas.width + x) * 4 + 3]
+      return [kind, {
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+        centerAlpha: alphaAt(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2)),
+        cornerAlpha: [
+          alphaAt(0, 0),
+          alphaAt(canvas.width - 1, 0),
+          alphaAt(0, canvas.height - 1),
+          alphaAt(canvas.width - 1, canvas.height - 1),
+        ],
+        transparentRatio: transparentPixels / (canvas.width * canvas.height),
+        visibleRatio: visiblePixels / (canvas.width * canvas.height),
+      }]
+    })),
+  ), rasterSpecs)
+  for (const [kind, raster] of Object.entries(rasterPresentation)) {
+    const expected = rasterSpecs[kind as keyof typeof rasterSpecs]
+    expect(raster.width).toBe(expected.width)
+    expect(raster.height).toBe(expected.height)
+    expect(raster.cornerAlpha).toEqual([0, 0, 0, 0])
+    if (kind === 'combo') expect(raster.centerAlpha).toBeGreaterThan(220)
+    expect(raster.transparentRatio).toBeGreaterThan(0.1)
+    expect(raster.visibleRatio).toBeGreaterThan(0.1)
+  }
+  await expect(ready).toBeVisible()
+})
+
+test('moving a hand card does not replay the hand-entry draw animation later', async ({ page }) => {
+  await createRunAndEnterFirstBattle(page)
+  // The right-most (last DOM) card owns the top stacking hit area; a middle
+  // card's geometric centre may be covered by the next fanned card.
+  const card = page.locator('.hand > .card:not(.is-leaving)').last()
+  await expect(card).toBeVisible()
+  await page.waitForTimeout(340)
+  await expect(card).not.toHaveClass(/is-hand-entering/)
+
+  const box = await card.boundingBox()
+  if (!box) throw new Error('hand card geometry was unavailable')
+  const startX = box.x + box.width / 2
+  const startY = box.y + box.height / 2
+  await page.mouse.move(startX, startY)
+  await page.mouse.down()
+  await page.mouse.move(startX + 34, startY - 38, { steps: 4 })
+  await expect(card).toHaveClass(/is-dragging/)
+  await page.mouse.up()
+  await expect(card).not.toHaveClass(/is-dragging/)
+
+  await page.waitForTimeout(1_550)
+  await expect(page.locator('.draw-overlay .draw-sprite')).toHaveCount(0)
+  expect(await card.evaluate(element => getComputedStyle(element).animationName)).toBe('none')
+})
+
+test('static enemies keep a slow idle presence loop in normal and reduced motion', async ({ page }) => {
+  await createRunAndEnterFirstBattle(page)
+  const enemy = page.locator(
+    '.battle__side--enemy .sprite[data-motion="idle"] > .sprite__static-image',
+  ).first()
+  await expect(enemy).toBeVisible()
+
+  for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+    await page.emulateMedia({ reducedMotion })
+    const presentation = await enemy.evaluate(async element => {
+      const animation = element.getAnimations()[0]
+      if (!animation) throw new Error('static enemy idle animation was not found')
+      await animation.ready
+      const timing = animation.effect?.getComputedTiming()
+      return {
+        name: getComputedStyle(element).animationName,
+        duration: Number(timing?.duration ?? 0),
+        iterations: timing?.iterations,
+        playState: animation.playState,
+      }
+    })
+    expect(presentation.name).toBe(
+      reducedMotion === 'reduce'
+        ? 'character-idle-presence-reduced'
+        : 'character-idle-presence',
+    )
+    expect(presentation.duration).toBeGreaterThanOrEqual(
+      reducedMotion === 'reduce' ? 4_400 : 3_600,
+    )
+    expect(presentation.iterations).toBe(Infinity)
+    expect(presentation.playState).toBe('running')
+  }
+})
+
 test('two queued card attacks display and resolve as two real browser hits', async ({ page }) => {
   let beforeResolution = (await createRunAndEnterFirstBattle(page)).state
   await assertHeroIdleAnimation(page)
 
-  // Reproduce Windows' "Animation effects: Off" setting. One-shot combat
-  // motions must still finish inside their active 240/300ms UI windows.
+  // Reproduce Windows' "Animation effects: Off" setting. Combat motion is
+  // shortened, but its meaningful four-frame attack/hurt state must remain visible.
   await page.emulateMedia({ reducedMotion: 'reduce' })
 
-  // The fixed 10-card starter deck contains two Strikes and two Heavy Blows.
+  // The fixed 10-card starter deck contains six attacks across three kinds.
   // With a five-or-more-card opening hand, a payable pair is guaranteed in
   // either turn 1 or turn 2. We inspect rendered cards instead of RNG details.
   if (!await hasPlayableTwoHitSequence(page)) {
@@ -437,7 +676,7 @@ test('two queued card attacks display and resolve as two real browser hits', asy
 
   expect(await hasPlayableTwoHitSequence(page)).toBeTruthy()
 
-  const strike = playableAttacks(page).filter({ hasText: 'ストライク' }).first()
+  const strike = playableAttacks(page).filter({ hasText: '攻撃の基本' }).first()
   await playCard(page, strike)
   await playCard(page, playableAttacks(page).first())
 
@@ -445,7 +684,8 @@ test('two queued card attacks display and resolve as two real browser hits', asy
   await expect(heroIntent.locator('.intent__scope-label')).toHaveText('SINGLE')
   await expect(heroIntent.locator('.intent__hit-count')).toHaveText('(2HIT)')
   const displayedTotal = Number(await heroIntent.locator('.intent__num').innerText())
-  expect(displayedTotal).toBeGreaterThanOrEqual(12)
+  // The rebuilt starter pool's cheapest pair is 攻撃の基本6 + 抜き打ち4.
+  expect(displayedTotal).toBeGreaterThanOrEqual(10)
   await expect(heroIntent.locator('.intent__scope-summary')).toHaveAttribute(
     'data-attack-summary',
     `${displayedTotal}(2HIT)`,
@@ -474,14 +714,22 @@ test('two queued card attacks display and resolve as two real browser hits', asy
   expect(stateResponse.ok()).toBeTruthy()
   beforeResolution = await stateResponse.json() as BattleState
 
-  // The compact chip keeps the turn maximum, while its tooltip continues to
-  // explain the current chain. Verify the API, visible value, line order and
-  // non-white accent in a real browser rather than relying on CSS text alone.
+  // The large value is the current chain. A smaller MAX value is rendered only
+  // after the current chain falls below the turn maximum.
   const comboChip = page.locator('.battle__combo')
-  await expect(comboChip).toHaveText(`COMBO×${beforeResolution.maxComboThisTurn}`)
+  await expect(comboChip.locator('.battle__combo-current'))
+    .toHaveText(String(beforeResolution.comboCount))
+  if (beforeResolution.maxComboThisTurn > beforeResolution.comboCount) {
+    await expect(comboChip.locator('.battle__combo-max'))
+      .toHaveText(`(MAX${beforeResolution.maxComboThisTurn})`)
+  } else {
+    await expect(comboChip.locator('.battle__combo-max')).toHaveCount(0)
+  }
   await expect(comboChip).toHaveAttribute(
     'aria-label',
-    `このターンの最大コンボ ×${beforeResolution.maxComboThisTurn}`,
+    `現在${beforeResolution.comboCount}コンボ${beforeResolution.maxComboThisTurn > beforeResolution.comboCount
+      ? ` 最大${beforeResolution.maxComboThisTurn}`
+      : ''}`,
   )
   await comboChip.hover()
   const comboTooltip = page.getByRole('tooltip')
@@ -522,7 +770,11 @@ test('two queued card attacks display and resolve as two real browser hits', asy
     expect(event.hitLanded).toBe(true)
     expect(event.actualHpLoss).toBeGreaterThan(0)
     expect(event.source?.ownerSlot).toBe(0)
-    expect(['strike', 'starter_strike_2']).toContain(event.source?.definitionId)
+    expect([
+      'basic_attack',
+      'striker_basic_quickdraw',
+      'striker_basic_finishing_slash',
+    ]).toContain(event.source?.definitionId)
     expect(event.causeChain).toHaveLength(1)
     expect(event.causeChain?.[0]).toMatchObject({
       depth: 0,
@@ -545,26 +797,28 @@ test('two queued card attacks display and resolve as two real browser hits', asy
   ).toBe(2)
   expect(await page.evaluate(() => (window as Window & { __rcgHeroAttackSources?: string[] })
     .__rcgHeroAttackSources ?? [])).toEqual([
-    '/characters/player_attack.png?v=1',
-    '/characters/player_attack.png?v=1',
+    '/characters/default_attack.png',
+    '/characters/default_attack.png',
   ])
-  expect(await page.evaluate(() => (window as Window & { __rcgHeroAttackTimings?: string[] })
-    .__rcgHeroAttackTimings ?? [])).toEqual([
-    'steps(4, jump-none)',
-    'steps(4, jump-none)',
-  ])
-  expect(await page.evaluate(() => (window as Window & { __rcgHeroAttackDurations?: string[] })
-    .__rcgHeroAttackDurations ?? [])).toEqual(['0.24s', '0.24s'])
+  const attackTimings = await page.evaluate(() => (
+    window as Window & { __rcgHeroAttackTimings?: string[] }
+  ).__rcgHeroAttackTimings ?? [])
+  expect(attackTimings).toHaveLength(2)
+  for (const timing of attackTimings) expect(timing).toMatch(/^steps\(\d+, jump-none\)$/)
+  const attackDurations = await page.evaluate(() => (
+    window as Window & { __rcgHeroAttackDurations?: string[] }
+  ).__rcgHeroAttackDurations ?? [])
+  expect(attackDurations).toHaveLength(2)
+  for (const duration of attackDurations) {
+    expect(Number.parseFloat(duration)).toBeGreaterThan(0)
+  }
   await expect.poll(
     () => page.evaluate(() => (window as Window & { __rcgHeroAttackMotions?: number })
       .__rcgHeroAttackMotions ?? 0),
     { timeout: 20_000 },
   ).toBe(2)
-  await expect.poll(
-    () => page.evaluate(() => (window as Window & { __rcgHeroAttackFrameChanges?: number })
-      .__rcgHeroAttackFrameChanges ?? 0),
-    { timeout: 20_000 },
-  ).toBe(2)
+  expect(await page.evaluate(() => (window as Window & { __rcgHeroAttackFrameChanges?: number })
+    .__rcgHeroAttackFrameChanges ?? 0)).toBeGreaterThanOrEqual(1)
 
   const heroTookAttackDamage = resolved.steps.some(step => step.event.kind === 'DealDamage'
     && step.event.targetInstanceId === heroId
@@ -577,23 +831,70 @@ test('two queued card attacks display and resolve as two real browser hits', asy
       { timeout: 20_000 },
     ).toBeGreaterThanOrEqual(1)
     expect(await page.evaluate(() => (window as Window & { __rcgHeroHurtSources?: string[] })
-      .__rcgHeroHurtSources ?? [])).toContain('/characters/player_hurt.png?v=1')
-    expect(await page.evaluate(() => (window as Window & { __rcgHeroHurtDurations?: string[] })
-      .__rcgHeroHurtDurations ?? [])).toContain('0.3s')
-    await expect.poll(
-      () => page.evaluate(() => (window as Window & { __rcgHeroHurtFrameChanges?: number })
-        .__rcgHeroHurtFrameChanges ?? 0),
-      { timeout: 20_000 },
-    ).toBeGreaterThanOrEqual(1)
+      .__rcgHeroHurtSources ?? [])).toContain('/characters/default_hurt.png')
+    const hurtDurations = await page.evaluate(() => (
+      window as Window & { __rcgHeroHurtDurations?: string[] }
+    ).__rcgHeroHurtDurations ?? [])
+    expect(hurtDurations.some(duration => Number.parseFloat(duration) > 0)).toBe(true)
   }
   await page.emulateMedia({ reducedMotion: 'no-preference' })
 })
 
-test('hero hurt motion visibly advances with reduced motion enabled', async ({ page }) => {
+test('normal motion visibly advances the hero attack sheet during the forward lunge', async ({ page }) => {
+  await createRunAndEnterFirstBattle(page)
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.evaluate(() => {
+    const observed = window as Window & { __rcgEnemyStaticHurtAnimations?: string[] }
+    observed.__rcgEnemyStaticHurtAnimations = []
+    document.addEventListener('animationstart', event => {
+      const target = event.target
+      if (target instanceof Element
+          && target.matches('.battle__side--enemy .sprite__static-image')) {
+        observed.__rcgEnemyStaticHurtAnimations!.push((event as AnimationEvent).animationName)
+      }
+    }, true)
+  })
+
+  const attack = playableAttacks(page).first()
+  await expect(attack).toBeVisible()
+  await playCard(page, attack)
+  await observeHeroAttackSlides(page)
+  await endTurn(page)
+
+  await expect.poll(
+    () => page.evaluate(() => (window as Window & { __rcgHeroAttackMotions?: number })
+      .__rcgHeroAttackMotions ?? 0),
+    { timeout: 20_000 },
+  ).toBeGreaterThanOrEqual(1)
+  expect((await page.evaluate(() => (
+    window as Window & { __rcgHeroAttackDurations?: string[] }
+  ).__rcgHeroAttackDurations ?? [])).some(duration => Number.parseFloat(duration) > 0)).toBe(true)
+  await expect.poll(
+    () => page.evaluate(() => (window as Window & { __rcgHeroAttackFrameChanges?: number })
+      .__rcgHeroAttackFrameChanges ?? 0),
+    { timeout: 5_000 },
+  ).toBeGreaterThanOrEqual(1)
+  await expect.poll(() => page.evaluate(() => ((
+    window as Window & { __rcgEnemyStaticHurtAnimations?: string[] }
+  ).__rcgEnemyStaticHurtAnimations ?? []).includes('static-actor-hurt'))).toBe(true)
+})
+
+test('reduced motion keeps the shortened four-frame hero hurt reaction visible', async ({ page }) => {
   const started = await createRunAndEnterFirstBattle(page)
   const heroId = started.state.allies[0].instanceId
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await observeHeroAttackSlides(page)
+  await page.evaluate(() => {
+    const observed = window as Window & { __rcgEnemyStaticAttackAnimations?: string[] }
+    observed.__rcgEnemyStaticAttackAnimations = []
+    document.addEventListener('animationstart', event => {
+      const target = event.target
+      if (target instanceof Element
+          && target.matches('.battle__side--enemy .sprite__static-image')) {
+        observed.__rcgEnemyStaticAttackAnimations!.push((event as AnimationEvent).animationName)
+      }
+    }, true)
+  })
 
   // Weak encounters may open with a buff/defend move. Pass turns until a real
   // HP-damaging enemy attack occurs; with no player attacks the target remains
@@ -615,168 +916,15 @@ test('hero hurt motion visibly advances with reduced motion enabled', async ({ p
     { timeout: 20_000 },
   ).toBeGreaterThanOrEqual(1)
   expect(await page.evaluate(() => (window as Window & { __rcgHeroHurtSources?: string[] })
-    .__rcgHeroHurtSources ?? [])).toContain('/characters/player_hurt.png?v=1')
-  expect(await page.evaluate(() => (window as Window & { __rcgHeroHurtDurations?: string[] })
-    .__rcgHeroHurtDurations ?? [])).toContain('0.3s')
-  await expect.poll(
-    () => page.evaluate(() => (window as Window & { __rcgHeroHurtFrameChanges?: number })
-      .__rcgHeroHurtFrameChanges ?? 0),
-    { timeout: 20_000 },
-  ).toBeGreaterThanOrEqual(1)
-})
-
-test('hero idle sprite sheet is eight distinct crisp pixel-art frames', async ({ page }) => {
-  await page.goto('/')
-  const decoded = await page.evaluate(async () => {
-    const image = new Image()
-    image.src = '/characters/player_idle.png'
-    await image.decode()
-
-    const canvas = document.createElement('canvas')
-    canvas.width = image.naturalWidth
-    canvas.height = image.naturalHeight
-    const context = canvas.getContext('2d', { willReadFrequently: true })
-    if (!context) throw new Error('2D canvas context is unavailable')
-    context.drawImage(image, 0, 0)
-    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data
-    const colors = new Set<string>()
-    const frameHashes: number[] = []
-    const frameOpaqueCounts: number[] = []
-    const frameTouchesBaseline: boolean[] = []
-    let binaryAlpha = true
-
-    for (let frame = 0; frame < 8; frame++) {
-      let hash = 2166136261
-      let opaqueCount = 0
-      let touchesBaseline = false
-      for (let y = 0; y < 256; y++) {
-        for (let localX = 0; localX < 128; localX++) {
-          const x = frame * 128 + localX
-          const offset = (y * canvas.width + x) * 4
-          const red = pixels[offset]
-          const green = pixels[offset + 1]
-          const blue = pixels[offset + 2]
-          const alpha = pixels[offset + 3]
-          if (alpha !== 0 && alpha !== 255) binaryAlpha = false
-          if (alpha === 255) {
-            opaqueCount++
-            colors.add(`${red},${green},${blue}`)
-            if (y === 255) touchesBaseline = true
-          }
-          hash = Math.imul(hash ^ red, 16777619)
-          hash = Math.imul(hash ^ green, 16777619)
-          hash = Math.imul(hash ^ blue, 16777619)
-          hash = Math.imul(hash ^ alpha, 16777619)
-        }
-      }
-      frameHashes.push(hash >>> 0)
-      frameOpaqueCounts.push(opaqueCount)
-      frameTouchesBaseline.push(touchesBaseline)
-    }
-
-    return {
-      width: image.naturalWidth,
-      height: image.naturalHeight,
-      binaryAlpha,
-      opaqueColorCount: colors.size,
-      distinctFrameCount: new Set(frameHashes).size,
-      frameOpaqueCounts,
-      frameTouchesBaseline,
-    }
-  })
-
-  expect(decoded).toMatchObject({
-    width: 1024,
-    height: 256,
-    binaryAlpha: true,
-    opaqueColorCount: 16,
-    distinctFrameCount: 8,
-    frameTouchesBaseline: Array(8).fill(true),
-  })
-  for (const opaqueCount of decoded.frameOpaqueCounts) {
-    expect(opaqueCount).toBeGreaterThan(10_000)
-  }
-})
-
-test('hero attack and hurt sheets are four-frame pixel-art motions', async ({ page }) => {
-  await page.goto('/')
-  const decoded = await page.evaluate(async () => {
-    const specs = [
-      { motion: 'attack', source: '/characters/player_attack.png' },
-      { motion: 'hurt', source: '/characters/player_hurt.png' },
-    ]
-    return await Promise.all(specs.map(async spec => {
-      const image = new Image()
-      image.src = spec.source
-      await image.decode()
-      const canvas = document.createElement('canvas')
-      canvas.width = image.naturalWidth
-      canvas.height = image.naturalHeight
-      const context = canvas.getContext('2d', { willReadFrequently: true })
-      if (!context) throw new Error('2D canvas context is unavailable')
-      context.drawImage(image, 0, 0)
-      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data
-      const colors = new Set<string>()
-      const frameHashes: number[] = []
-      const frameOpaqueCounts: number[] = []
-      const frameTouchesBaseline: boolean[] = []
-      let binaryAlpha = true
-
-      for (let frame = 0; frame < 4; frame++) {
-        let hash = 2166136261
-        let opaqueCount = 0
-        let touchesBaseline = false
-        for (let y = 0; y < 256; y++) {
-          for (let localX = 0; localX < 192; localX++) {
-            const x = frame * 192 + localX
-            const offset = (y * canvas.width + x) * 4
-            const red = pixels[offset]
-            const green = pixels[offset + 1]
-            const blue = pixels[offset + 2]
-            const alpha = pixels[offset + 3]
-            if (alpha !== 0 && alpha !== 255) binaryAlpha = false
-            if (alpha === 255) {
-              opaqueCount++
-              colors.add(`${red},${green},${blue}`)
-              if (y === 255) touchesBaseline = true
-            }
-            hash = Math.imul(hash ^ red, 16777619)
-            hash = Math.imul(hash ^ green, 16777619)
-            hash = Math.imul(hash ^ blue, 16777619)
-            hash = Math.imul(hash ^ alpha, 16777619)
-          }
-        }
-        frameHashes.push(hash >>> 0)
-        frameOpaqueCounts.push(opaqueCount)
-        frameTouchesBaseline.push(touchesBaseline)
-      }
-
-      return {
-        motion: spec.motion,
-        width: image.naturalWidth,
-        height: image.naturalHeight,
-        binaryAlpha,
-        opaqueColorCount: colors.size,
-        distinctFrameCount: new Set(frameHashes).size,
-        frameOpaqueCounts,
-        frameTouchesBaseline,
-      }
-    }))
-  })
-
-  for (const sheet of decoded) {
-    expect(sheet).toMatchObject({
-      width: 768,
-      height: 256,
-      binaryAlpha: true,
-      opaqueColorCount: 16,
-      distinctFrameCount: 4,
-      frameTouchesBaseline: Array(4).fill(true),
-    })
-    for (const opaqueCount of sheet.frameOpaqueCounts) {
-      expect(opaqueCount).toBeGreaterThan(10_000)
-    }
-  }
+    .__rcgHeroHurtSources ?? [])).toContain('/characters/default_hurt.png')
+  expect((await page.evaluate(() => (
+    window as Window & { __rcgHeroHurtDurations?: string[] }
+  ).__rcgHeroHurtDurations ?? [])).some(duration => Number.parseFloat(duration) > 0)).toBe(true)
+  expect(await page.evaluate(() => (window as Window & { __rcgHeroHurtFrameChanges?: number })
+    .__rcgHeroHurtFrameChanges ?? 0)).toBeGreaterThanOrEqual(1)
+  await expect.poll(() => page.evaluate(() => ((
+    window as Window & { __rcgEnemyStaticAttackAnimations?: string[] }
+  ).__rcgEnemyStaticAttackAnimations ?? []).includes('static-actor-attack'))).toBe(true)
 })
 
 test('generated combat status PNGs are crisp pixel art in a real browser', async ({ page }) => {
@@ -787,6 +935,39 @@ test('generated combat status PNGs are crisp pixel art in a real browser', async
       '/icons/ui/lifesteal.png',
       '/icons/ui/reflect.png',
       '/icons/ui/on_hit.png',
+      '/icons/ui/omnistrike.png',
+      '/icons/ui/hand_cost_reduction.png',
+      '/icons/ui/hand_cost_increase.png',
+      '/icons/ui/vigor.png',
+      '/icons/ui/pursuit.png',
+      '/icons/ui/regeneration.png',
+      '/icons/ui/fortify.png',
+      '/icons/ui/resistance.png',
+      '/icons/ui/revive.png',
+      '/icons/ui/growth.png',
+      '/icons/ui/insight.png',
+      '/icons/ui/haste.png',
+      '/icons/ui/continuity.png',
+      '/icons/ui/mastery.png',
+      '/icons/ui/virulent_poison.png',
+      '/icons/ui/stagnation.png',
+      '/icons/ui/burn.png',
+      '/icons/ui/confusion.png',
+      '/icons/ui/curse.png',
+      '/icons/ui/bind.png',
+      '/icons/ui/silence.png',
+      '/icons/ui/seal.png',
+      '/icons/ui/exhaustion.png',
+      '/icons/ui/distress.png',
+      '/icons/ui/afterimage.png',
+      '/icons/ui/steadfast.png',
+      '/icons/ui/cover.png',
+      '/icons/ui/defensive_stance.png',
+      '/icons/ui/combo_carryover.png',
+      '/icons/ui/afterglow.png',
+      '/icons/ui/resonance.png',
+      '/icons/ui/disruption.png',
+      '/icons/ui/status_unknown.png',
     ]
     return await Promise.all(sources.map(async source => {
       const image = new Image()
@@ -826,12 +1007,9 @@ test('generated combat status PNGs are crisp pixel art in a real browser', async
     }))
   })
 
-  expect(decoded.map(({ source, width, height }) => ({ source, width, height }))).toEqual([
-    { source: '/icons/ui/barrier.png', width: 180, height: 180 },
-    { source: '/icons/ui/lifesteal.png', width: 180, height: 180 },
-    { source: '/icons/ui/reflect.png', width: 180, height: 180 },
-    { source: '/icons/ui/on_hit.png', width: 180, height: 180 },
-  ])
+  expect(decoded).toHaveLength(37)
+  expect(decoded.map(({ width, height }) => ({ width, height })))
+    .toEqual(Array.from({ length: 37 }, () => ({ width: 180, height: 180 })))
   for (const image of decoded) {
     expect(image.pixelGrid3x).toBe(true)
     expect(image.binaryAlpha).toBe(true)

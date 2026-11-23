@@ -20,17 +20,17 @@
                      {
                          "version":  "v2",
                          "createdAt":  "2026-08-08T00:00:00Z",
-                         "label":  "lifesteal reference relic",
+                         "label":  "regeneration sustain relic",
                          "spec":  {
                                       "rarity":  1,
-                                      "description":  "戦闘開始時に吸血25%を得る。攻撃で実際に減らしたHPの25%を回復する。",
+                                      "description":  "脈打つたび熱を帯びる深紅の珊瑚。戦いの傷を糧に艶を増す。",
                                       "effects":  [
                                                       {
                                                           "action":  "buff",
                                                           "scope":  "self",
                                                           "target":  null,
-                                                          "amount":  25,
-                                                          "name":  "lifesteal",
+                                                          "amount":  2,
+                                                          "name":  "regeneration",
                                                           "trigger":  "OnBattleStart"
                                                       }
                                                   ],

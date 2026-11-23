@@ -10,8 +10,58 @@ namespace RoguelikeCardGame.Core.Battle.State;
 public sealed record PendingCardPlay(
     string CardInstanceId,
     int EffectIndex,
-    bool SummonSucceededBefore,
-    PendingChoice Choice);
+    ImmutableArray<string> SummonedActorInstanceIdsBefore,
+    PendingChoice Choice)
+{
+    /// <summary>
+    /// Non-null when the choice belongs to an effect-only execution rather
+    /// than the normal effect list of <see cref="CardInstanceId"/>.
+    /// </summary>
+    public PendingEffectExecution? EffectExecution { get; init; }
+}
+
+public enum EffectExecutionKind
+{
+    Reprise,
+    Contingency,
+    Afterimage,
+}
+
+/// <summary>
+/// Continuation metadata for a copied effect list.  The source snapshot is
+/// independent from the real card whose lifecycle may still need finalizing.
+/// </summary>
+public sealed record PendingEffectExecution(
+    EffectExecutionKind Kind,
+    PlayedCardEffectSnapshot SourceCard,
+    string CasterActorInstanceId,
+    string CauseDefinitionId)
+{
+    public ImmutableArray<PlayedCardEffectSnapshot> RemainingCards { get; init; } =
+        ImmutableArray<PlayedCardEffectSnapshot>.Empty;
+
+    public int RemainingCycles { get; init; }
+
+    public string? ArmedContingencyCardInstanceId { get; init; }
+
+    public int BeforeSingleAttackCount { get; init; }
+
+    public int BeforeRandomAttackCount { get; init; }
+
+    public int BeforeAllAttackCount { get; init; }
+
+    public int? TriggerPreviousCombo { get; init; }
+
+    public int? TriggerCurrentCombo { get; init; }
+
+    /// <summary>
+    /// A Finisher card whose final combo snapshot/reset must run after every
+    /// ComboReached Contingency (including human choices) has completed.
+    /// </summary>
+    public BattleCardInstance? PostContingencyFinisherCard { get; init; }
+
+    public string? PostContingencyFinisherActorInstanceId { get; init; }
+}
 
 /// <summary>
 /// Phase 10.5.M2-Choose: choose effect の選択候補と要件。

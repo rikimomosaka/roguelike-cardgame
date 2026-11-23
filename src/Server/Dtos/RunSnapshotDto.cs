@@ -5,6 +5,8 @@ using RoguelikeCardGame.Core.History;
 using RoguelikeCardGame.Core.Map;
 using RoguelikeCardGame.Core.Merchant;
 using RoguelikeCardGame.Core.Relics;
+using RoguelikeCardGame.Core.Rewards;
+using RoguelikeCardGame.Core.Rest;
 using RoguelikeCardGame.Core.Run;
 using RoguelikeCardGame.Server.Services;
 
@@ -35,7 +37,40 @@ public sealed record RunStateDto(
     bool ActiveRestPending,
     bool ActiveRestCompleted,
     string SavedAtUtc,
-    ActStartRelicChoiceDto? ActiveActStartRelicChoice);
+    ActStartRelicChoiceDto? ActiveActStartRelicChoice,
+    RestHealPreviewDto? RestHealPreview,
+    string HostMemberId,
+    IReadOnlyList<RunPartyMemberStateDto> PartyMembers);
+
+public sealed record RunPartyMemberStateDto(
+    string MemberId,
+    int SlotIndex,
+    string CharacterId,
+    string ControlMode,
+    int CurrentHp,
+    int MaxHp,
+    int Gold,
+    IReadOnlyList<CardInstanceDto> Deck,
+    IReadOnlyList<string> Potions,
+    int PotionSlotCount,
+    IReadOnlyList<string> Relics,
+    RewardStateDto? ActiveReward,
+    MerchantInventoryDto? ActiveMerchant,
+    EventInstanceDto? ActiveEvent,
+    bool ActiveRestPending,
+    bool ActiveRestCompleted,
+    ActStartRelicChoiceDto? ActiveActStartRelicChoice,
+    RestHealPreviewDto? RestHealPreview,
+    int DiscardUsesSoFar);
+
+public sealed record RestHealPreviewDto(
+    int CurrentHpBefore,
+    int MaxHpBefore,
+    int BasePercent,
+    int BaseHealAmount,
+    int PassiveBonusAmount,
+    int CurrentHpAfter,
+    int MaxHpAfter);
 
 public sealed record EventChoiceSnapshotDto(
     string Label,
@@ -54,6 +89,10 @@ public static class RunSnapshotDtoMapper
 {
     public static RunSnapshotDto From(RunState s, DungeonMap map, DataCatalog data)
     {
+        // Legacy run actions still mutate the host projection on the root. Capture
+        // that view before returning the authoritative member list in the same response.
+        s = RunPartyAccess.CaptureRootIntoHost(s);
+
         BattlePlaceholderStateDto? battle = null;
         if (s.ActiveBattle is { } b)
         {
@@ -67,25 +106,21 @@ public static class RunSnapshotDtoMapper
             battle = new BattlePlaceholderStateDto(b.EncounterId, enemies, b.Outcome.ToString());
         }
 
-        RewardStateDto? reward = null;
-        if (s.ActiveReward is { } r)
-        {
-            bool rerollAvailable = PassiveModifiers.HasPassiveCapability("rewardRerollAvailable", s, data);
-            reward = new RewardStateDto(r.Gold, r.GoldClaimed, r.PotionId, r.PotionClaimed,
-                r.CardChoices, r.CardStatus.ToString(), r.RelicId, r.RelicClaimed, r.IsBossReward,
-                r.RerollUsed, rerollAvailable);  // Phase 10.6.B T7
-        }
-
-        MerchantInventoryDto? merchant = null;
-        if (s.ActiveMerchant is { } m)
-            merchant = MerchantInventoryDto.From(m);
+        var reward = ToRewardDto(s, data);
+        var merchant = s.ActiveMerchant is { } m ? MerchantInventoryDto.From(m) : null;
 
         var resolutions = new Dictionary<int, string>();
         foreach (var kv in s.UnknownResolutions) resolutions[kv.Key] = kv.Value.ToString();
 
-        EventInstanceDto? activeEvent = s.ActiveEvent is null
-            ? null
-            : EventInstanceDtoFactory.From(s.ActiveEvent, s, data);
+        var activeEvent = ToEventDto(s, data);
+        var restHealPreview = ToRestHealPreviewDto(s, data);
+        var partyMembers = RunPartyAccess.EffectiveMembers(s)
+            .OrderBy(member => member.SlotIndex)
+            .Select(member => ToPartyMemberDto(
+                member,
+                RunPartyAccess.ProjectMemberToRoot(s, member.MemberId),
+                data))
+            .ToArray();
 
         var run = new RunStateDto(
             s.SchemaVersion, s.CurrentAct, s.CurrentNodeId, s.VisitedNodeIds, resolutions,
@@ -95,8 +130,78 @@ public static class RunSnapshotDtoMapper
             battle, reward, merchant, s.Relics, s.PlaySeconds, s.Progress.ToString(),
             activeEvent, s.ActiveRestPending, s.ActiveRestCompleted,
             s.SavedAtUtc.ToString("O"),
-            s.ActiveActStartRelicChoice is null ? null : new ActStartRelicChoiceDto(s.ActiveActStartRelicChoice.RelicIds));
+            s.ActiveActStartRelicChoice is null ? null : new ActStartRelicChoiceDto(s.ActiveActStartRelicChoice.RelicIds),
+            restHealPreview,
+            RunPartyAccess.EffectiveHostMemberId(s),
+            partyMembers);
         return new RunSnapshotDto(run, MapDtoMapper.From(map));
+    }
+
+    private static RunPartyMemberStateDto ToPartyMemberDto(
+        RunPartyMemberState member,
+        RunState memberView,
+        DataCatalog data) =>
+        new(
+            member.MemberId,
+            member.SlotIndex,
+            member.CharacterId,
+            member.ControlMode.ToString(),
+            member.CurrentHp,
+            member.MaxHp,
+            member.Gold,
+            member.Deck.Select(card => new CardInstanceDto(card.Id, card.Upgraded)).ToArray(),
+            member.Potions,
+            member.PotionSlotCount,
+            member.Relics,
+            ToRewardDto(memberView, data),
+            member.ActiveMerchant is { } merchant ? MerchantInventoryDto.From(merchant) : null,
+            ToEventDto(memberView, data),
+            member.ActiveRestPending,
+            member.ActiveRestCompleted,
+            member.ActiveActStartRelicChoice is null
+                ? null
+                : new ActStartRelicChoiceDto(member.ActiveActStartRelicChoice.RelicIds),
+            ToRestHealPreviewDto(memberView, data),
+            member.DiscardUsesSoFar);
+
+    private static RewardStateDto? ToRewardDto(RunState state, DataCatalog data)
+    {
+        if (state.ActiveReward is not { } reward) return null;
+        bool rerollAvailable = reward.CardPoolKind == CardRewardPoolKind.Class
+            && PassiveModifiers.HasPassiveCapability("rewardRerollAvailable", state, data);
+        return new RewardStateDto(
+            reward.Gold,
+            reward.GoldClaimed,
+            reward.PotionId,
+            reward.PotionClaimed,
+            reward.CardChoices,
+            reward.CardStatus.ToString(),
+            reward.RelicId,
+            reward.RelicClaimed,
+            reward.IsBossReward,
+            reward.RerollUsed,
+            rerollAvailable);
+    }
+
+    private static EventInstanceDto? ToEventDto(RunState state, DataCatalog data) =>
+        state.ActiveEvent is null
+            ? null
+            : EventInstanceDtoFactory.From(state.ActiveEvent, state, data);
+
+    private static RestHealPreviewDto? ToRestHealPreviewDto(
+        RunState state,
+        DataCatalog data)
+    {
+        if (!state.ActiveRestPending || state.ActiveRestCompleted) return null;
+        var preview = RestActions.PreviewHeal(state, data);
+        return new RestHealPreviewDto(
+            preview.CurrentHpBefore,
+            preview.MaxHpBefore,
+            preview.BasePercent,
+            preview.BaseHealAmount,
+            preview.PassiveBonusAmount,
+            preview.CurrentHpAfter,
+            preview.MaxHpAfter);
     }
 
     public static RunResultDto ToResult(string accountId, RunState s, DungeonMap currentMap, RunProgress outcome)

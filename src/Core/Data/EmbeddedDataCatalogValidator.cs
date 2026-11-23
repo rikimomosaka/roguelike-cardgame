@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using RoguelikeCardGame.Core.Battle.Statuses;
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Relics;
@@ -50,12 +51,14 @@ internal static class EmbeddedDataCatalogValidator
         "drawCards",
         "discard",
         "gainEnergy",
+        "gainComboGauge",
         "exhaustCard",
         "upgrade",
         "summon",
         "selfDamage",
         "addCard",
         "recoverFromDiscard",
+        "recoverFromExhaust",
         "gainMaxEnergy",
         "modifyCardCost",
     };
@@ -79,20 +82,6 @@ internal static class EmbeddedDataCatalogValidator
         "shopPriceMultiplier",
         "rewardRerollAvailable",
         "unknownTileWeightDelta",
-    };
-
-    private static readonly HashSet<string> AmountSources = new(StringComparer.Ordinal)
-    {
-        "handCount",
-        "drawPileCount",
-        "discardPileCount",
-        "exhaustPileCount",
-        "selfHp",
-        "selfHpLost",
-        "selfBlock",
-        "comboCount",
-        "energy",
-        "powerCardCount",
     };
 
     internal static void ValidateRelics(IEnumerable<string> relicJsonEntries)
@@ -125,6 +114,25 @@ internal static class EmbeddedDataCatalogValidator
         }
     }
 
+    internal static void ValidateCards(IEnumerable<string> cardJsonEntries)
+    {
+        ArgumentNullException.ThrowIfNull(cardJsonEntries);
+        foreach (var json in cardJsonEntries)
+        {
+            CardDefinition card;
+            try
+            {
+                card = CardJsonLoader.Parse(json);
+            }
+            catch (Exception ex) when (ex is CardJsonException or FormatException or OverflowException)
+            {
+                throw new DataCatalogException($"Embedded card JSON is invalid: {ex.Message}");
+            }
+
+            CardContentPolicyValidator.Validate(card, Fail);
+        }
+    }
+
     private static void ValidateRelicEffect(string relicId, int effectIndex, CardEffect effect)
     {
         var location = $"Embedded relic '{relicId}' effects[{effectIndex}]";
@@ -140,8 +148,11 @@ internal static class EmbeddedDataCatalogValidator
         if (effect.ChancePercent is not null && effect.Trigger != "OnHit")
             Fail(location, "chancePercent is currently supported only by trigger 'OnHit'.");
 
-        if (effect.AmountSource is not null && !AmountSources.Contains(effect.AmountSource))
+        if (effect.AmountSource is not null &&
+            !ContentAuthoringCatalog.AmountSources.Contains(effect.AmountSource, StringComparer.Ordinal))
             Fail(location, $"amountSource '{effect.AmountSource}' is not supported by the current Core.");
+        if (effect.AmountSource == "currentCost" && effect.Action != "modifyCardCost")
+            Fail(location, "amountSource 'currentCost' is supported only by action 'modifyCardCost'.");
 
         if (effect.Trigger == "Passive")
         {
@@ -225,14 +236,19 @@ internal static class EmbeddedDataCatalogValidator
             case "draw":
             case "drawCards":
             case "gainEnergy":
+            case "gainComboGauge":
             case "gainMaxEnergy":
+            case "modifyCardCost":
+                RequireParticipantResourceTarget(location, effect);
+                break;
+
             case "selfDamage":
             case "summon":
             case "addCard":
             case "exhaustCard":
             case "upgrade":
             case "recoverFromDiscard":
-            case "modifyCardCost":
+            case "recoverFromExhaust":
                 RequireSelfOnly(location, effect);
                 break;
         }
@@ -252,17 +268,23 @@ internal static class EmbeddedDataCatalogValidator
         }
 
         if (effect.Action == "upgrade" &&
-            effect.Pile is not ("hand" or "draw" or "discard"))
+            effect.Pile is not ("hand" or "draw" or "discard" or "exhaust"))
         {
-            Fail(location, "upgrade requires pile hand|draw|discard.");
+            Fail(location, "upgrade requires pile hand|draw|discard|exhaust.");
         }
 
         if (effect.Action == "recoverFromDiscard" && effect.Pile is not ("hand" or "exhaust"))
             Fail(location, "recoverFromDiscard requires pile hand|exhaust.");
 
+        if (effect.Action == "recoverFromExhaust" &&
+            effect.Pile is not ("hand" or "draw" or "discard"))
+        {
+            Fail(location, "recoverFromExhaust requires pile hand|draw|discard.");
+        }
+
         if (effect.Select is not null)
         {
-            if (effect.Action is not ("discard" or "exhaustCard" or "upgrade" or "recoverFromDiscard" or "modifyCardCost"))
+            if (effect.Action is not ("discard" or "exhaustCard" or "upgrade" or "recoverFromDiscard" or "recoverFromExhaust" or "modifyCardCost"))
                 Fail(location, $"action '{effect.Action}' does not support select.");
             if (effect.Select is not ("all" or "random" or "choose"))
                 Fail(location, "select must be all|random|choose.");
@@ -270,7 +292,7 @@ internal static class EmbeddedDataCatalogValidator
 
         if (effect.Action == "modifyCardCost")
         {
-            if (effect.Amount == 0)
+            if (effect.Amount == 0 && effect.AmountSource != "currentCost")
                 Fail(location, "modifyCardCost amount must not be 0.");
             if (effect.Pile is not ("hand" or "draw" or "discard" or "exhaust"))
                 Fail(location, "modifyCardCost requires pile hand|draw|discard|exhaust.");
@@ -278,6 +300,8 @@ internal static class EmbeddedDataCatalogValidator
                 Fail(location, "modifyCardCost requires select all|random|choose.");
             if (effect.Select == "choose" && !string.IsNullOrEmpty(effect.Trigger))
                 Fail(location, "triggered modifyCardCost cannot use select choose.");
+            if (effect.Select == "choose" && effect.Scope != EffectScope.Self)
+                Fail(location, "modifyCardCost select choose only supports scope self.");
             if (effect.CostDuration is not ("untilPlayed" or "untilTurnEnd"))
                 Fail(location, "modifyCardCost requires costDuration untilPlayed|untilTurnEnd.");
             if (effect.Select != "all" && effect.CardCount is <= 0)
@@ -287,25 +311,37 @@ internal static class EmbeddedDataCatalogValidator
 
     private static void ValidateStatus(string location, CardEffect effect)
     {
-        if (string.IsNullOrWhiteSpace(effect.Name))
-            Fail(location, $"{effect.Action} requires name (status ID).");
+        var changes = effect.EffectiveStatusChanges();
+        if (changes.Count == 0)
+            Fail(location, $"{effect.Action} requires at least one status ID via name/amount or statusChanges.");
 
-        StatusDefinition status;
-        try
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var change in changes)
         {
-            status = StatusDefinition.Get(effect.Name!);
-        }
-        catch (InvalidOperationException)
-        {
-            Fail(location, $"status ID '{effect.Name}' does not exist.");
-            return;
-        }
+            if (string.IsNullOrWhiteSpace(change.Name))
+                Fail(location, $"{effect.Action} contains an empty status ID.");
+            if (!seen.Add(change.Name))
+                Fail(location, $"{effect.Action} contains duplicate status ID '{change.Name}'.");
 
-        var expectedKind = effect.Action == "buff" ? StatusKind.Buff : StatusKind.Debuff;
-        if (status.Kind != expectedKind)
-        {
-            Fail(location,
-                $"action '{effect.Action}' cannot apply {status.Kind.ToString().ToLowerInvariant()} status '{status.Id}'.");
+            StatusDefinition status;
+            try
+            {
+                status = StatusDefinition.Get(change.Name);
+            }
+            catch (InvalidOperationException)
+            {
+                Fail(location, $"status ID '{change.Name}' does not exist.");
+                return;
+            }
+
+            var expectedKind = effect.Action == "buff" ? StatusKind.Buff : StatusKind.Debuff;
+            if (status.Kind != expectedKind)
+            {
+                Fail(location,
+                    $"action '{effect.Action}' cannot apply {status.Kind.ToString().ToLowerInvariant()} status '{status.Id}'.");
+            }
+            if (change.Name == BattleStatusIds.VirulentPoison && change.Amount > 0 && change.Amount != 1)
+                Fail(location, $"status '{BattleStatusIds.VirulentPoison}' must be applied one stack at a time.");
         }
     }
 
@@ -327,6 +363,19 @@ internal static class EmbeddedDataCatalogValidator
         if (effect.Scope != EffectScope.Self)
             Fail(location, $"action '{effect.Action}' requires scope 'self'.");
         RequireNoSide(location, effect);
+    }
+
+    private static void RequireParticipantResourceTarget(string location, CardEffect effect)
+    {
+        if (effect.Scope == EffectScope.Self)
+        {
+            RequireNoSide(location, effect);
+            return;
+        }
+
+        if (effect.Side != EffectSide.Ally)
+            Fail(location,
+                $"action '{effect.Action}' with non-self scope requires side 'ally'.");
     }
 
     private static void RequireNoSide(string location, CardEffect effect)

@@ -187,3 +187,57 @@ public class EnemyJsonLoaderTests
         Assert.Throws<EnemyJsonException>(() => EnemyJsonLoader.Parse(json));
     }
 }
+
+/// <summary>カード制御の敵（deck 形式）。</summary>
+public class EnemyJsonLoaderDeckTests
+{
+    [Fact]
+    public void Parse_card_controlled_enemy_with_deck()
+    {
+        var def = EnemyJsonLoader.Parse("""
+        {
+          "id":"e3","name":"敵 3","imageId":"e3",
+          "hp":30,"act":1,"tier":"Weak",
+          "energyPerTurn":2,"drawPerTurn":4,"handLimit":6,
+          "aiProfileId":"low_cost_combo",
+          "deck":[{"cardId":"enemy_strike","count":3},{"cardId":"enemy_guard","priority":2}]
+        }
+        """);
+        Assert.True(def.IsCardControlled);
+        Assert.Empty(def.Moves);
+        Assert.Equal(string.Empty, def.InitialMoveId);
+        Assert.Equal(0, def.InitialEnergy);
+        Assert.Equal(2, def.EnergyPerTurn);
+        Assert.Equal(4, def.DrawPerTurn);
+        Assert.Equal(6, def.HandLimit);
+        Assert.Equal(2, def.EffectiveDeck.Count);
+        Assert.Equal(3, def.EffectiveDeck[0].Count);
+        Assert.Equal(2, def.EffectiveDeck[1].Priority);
+    }
+
+    [Fact]
+    public void Deck_and_moves_cannot_be_combined()
+    {
+        Assert.Throws<EnemyJsonException>(() => EnemyJsonLoader.Parse("""
+        {
+          "id":"e4","name":"敵 4","imageId":"e4",
+          "hp":30,"act":1,"tier":"Weak","aiProfileId":"low_cost_combo",
+          "deck":[{"cardId":"enemy_strike"}],
+          "initialMoveId":"a",
+          "moves":[{"id":"a","kind":"Attack","nextMoveId":"a","effects":[]}]
+        }
+        """));
+    }
+
+    [Fact]
+    public void Deck_requires_ai_profile()
+    {
+        Assert.Throws<EnemyJsonException>(() => EnemyJsonLoader.Parse("""
+        {
+          "id":"e5","name":"敵 5","imageId":"e5",
+          "hp":30,"act":1,"tier":"Weak",
+          "deck":[{"cardId":"enemy_strike"}]
+        }
+        """));
+    }
+}

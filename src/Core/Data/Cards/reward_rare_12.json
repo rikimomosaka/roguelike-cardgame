@@ -1,0 +1,69 @@
+{
+  "id": "tactician_rare_dawn_scheme",
+  "name": "夜明けの策",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Tactician",
+  "eligibleCharacterIds": [
+    "tactician_yuno"
+  ],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 2,
+        "cardType": "Skill",
+        "cost": 1,
+        "usesPerTurn": 1,
+        "upgradedUsesPerTurn": 1,
+        "effects": [
+          {
+            "action": "draw",
+            "scope": "self",
+            "amount": 2
+          },
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "comboCarryover",
+            "amount": 1
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "draw",
+            "scope": "self",
+            "amount": 3
+          },
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "comboCarryover",
+            "amount": 1
+          }
+        ],
+        "abilities": [
+          {
+            "type": "contingency",
+            "trigger": {
+              "timing": "TurnStart"
+            }
+          }
+        ],
+        "upgradedAbilities": [
+          {
+            "type": "contingency",
+            "trigger": {
+              "timing": "TurnStart"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

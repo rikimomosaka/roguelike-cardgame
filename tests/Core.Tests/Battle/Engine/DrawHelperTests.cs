@@ -67,9 +67,11 @@ public class DrawHelperTests
             ImmutableArray<BattleCardInstance>.Empty,
             ImmutableArray.Create(c1, c2));
 
-        var result = DrawHelper.Draw(state, 2, ZeroRng(), out int drawn);
+        var result = DrawHelper.Draw(
+            state, 2, ZeroRng(), out int drawn, out int shuffledCardCount);
 
         Assert.Equal(2, drawn);
+        Assert.Equal(2, shuffledCardCount);
         Assert.Equal(2, result.Hand.Length);
         Assert.Empty(result.DiscardPile);
     }

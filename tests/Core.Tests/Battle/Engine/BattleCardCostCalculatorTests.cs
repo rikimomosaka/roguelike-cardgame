@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using RoguelikeCardGame.Core.Battle.Engine;
 using RoguelikeCardGame.Core.Battle.State;
+using RoguelikeCardGame.Core.Battle.Statuses;
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Tests.Battle.Fixtures;
 using Xunit;
@@ -37,6 +38,136 @@ public sealed class BattleCardCostCalculatorTests
         Assert.Equal(4, result.CostBeforeCombo);
         Assert.Equal(3, result.PayableCost);
         Assert.True(result.ComboReductionEligible);
+    }
+
+    [Fact]
+    public void Breakdown_preserves_fixed_modifier_status_and_combo_order_even_when_net_cost_is_unchanged()
+    {
+        var hero = BattleFixtures.Hero() with
+        {
+            Statuses = ImmutableDictionary<string, int>.Empty
+                .Add(BattleStatusIds.HandCostIncrease, 1)
+                .Add(BattleStatusIds.HandCostReduction, 1),
+        };
+        var card = new BattleCardInstance("i", "cost-card", false, CostOverride: 4)
+            .AddCostModifier(new CardCostModifier(
+                -1, CardCostModifierDuration.UntilPlayed, "source-card"));
+
+        var result = BattleCardCostCalculator.Evaluate(
+            card, Definition(), hero, isInHand: true,
+            comboReductionEligible: false);
+
+        Assert.Equal(3, result.OriginalCost);
+        Assert.Equal(3, result.PayableCost);
+        Assert.Collection(
+            result.Changes,
+            step =>
+            {
+                Assert.Equal(CardCostChangeKind.Fixed, step.Kind);
+                Assert.Equal(4, step.Value);
+                Assert.Equal(BattleStatusIds.Confusion, step.SourceId);
+            },
+            step =>
+            {
+                Assert.Equal(CardCostChangeKind.Modifier, step.Kind);
+                Assert.Equal(-1, step.Value);
+                Assert.Equal("source-card", step.SourceId);
+            },
+            step =>
+            {
+                Assert.Equal(CardCostChangeKind.Status, step.Kind);
+                Assert.Equal(1, step.Value);
+                Assert.Equal(BattleStatusIds.HandCostIncrease, step.SourceId);
+            },
+            step =>
+            {
+                Assert.Equal(CardCostChangeKind.Status, step.Kind);
+                Assert.Equal(-1, step.Value);
+                Assert.Equal(BattleStatusIds.HandCostReduction, step.SourceId);
+            });
+    }
+
+    [Fact]
+    public void Breakdown_lists_combo_reduction_after_all_other_changes()
+    {
+        var card = new BattleCardInstance("i", "cost-card", false, CostOverride: null)
+            .AddCostModifier(new CardCostModifier(
+                -1, CardCostModifierDuration.UntilPlayed, "source-card"));
+
+        var result = BattleCardCostCalculator.Evaluate(
+            card, Definition(), BattleFixtures.Hero(), isInHand: true,
+            comboReductionEligible: true);
+
+        Assert.Equal(CardCostChangeKind.Combo, result.Changes[^1].Kind);
+        Assert.Equal(-1, result.Changes[^1].Value);
+    }
+
+    [Fact]
+    public void First_wild_is_not_a_combo_continuation()
+    {
+        var definition = new CardDefinition(
+            "first-wild", "First Wild", null, CardRarity.Common, CardType.Skill,
+            4, null, [], null, new[] { "wild" });
+        var card = new BattleCardInstance("wild-instance", definition.Id, false, null);
+        var state = new BattleState(
+            Turn: 1,
+            Phase: BattlePhase.PlayerInput,
+            Outcome: BattleOutcome.Pending,
+            Allies: ImmutableArray.Create(BattleFixtures.Hero()),
+            Enemies: ImmutableArray.Create(BattleFixtures.Goblin()),
+            TargetAllyIndex: 0,
+            TargetEnemyIndex: 0,
+            Energy: 4,
+            EnergyMax: 3,
+            DrawPile: [],
+            Hand: ImmutableArray.Create(card),
+            DiscardPile: [],
+            ExhaustPile: [],
+            SummonHeld: [],
+            PowerCards: [],
+            ComboCount: 0,
+            LastPlayedOrigCost: null,
+            NextCardComboFreePass: false,
+            OwnedRelicIds: [],
+            Potions: [],
+            EncounterId: "first-wild",
+            WildUsedInCurrentCombo: false);
+
+        var result = BattleCardCostCalculator.EvaluateForHand(
+            state, card, definition, BattleFixtures.Hero());
+
+        Assert.False(result.ComboReductionEligible);
+        Assert.False(result.ComboContinues);
+        Assert.False(result.ComboRingHighlighted);
+    }
+
+    [Fact]
+    public void Continuity_can_continue_and_reduce_without_highlighting_the_ring()
+    {
+        var definition = Definition(cost: 5, upgradedCost: null);
+        var card = new BattleCardInstance("continuity-card", definition.Id, false, null);
+        var hero = BattleFixtures.Hero() with
+        {
+            Statuses = ImmutableDictionary<string, int>.Empty
+                .Add(BattleStatusIds.Continuity, 1),
+        };
+        var state = BattleFixtures.MinimalState(
+            allies: ImmutableArray.Create(hero),
+            hand: ImmutableArray.Create(card),
+            energy: 10) with
+        {
+            ComboCount = 2,
+            MaxComboThisTurn = 2,
+            LastPlayedOrigCost = 1,
+        };
+
+        var result = BattleCardCostCalculator.EvaluateForHand(
+            state, card, definition, hero);
+
+        Assert.True(result.ComboContinues);
+        Assert.True(result.ComboReductionEligible);
+        Assert.False(result.ComboRingHighlighted);
+        Assert.Equal(4, result.PayableCost);
     }
 
     [Fact]

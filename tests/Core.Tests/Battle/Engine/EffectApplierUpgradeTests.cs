@@ -90,6 +90,28 @@ public class EffectApplierUpgradeTests
         Assert.Empty(evs);  // 強化候補がないため無発火
     }
 
+    [Fact]
+    public void Upgrade_accepts_a_keyword_only_upgrade_that_removes_the_normal_keyword()
+    {
+        var definition = UnUpgradableCard() with
+        {
+            Keywords = new[] { "wild" },
+            UpgradedKeywords = System.Array.Empty<string>(),
+        };
+        var state = MakeState(ImmutableArray.Create(
+            new BattleCardInstance("keyword-only", definition.Id, false, null)));
+        var effect = new CardEffect(
+            "upgrade", EffectScope.Self, null, 1, Pile: "hand");
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { definition });
+
+        var (next, events) = EffectApplier.Apply(
+            state, state.Allies[0], effect, Rng(), catalog);
+
+        Assert.True(next.Hand[0].IsUpgraded);
+        Assert.Single(events);
+        Assert.Empty(definition.EffectiveKeywords(upgraded: true)!);
+    }
+
     [Fact] public void Upgrade_clamps_to_candidate_count()
     {
         var hand = ImmutableArray.Create(

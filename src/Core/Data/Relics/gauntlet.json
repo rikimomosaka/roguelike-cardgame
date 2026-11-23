@@ -10,11 +10,17 @@
                          "label":  "original",
                          "spec":  {
                                       "rarity":  1,
-                                      "description":  "[未実装] 革と金属を重ねた頑丈な小手。握り拳の重みが、すこしだけ増した気がする。",
+                                      "description":  "革と金属を重ねた頑丈な小手。握り拳の重みが、すこしだけ増した気がする。",
                                       "effects":  [
-
+                                                      {
+                                                          "action": "buff",
+                                                          "scope": "self",
+                                                          "name": "strength",
+                                                          "amount": 2,
+                                                          "trigger": "OnBattleStart"
+                                                      }
                                                   ],
-                                      "implemented":  false
+                                      "implemented":  true
                                   }
                      }
                  ]

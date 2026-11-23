@@ -1,25 +1,63 @@
 {
-    "id":  "reward_epic_02",
-    "name":  "覇者の咆哮",
-    "displayName":  null,
-    "activeVersion":  "v1",
-    "versions":  [
-                     {
-                         "version":  "v1",
-                         "createdAt":  "2026-05-01T03:54:50Z",
-                         "label":  "original",
-                         "spec":  {
-                                      "rarity":  3,
-                                      "cardType":  "Power",
-                                      "cost":  2,
-                                      "effects":  [
-                                                      {
-                                                          "action":  "gainStrength",
-                                                          "scope":  "self",
-                                                          "amount":  3
-                                                      }
-                                                  ]
-                                  }
-                     }
-                 ]
+  "id": "striker_epic_dance_finale",
+  "name": "乱舞終式",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Striker",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 3,
+        "cardType": "Attack",
+        "cost": 3,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 12
+          },
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 8,
+            "maxComboMin": 4
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 16
+          },
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 10,
+            "maxComboMin": 4
+          }
+        ],
+        "abilities": [
+          {
+            "type": "finisher"
+          }
+        ],
+        "upgradedAbilities": [
+          {
+            "type": "finisher"
+          }
+        ]
+      }
+    }
+  ]
 }

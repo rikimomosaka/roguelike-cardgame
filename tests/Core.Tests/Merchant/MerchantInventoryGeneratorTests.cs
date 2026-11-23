@@ -139,7 +139,9 @@ public class MerchantInventoryGeneratorTests
             UpgradedCost: null,
             Effects: System.Array.Empty<CardEffect>(),
             UpgradedEffects: null,
-            Keywords: null);
+            Keywords: null,
+            PoolClass: CardPoolClass.Striker,
+            PoolKinds: new[] { CardPoolKind.Reward });
         var augmentedCards = Catalog.Cards
             .Concat(new[] { new KeyValuePair<string, CardDefinition>(tokenCard.Id, tokenCard) })
             .ToDictionary(kv => kv.Key, kv => kv.Value);
@@ -151,6 +153,79 @@ public class MerchantInventoryGeneratorTests
             Assert.DoesNotContain("reward_token_test", inv.Cards.Select(o => o.Id));
         }
     }
+
+    [Fact]
+    public void Generate_CardSlotsAreThreeClassRewardsThenTwoUniversalRewards()
+    {
+        var cards = new[]
+        {
+            PoolCard("class_1", CardPoolClass.Striker),
+            PoolCard("class_2", CardPoolClass.Striker),
+            PoolCard("class_3", CardPoolClass.Striker),
+            PoolCard("universal_1", CardPoolClass.Universal),
+            PoolCard("universal_2", CardPoolClass.Universal),
+            PoolCard("wrong_class", CardPoolClass.Guardian),
+            PoolCard("reward_external", null, Array.Empty<CardPoolKind>()),
+            PoolCard("restricted", CardPoolClass.Striker, eligibleCharacterIds: new[] { "another_character" }),
+        };
+        var catalog = Catalog with
+        {
+            Cards = cards.ToDictionary(card => card.Id, StringComparer.Ordinal),
+        };
+
+        var inventory = MerchantInventoryGenerator.Generate(
+            catalog, catalog.MerchantPrices!, Base(), new SequentialRng(21UL));
+
+        Assert.Equal(5, inventory.Cards.Length);
+        Assert.All(inventory.Cards.Take(3), offer =>
+            Assert.Equal(CardPoolClass.Striker, catalog.Cards[offer.Id].PoolClass));
+        Assert.All(inventory.Cards.Skip(3), offer =>
+            Assert.Equal(CardPoolClass.Universal, catalog.Cards[offer.Id].PoolClass));
+    }
+
+    [Fact]
+    public void Generate_DoesNotCrossFillCardSlotsWhenOnePoolIsShort()
+    {
+        var cards = new[]
+        {
+            PoolCard("class_only", CardPoolClass.Striker),
+            PoolCard("universal_1", CardPoolClass.Universal),
+            PoolCard("universal_2", CardPoolClass.Universal),
+            PoolCard("universal_3", CardPoolClass.Universal),
+            PoolCard("universal_4", CardPoolClass.Universal),
+        };
+        var catalog = Catalog with
+        {
+            Cards = cards.ToDictionary(card => card.Id, StringComparer.Ordinal),
+        };
+
+        var inventory = MerchantInventoryGenerator.Generate(
+            catalog, catalog.MerchantPrices!, Base(), new SequentialRng(22UL));
+
+        Assert.Equal(3, inventory.Cards.Length);
+        Assert.Single(inventory.Cards.Where(offer => offer.Id == "class_only"));
+        Assert.Equal(2, inventory.Cards.Count(offer => offer.Id.StartsWith("universal_", StringComparison.Ordinal)));
+    }
+
+    private static CardDefinition PoolCard(
+        string id,
+        CardPoolClass? poolClass,
+        IReadOnlyList<CardPoolKind>? poolKinds = null,
+        IReadOnlyList<string>? eligibleCharacterIds = null) =>
+        new(
+            Id: id,
+            Name: id,
+            DisplayName: null,
+            Rarity: CardRarity.Common,
+            CardType: CardType.Skill,
+            Cost: 1,
+            UpgradedCost: null,
+            Effects: Array.Empty<CardEffect>(),
+            UpgradedEffects: null,
+            Keywords: null,
+            PoolClass: poolClass,
+            PoolKinds: poolKinds ?? new[] { CardPoolKind.Reward },
+            EligibleCharacterIds: eligibleCharacterIds);
 
     // ---- Phase 10.6.B T4: shopPriceMultiplier helpers ----
 

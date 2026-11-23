@@ -1,0 +1,53 @@
+{
+  "id": "enhancer_rare_resonation",
+  "name": "共振",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Enhancer",
+  "eligibleCharacterIds": [
+    "enhancer_lyra"
+  ],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 2,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "resonance",
+            "amount": 1
+          },
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "vigor",
+            "amount": 1
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "resonance",
+            "amount": 1
+          },
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "vigor",
+            "amount": 2
+          }
+        ]
+      }
+    }
+  ]
+}

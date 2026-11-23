@@ -7,6 +7,7 @@ type FixtureOptions = {
   comboGauge?: number
   tacticalDisabled?: boolean
   ultimateDisabled?: boolean
+  withFinisherRecord?: boolean
 }
 
 async function mountFixture(page: Page, options: FixtureOptions = {}) {
@@ -59,6 +60,33 @@ test('combo skills flank the combo, gauge sits below, and controls avoid hand an
   expect(overlaps(controlsBox, handBox)).toBe(false)
   expect(overlaps(controlsBox, endTurnBox)).toBe(false)
 
+  const [currentComboBox, maxComboBox] = await Promise.all([
+    box(combo.locator('.battle__combo-current')),
+    box(combo.locator('.battle__combo-max')),
+  ])
+  // MAX is independently right-aligned: it must never shift the large current
+  // count away from the physical center of the fixed combo box.
+  expect(currentComboBox.x + currentComboBox.width / 2)
+    .toBeCloseTo(comboBox.x + comboBox.width / 2, 3)
+  expect(maxComboBox.x).toBeGreaterThan(currentComboBox.x + currentComboBox.width)
+  expect(maxComboBox.x + maxComboBox.width).toBeLessThan(comboBox.x + comboBox.width)
+
+  const comboLabelStyle = await combo.locator('.battle__combo-k').evaluate(element => {
+    const style = getComputedStyle(element)
+    return { fontSize: Number.parseFloat(style.fontSize), top: style.top }
+  })
+  const maxComboStyle = await combo.locator('.battle__combo-max').evaluate(element => {
+    const style = getComputedStyle(element)
+    return {
+      fontSize: Number.parseFloat(style.fontSize),
+      letterSpacing: style.letterSpacing,
+    }
+  })
+  expect(comboLabelStyle.fontSize).toBeGreaterThanOrEqual(10)
+  expect(comboLabelStyle.top).toBe('8px')
+  expect(maxComboStyle.fontSize).toBeGreaterThanOrEqual(10)
+  expect(['0px', 'normal']).toContain(maxComboStyle.letterSpacing)
+
   await expect(gauge).toHaveAttribute('aria-label', 'コンボゲージ 0/10')
   await expect(gauge.locator('.combo-gauge__segment')).toHaveCount(10)
   await expect(gauge.locator('.combo-gauge__segment.is-filled')).toHaveCount(0)
@@ -74,7 +102,7 @@ test('combo skills flank the combo, gauge sits below, and controls avoid hand an
   await expect(tacticalTooltip.locator('.tip__name')).toHaveText('戦技')
   await expect(tacticalTooltip.locator('.tip__status')).toHaveText('(コンボゲージ3消費)')
   await expect(tacticalTooltip.locator('.tip__desc')).toContainText(
-    '1ターンに1度、自身の攻撃+1と拡散+1を得る。',
+    'ターン中1度だけ使用可能(0/1)。',
   )
 
   await gauge.focus()
@@ -99,4 +127,33 @@ test('combo skills flank the combo, gauge sits below, and controls avoid hand an
   await page.screenshot({
     path: path.join(artifactDirectory, 'combo-controls-gauge-10-enabled.png'),
   })
+})
+
+test('saved afterimage control appears below the gauge without moving tactical, combo, or ultimate controls', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await mountFixture(page)
+
+  const controls = page.locator('.battle__combo-controls')
+  const selectors = [
+    '[data-combo-skill="tactical"]',
+    '.battle__combo',
+    '.combo-gauge',
+    '[data-combo-skill="ultimate"]',
+  ] as const
+  const before = await Promise.all(selectors.map(selector => box(controls.locator(selector))))
+
+  await mountFixture(page, { withFinisherRecord: true })
+  const afterControls = page.locator('.battle__combo-controls')
+  const after = await Promise.all(selectors.map(selector => box(afterControls.locator(selector))))
+  after.forEach((geometry, index) => {
+    expect(geometry.x).toBeCloseTo(before[index].x, 3)
+    expect(geometry.y).toBeCloseTo(before[index].y, 3)
+  })
+
+  const record = afterControls.getByRole('button', { name: '保存された残光を表示（1枚）' })
+  const [recordBox, gaugeBox] = await Promise.all([
+    box(record),
+    box(afterControls.locator('.combo-gauge')),
+  ])
+  expect(recordBox.y).toBeGreaterThanOrEqual(gaugeBox.y + gaugeBox.height)
 })

@@ -1,0 +1,90 @@
+{
+  "id": "enhancer_lyra",
+  "name": "調律師リラ",
+  "characterClass": "Enhancer",
+  "description": "自己強化を共鳴で味方へ伝え、余韻・回復・復活で戦線を維持する調律師。",
+  "traitDescription": "調和：自身の共鳴が発動した時、味方全体に3ブロックを付与する。",
+  "maxHp": 74,
+  "startingGold": 99,
+  "potionSlotCount": 3,
+  "heightTier": 5,
+  "energyPerTurn": 3,
+  "drawPerTurn": 5,
+  "trait": {
+    "id": "harmony",
+    "name": "調和",
+    "trigger": "OnResonanceConsumed",
+    "description": "自身の共鳴が発動した時、味方全体に3ブロックを付与する。",
+    "effects": [
+      {
+        "action": "block",
+        "scope": "all",
+        "side": "ally",
+        "amount": 3
+      }
+    ]
+  },
+  "skills": [
+    {
+      "id": "tactical",
+      "name": "治癒の音色",
+      "comboGaugeCost": 2,
+      "oncePerTurn": true,
+      "usesPerTurn": 1,
+      "description": "自身を含む味方単体に6HP回復。自身に共鳴1を付与する。",
+      "effects": [
+        {
+          "action": "heal",
+          "scope": "single",
+          "side": "ally",
+          "amount": 6
+        },
+        {
+          "action": "buff",
+          "scope": "self",
+          "name": "resonance",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "ultimate",
+      "name": "生命交響曲",
+      "comboGaugeCost": 8,
+      "oncePerTurn": true,
+      "usesPerTurn": 1,
+      "description": "自身を含む味方単体に元気1、再生4を付与する。",
+      "effects": [
+        {
+          "action": "buff",
+          "scope": "single",
+          "side": "ally",
+          "statusChanges": [
+            {
+              "name": "vigor",
+              "amount": 1
+            },
+            {
+              "name": "regeneration",
+              "amount": 4
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "deck": [
+    "basic_attack",
+    "basic_attack",
+    "basic_defense",
+    "basic_defense",
+    "enhancer_basic_preparation",
+    "enhancer_basic_preparation",
+    "enhancer_basic_self_attunement",
+    "enhancer_basic_self_attunement",
+    "enhancer_basic_afterglow_hymn",
+    "enhancer_basic_afterglow_hymn"
+  ],
+  "attack": 5,
+  "defense": 5
+}

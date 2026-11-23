@@ -1,0 +1,61 @@
+{
+  "id": "tactician_epic_bind_time",
+  "name": "時を束ねる",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Tactician",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 3,
+        "cardType": "Skill",
+        "cost": 2,
+        "effects": [
+          {
+            "action": "buff",
+            "scope": "self",
+            "statusChanges": [
+              {
+                "name": "comboCarryover",
+                "amount": 2
+              },
+              {
+                "name": "continuity",
+                "amount": 1
+              }
+            ]
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "buff",
+            "scope": "self",
+            "statusChanges": [
+              {
+                "name": "comboCarryover",
+                "amount": 2
+              },
+              {
+                "name": "continuity",
+                "amount": 2
+              }
+            ]
+          }
+        ],
+        "keywords": [
+          "exhaust"
+        ],
+        "upgradedKeywords": [
+          "exhaust"
+        ]
+      }
+    }
+  ]
+}

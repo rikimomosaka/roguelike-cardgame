@@ -1,0 +1,24 @@
+{
+  "id": "wisp_scatterflame",
+  "name": "\u6563\u706B",
+  "displayName": null,
+    "poolKinds":  [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "wisp cpu deck",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 2,
+        "effects": [
+          { "action": "attack", "scope": "all", "side": "enemy", "amount": 2 }
+        ],
+        "upgradedEffects": [
+          { "action": "attack", "scope": "all", "side": "enemy", "amount": 3 }
+        ]
+      }
+    }
+  ]
+}

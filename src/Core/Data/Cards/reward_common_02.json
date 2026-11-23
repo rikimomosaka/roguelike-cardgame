@@ -1,32 +1,39 @@
 {
-    "id":  "reward_common_02",
-    "name":  "二連撃",
-    "displayName":  null,
-    "activeVersion":  "v1",
-    "versions":  [
-                     {
-                         "version":  "v1",
-                         "createdAt":  "2026-05-01T03:54:50Z",
-                         "label":  "original",
-                         "spec":  {
-                                      "rarity":  1,
-                                      "cardType":  "Attack",
-                                      "cost":  1,
-                                      "effects":  [
-                                                      {
-                                                          "action":  "attack",
-                                                          "scope":  "single",
-                                                          "side":  "enemy",
-                                                          "amount":  5
-                                                      },
-                                                      {
-                                                          "action":  "attack",
-                                                          "scope":  "single",
-                                                          "side":  "enemy",
-                                                          "amount":  5
-                                                      }
-                                                  ]
-                                  }
-                     }
-                 ]
+  "id": "striker_common_chain_fang",
+  "name": "連牙",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Striker",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 7
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "attack",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 10
+          }
+        ]
+      }
+    }
+  ]
 }

@@ -22,9 +22,30 @@ public sealed record BattleStateDto(
     int MaxComboThisTurn,
     int ComboGauge,
     IReadOnlyList<string> UsedCharacterSkillIdsThisTurn,
+    IReadOnlyDictionary<string, int> CharacterSkillUsesThisTurn,
     int? LastPlayedOrigCost,
     bool NextCardComboFreePass,
     IReadOnlyList<string> OwnedRelicIds,
     IReadOnlyList<string> Potions,
+    IReadOnlyDictionary<string, int> PotionUsesThisTurn,
     string EncounterId,
-    PendingCardPlayDto? PendingCardPlay = null);
+    PendingCardPlayDto? PendingCardPlay = null,
+    bool CharacterSkillsRestricted = false,
+    long ActionRevision = 0,
+    IReadOnlyList<BattleParticipantDto>? Participants = null,
+    FinisherRecordDto? FinisherRecord = null,
+    bool ComboCarryoverPending = false,
+    IReadOnlyList<EnemyParticipantSummaryDto>? EnemyParticipants = null);
+
+/// <summary>
+/// カード制御の敵のカード資源の概要（行動再生の入口・開発確認用）。
+/// 手札の中身は公開しない（枚数のみ）。
+/// </summary>
+public sealed record EnemyParticipantSummaryDto(
+    string ParticipantId,
+    string ActorInstanceId,
+    int Energy,
+    int HandCount,
+    int DrawPileCount,
+    int DiscardPileCount,
+    int ExhaustPileCount);

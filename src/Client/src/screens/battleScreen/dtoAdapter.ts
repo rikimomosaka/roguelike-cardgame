@@ -21,6 +21,7 @@ import type {
   UnitCatalog,
 } from '../../api/catalog'
 import type { CardRarity, CardType } from '../../components/Card'
+import { STATUS_DEFS } from '../../components/CardDesc'
 import { rarityCodeFromName, rarityCodeFromNumber } from '../../components/rarity'
 import type {
   BuffDemo,
@@ -30,6 +31,7 @@ import type {
   IntentDemo,
   RelicDemo,
 } from '../BattleScreen'
+import { resolveActorVisual } from './actorVisualManifest'
 
 // ---------------- HP level (sprite tier) ----------------
 
@@ -65,11 +67,9 @@ function cardTypeFromString(s: string | undefined): CardType {
 
 const HERO_DEFINITION_ID = 'hero'
 
-// Why: BattleState.actor.definitionId for the hero is the sentinel 'hero',
-// but the playable-character catalog is keyed by CharacterDefinition.Id
-// (currently only 'default'). This hardcoded mapping unblocks heightTier
-// data flow for the single-character era. TODO: thread RunSnapshotDto.run.
-// characterId through when a second playable character lands.
+// BattleState.actor.definitionId for a playable character is still the
+// sentinel 'hero'.  Its actual catalog identity therefore comes from the
+// owning participant (and falls back to the legacy solo default).
 const HERO_CHARACTER_ID = 'default'
 
 const HERO_FALLBACK = {
@@ -119,6 +119,7 @@ export function toCharacterDemo(
   actor: CombatActorDto,
   catalogs: CharacterCatalogs,
   accountId: string,
+  characterId?: string,
 ): CharacterDemo {
   const isHero = actor.definitionId === HERO_DEFINITION_ID
   const enemyDef = !isHero && actor.side === 'Enemy'
@@ -128,7 +129,8 @@ export function toCharacterDemo(
     ? catalogs.units?.[actor.definitionId]
     : undefined
   const characterDef = isHero
-    ? catalogs.characters?.[HERO_CHARACTER_ID]
+    ? catalogs.characters?.[characterId ?? HERO_CHARACTER_ID]
+      ?? catalogs.characters?.[HERO_CHARACTER_ID]
     : undefined
 
   const name = isHero
@@ -150,44 +152,21 @@ export function toCharacterDemo(
   // hero/enemy/summon すべて Server 計算済 IntentDto を使う統一経路。
   const intents = actor.intent ? toIntentDemos(actor.intent) : undefined
 
-  // Why: 立ち絵 PNG は hero のみ既存配置 (player_stand.png)。enemy / summon は
-  // 実アセットが配置されたら image を流し込むため、現状 undefined。
-  // heightTier はカタログ (catalog 取得失敗時 5) から引く。
-  const image = isHero ? '/characters/player_stand.png' : undefined
-  const animations: CharacterDemo['animations'] = isHero
-    ? {
-        idle: {
-          src: '/characters/player_idle.png?v=2',
-          frameWidth: 128,
-          frameHeight: 256,
-          frameCount: 8,
-          durationMs: 1200,
-          loop: true,
-        },
-        attack: {
-          src: '/characters/player_attack.png?v=1',
-          frameWidth: 192,
-          frameHeight: 256,
-          frameCount: 4,
-          durationMs: 240,
-          loop: false,
-        },
-        hurt: {
-          src: '/characters/player_hurt.png?v=1',
-          frameWidth: 192,
-          frameHeight: 256,
-          frameCount: 4,
-          durationMs: 300,
-          loop: false,
-        },
-      }
-    : undefined
+  const visual = resolveActorVisual({
+    isHero,
+    characterId,
+    imageId: isHero ? undefined : sprite,
+    side: actor.side,
+  })
+  const image = visual?.image
+  const animations: CharacterDemo['animations'] = visual?.animations
   const heightTier = isHero
     ? characterDef?.heightTier ?? 5
     : enemyDef?.heightTier ?? unitDef?.heightTier ?? 5
 
   return {
     occupied: true,
+    instanceId: actor.instanceId,
     name,
     desc,
     sprite,
@@ -195,6 +174,10 @@ export function toCharacterDemo(
     image,
     animations,
     heightTier,
+    traitName: characterDef?.traitName ?? undefined,
+    traitDescription: characterDef?.traitEffects
+      ?? characterDef?.traitDescription
+      ?? undefined,
     hpCur: actor.currentHp,
     hpMax: actor.maxHp,
     hpLv: hpLevel(actor.currentHp, actor.maxHp),
@@ -320,18 +303,32 @@ export function toBuffs(actor: CombatActorDto): BuffDemo[] {
   // Phase 10.6.B follow-up: strength / dexterity は signed なので負値も表示する。
   // weak / vulnerable / poison 等は engine 側で 0 以下なら remove されているため、
   // ここに到達した時点で amount > 0 (= 表示すべき)。
-  for (const [statusId, amount] of Object.entries(actor.statuses)) {
+  const statusIds = [
+    ...(actor.statusOrder ?? []),
+    ...Object.keys(actor.statuses),
+  ].filter((id, index, all) => all.indexOf(id) === index)
+  for (const statusId of statusIds) {
+    const amount = actor.statuses[statusId] ?? 0
     if (amount === 0) continue
     const meta = statusMeta(statusId, amount)
     buffs.push({
       kind: meta.kind,
       icon: meta.icon,
       num: amount,
-      name: meta.name,
-      desc: meta.desc,
+      name: STATUS_DEFS[statusId]?.name ?? meta.name,
+      desc: formatStatusDescription(statusId, amount, meta.desc),
     })
   }
   return buffs
+}
+
+function formatStatusDescription(id: string, amount: number, fallback: string): string {
+  if (id === 'strength' && amount < 0)
+    return `アタックで与えるダメージが[N:${-amount}]減少する。`
+  if (id === 'dexterity' && amount < 0)
+    return `得るブロックが[N:${-amount}]減少する。`
+  const template = STATUS_DEFS[id]?.desc
+  return template ? template.replaceAll('[N:X]', `[N:${Math.abs(amount)}]`) : fallback
 }
 
 function statusMeta(id: string, amount: number): {
@@ -347,46 +344,136 @@ function statusMeta(id: string, amount: number): {
         kind: amount < 0 ? 'debuff' : 'buff',
         icon: '/icons/ui/strength.png', name: '筋力',
         desc: amount < 0
-          ? `与えるダメージが${-amount}減少する。`
-          : `与えるダメージが${amount}増加する。`,
+          ? `アタックで与えるダメージが${-amount}減少する。`
+          : `アタックで与えるダメージが${amount}増加する。`,
       }
     case 'dexterity':
       return {
         kind: amount < 0 ? 'debuff' : 'buff',
         icon: '/icons/ui/dexterity.png', name: '敏捷',
         desc: amount < 0
-          ? `ブロック値が${-amount}減少する。`
-          : `ブロック値が${amount}増加する。`,
+          ? `得るブロックが${-amount}減少する。`
+          : `得るブロックが${amount}増加する。`,
       }
     case 'vulnerable':
       return { kind: 'debuff', icon: '/icons/ui/vulnerable.png', name: '脆弱',
-               desc: `受けるダメージが 1.5 倍。${amount}ターン残存。` }
+               desc: `アタックで受けるダメージが1.5倍になる。ターン終了時に${amount}が1減少する。` }
     case 'weak':
       return { kind: 'debuff', icon: '/icons/ui/weak.png', name: '脱力',
-               desc: `与えるダメージが 0.75 倍。${amount}ターン残存。` }
+               desc: `アタックで与えるダメージが0.75倍になる。ターン終了時に${amount}が1減少する。` }
     case 'poison':
       return { kind: 'debuff', icon: '/icons/ui/poison.png', name: '毒',
-               desc: `ターン開始時に${amount}ダメージ。スタック数が 1 減る。` }
+               desc: `ターン開始時に${amount}ダメージを受け、${amount}が1減少する。` }
     case 'omnistrike':
-      return { kind: 'buff', icon: '/icons/ui/attack_all.png', name: '拡散',
-               desc: `全ての攻撃を全体攻撃に変更する。${amount}ターン残存。` }
+      return { kind: 'buff', icon: '/icons/ui/omnistrike.png', name: '拡散',
+               desc: `全ての攻撃を全体攻撃に変更する。ターン終了時に${amount}が1減少する。` }
     case 'barrier':
       return { kind: 'buff', icon: '/icons/ui/barrier.png', name: 'バリア',
-               desc: `正の攻撃を${amount}ヒット無効化する。ブロックは消費しない。` }
+               desc: `アタックによってHPが1以上減る場合、そのダメージを無効化し、${amount}が1減少する。` }
     case 'lifesteal':
       return { kind: 'buff', icon: '/icons/ui/lifesteal.png', name: '吸血',
-               desc: `攻撃で実際に減らしたHPの${amount}%を回復する。` }
+               desc: `アタックによって減らしたHPの${amount}%を回復する。` }
     case 'reflect':
       return { kind: 'buff', icon: '/icons/ui/reflect.png', name: '反射',
-               desc: `攻撃を受けるたび、攻撃者へ${amount}の固定ダメージを返す。` }
+               desc: `アタックを受けた時、攻撃元にアタックの回数分だけ${amount}ダメージを返す(この際ブロックを無視する)。` }
     case 'handCostReduction':
-      return { kind: 'buff', icon: '/icons/ui/intent_buff.png', name: '手札軽減',
-               desc: `手札にあるカードの現在コストを${amount}減らす。手札を離れると適用されない。` }
+      return { kind: 'buff', icon: '/icons/ui/hand_cost_reduction.png', name: '節制',
+               desc: `手札のカードの使用コストを[N:${amount}]軽減する。カードの使用時に[S:handCostReduction]が1減少する。` }
     case 'handCostIncrease':
-      return { kind: 'debuff', icon: '/icons/ui/intent_debuff.png', name: '手札増加',
-               desc: `手札にあるカードの現在コストを${amount}増やす。手札を離れると適用されない。` }
+      return { kind: 'debuff', icon: '/icons/ui/hand_cost_increase.png', name: '浪費',
+               desc: `手札のカードの使用コストを[N:${amount}]増加する。カードの使用時に[S:handCostIncrease]が1減少する。` }
+    case 'vigor':
+      return { kind: 'buff', icon: '/icons/ui/vigor.png', name: '元気',
+               desc: `アタックで与えるダメージが1.5倍になる。ターン終了時に${amount}が1減少する。` }
+    case 'pursuit':
+      return { kind: 'buff', icon: '/icons/ui/pursuit.png', name: '追撃',
+               desc: `攻撃直前に、「敵全体に${amount}アタック。」を得て、${amount}が1減少する。` }
+    case 'regeneration':
+      return { kind: 'buff', icon: '/icons/ui/regeneration.png', name: '再生',
+               desc: `ターン開始時にHPを${amount}回復し、${amount}が1減少する。` }
+    case 'fortify':
+      return { kind: 'buff', icon: '/icons/ui/fortify.png', name: '堅牢',
+               desc: `ブロックを最大${amount}まで次のターンに持ち越す。` }
+    case 'resistance':
+      return { kind: 'buff', icon: '/icons/ui/resistance.png', name: '耐性',
+               desc: `デバフを無効化し、${amount}が1減少する。` }
+    case 'revive':
+      return { kind: 'buff', icon: '/icons/ui/revive.png', name: '復活',
+               desc: `死亡時に1度だけHPを${amount}回復し、${amount}が0になる。` }
+    case 'growth':
+      return { kind: 'buff', icon: '/icons/ui/growth.png', name: '成長',
+               desc: `ターン開始時に筋力${amount}を得る。` }
+    case 'insight':
+      return { kind: 'buff', icon: '/icons/ui/insight.png', name: '洞察',
+               desc: `ターン開始時に${amount}枚追加で引き、${amount}が0になる。` }
+    case 'haste':
+      return { kind: 'buff', icon: '/icons/ui/haste.png', name: '加速',
+               desc: 'ターン開始時のエナジー回復量を+[N:X]し、[S:haste]が消滅する。' }
+    case 'continuity':
+      return { kind: 'buff', icon: '/icons/ui/continuity.png', name: '継続',
+               desc: `コンボ条件を満たさないカードを使った時、コンボを継続し、${amount}が1減少する。` }
+    case 'mastery':
+      return { kind: 'buff', icon: '/icons/ui/mastery.png', name: '熟練',
+               desc: `ターン開始時にコンボゲージを${amount}得て、${amount}が1減少する。` }
+    case 'virulentPoison':
+      return { kind: 'debuff', icon: '/icons/ui/virulent_poison.png', name: '猛毒',
+               desc: `毒によって受けるダメージが${amount}倍になる。` }
+    case 'stagnation':
+      return { kind: 'debuff', icon: '/icons/ui/stagnation.png', name: '停滞',
+               desc: `コンボゲージが増えなくなる。ターン終了時に${amount}が1減少する。` }
+    case 'burn':
+      return { kind: 'debuff', icon: '/icons/ui/burn.png', name: '火傷',
+               desc: `ターン開始時に現在HPの${amount}%のダメージを受け、${amount}が0になる。` }
+    case 'scorch':
+      return { kind: 'debuff', icon: '/icons/ui/scorch.png', name: '灼痕',
+               desc: `火傷が消滅する時、代わりに灼痕が1減少する。` }
+    case 'confusion':
+      return { kind: 'debuff', icon: '/icons/ui/confusion.png', name: '混乱',
+               desc: `カードが手札へ入った時、その使用コストを0～3のランダムな数値に変更する。ターン終了時に${amount}が1減少する。` }
+    case 'curse':
+      return { kind: 'debuff', icon: '/icons/ui/curse.png', name: '呪縛',
+               desc: `カードを使用した時に${amount}が1減少する。${amount}が0になったターンはカードを使用できなくなる。` }
+    case 'bind':
+      return { kind: 'debuff', icon: '/icons/ui/bind.png', name: '束縛',
+               desc: `アタックカードを使用できない。ターン終了時に${amount}が1減少する。` }
+    case 'silence':
+      return { kind: 'debuff', icon: '/icons/ui/silence.png', name: '沈黙',
+               desc: `アタック以外のカードを使用できない。ターン終了時に${amount}が1減少する。` }
+    case 'seal':
+      return { kind: 'debuff', icon: '/icons/ui/seal.png', name: '封印',
+               desc: `戦技・奥義を使用できない。ターン終了時に${amount}が1減少する。` }
+    case 'exhaustion':
+      return { kind: 'debuff', icon: '/icons/ui/exhaustion.png', name: '消耗',
+               desc: `ターン開始時にエナジーを${amount}失い、${amount}が1減少する。` }
+    case 'distress':
+      return { kind: 'debuff', icon: '/icons/ui/distress.png', name: '動揺',
+               desc: `カードを使用することでコンボが途切れた時、エナジーとコンボゲージを0にする。ターン終了時に${amount}が1減少する。` }
+    case 'afterimage':
+      return { kind: 'buff', icon: '/icons/ui/afterimage.png', name: '残光',
+               desc: STATUS_DEFS.afterimage.desc }
+    case 'steadfast':
+      return { kind: 'buff', icon: '/icons/ui/steadfast.png', name: '堅持',
+               desc: STATUS_DEFS.steadfast.desc }
+    case 'cover':
+      return { kind: 'buff', icon: '/icons/ui/cover.png', name: '護衛',
+               desc: STATUS_DEFS.cover.desc }
+    case 'defensiveStance':
+      return { kind: 'buff', icon: '/icons/ui/defensive_stance.png', name: '守勢',
+               desc: STATUS_DEFS.defensiveStance.desc }
+    case 'comboCarryover':
+      return { kind: 'buff', icon: '/icons/ui/combo_carryover.png', name: '連環',
+               desc: STATUS_DEFS.comboCarryover.desc }
+    case 'afterglow':
+      return { kind: 'buff', icon: '/icons/ui/afterglow.png', name: '余韻',
+               desc: STATUS_DEFS.afterglow.desc }
+    case 'resonance':
+      return { kind: 'buff', icon: '/icons/ui/resonance.png', name: '共鳴',
+               desc: STATUS_DEFS.resonance.desc }
+    case 'disruption':
+      return { kind: 'debuff', icon: '/icons/ui/disruption.png', name: '攪乱',
+               desc: STATUS_DEFS.disruption.desc }
     default:
-      return { kind: 'buff', icon: '?', name: id, desc: '' }
+      return { kind: 'buff', icon: '/icons/ui/status_unknown.png', name: id, desc: '' }
   }
 }
 
@@ -402,7 +489,21 @@ export function toHandCardDemo(
   // reduction. Never duplicate those game rules in the client.
   const currentCost = card.currentCost
   const originalCost = card.originalCost
-  const playable = currentCost !== null && currentCost <= energy
+  const cardUsageLimitReached = card.cardUsageLimitReached ?? false
+  const playable = currentCost !== null
+    && currentCost <= energy
+    && !cardUsageLimitReached
+    && !(card.cardPlayRestricted ?? false)
+  const unavailableReason = playable
+    ? undefined
+    : card.cardPlayRestrictionReason
+      ?? (cardUsageLimitReached
+        ? 'このターンの使用回数に到達'
+        : currentCost === null
+          ? '現在使用できません'
+          : currentCost > energy
+            ? `エナジー不足 ${energy}/${currentCost}`
+            : '現在使用できません')
   // Why: 10.5.C で Server が hero context を反映した adjustedDescription を populate
   //   するようになった。null (戦闘外 catalog 等) のときは catalog の static description
   //   にフォールバックする。adjustedDescription/adjustedUpgradedDescription は marker
@@ -420,11 +521,26 @@ export function toHandCardDemo(
     description,
     upgradedDescription,
     cost: currentCost ?? 'X',
+    costOriginal: originalCost,
+    costChanges: card.costChanges ?? [],
+    isContingencyArmed: card.isContingencyArmed ?? false,
+    contingencyTriggerText: card.contingencyTriggerText ?? null,
+    comboReductionEligible: card.comboReductionEligible ?? false,
+    comboContinues: card.comboContinues ?? card.comboReductionEligible ?? false,
+    comboRingHighlighted: card.comboRingHighlighted ?? card.comboContinues ?? false,
+    wildDisabled: card.wildDisabled ?? false,
+    cardUsageLimitReached,
+    costUnavailable: cardUsageLimitReached || (card.cardPlayRestricted ?? false),
     // 変更理由に関係なく上段=現在値、下段=コンボ参照用の元コスト。
     costOrig: currentCost !== originalCost ? originalCost : null,
     type: cardTypeFromString(def?.cardType),
     rarity: def ? cardRarityFromNumber(def.rarity) : 'c',
+    // Generated-card DTOs carry their source affiliation. Older snapshots or
+    // unknown definitions still need the neutral frame instead of an implicit
+    // type-coloured fallback.
+    poolClass: card.poolClass ?? def?.poolClass ?? 'Universal',
     playable,
+    unavailableReason,
     desc: card.isUpgraded
       ? upgradedDescription ?? description
       : description,

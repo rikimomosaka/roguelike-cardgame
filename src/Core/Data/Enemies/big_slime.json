@@ -6,38 +6,29 @@
   "act": 1,
   "heightTier": 3,
   "tier": "Strong",
-  "initialMoveId": "body_slam",
-  "moves": [
+  "attack": 5,
+  "defense": 5,
+  "initialEnergy": 0,
+  "energyPerTurn": 1,
+  "drawPerTurn": 3,
+  "handLimit": 5,
+  "aiProfileId": "low_cost_combo",
+  "deck": [
     {
-      "id": "body_slam",
-      "kind": "Attack",
-      "nextMoveId": "bounce",
-      "effects": [
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 12
-        }
-      ]
+      "cardId": "enemy_big_slime_body_slam",
+      "count": 2
     },
     {
-      "id": "bounce",
-      "kind": "Multi",
-      "nextMoveId": "body_slam",
-      "effects": [
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 5
-        },
-        {
-          "action": "block",
-          "scope": "self",
-          "amount": 5
-        }
-      ]
+      "cardId": "enemy_big_slime_bounce",
+      "count": 2
+    },
+    {
+      "cardId": "enemy_common_attack",
+      "count": 6
+    },
+    {
+      "cardId": "enemy_common_defend",
+      "count": 2
     }
   ]
 }

@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",
+    "test:raster": "powershell -NoProfile -ExecutionPolicy Bypass -File ../../tools/AuditRasterAssets.ps1",
     "test:e2e": "playwright test"
   },
   "dependencies": {

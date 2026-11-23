@@ -114,10 +114,10 @@ describe('RewardPopup', () => {
     fireEvent.click(screen.getByText('カード報酬'))
     expect(screen.getByText('カードを選ぶ')).toBeDefined()
     fireEvent.click(screen.getByText('card_strike'))
-    await waitFor(() =>
-      expect(handlers.onPickCard).toHaveBeenCalledWith('card_strike'),
-    )
-    expect(screen.queryByText('カードを選ぶ')).toBeNull()
+    await waitFor(() => {
+      expect(handlers.onPickCard).toHaveBeenCalledWith('card_strike')
+      expect(screen.queryByText('カードを選ぶ')).toBeNull()
+    })
   })
 
   it('relic ボタンは relicId が設定されているとき表示される', () => {
@@ -148,6 +148,23 @@ describe('RewardPopup', () => {
     )
     fireEvent.click(screen.getByText(/レリック: coin_purse/))
     await waitFor(() => expect(handlers.onClaimRelic).toHaveBeenCalledTimes(1))
+  })
+
+  it('報酬受取中は二重送信と他の操作を防ぐ', async () => {
+    let finish!: () => void
+    const handlers = baseHandlers()
+    handlers.onClaimGold.mockImplementation(() => new Promise<void>(resolve => { finish = resolve }))
+    render(
+      <RewardPopup reward={baseReward()} potions={[]} potionSlotCount={3} {...handlers} />,
+    )
+    const gold = screen.getByRole('button', { name: /15 ゴールド/ })
+    fireEvent.click(gold)
+    fireEvent.click(gold)
+    expect(handlers.onClaimGold).toHaveBeenCalledTimes(1)
+    expect(screen.getByText('報酬を受け取っています…')).toBeInTheDocument()
+    expect(screen.getByText('閉じる')).toBeDisabled()
+    finish()
+    await waitFor(() => expect(screen.getByText('受け取りました')).toBeInTheDocument())
   })
 
   it('relic 行の hover で TopBar と共通の名称・レア度・効果説明を表示する', () => {
@@ -464,5 +481,27 @@ describe('RewardPopup', () => {
     )
     // Skipped 状態では cardView に入れないが、念のためボタン非表示確認
     expect(screen.queryByText('リロール')).toBeNull()
+  })
+
+  it('reward potion row shows the same tooltip surface as the top-bar potion', () => {
+    const handlers = baseHandlers()
+    const { container } = render(
+      <TooltipHost>
+        <RewardPopup
+          reward={baseReward({ potionId: 'health_potion', potionClaimed: false })}
+          potions={['', '', '']}
+          potionSlotCount={3}
+          {...handlers}
+        />
+      </TooltipHost>,
+    )
+    const row = container.querySelector('.rw-row--potion') as HTMLElement
+    expect(row).not.toBeNull()
+    fireEvent.mouseEnter(row, { clientX: 120, clientY: 100 })
+    const tooltip = screen.getByRole('tooltip')
+    expect(within(tooltip).getByText('health_potion')).toBeInTheDocument()
+    expect(within(tooltip).getByText('ポーションの効果情報はありません。')).toBeInTheDocument()
+    fireEvent.mouseLeave(row)
+    expect(screen.queryByRole('tooltip')).toBeNull()
   })
 })

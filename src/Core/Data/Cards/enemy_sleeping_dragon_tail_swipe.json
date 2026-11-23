@@ -1,0 +1,32 @@
+{
+  "id": "enemy_sleeping_dragon_tail_swipe",
+  "name": "尾の一撃",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy sleeping_dragon unique (from move tail_swipe)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 8
+          },
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 8
+          }
+        ]
+      }
+    }
+  ]
+}

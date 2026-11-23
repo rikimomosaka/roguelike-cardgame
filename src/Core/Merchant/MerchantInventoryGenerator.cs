@@ -10,7 +10,8 @@ namespace RoguelikeCardGame.Core.Merchant;
 
 public static class MerchantInventoryGenerator
 {
-    private const int CardCount = 5;
+    private const int ClassCardCount = 3;
+    private const int UniversalCardCount = 2;
     private const int RelicCount = 2;
     private const int PotionCount = 3;
 
@@ -20,7 +21,7 @@ public static class MerchantInventoryGenerator
     public static MerchantInventory Generate(
         DataCatalog catalog, MerchantPrices prices, RunState s, IRng rng)
     {
-        var cards = PickCards(catalog, prices, s, rng, CardCount);
+        var cards = PickCards(catalog, prices, s, rng);
         var relics = PickRelics(catalog, prices, s, rng, RelicCount);
         var potions = PickPotions(catalog, prices, rng, PotionCount);
         int rawDiscard = prices.DiscardSlotPrice + DiscardPriceIncrement * s.DiscardUsesSoFar;
@@ -44,19 +45,35 @@ public static class MerchantInventoryGenerator
     }
 
     private static ImmutableArray<MerchantOffer> PickCards(
-        DataCatalog catalog, MerchantPrices prices, RunState s, IRng rng, int count)
+        DataCatalog catalog, MerchantPrices prices, RunState s, IRng rng)
     {
+        if (!catalog.Characters.TryGetValue(s.CharacterId, out var character))
+            throw new System.InvalidOperationException(
+                $"Character \"{s.CharacterId}\" is not configured in the data catalog");
+
         // Why: prices.Cards に Token rarity の価格は存在しないので
         // ContainsKey で除外されるが、将来 prices に Token 価格が誤って
         // 追加された場合でも token カードが商人在庫に並ばないよう明示的に
         // 除外する防御フィルタ (Phase 10.5.G)。
-        var candidates = catalog.Cards.Values
+        var pricedRewards = catalog.Cards.Values
             .Where(c => c.Rarity != CardRarity.Token)
-            .Where(c => c.Id.StartsWith("reward_") && prices.Cards.ContainsKey(c.Rarity))
+            .Where(c => prices.Cards.ContainsKey(c.Rarity))
             .OrderBy(c => c.Id)
             .ToList();
-        return PickFromPool(candidates, count, rng,
+
+        // Class and Universal inventory slots are independent. If either pool is
+        // short, the other pool must not fill its reserved slots.
+        var classOffers = PickFromPool(
+            pricedRewards.Where(card => CardPoolRules.IsClassRewardFor(card, character)).ToList(),
+            ClassCardCount,
+            rng,
             def => new MerchantOffer("card", def.Id, prices.Cards[def.Rarity], false));
+        var universalOffers = PickFromPool(
+            pricedRewards.Where(card => CardPoolRules.IsUniversalRewardFor(card, character)).ToList(),
+            UniversalCardCount,
+            rng,
+            def => new MerchantOffer("card", def.Id, prices.Cards[def.Rarity], false));
+        return classOffers.AddRange(universalOffers);
     }
 
     private static ImmutableArray<MerchantOffer> PickRelics(

@@ -1,0 +1,25 @@
+{
+  "id": "enemy_bandit_dodge",
+  "name": "回避",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy bandit unique (from move dodge)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 7
+          }
+        ]
+      }
+    }
+  ]
+}

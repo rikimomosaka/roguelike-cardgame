@@ -18,10 +18,20 @@ public static class RunStateSerializer
     public static string Serialize(RunState state)
     {
         ArgumentNullException.ThrowIfNull(state);
-        ValidateState(state, "before serialization");
+        RunState prepared;
         try
         {
-            return JsonSerializer.Serialize(state, JsonOptions.Default);
+            prepared = RunPartyAccess.CaptureRootIntoHost(state);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
+        {
+            throw new RunStateSerializerException(
+                "RunState party projection failed before serialization.", ex);
+        }
+        ValidateState(prepared, "before serialization");
+        try
+        {
+            return JsonSerializer.Serialize(prepared, JsonOptions.Default);
         }
         catch (Exception ex) when (ex is JsonException or NotSupportedException)
         {
@@ -55,9 +65,13 @@ public static class RunStateSerializer
         if (version == 4) { obj = MigrateV4ToV5(obj); version = 5; }
         if (version == 5) { obj = MigrateV5ToV6(obj); version = 6; }
         if (version == 6) { obj = MigrateV6ToV7(obj); version = 7; }
+        if (version == 7) { obj = MigrateV7ToV8(obj); version = 8; }
         if (version != RunState.CurrentSchemaVersion)
             throw new RunStateSerializerException(
                 $"未対応の schemaVersion: {version} (対応: {RunState.CurrentSchemaVersion})");
+        if (obj["partyMembers"] is not JsonArray { Count: > 0 })
+            throw new RunStateSerializerException(
+                "RunState schema v8 requires a non-empty partyMembers array.");
 
         RunState? state;
         try { state = JsonSerializer.Deserialize<RunState>(obj.ToJsonString(), JsonOptions.Default); }
@@ -145,7 +159,49 @@ public static class RunStateSerializer
         // v6 セーブには過去アクトのマス情報が残っていないため空で開始する。
         // 以後のアクト遷移から journeyLog に追記される。
         obj["journeyLog"] = new JsonArray();
+        obj["schemaVersion"] = 7;
+        return obj;
+    }
+
+    private static JsonObject MigrateV7ToV8(JsonObject obj)
+    {
+        const string hostMemberId = RunPartyAccess.DefaultHostMemberId;
+        obj["hostMemberId"] ??= hostMemberId;
+        if (obj["partyMembers"] is null)
+        {
+            obj["partyMembers"] = new JsonArray
+            {
+                new JsonObject
+                {
+                    ["memberId"] = hostMemberId,
+                    ["slotIndex"] = 0,
+                    ["characterId"] = Clone(obj, "characterId"),
+                    ["controlMode"] = RunMemberControlMode.Human.ToString(),
+                    ["currentHp"] = Clone(obj, "currentHp"),
+                    ["maxHp"] = Clone(obj, "maxHp"),
+                    ["gold"] = Clone(obj, "gold"),
+                    ["deck"] = Clone(obj, "deck"),
+                    ["potions"] = Clone(obj, "potions"),
+                    ["potionSlotCount"] = Clone(obj, "potionSlotCount"),
+                    ["relics"] = Clone(obj, "relics"),
+                    ["rewardRngState"] = Clone(obj, "rewardRngState"),
+                    ["activeReward"] = Clone(obj, "activeReward"),
+                    ["activeMerchant"] = Clone(obj, "activeMerchant"),
+                    ["activeEvent"] = Clone(obj, "activeEvent"),
+                    ["activeRestPending"] = obj["activeRestPending"]?.DeepClone() ?? false,
+                    ["activeRestCompleted"] = obj["activeRestCompleted"]?.DeepClone() ?? false,
+                    ["activeActStartRelicChoice"] = Clone(obj, "activeActStartRelicChoice"),
+                    ["seenCardBaseIds"] = Clone(obj, "seenCardBaseIds"),
+                    ["acquiredRelicIds"] = Clone(obj, "acquiredRelicIds"),
+                    ["acquiredPotionIds"] = Clone(obj, "acquiredPotionIds"),
+                    ["discardUsesSoFar"] = obj["discardUsesSoFar"]?.DeepClone() ?? 0,
+                },
+            };
+        }
         obj["schemaVersion"] = RunState.CurrentSchemaVersion;
         return obj;
     }
+
+    private static JsonNode? Clone(JsonObject obj, string propertyName) =>
+        obj[propertyName]?.DeepClone();
 }

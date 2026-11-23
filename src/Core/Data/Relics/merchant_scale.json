@@ -1,0 +1,21 @@
+{
+  "id": "merchant_scale",
+  "name": "商人の天秤",
+  "displayName": null,
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-17T00:00:00Z",
+      "label": "initial",
+      "spec": {
+        "rarity": 1,
+        "description": "どんな取引でも持ち主に少しだけ有利に傾く、不思議な天秤。",
+        "effects": [
+          { "action": "shopPriceMultiplier", "scope": "self", "amount": -15, "trigger": "Passive" }
+        ],
+        "implemented": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "id": "enemy_iron_golem_b_overheat",
+  "name": "過熱",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy iron_golem_b unique (from move overheat)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "strength",
+            "amount": 2
+          }
+        ]
+      }
+    }
+  ]
+}

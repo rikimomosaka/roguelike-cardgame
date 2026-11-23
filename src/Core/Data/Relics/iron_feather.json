@@ -1,0 +1,21 @@
+{
+  "id": "iron_feather",
+  "name": "鉄羽根",
+  "displayName": null,
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-17T00:00:00Z",
+      "label": "initial",
+      "spec": {
+        "rarity": 1,
+        "description": "鋼を羽根ほど薄く打ち延ばした護符。身につけると足取りまで軽くなる。",
+        "effects": [
+          { "action": "buff", "scope": "self", "name": "dexterity", "amount": 1, "trigger": "OnBattleStart" }
+        ],
+        "implemented": true
+      }
+    }
+  ]
+}

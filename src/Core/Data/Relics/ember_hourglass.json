@@ -1,0 +1,21 @@
+{
+  "id": "ember_hourglass",
+  "name": "熾火の砂時計",
+  "displayName": null,
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-17T00:00:00Z",
+      "label": "initial",
+      "spec": {
+        "rarity": 2,
+        "description": "落ちる砂の代わりに小さな熾火が巡る。ひっくり返すたび闘志が蘇る。",
+        "effects": [
+          { "action": "buff", "scope": "self", "name": "vigor", "amount": 1, "trigger": "OnTurnStart" }
+        ],
+        "implemented": true
+      }
+    }
+  ]
+}

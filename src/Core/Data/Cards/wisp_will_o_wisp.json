@@ -1,0 +1,24 @@
+{
+  "id": "wisp_will_o_wisp",
+  "name": "\u9B3C\u706B",
+  "displayName": null,
+    "poolKinds":  [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "wisp cpu deck",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 0,
+        "effects": [
+          { "action": "attack", "scope": "single", "side": "enemy", "amount": 1 }
+        ],
+        "upgradedEffects": [
+          { "action": "attack", "scope": "single", "side": "enemy", "amount": 2 }
+        ]
+      }
+    }
+  ]
+}

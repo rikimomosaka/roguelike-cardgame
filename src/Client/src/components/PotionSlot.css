@@ -1,0 +1,87 @@
+.potion-slot {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border-light);
+  border-radius: 50%;
+  background: var(--bg-0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.potion-slot--empty {
+  opacity: 0.4;
+  border-style: dashed;
+}
+
+.potion-slot__icon {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.potion-slot__icon img {
+  width: 84%;
+  height: 84%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.potion-slot__icon:hover {
+  background: rgba(201, 152, 90, 0.15);
+}
+
+.potion-slot__menu {
+  position: fixed;
+  z-index: var(--z-tooltip);
+  min-width: 112px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  background: rgba(20, 14, 10, 0.98);
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.6), 0 0 12px rgba(201, 152, 90, 0.2);
+  color: var(--fg);
+  font-family: var(--font-body);
+  animation: potion-menu-enter var(--motion-fast) var(--ease-decelerate) both;
+}
+
+.potion-slot__menu button {
+  padding: 6px 10px;
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-sm);
+  background: rgba(10, 6, 4, 0.6);
+  color: var(--fg);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--fs-md);
+  letter-spacing: 1px;
+  transition:
+    border-color var(--motion-fast) linear,
+    color var(--motion-fast) linear,
+    background-color var(--motion-fast) linear;
+}
+
+.potion-slot__menu button:hover {
+  border-color: var(--gold-deep);
+  color: var(--gold-soft);
+  background: rgba(201, 152, 90, 0.14);
+}
+
+@keyframes potion-menu-enter {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

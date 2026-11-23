@@ -16,7 +16,18 @@ export type CardCatalogEntry = {
   upgradable: boolean
   description: string
   upgradedDescription: string | null
+  comboGaugeCost?: number
+  usesPerTurn?: number
+  upgradedUsesPerTurn?: number | null
+  /** Added by the pool-aware catalog; optional keeps cached/legacy fixtures readable. */
+  poolKinds?: CardPoolKind[]
+  poolClass?: CardPoolClass | null
+  eligibleCharacterIds?: string[]
 }
+
+export type CharacterClass = 'Striker' | 'Guardian' | 'Tactician' | 'Enhancer'
+export type CardPoolClass = 'Universal' | CharacterClass
+export type CardPoolKind = 'Basic' | 'Reward'
 
 export type PotionCatalogEntry = {
   id: string
@@ -24,6 +35,7 @@ export type PotionCatalogEntry = {
   rarity: number
   usableOutsideBattle: boolean
   description: string
+  usesPerTurn?: number
 }
 
 export type CardCatalog = Record<string, CardCatalogEntry>

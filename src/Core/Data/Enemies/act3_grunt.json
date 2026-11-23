@@ -6,20 +6,25 @@
   "act": 3,
   "heightTier": 4,
   "tier": "Weak",
-  "initialMoveId": "pierce",
-  "moves": [
+  "attack": 13,
+  "defense": 6,
+  "initialEnergy": 0,
+  "energyPerTurn": 1,
+  "drawPerTurn": 3,
+  "handLimit": 5,
+  "aiProfileId": "low_cost_combo",
+  "deck": [
     {
-      "id": "pierce",
-      "kind": "Attack",
-      "nextMoveId": "pierce",
-      "effects": [
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 13
-        }
-      ]
+      "cardId": "enemy_act3_grunt_pierce",
+      "count": 2
+    },
+    {
+      "cardId": "enemy_common_attack",
+      "count": 7
+    },
+    {
+      "cardId": "enemy_common_defend",
+      "count": 3
     }
   ]
 }

@@ -1,4 +1,4 @@
-import type { CardCatalog } from '../api/catalog'
+import type { CardCatalog, CardPoolClass } from '../api/catalog'
 import type { CardRarity, CardType } from './Card'
 import { rarityCodeFromNumber } from './rarity'
 
@@ -7,6 +7,7 @@ export type CardDisplay = {
   cost: number | string
   type: CardType
   rarity: CardRarity
+  poolClass: CardPoolClass | null
   description: string
   upgradedDescription: string | null
 }
@@ -32,6 +33,7 @@ export function cardDisplay(
       cost: 1,
       type: 'skill',
       rarity: 'c',
+      poolClass: null,
       description: '',
       upgradedDescription: null,
     }
@@ -41,6 +43,7 @@ export function cardDisplay(
     cost: entry.cost ?? 0,
     type: TYPE_MAP[entry.cardType.toLowerCase()] ?? 'skill',
     rarity: rarityCodeFromNumber(entry.rarity),
+    poolClass: entry.poolClass ?? null,
     description: entry.description ?? '',
     upgradedDescription: entry.upgradedDescription ?? null,
   }

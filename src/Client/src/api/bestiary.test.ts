@@ -19,6 +19,8 @@ describe('bestiary api', () => {
       allKnownRelicIds: [],
       allKnownPotionIds: [],
       allKnownEnemyIds: [],
+      playerCharacters: [],
+      allyCharacters: [],
     }
     fetchMock.mockResolvedValue(new Response(JSON.stringify(body), { status: 200 }))
 

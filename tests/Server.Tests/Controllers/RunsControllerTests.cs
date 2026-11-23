@@ -55,8 +55,126 @@ public class RunsControllerTests : IClassFixture<TempDataFactory>
         var res = await client.PostAsync("/api/v1/runs/new", content: null);
         Assert.Equal(HttpStatusCode.OK, res.StatusCode);
         var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
-        Assert.True(doc.RootElement.TryGetProperty("run", out _));
+        Assert.True(doc.RootElement.TryGetProperty("run", out var run));
         Assert.True(doc.RootElement.TryGetProperty("map", out _));
+        Assert.Equal("default", run.GetProperty("characterId").GetString());
+        Assert.Equal("player:0", run.GetProperty("hostMemberId").GetString());
+        var member = Assert.Single(run.GetProperty("partyMembers").EnumerateArray());
+        Assert.Equal("default", member.GetProperty("characterId").GetString());
+    }
+
+    [Fact]
+    public async Task PostNew_EmptyObject_UsesDefaultCharacter()
+    {
+        _factory.ResetData();
+        var client = _factory.CreateClient();
+        await EnsureAccountAsync(client, "pick-empty-object");
+        WithAccount(client, "pick-empty-object");
+
+        var res = await client.PostAsJsonAsync("/api/v1/runs/new", new { });
+
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
+        Assert.Equal("default", doc.RootElement.GetProperty("run").GetProperty("characterId").GetString());
+    }
+
+    [Fact]
+    public async Task PostNew_ExplicitSingleCharacter_UsesSelection()
+    {
+        _factory.ResetData();
+        var client = _factory.CreateClient();
+        await EnsureAccountAsync(client, "pick-single");
+        WithAccount(client, "pick-single");
+
+        var res = await client.PostAsJsonAsync("/api/v1/runs/new", new
+        {
+            characterIds = new[] { "default" },
+        });
+
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
+        var run = doc.RootElement.GetProperty("run");
+        Assert.Equal("default", run.GetProperty("characterId").GetString());
+        Assert.Equal("default", Assert.Single(run.GetProperty("partyMembers").EnumerateArray())
+            .GetProperty("characterId").GetString());
+    }
+
+    [Fact]
+    public async Task PostNew_InvalidCharacterSelections_Return400WithoutCreatingRun()
+    {
+        _factory.ResetData();
+        var client = _factory.CreateClient();
+        await EnsureAccountAsync(client, "pick-invalid");
+        WithAccount(client, "pick-invalid");
+        object[] invalidBodies =
+        {
+            new { characterIds = Array.Empty<string>() },
+            new { characterIds = new[] { " " } },
+            new { characterIds = new[] { "missing-character" } },
+            new { characterIds = new[] { "default", "default" } },
+            new { characterIds = new[] { "a", "b", "c", "d", "e" } },
+        };
+
+        foreach (var body in invalidBodies)
+        {
+            var res = await client.PostAsJsonAsync("/api/v1/runs/new", body);
+            Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+        }
+
+        var current = await client.GetAsync("/api/v1/runs/current");
+        Assert.Equal(HttpStatusCode.NoContent, current.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostNew_TwoKnownCharacters_Returns409UntilBattleSupportsPartyPlay()
+    {
+        _factory.ResetData();
+        var client = _factory.CreateClient();
+        await EnsureAccountAsync(client, "pick-multiple");
+        WithAccount(client, "pick-multiple");
+        var catalog = _factory.Services.GetRequiredService<DataCatalog>();
+        var characters = Assert.IsType<Dictionary<string, CharacterDefinition>>(catalog.Characters);
+        var alternate = characters["default"] with { Id = "alternate" };
+        characters.Add(alternate.Id, alternate);
+        try
+        {
+            var res = await client.PostAsJsonAsync("/api/v1/runs/new", new
+            {
+                characterIds = new[] { "default", "alternate" },
+            });
+
+            Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
+            var current = await client.GetAsync("/api/v1/runs/current");
+            Assert.Equal(HttpStatusCode.NoContent, current.StatusCode);
+        }
+        finally
+        {
+            characters.Remove(alternate.Id);
+        }
+    }
+
+    [Fact]
+    public async Task PostNew_InvalidForcedSelection_PreservesExistingRun()
+    {
+        _factory.ResetData();
+        var client = _factory.CreateClient();
+        await EnsureAccountAsync(client, "pick-force-invalid");
+        WithAccount(client, "pick-force-invalid");
+        var created = await client.PostAsync("/api/v1/runs/new", content: null);
+        created.EnsureSuccessStatusCode();
+        var saves = _factory.Services.GetRequiredService<ISaveRepository>();
+        var before = await saves.TryLoadAsync("pick-force-invalid", CancellationToken.None);
+        Assert.NotNull(before);
+
+        var invalid = await client.PostAsJsonAsync("/api/v1/runs/new?force=true", new
+        {
+            characterIds = new[] { "missing-character" },
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+        var after = await saves.TryLoadAsync("pick-force-invalid", CancellationToken.None);
+        Assert.NotNull(after);
+        Assert.Equal(before!.RunId, after!.RunId);
     }
 
     [Fact]

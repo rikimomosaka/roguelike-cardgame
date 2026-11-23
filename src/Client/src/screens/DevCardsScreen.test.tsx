@@ -39,8 +39,8 @@ const sampleMeta = () => ({
     { id: 'superwild', name: 'スーパーワイルド', description: '...' },
   ],
   statuses: [
-    { id: 'weak', jp: '脱力' },
-    { id: 'vulnerable', jp: '脆弱' },
+    { id: 'weak', jp: '脱力', kind: 'Debuff' },
+    { id: 'vulnerable', jp: '脆弱', kind: 'Debuff' },
   ],
 })
 

@@ -121,6 +121,7 @@ public readonly record struct AttackPool
             var right = other.Hits[i];
             if (left.Amount != right.Amount || left.Source != right.Source) return false;
             if (left.CauseChain != right.CauseChain) return false;
+            if (left.TargetInstanceId != right.TargetInstanceId) return false;
         }
         return true;
     }
@@ -132,6 +133,7 @@ public readonly record struct AttackPool
         {
             hash.Add(hit.Amount);
             hash.Add(hit.Source);
+            hash.Add(hit.TargetInstanceId);
             foreach (var cause in hit.CauseChain.Frames)
                 hash.Add(cause);
         }

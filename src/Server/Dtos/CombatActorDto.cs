@@ -17,4 +17,7 @@ public sealed record CombatActorDto(
     string? CurrentMoveId,
     int? RemainingLifetimeTurns,
     string? AssociatedSummonHeldInstanceId,
-    IntentDto? Intent);
+    IntentDto? Intent,
+    IReadOnlyList<string>? StatusOrder = null,
+    int BlockAddCount = 0,
+    int? BlockRawSum = null);

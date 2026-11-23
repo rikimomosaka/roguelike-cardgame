@@ -1,0 +1,24 @@
+{
+  "id": "wisp_spark",
+  "name": "\u706B\u82B1",
+  "displayName": null,
+    "poolKinds":  [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "wisp cpu deck",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          { "action": "attack", "scope": "single", "side": "enemy", "amount": 3 }
+        ],
+        "upgradedEffects": [
+          { "action": "attack", "scope": "single", "side": "enemy", "amount": 5 }
+        ]
+      }
+    }
+  ]
+}

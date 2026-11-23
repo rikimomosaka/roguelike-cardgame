@@ -27,6 +27,9 @@ public static class DevOverrideLoader
     public static IReadOnlyDictionary<string, string> LoadRelics(string overrideRoot)
         => LoadFromSubDir(overrideRoot, "relics");
 
+    public static IReadOnlyDictionary<string, string> Load(string overrideRoot, string subDir)
+        => LoadFromSubDir(overrideRoot, subDir);
+
     private static IReadOnlyDictionary<string, string> LoadFromSubDir(string overrideRoot, string subDir)
     {
         var result = new Dictionary<string, string>();
@@ -43,9 +46,26 @@ public static class DevOverrideLoader
             {
                 using var doc = JsonDocument.Parse(json);
                 if (doc.RootElement.ValueKind != JsonValueKind.Object) continue;
-                if (!doc.RootElement.TryGetProperty("id", out var idEl)) continue;
-                if (idEl.ValueKind != JsonValueKind.String) continue;
-                var id = idEl.GetString();
+                string? id = null;
+                if (doc.RootElement.TryGetProperty("id", out var idEl) &&
+                    idEl.ValueKind == JsonValueKind.String)
+                {
+                    id = idEl.GetString();
+                }
+                else if (subDir == "act-start-relic-pools" &&
+                         doc.RootElement.TryGetProperty("act", out var actEl) &&
+                         actEl.TryGetInt32(out var act))
+                {
+                    id = $"act{act}";
+                }
+                else if (subDir == "merchant-prices")
+                {
+                    id = "merchant-prices";
+                }
+                else if (subDir == "map-configs")
+                {
+                    id = "map-act1";
+                }
                 if (string.IsNullOrEmpty(id)) continue;
                 result[id] = json;
             }

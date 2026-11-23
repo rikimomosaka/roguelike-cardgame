@@ -15,18 +15,18 @@ public class AudioSettingsTests
         Assert.Equal(80, d.Master);
         Assert.Equal(70, d.Bgm);
         Assert.Equal(80, d.Se);
-        Assert.Equal(60, d.Ambient);
+        Assert.Equal(80, d.Voice);
     }
 
     [Fact]
     public void Create_WithValidValues_ReturnsSettings()
     {
-        var s = AudioSettings.Create(master: 100, bgm: 0, se: 50, ambient: 25);
+        var s = AudioSettings.Create(master: 100, bgm: 0, se: 50, voice: 25);
         Assert.Equal(AudioSettings.CurrentSchemaVersion, s.SchemaVersion);
         Assert.Equal(100, s.Master);
         Assert.Equal(0, s.Bgm);
         Assert.Equal(50, s.Se);
-        Assert.Equal(25, s.Ambient);
+        Assert.Equal(25, s.Voice);
     }
 
     [Theory]
@@ -36,12 +36,12 @@ public class AudioSettingsTests
     [InlineData(0, 101, 0, 0, "bgm")]
     [InlineData(0, 0, -1, 0, "se")]
     [InlineData(0, 0, 101, 0, "se")]
-    [InlineData(0, 0, 0, -1, "ambient")]
-    [InlineData(0, 0, 0, 101, "ambient")]
-    public void Create_WithOutOfRange_Throws(int master, int bgm, int se, int ambient, string expectedParamName)
+    [InlineData(0, 0, 0, -1, "voice")]
+    [InlineData(0, 0, 0, 101, "voice")]
+    public void Create_WithOutOfRange_Throws(int master, int bgm, int se, int voice, string expectedParamName)
     {
         var ex = Assert.Throws<ArgumentOutOfRangeException>(() =>
-            AudioSettings.Create(master, bgm, se, ambient));
+            AudioSettings.Create(master, bgm, se, voice));
         Assert.Equal(expectedParamName, ex.ParamName);
     }
 
@@ -52,12 +52,12 @@ public class AudioSettingsTests
         Assert.Equal(0, lo.Master);
         Assert.Equal(0, lo.Bgm);
         Assert.Equal(0, lo.Se);
-        Assert.Equal(0, lo.Ambient);
+        Assert.Equal(0, lo.Voice);
 
         var hi = AudioSettings.Create(100, 100, 100, 100);
         Assert.Equal(100, hi.Master);
         Assert.Equal(100, hi.Bgm);
         Assert.Equal(100, hi.Se);
-        Assert.Equal(100, hi.Ambient);
+        Assert.Equal(100, hi.Voice);
     }
 }

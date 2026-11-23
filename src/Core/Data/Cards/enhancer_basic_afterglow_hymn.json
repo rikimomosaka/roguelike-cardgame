@@ -1,0 +1,47 @@
+{
+  "id": "enhancer_basic_afterglow_hymn",
+  "name": "余韻の賛歌",
+  "displayName": null,
+  "poolKinds": [
+    "Basic"
+  ],
+  "poolClass": "Enhancer",
+  "eligibleCharacterIds": [
+    "enhancer_lyra"
+  ],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Skill",
+        "cost": 3,
+        "effects": [
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "afterglow",
+            "amount": 1
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "afterglow",
+            "amount": 1
+          }
+        ],
+        "keywords": [
+          "wild"
+        ],
+        "upgradedKeywords": [
+          "superwild"
+        ]
+      }
+    }
+  ]
+}

@@ -58,6 +58,64 @@ public class EnemyAttackingResolverTests
     }
 
     [Fact]
+    public void Enemy_attack_emits_gain_attack_on_the_attacker_before_it_fires()
+    {
+        var hero = BattleFixtures.Hero();
+        var goblin = BattleFixtures.Goblin();
+        var state = MakeState(hero, goblin);
+        var catalog = BattleFixtures.MinimalCatalog(
+            enemies: new[] { BattleFixtures.GoblinDef(hp: 20, attack: 5) });
+
+        var (_, events) = EnemyAttackingResolver.Resolve(state, Rng(), catalog);
+
+        var ordered = events.ToList();
+        var gainIndex = ordered.FindIndex(
+            battleEvent => battleEvent.Kind == BattleEventKind.GainAttack);
+        var fireIndex = ordered.FindIndex(
+            battleEvent => battleEvent.Kind == BattleEventKind.AttackFire);
+        Assert.InRange(gainIndex, 0, int.MaxValue);
+        Assert.True(gainIndex < fireIndex);
+        var gain = ordered[gainIndex];
+        Assert.Equal(goblin.InstanceId, gain.CasterInstanceId);
+        Assert.Equal(goblin.InstanceId, gain.TargetInstanceId);
+        Assert.Equal(5, gain.Amount);
+        Assert.Equal("all", gain.Note);
+        Assert.Equal(CombatSourceKind.EnemyMove, gain.Source?.Kind);
+    }
+
+    [Fact]
+    public void Required_player_death_stops_later_enemies_before_they_attack_tokens()
+    {
+        var hero = BattleFixtures.Hero(currentHp: 1, maxHp: 20);
+        var wisp = BattleFixtures.SummonActor(
+            "wisp", "wisp", slotIndex: 1, hp: 30);
+        var enemy0 = BattleFixtures.Goblin(slotIndex: 0) with
+        {
+            InstanceId = "enemy-0",
+            CurrentMoveId = "attack",
+        };
+        var enemy1 = BattleFixtures.Goblin(slotIndex: 1) with
+        {
+            InstanceId = "enemy-1",
+            CurrentMoveId = "attack",
+        };
+        var definition = EnemyWithAttackEffects(
+            "goblin",
+            new CardEffect(
+                "attack", EffectScope.Single, EffectSide.Enemy, 5));
+
+        var (next, events) = EnemyAttackingResolver.Resolve(
+            MakePartyState([hero, wisp], enemy0, enemy1),
+            Rng(),
+            BattleFixtures.MinimalCatalog(enemies: [definition]));
+
+        Assert.False(next.Allies.Single(actor => actor.InstanceId == hero.InstanceId).IsAlive);
+        Assert.Equal(30, next.Allies.Single(actor => actor.InstanceId == wisp.InstanceId).CurrentHp);
+        Assert.Single(events, battleEvent =>
+            battleEvent.Kind == BattleEventKind.AttackFire);
+    }
+
+    [Fact]
     public void Enemy_attack_scope_single_hits_only_lowest_living_ally_slot()
     {
         var hero = BattleFixtures.Hero(70, slotIndex: 1);

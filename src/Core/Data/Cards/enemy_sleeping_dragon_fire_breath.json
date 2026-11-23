@@ -1,0 +1,26 @@
+{
+  "id": "enemy_sleeping_dragon_fire_breath",
+  "name": "火炎の息",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy sleeping_dragon unique (from move fire_breath)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 18
+          }
+        ]
+      }
+    }
+  ]
+}

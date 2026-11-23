@@ -1,0 +1,26 @@
+{
+  "id": "enemy_red_orc_smash",
+  "name": "叩きつけ",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy red_orc unique (from move smash)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 10
+          }
+        ]
+      }
+    }
+  ]
+}

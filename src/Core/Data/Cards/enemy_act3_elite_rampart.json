@@ -1,0 +1,25 @@
+{
+  "id": "enemy_act3_elite_rampart",
+  "name": "城壁",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy act3_elite unique (from move rampart)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 22
+          }
+        ]
+      }
+    }
+  ]
+}

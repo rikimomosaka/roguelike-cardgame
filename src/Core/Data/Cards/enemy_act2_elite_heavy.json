@@ -1,0 +1,26 @@
+{
+  "id": "enemy_act2_elite_heavy",
+  "name": "重撃",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy act2_elite unique (from move heavy)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 19
+          }
+        ]
+      }
+    }
+  ]
+}

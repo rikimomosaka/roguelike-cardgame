@@ -1,0 +1,32 @@
+{
+  "id": "enemy_goblin_c_throw_knife",
+  "name": "投げナイフ",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy goblin_c unique (from move throw_knife)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 4
+          },
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 4
+          }
+        ]
+      }
+    }
+  ]
+}

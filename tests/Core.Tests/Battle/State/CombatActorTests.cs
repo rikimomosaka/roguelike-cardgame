@@ -73,6 +73,7 @@ public class CombatActorTests
     {
         var json = JsonNode.Parse(JsonSerializer.Serialize(MakeHero()))!.AsObject();
         json.Remove(nameof(CombatActor.StatusSources));
+        json.Remove(nameof(CombatActor.StatusDisplayOrder));
         json.Remove(nameof(CombatActor.OwnerPlayerSlot));
         json.Remove(nameof(CombatActor.OwnerActorInstanceId));
 
@@ -80,6 +81,7 @@ public class CombatActorTests
 
         Assert.NotNull(restored);
         Assert.Empty(restored.StatusSources);
+        Assert.Empty(restored.StatusDisplayOrder);
         Assert.Null(restored.OwnerPlayerSlot);
         Assert.Null(restored.OwnerActorInstanceId);
     }

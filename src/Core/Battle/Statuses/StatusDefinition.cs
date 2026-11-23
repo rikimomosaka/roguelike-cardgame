@@ -33,6 +33,42 @@ public sealed record StatusDefinition(
         // ターン数ではないため、自動countdownせず明示的なbuff/debuff効果で増減する。
         new StatusDefinition("handCostReduction", StatusKind.Buff,   IsPermanent: true, StatusTickDirection.None),
         new StatusDefinition("handCostIncrease",  StatusKind.Debuff, IsPermanent: true, StatusTickDirection.None),
+
+        new StatusDefinition("vigor",        StatusKind.Buff,   IsPermanent: false, StatusTickDirection.Decrement),
+        new StatusDefinition("pursuit",      StatusKind.Buff,   IsPermanent: false, StatusTickDirection.None),
+        new StatusDefinition("regeneration", StatusKind.Buff,   IsPermanent: false, StatusTickDirection.None),
+        new StatusDefinition("fortify",      StatusKind.Buff,   IsPermanent: true,  StatusTickDirection.None),
+        new StatusDefinition("resistance",   StatusKind.Buff,   IsPermanent: false, StatusTickDirection.None),
+        new StatusDefinition("revive",       StatusKind.Buff,   IsPermanent: false, StatusTickDirection.None),
+        new StatusDefinition("growth",       StatusKind.Buff,   IsPermanent: true,  StatusTickDirection.None),
+        new StatusDefinition("insight",      StatusKind.Buff,   IsPermanent: false, StatusTickDirection.None),
+        new StatusDefinition("haste",        StatusKind.Buff,   IsPermanent: false, StatusTickDirection.None),
+        new StatusDefinition("continuity",   StatusKind.Buff,   IsPermanent: false, StatusTickDirection.None),
+        new StatusDefinition("mastery",      StatusKind.Buff,   IsPermanent: false, StatusTickDirection.None),
+
+        // Class-mechanic buffs have explicit lifecycle hooks.  They must not use
+        // the side countdown because ally countdown runs before EnemyAttacking,
+        // where Cover and DefensiveStance still need to be active.
+        new StatusDefinition("afterimage",       StatusKind.Buff, IsPermanent: false, StatusTickDirection.None),
+        new StatusDefinition("steadfast",        StatusKind.Buff, IsPermanent: false, StatusTickDirection.None),
+        new StatusDefinition("cover",            StatusKind.Buff, IsPermanent: false, StatusTickDirection.None),
+        new StatusDefinition("defensiveStance",  StatusKind.Buff, IsPermanent: false, StatusTickDirection.None),
+        new StatusDefinition("comboCarryover",   StatusKind.Buff, IsPermanent: false, StatusTickDirection.None),
+        new StatusDefinition("afterglow",        StatusKind.Buff, IsPermanent: false, StatusTickDirection.None),
+        new StatusDefinition("resonance",        StatusKind.Buff, IsPermanent: false, StatusTickDirection.None),
+
+        new StatusDefinition("virulentPoison", StatusKind.Debuff, IsPermanent: true,  StatusTickDirection.None),
+        new StatusDefinition("stagnation",     StatusKind.Debuff, IsPermanent: false, StatusTickDirection.Decrement),
+        new StatusDefinition("burn",           StatusKind.Debuff, IsPermanent: false, StatusTickDirection.None),
+        new StatusDefinition("scorch",         StatusKind.Debuff, IsPermanent: false, StatusTickDirection.None),
+        new StatusDefinition("confusion",      StatusKind.Debuff, IsPermanent: false, StatusTickDirection.Decrement),
+        new StatusDefinition("curse",          StatusKind.Debuff, IsPermanent: false, StatusTickDirection.None),
+        new StatusDefinition("bind",           StatusKind.Debuff, IsPermanent: false, StatusTickDirection.Decrement),
+        new StatusDefinition("silence",        StatusKind.Debuff, IsPermanent: false, StatusTickDirection.Decrement),
+        new StatusDefinition("seal",           StatusKind.Debuff, IsPermanent: false, StatusTickDirection.Decrement),
+        new StatusDefinition("exhaustion",     StatusKind.Debuff, IsPermanent: false, StatusTickDirection.None),
+        new StatusDefinition("distress",       StatusKind.Debuff, IsPermanent: false, StatusTickDirection.Decrement),
+        new StatusDefinition("disruption",     StatusKind.Debuff, IsPermanent: false, StatusTickDirection.Decrement),
     };
 
     public static StatusDefinition Get(string id) =>

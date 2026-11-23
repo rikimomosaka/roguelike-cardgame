@@ -1,0 +1,51 @@
+{
+  "id": "enhancer_rare_afterglow_barrier",
+  "name": "残響結界",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Enhancer",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 2,
+        "cardType": "Skill",
+        "cost": 2,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 9
+          },
+          {
+            "action": "buff",
+            "scope": "all",
+            "side": "ally",
+            "name": "afterglow",
+            "amount": 1
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 13
+          },
+          {
+            "action": "buff",
+            "scope": "all",
+            "side": "ally",
+            "name": "afterglow",
+            "amount": 1
+          }
+        ]
+      }
+    }
+  ]
+}

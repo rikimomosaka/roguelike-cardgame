@@ -8,9 +8,9 @@ namespace RoguelikeCardGame.Core.Tests.Run;
 public class RunStateBestiaryFieldsTests
 {
     [Fact]
-    public void CurrentSchemaVersion_Is7()
+    public void CurrentSchemaVersion_Is8()
     {
-        Assert.Equal(7, RunState.CurrentSchemaVersion);
+        Assert.Equal(8, RunState.CurrentSchemaVersion);
     }
 
     [Fact]

@@ -1,25 +1,49 @@
 {
-    "id":  "reward_rare_05",
-    "name":  "闘気開放",
-    "displayName":  null,
-    "activeVersion":  "v1",
-    "versions":  [
-                     {
-                         "version":  "v1",
-                         "createdAt":  "2026-05-01T03:54:50Z",
-                         "label":  "original",
-                         "spec":  {
-                                      "rarity":  2,
-                                      "cardType":  "Skill",
-                                      "cost":  1,
-                                      "effects":  [
-                                                      {
-                                                          "action":  "gainEnergy",
-                                                          "scope":  "self",
-                                                          "amount":  2
-                                                      }
-                                                  ]
-                                  }
-                     }
-                 ]
+  "id": "guardian_rare_endure",
+  "name": "持ち堪え",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Guardian",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 2,
+        "cardType": "Skill",
+        "cost": 2,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 12
+          },
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "steadfast",
+            "amount": 1
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 16
+          },
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "steadfast",
+            "amount": 1
+          }
+        ]
+      }
+    }
+  ]
 }

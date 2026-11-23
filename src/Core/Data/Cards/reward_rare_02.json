@@ -1,25 +1,55 @@
 {
-    "id":  "reward_rare_02",
-    "name":  "鉄壁",
-    "displayName":  null,
-    "activeVersion":  "v1",
-    "versions":  [
-                     {
-                         "version":  "v1",
-                         "createdAt":  "2026-05-01T03:54:50Z",
-                         "label":  "original",
-                         "spec":  {
-                                      "rarity":  2,
-                                      "cardType":  "Skill",
-                                      "cost":  1,
-                                      "effects":  [
-                                                      {
-                                                          "action":  "block",
-                                                          "scope":  "self",
-                                                          "amount":  12
-                                                      }
-                                                  ]
-                                  }
-                     }
-                 ]
+  "id": "striker_rare_sunder",
+  "name": "断ち割り",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Striker",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 2,
+        "cardType": "Attack",
+        "cost": 2,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 13
+          },
+          {
+            "action": "debuff",
+            "scope": "single",
+            "side": "enemy",
+            "name": "vulnerable",
+            "amount": 2,
+            "maxComboMin": 3
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "attack",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 17
+          },
+          {
+            "action": "debuff",
+            "scope": "single",
+            "side": "enemy",
+            "name": "vulnerable",
+            "amount": 2,
+            "maxComboMin": 3
+          }
+        ]
+      }
+    }
+  ]
 }

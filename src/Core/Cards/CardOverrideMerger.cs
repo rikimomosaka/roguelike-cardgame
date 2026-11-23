@@ -60,6 +60,29 @@ public static class CardOverrideMerger
 
         baseNode["versions"] = merged;
 
+        // Acquisition metadata is one logical group. Older, version-only overrides do not
+        // contain poolKinds and must continue inheriting the embedded metadata. Once an
+        // override explicitly contains poolKinds, however, the workbench document is the
+        // authority for the whole group: omitted optional members mean "remove them".
+        // This lets an author change a pooled card back to an external/special card with
+        // poolKinds: [] without the base poolClass being resurrected by the merge.
+        if (overrideNode.ContainsKey("poolKinds"))
+        {
+            foreach (var key in new[] { "poolClass", "eligibleCharacterIds" })
+            {
+                if (!overrideNode.ContainsKey(key))
+                    baseNode.Remove(key);
+            }
+        }
+
+        // The unified workbench writes complete documents. Keep partial overrides valid,
+        // while allowing explicit top-level metadata such as name/displayName to change.
+        foreach (var property in overrideNode)
+        {
+            if (property.Key is "id" or "versions" or "activeVersion") continue;
+            baseNode[property.Key] = property.Value?.DeepClone();
+        }
+
         // override.activeVersion が指定されていれば上書き。
         var overrideActive = overrideNode["activeVersion"]?.GetValue<string>();
         if (!string.IsNullOrEmpty(overrideActive))

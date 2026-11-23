@@ -53,6 +53,9 @@ public static class EventResolver
                 return GainRelic(s, gr.Rarity, catalog, rng);
             case EventEffect.GrantCardReward:
                 return GrantCardReward(s, catalog, rng);
+            case EventEffect.GainCard gc:
+                var withCard = RunDeckActions.AddCardToDeck(s, gc.CardId, catalog);
+                return BestiaryTracker.NoteCardsSeen(withCard, new[] { gc.CardId });
             default:
                 return s;
         }
@@ -78,16 +81,21 @@ public static class EventResolver
             throw new InvalidOperationException(
                 $"RewardTable \"{rewardTableId}\" is not configured for the current act");
         var excl = ImmutableArray.CreateRange(s.Deck.Select(c => c.Id));
-        var (reward, newRngState) = RewardGenerator.Generate(
-            new RewardContext.FromEnemy(new EnemyPool(s.CurrentAct, EnemyTier.Weak)),
-            s.RewardRngState, excl, rt, catalog, rng, s);
+        var picks = RewardGenerator.RegenerateUniversalCardChoices(
+            new EnemyPool(s.CurrentAct, EnemyTier.Weak),
+            s.RewardRngState,
+            excl,
+            rt,
+            catalog,
+            rng,
+            s);
         // Event からのカード報酬は Gold / Potion を含めない（CardChoices のみ提示）
         var cardOnly = new RewardState(
             Gold: 0, GoldClaimed: true,
             PotionId: null, PotionClaimed: true,
-            CardChoices: reward.CardChoices,
-            CardStatus: CardRewardStatus.Pending);
-        var next = RewardActions.AssignReward(s, cardOnly, newRngState, catalog);
-        return BestiaryTracker.NoteCardsSeen(next, reward.CardChoices);
+            CardChoices: picks,
+            CardStatus: picks.IsEmpty ? CardRewardStatus.Claimed : CardRewardStatus.Pending,
+            CardPoolKind: CardRewardPoolKind.Universal);
+        return RewardActions.AssignReward(s, cardOnly, s.RewardRngState, catalog);
     }
 }

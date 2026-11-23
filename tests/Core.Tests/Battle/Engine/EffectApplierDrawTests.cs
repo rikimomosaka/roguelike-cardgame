@@ -62,6 +62,19 @@ public class EffectApplierDrawTests
         var (next, evs) = EffectApplier.Apply(s, hero, eff, Rng(), BattleFixtures.MinimalCatalog());
         Assert.Equal(2, next.Hand.Length);
         Assert.Empty(next.DiscardPile);
+        Assert.Collection(
+            evs,
+            shuffle =>
+            {
+                Assert.Equal(BattleEventKind.Shuffle, shuffle.Kind);
+                Assert.Equal(2, shuffle.Amount);
+                Assert.Equal(hero.InstanceId, shuffle.TargetInstanceId);
+            },
+            draw =>
+            {
+                Assert.Equal(BattleEventKind.Draw, draw.Kind);
+                Assert.Equal(2, draw.Amount);
+            });
     }
 
     [Fact] public void Draw_caps_at_hand_max_10()

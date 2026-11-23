@@ -20,6 +20,15 @@ function TooltipTrigger({ withStatusLine = true }: { withStatusLine?: boolean })
   return <button {...tip}>説明を表示</button>
 }
 
+function StatusTooltipTrigger() {
+  const tip = useTooltipTarget({
+    name: '加速',
+    desc: 'ターン開始時のエナジー回復量を+[N:X]し、[S:haste]が消滅する。[S:strength]を得る。',
+    selfReference: { kind: 'status', id: 'haste' },
+  })
+  return <button {...tip}>状態説明を表示</button>
+}
+
 describe('Tooltip status line', () => {
   it('renders title, optional status, and description in that DOM order', () => {
     render(
@@ -53,5 +62,22 @@ describe('Tooltip status line', () => {
     const tooltip = screen.getByRole('tooltip')
     expect(within(tooltip).queryByText(/このターンの最大コンボ/)).not.toBeInTheDocument()
     expect(within(tooltip).getByText(/現在1コンボ。/)).toBeInTheDocument()
+  })
+
+  it('highlights markers without repeating the same status definition panel', () => {
+    render(
+      <TooltipHost>
+        <StatusTooltipTrigger />
+      </TooltipHost>,
+    )
+
+    fireEvent.focus(screen.getByRole('button', { name: '状態説明を表示' }))
+    const tooltip = screen.getByRole('tooltip')
+    expect(tooltip.querySelector('.card-desc-num')).toHaveTextContent('X')
+    expect(tooltip.querySelector('.card-desc-status')).toHaveTextContent('加速')
+    const refs = tooltip.querySelectorAll('.tip__ref')
+    expect(refs).toHaveLength(1)
+    expect(refs[0]).toHaveTextContent('筋力')
+    expect(refs[0]).not.toHaveTextContent('加速')
   })
 })

@@ -10,11 +10,16 @@
                          "label":  "original",
                          "spec":  {
                                       "rarity":  0,
-                                      "description":  "[未実装] つるりと磨かれた小さなどんぐり。手に握ると、ほのかな木の香りで気が引き締まる。",
+                                      "description":  "つるりと磨かれた小さなどんぐり。手に握ると、ほのかな木の香りで気が引き締まる。",
                                       "effects":  [
-
+                                                      {
+                                                          "action": "gainMaxHp",
+                                                          "scope": "self",
+                                                          "amount": 4,
+                                                          "trigger": "OnPickup"
+                                                      }
                                                   ],
-                                      "implemented":  false
+                                      "implemented":  true
                                   }
                      }
                  ]

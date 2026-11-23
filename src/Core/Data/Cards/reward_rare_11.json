@@ -1,0 +1,81 @@
+{
+  "id": "tactician_rare_virulent_shot",
+  "name": "猛毒射撃",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Tactician",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 2,
+        "cardType": "Attack",
+        "cost": 3,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 8
+          },
+          {
+            "action": "debuff",
+            "scope": "single",
+            "side": "enemy",
+            "name": "poison",
+            "amount": 4
+          },
+          {
+            "action": "debuff",
+            "scope": "single",
+            "side": "enemy",
+            "name": "virulentPoison",
+            "amount": 1
+          },
+          {
+            "action": "debuff",
+            "scope": "single",
+            "side": "enemy",
+            "name": "virulentPoison",
+            "amount": 1
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "attack",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 11
+          },
+          {
+            "action": "debuff",
+            "scope": "single",
+            "side": "enemy",
+            "name": "poison",
+            "amount": 6
+          },
+          {
+            "action": "debuff",
+            "scope": "single",
+            "side": "enemy",
+            "name": "virulentPoison",
+            "amount": 1
+          },
+          {
+            "action": "debuff",
+            "scope": "single",
+            "side": "enemy",
+            "name": "virulentPoison",
+            "amount": 1
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -62,8 +62,8 @@ public sealed class EmbeddedDataCatalogValidatorTests
         "{\"action\":\"gainGold\",\"scope\":\"all\",\"side\":\"ally\",\"amount\":2,\"trigger\":\"OnPickup\"}",
         "scope 'self'")]
     [InlineData(
-        "{\"action\":\"draw\",\"scope\":\"all\",\"side\":\"ally\",\"amount\":1,\"trigger\":\"OnTurnStart\"}",
-        "scope 'self'")]
+        "{\"action\":\"draw\",\"scope\":\"all\",\"side\":\"enemy\",\"amount\":1,\"trigger\":\"OnTurnStart\"}",
+        "side 'ally'")]
     public void Validator_RejectsInvalidScopeAndSideCombinations(
         string effectJson, string expectedMessage)
     {
@@ -71,6 +71,42 @@ public sealed class EmbeddedDataCatalogValidatorTests
             EmbeddedDataCatalogValidator.ValidateRelics(new[] { RelicWith(effectJson) }));
 
         Assert.Contains(expectedMessage, error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("draw", "all", "ally")]
+    [InlineData("gainEnergy", "single", "ally")]
+    [InlineData("gainMaxEnergy", "random", "ally")]
+    [InlineData("modifyCardCost", "all", "ally")]
+    public void Validator_AcceptsParticipantResourceEffectsTargetingAllies(
+        string action, string scope, string side)
+    {
+        string extra = action == "modifyCardCost"
+            ? ",\"pile\":\"hand\",\"select\":\"all\",\"costDuration\":\"untilPlayed\""
+            : "";
+        string effect =
+            $"{{\"action\":\"{action}\",\"scope\":\"{scope}\",\"side\":\"{side}\",\"amount\":1,\"trigger\":\"OnTurnStart\"{extra}}}";
+
+        EmbeddedDataCatalogValidator.ValidateRelics(new[] { RelicWith(effect) });
+    }
+
+    [Theory]
+    [InlineData("draw")]
+    [InlineData("gainEnergy")]
+    [InlineData("gainMaxEnergy")]
+    [InlineData("modifyCardCost")]
+    public void Validator_RejectsParticipantResourceEffectsTargetingEnemies(string action)
+    {
+        string extra = action == "modifyCardCost"
+            ? ",\"pile\":\"hand\",\"select\":\"all\",\"costDuration\":\"untilPlayed\""
+            : "";
+        string effect =
+            $"{{\"action\":\"{action}\",\"scope\":\"single\",\"side\":\"enemy\",\"amount\":1,\"trigger\":\"OnTurnStart\"{extra}}}";
+
+        var error = Assert.Throws<DataCatalogException>(() =>
+            EmbeddedDataCatalogValidator.ValidateRelics(new[] { RelicWith(effect) }));
+
+        Assert.Contains("side 'ally'", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]
@@ -90,6 +126,18 @@ public sealed class EmbeddedDataCatalogValidatorTests
             EmbeddedDataCatalogValidator.ValidateRelics(new[] { RelicWith(effectJson) }));
 
         Assert.Contains(expectedMessage, error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Validator_Rejects_multi_stack_virulent_poison_application()
+    {
+        const string effect =
+            "{\"action\":\"debuff\",\"scope\":\"single\",\"side\":\"enemy\",\"amount\":2,\"name\":\"virulentPoison\",\"trigger\":\"OnHit\"}";
+
+        var error = Assert.Throws<DataCatalogException>(() =>
+            EmbeddedDataCatalogValidator.ValidateRelics(new[] { RelicWith(effect) }));
+
+        Assert.Contains("one stack at a time", error.Message, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -133,6 +181,9 @@ public sealed class EmbeddedDataCatalogValidatorTests
         "{\"action\":\"attack\",\"scope\":\"single\",\"side\":\"enemy\",\"amount\":1,\"amountSource\":\"typo\",\"trigger\":\"OnHit\"}",
         "amountSource")]
     [InlineData(
+        "{\"action\":\"attack\",\"scope\":\"single\",\"side\":\"enemy\",\"amount\":1,\"amountSource\":\"currentCost\",\"trigger\":\"OnHit\"}",
+        "only")]
+    [InlineData(
         "{\"action\":\"unknownTileWeightDelta\",\"scope\":\"self\",\"amount\":1,\"name\":\"boss\",\"trigger\":\"Passive\"}",
         "unknownTileWeightDelta")]
     public void Validator_RejectsMissingOrUnsupportedActionParameters(
@@ -166,6 +217,15 @@ public sealed class EmbeddedDataCatalogValidatorTests
             EmbeddedDataCatalogValidator.ValidateRelics(new[] { RelicWith(effect) }));
 
         Assert.Contains("cannot use select choose", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Validator_AcceptsCurrentCostForCardCostModifier()
+    {
+        const string effect =
+            "{\"action\":\"modifyCardCost\",\"scope\":\"self\",\"amount\":0,\"amountSource\":\"currentCost\",\"pile\":\"hand\",\"select\":\"all\",\"costDuration\":\"untilPlayed\",\"trigger\":\"OnBattleStart\"}";
+
+        EmbeddedDataCatalogValidator.ValidateRelics(new[] { RelicWith(effect) });
     }
 
     [Fact]

@@ -1,0 +1,55 @@
+{
+  "id": "universal_rare_equipment_check",
+  "name": "装備点検",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Universal",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 2,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "modifyCardCost",
+            "scope": "self",
+            "amount": -1,
+            "pile": "hand",
+            "select": "choose",
+            "cardCount": 1,
+            "costDuration": "untilPlayed"
+          },
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 3
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "modifyCardCost",
+            "scope": "self",
+            "amount": -1,
+            "pile": "hand",
+            "select": "choose",
+            "cardCount": 1,
+            "costDuration": "untilPlayed"
+          },
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 6
+          }
+        ]
+      }
+    }
+  ]
+}

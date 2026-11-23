@@ -1,0 +1,54 @@
+{
+  "id": "universal_epic_reconstruction",
+  "name": "再構成",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Universal",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 3,
+        "cardType": "Skill",
+        "cost": 2,
+        "usesPerTurn": 1,
+        "upgradedUsesPerTurn": 1,
+        "effects": [
+          {
+            "action": "recoverFromDiscard",
+            "scope": "self",
+            "amount": 1,
+            "pile": "hand",
+            "select": "choose"
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "recoverFromDiscard",
+            "scope": "self",
+            "amount": 1,
+            "pile": "hand",
+            "select": "choose"
+          },
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 6
+          }
+        ],
+        "keywords": [
+          "exhaust"
+        ],
+        "upgradedKeywords": [
+          "exhaust"
+        ]
+      }
+    }
+  ]
+}

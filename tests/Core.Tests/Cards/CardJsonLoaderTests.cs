@@ -1,5 +1,6 @@
 using System.Linq;
 using RoguelikeCardGame.Core.Cards;
+using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Tests.Fixtures;
 using Xunit;
 
@@ -7,6 +8,58 @@ namespace RoguelikeCardGame.Core.Tests.Cards;
 
 public class CardJsonLoaderTests
 {
+    [Fact]
+    public void Parse_reads_root_card_pool_metadata_for_versioned_card()
+    {
+        var json = """
+        {
+          "id":"pool_card","name":"Pool card",
+          "poolKinds":["Basic","Reward"],
+          "poolClass":"Guardian",
+          "eligibleCharacterIds":["guardian_a"],
+          "activeVersion":"v1",
+          "versions":[{"version":"v1","spec":{
+            "rarity":1,"cardType":"Skill","cost":1,"effects":[]
+          }}]
+        }
+        """;
+
+        var def = CardJsonLoader.Parse(json);
+
+        Assert.Equal(new[] { CardPoolKind.Basic, CardPoolKind.Reward }, def.EffectivePoolKinds);
+        Assert.Equal(CardPoolClass.Guardian, def.PoolClass);
+        Assert.Equal(new[] { "guardian_a" }, def.EffectiveEligibleCharacterIds);
+    }
+
+    [Fact]
+    public void Parse_missing_card_pool_metadata_means_normal_pool_external()
+    {
+        var def = CardJsonLoader.Parse(JsonFixtures.StrikeJson);
+
+        Assert.Empty(def.EffectivePoolKinds);
+        Assert.Null(def.PoolClass);
+        Assert.Empty(def.EffectiveEligibleCharacterIds);
+    }
+
+    [Theory]
+    [InlineData("\"poolKinds\":\"Reward\"")]
+    [InlineData("\"poolKinds\":[\"Reward\",\"Reward\"]")]
+    [InlineData("\"poolKinds\":[\"Unknown\"]")]
+    [InlineData("\"poolClass\":\"Unknown\"")]
+    [InlineData("\"eligibleCharacterIds\":\"hero\"")]
+    [InlineData("\"eligibleCharacterIds\":[\"hero\",\"hero\"]")]
+    public void Parse_rejects_invalid_card_pool_metadata(string metadata)
+    {
+        var json = $$"""
+        {
+          "id":"bad_pool","name":"Bad",{{metadata}},
+          "rarity":1,"cardType":"Skill","cost":1,"effects":[]
+        }
+        """;
+
+        Assert.Throws<CardJsonException>(() => CardJsonLoader.Parse(json));
+    }
+
     [Fact]
     public void ParseStrike_FillsAllFields()
     {
@@ -165,6 +218,62 @@ public class CardJsonLoaderTests
         var def = CardJsonLoader.Parse(json);
         Assert.NotNull(def.Keywords);
         Assert.Contains("wild", def.Keywords);
+    }
+
+    [Fact]
+    public void Parse_keeps_normal_and_upgraded_keywords_and_usage_limits_independent()
+    {
+        var json = """
+        {
+          "id":"independent","name":"Independent","rarity":2,"cardType":"Skill",
+          "cost":1,
+          "usesPerTurn":1,
+          "upgradedUsesPerTurn":3,
+          "keywords":["wild"],
+          "upgradedKeywords":["superwild"],
+          "effects":[]
+        }
+        """;
+
+        var def = CardJsonLoader.Parse(json);
+
+        Assert.Equal(new[] { "wild" }, def.EffectiveKeywords(upgraded: false));
+        Assert.Equal(new[] { "superwild" }, def.EffectiveKeywords(upgraded: true));
+        Assert.Equal(1, def.EffectiveUsesPerTurn(upgraded: false));
+        Assert.Equal(3, def.EffectiveUsesPerTurn(upgraded: true));
+    }
+
+    [Fact]
+    public void Parse_does_not_inherit_normal_keywords_into_upgraded_card()
+    {
+        var json = """
+        {
+          "id":"base_only","name":"Base only","rarity":2,"cardType":"Skill",
+          "cost":1,"upgradedCost":0,
+          "keywords":["wild"],
+          "effects":[]
+        }
+        """;
+
+        var def = CardJsonLoader.Parse(json);
+
+        Assert.Equal(new[] { "wild" }, def.EffectiveKeywords(upgraded: false));
+        Assert.Null(def.EffectiveKeywords(upgraded: true));
+    }
+
+    [Fact]
+    public void Parse_rejects_usage_limit_on_an_individual_effect()
+    {
+        var json = """
+        {
+          "id":"bad_limit","name":"Bad","rarity":1,"cardType":"Skill",
+          "cost":1,
+          "effects":[{"action":"draw","scope":"self","amount":1,"usesPerTurn":1}]
+        }
+        """;
+
+        var error = Assert.Throws<CardJsonException>(() => CardJsonLoader.Parse(json));
+        Assert.Contains("カード・ポーション・キャラクタースキル本体", error.Message);
     }
 
     [Fact]
@@ -354,5 +463,141 @@ public class CardJsonLoaderTests
         var def = CardJsonLoader.Parse(json);
         Assert.Equal("strike", def.Id);
         Assert.Equal(1, def.Cost);
+    }
+
+    [Fact]
+    public void Parses_grouped_status_changes_without_legacy_amount()
+    {
+        var json = """
+        {
+          "id": "grouped", "name": "grouped", "rarity": 1,
+          "cardType": "Skill", "cost": 1,
+          "effects": [{
+            "action": "debuff", "scope": "self",
+            "statusChanges": [
+              { "name": "silence", "amount": 1 },
+              { "name": "handCostIncrease", "amount": 2 }
+            ]
+          }]
+        }
+        """;
+
+        var effect = Assert.Single(CardJsonLoader.Parse(json).Effects);
+
+        Assert.Null(effect.Name);
+        Assert.Equal(0, effect.Amount);
+        Assert.Equal(
+            new[] { new StatusChange("silence", 1), new StatusChange("handCostIncrease", 2) },
+            effect.StatusChanges);
+    }
+
+    [Theory]
+    [InlineData("\"amount\":1,")]
+    [InlineData("\"name\":\"silence\",")]
+    [InlineData("\"amountSource\":\"handCount\",")]
+    public void Grouped_status_changes_reject_ambiguous_legacy_fields(string legacyField)
+    {
+        var json = $$"""
+        {
+          "id": "grouped", "name": "grouped", "rarity": 1,
+          "cardType": "Skill", "cost": 1,
+          "effects": [{
+            "action": "debuff", "scope": "self", {{legacyField}}
+            "statusChanges": [{ "name": "silence", "amount": 1 }]
+          }]
+        }
+        """;
+
+        Assert.Throws<CardJsonException>(() => CardJsonLoader.Parse(json));
+    }
+
+    [Fact]
+    public void Versioned_schema_parses_typed_card_abilities_and_momentum()
+    {
+        var json = """
+        {
+          "id":"ability_card","name":"Ability card","activeVersion":"v1",
+          "versions":[{"version":"v1","spec":{
+            "rarity":2,"cardType":"Skill","cost":1,
+            "effects":[{
+              "action":"attack","scope":"single","side":"enemy","amount":11,
+              "maxComboMin":3
+            }],
+            "abilities":[
+              {"type":"finisher"},
+              {"type":"reprise","filter":{
+                "cardTypes":["Skill"],
+                "maxOriginalCost":3,
+                "minPaidCost":0,
+                "maxPaidCost":1,
+                "requiredKeywords":["wild"]
+              }}
+            ],
+            "upgradedAbilities":[{
+              "type":"contingency",
+              "trigger":{"timing":"ComboReached","comboThreshold":4}
+            }]
+          }}]
+        }
+        """;
+
+        var definition = CardJsonLoader.Parse(json);
+
+        Assert.Equal(3, Assert.Single(definition.Effects).MaxComboMin);
+        Assert.Collection(
+            definition.EffectiveAbilities(upgraded: false),
+            ability => Assert.IsType<FinisherAbilityDefinition>(ability),
+            ability =>
+            {
+                var reprise = Assert.IsType<RepriseAbilityDefinition>(ability);
+                Assert.Equal(new[] { CardType.Skill }, reprise.Filter.EffectiveCardTypes);
+                Assert.Equal(3, reprise.Filter.MaxOriginalCost);
+                Assert.Equal(0, reprise.Filter.MinPaidCost);
+                Assert.Equal(1, reprise.Filter.MaxPaidCost);
+                Assert.Equal(new[] { "wild" }, reprise.Filter.EffectiveRequiredKeywords);
+            });
+        var contingency = Assert.IsType<ContingencyAbilityDefinition>(
+            Assert.Single(definition.EffectiveAbilities(upgraded: true)));
+        Assert.Equal(ContingencyTriggerTiming.ComboReached, contingency.Trigger.Timing);
+        Assert.Equal(4, contingency.Trigger.ComboThreshold);
+    }
+
+    [Theory]
+    [InlineData("TurnStart")]
+    [InlineData("BeforeEnemyAttack")]
+    public void Parses_non_combo_contingency_triggers_without_threshold(string timing)
+    {
+        var json = """
+        {
+          "id":"contingency","name":"Contingency","rarity":1,"cardType":"Skill","cost":1,
+          "effects":[],
+          "abilities":[{"type":"contingency","trigger":{"timing":"__TIMING__"}}]
+        }
+        """.Replace("__TIMING__", timing);
+
+        var ability = Assert.IsType<ContingencyAbilityDefinition>(
+            Assert.Single(CardJsonLoader.Parse(json).Abilities!));
+
+        Assert.Null(ability.Trigger.ComboThreshold);
+    }
+
+    [Theory]
+    [InlineData("\"abilities\":{}")]
+    [InlineData("\"abilities\":[{\"type\":\"unknown\"}]")]
+    [InlineData("\"abilities\":[{\"type\":\"reprise\"}]")]
+    [InlineData("\"abilities\":[{\"type\":\"reprise\",\"filter\":{\"minOriginalCost\":3,\"maxOriginalCost\":2}}]")]
+    [InlineData("\"abilities\":[{\"type\":\"contingency\",\"trigger\":{\"timing\":\"ComboReached\"}}]")]
+    [InlineData("\"abilities\":[{\"type\":\"contingency\",\"trigger\":{\"timing\":\"TurnStart\",\"comboThreshold\":2}}]")]
+    [InlineData("\"abilities\":[{\"type\":\"finisher\"},{\"type\":\"finisher\"}]")]
+    public void Rejects_malformed_typed_ability_schema(string abilityProperty)
+    {
+        var json = $$"""
+        {
+          "id":"bad_ability","name":"Bad", "rarity":1,"cardType":"Skill","cost":1,
+          "effects":[],{{abilityProperty}}
+        }
+        """;
+
+        Assert.Throws<CardJsonException>(() => CardJsonLoader.Parse(json));
     }
 }

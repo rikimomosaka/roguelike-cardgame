@@ -1,0 +1,45 @@
+{
+  "id": "enhancer_common_first_aid",
+  "name": "応急処置",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Enhancer",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "heal",
+            "scope": "single",
+            "side": "ally",
+            "amount": 4
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "heal",
+            "scope": "single",
+            "side": "ally",
+            "amount": 6
+          }
+        ],
+        "keywords": [
+          "exhaust"
+        ],
+        "upgradedKeywords": [
+          "exhaust"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "id": "striker_basic_step",
+  "name": "踏み込み",
+  "displayName": null,
+  "poolKinds": [
+    "Basic"
+  ],
+  "poolClass": "Striker",
+  "eligibleCharacterIds": [
+    "default"
+  ],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Skill",
+        "cost": 2,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 4
+          },
+          {
+            "action": "gainEnergy",
+            "scope": "self",
+            "amount": 1
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 7
+          },
+          {
+            "action": "gainEnergy",
+            "scope": "self",
+            "amount": 1
+          }
+        ]
+      }
+    }
+  ]
+}

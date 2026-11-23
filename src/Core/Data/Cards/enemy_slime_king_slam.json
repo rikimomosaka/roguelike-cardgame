@@ -1,0 +1,26 @@
+{
+  "id": "enemy_slime_king_slam",
+  "name": "叩き潰し",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy slime_king unique (from move slam)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 35
+          }
+        ]
+      }
+    }
+  ]
+}

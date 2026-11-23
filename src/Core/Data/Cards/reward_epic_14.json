@@ -1,0 +1,69 @@
+{
+  "id": "enhancer_epic_immortal_afterglow",
+  "name": "不滅の余韻",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Enhancer",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 3,
+        "cardType": "Skill",
+        "cost": 2,
+        "effects": [
+          {
+            "action": "buff",
+            "scope": "all",
+            "side": "ally",
+            "statusChanges": [
+              {
+                "name": "vigor",
+                "amount": 1
+              },
+              {
+                "name": "afterglow",
+                "amount": 1
+              }
+            ]
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "buff",
+            "scope": "all",
+            "side": "ally",
+            "statusChanges": [
+              {
+                "name": "vigor",
+                "amount": 1
+              },
+              {
+                "name": "afterglow",
+                "amount": 1
+              }
+            ]
+          },
+          {
+            "action": "heal",
+            "scope": "all",
+            "side": "ally",
+            "amount": 5
+          }
+        ],
+        "keywords": [
+          "exhaust"
+        ],
+        "upgradedKeywords": [
+          "exhaust"
+        ]
+      }
+    }
+  ]
+}

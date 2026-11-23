@@ -6,12 +6,16 @@ namespace RoguelikeCardGame.Core.Battle.Engine;
 /// </summary>
 internal static class AttackDamageMath
 {
-    public static int AdjustForAttacker(int baseAmount, int strength, int weak)
+    public static int AdjustForAttacker(
+        int baseAmount,
+        int strength,
+        int weak,
+        int vigor = 0)
     {
         long boosted = (long)baseAmount + strength;
-        int adjusted = weak > 0
-            ? (int)(boosted * 3 / 4)
-            : (int)boosted;
-        return System.Math.Max(0, adjusted);
+        long adjusted = weak > 0 ? boosted * 3 / 4 : boosted;
+        if (vigor > 0)
+            adjusted = adjusted * 3 / 2;
+        return (int)System.Math.Clamp(adjusted, 0L, int.MaxValue);
     }
 }

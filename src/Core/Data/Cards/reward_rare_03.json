@@ -1,25 +1,63 @@
 {
-    "id":  "reward_rare_03",
-    "name":  "洞察",
-    "displayName":  null,
-    "activeVersion":  "v1",
-    "versions":  [
-                     {
-                         "version":  "v1",
-                         "createdAt":  "2026-05-01T03:54:50Z",
-                         "label":  "original",
-                         "spec":  {
-                                      "rarity":  2,
-                                      "cardType":  "Skill",
-                                      "cost":  0,
-                                      "effects":  [
-                                                      {
-                                                          "action":  "drawCards",
-                                                          "scope":  "self",
-                                                          "amount":  3
-                                                      }
-                                                  ]
-                                  }
-                     }
-                 ]
+  "id": "striker_rare_converging_slash",
+  "name": "収束斬",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Striker",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 2,
+        "cardType": "Attack",
+        "cost": 3,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 16
+          },
+          {
+            "action": "attack",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 10,
+            "maxComboMin": 4
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "attack",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 20
+          },
+          {
+            "action": "attack",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 13,
+            "maxComboMin": 4
+          }
+        ],
+        "abilities": [
+          {
+            "type": "finisher"
+          }
+        ],
+        "upgradedAbilities": [
+          {
+            "type": "finisher"
+          }
+        ]
+      }
+    }
+  ]
 }

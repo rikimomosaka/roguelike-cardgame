@@ -5,6 +5,7 @@ using System.Linq;
 using RoguelikeCardGame.Core.Battle.Definitions;   // 10.2.D: UnitDefinition
 using RoguelikeCardGame.Core.Battle.Events;
 using RoguelikeCardGame.Core.Battle.State;
+using RoguelikeCardGame.Core.Battle.Statuses;
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Random;
@@ -31,30 +32,38 @@ internal static class EffectApplier
         DataCatalog catalog,
         CombatSource? source = null,
         DamageCauseChain? causeChain = null,
-        string? playingCardInstanceId = null)                // 10.2.D
+        string? playingCardInstanceId = null,
+        CardPoolClass? sourcePoolClass = null)                // 10.2.D
     {
         // 10.5.D: AmountSource を runtime 値で resolve。null 指定の effect は素通し。
-        var resolved = ResolveAmount(effect, state, caster);
+        // currentCost is intentionally evaluated once per selected card.  A
+        // skill such as "make every card cost 0" must snapshot each card's
+        // current cost, rather than resolving one shared Amount up front.
+        var resolved = effect.Action == "modifyCardCost" &&
+                       string.Equals(effect.AmountSource, "currentCost", StringComparison.Ordinal)
+            ? effect
+            : ResolveAmount(effect, state, caster);
 
         return resolved.Action switch
         {
             "attack" => ApplyAttack(state, caster, resolved, source, causeChain),
-            "block"  => ApplyBlock(state, caster, resolved),
-            "buff"   => ApplyStatusChange(state, caster, resolved, rng, source),
-            "debuff" => ApplyStatusChange(state, caster, resolved, rng, source),
+            "block"  => ApplyBlock(state, caster, resolved, rng),
+            "buff"   => ApplyStatusChange(state, caster, resolved, rng, catalog, source),
+            "debuff" => ApplyStatusChange(state, caster, resolved, rng, catalog, source),
             "heal"   => ApplyHeal(state, caster, resolved, rng),
-            "draw"   => ApplyDraw(state, caster, resolved, rng),
+            "draw"   => ApplyDraw(state, caster, resolved, rng, catalog),
             // Why: 既存 reward_*.json の draw 効果カードは "drawCards" 記法で
             // 書かれており、potion 側 "draw" と表記揺れしていた。両方サポート
             // することで洞察 / 叡智の奔流 / 戦術的撤退 等の効果が反映される。
-            "drawCards" => ApplyDraw(state, caster, resolved, rng),
+            "drawCards" => ApplyDraw(state, caster, resolved, rng, catalog),
             "discard"=> ApplyDiscard(
                 state, caster, resolved, rng, catalog,
                 playingCardInstanceId),
             "exhaustSelf" => ApplyExhaustSelf(
                 state, caster, rng, catalog, playingCardInstanceId),
             "retainSelf"  => (state, Array.Empty<BattleEvent>()),
-            "gainEnergy"  => ApplyGainEnergy(state, caster, resolved),
+            "gainEnergy"  => ApplyGainEnergy(state, caster, resolved, rng),
+            "gainComboGauge" => ApplyGainComboGauge(state, caster, resolved, rng),
             "exhaustCard" => ApplyExhaustCard(
                 state, caster, resolved, rng, catalog,
                 playingCardInstanceId),
@@ -66,11 +75,16 @@ internal static class EffectApplier
             "selfDamage"        => ApplySelfDamage(
                 state, caster, resolved, rng, catalog, source,
                 playingCardInstanceId),
-            "addCard"           => ApplyAddCard(state, caster, resolved),
-            "recoverFromDiscard"=> ApplyRecoverFromDiscard(state, caster, resolved, rng),
-            "gainMaxEnergy"     => ApplyGainMaxEnergy(state, caster, resolved),
+            "addCard"           => ApplyAddCard(
+                state, caster, resolved, rng, catalog, playingCardInstanceId,
+                ResolveSourcePoolClass(
+                    state, catalog, source, playingCardInstanceId,
+                    sourcePoolClass)),
+            "recoverFromDiscard"=> ApplyRecoverFromDiscard(state, caster, resolved, rng, catalog),
+            "recoverFromExhaust"=> ApplyRecoverFromExhaust(state, caster, resolved, rng, catalog),
+            "gainMaxEnergy"     => ApplyGainMaxEnergy(state, caster, resolved, rng),
             "modifyCardCost"    => ApplyModifyCardCost(
-                state, caster, resolved, rng, source,
+                state, caster, resolved, rng, catalog, source,
                 playingCardInstanceId),
             _        => (state, Array.Empty<BattleEvent>()),
         };
@@ -80,12 +94,36 @@ internal static class EffectApplier
     /// 10.5.D: effect.AmountSource が non-null なら AmountSourceEvaluator で
     /// runtime 値を計算し、新 Amount を持った effect を返す。null は素通し。
     /// </summary>
+    /// <summary>
+    /// 敵カード計画用: 使用時点で確定する AmountSource だけを解決した effect を返す
+    /// （既存仕様どおり AmountSource は使用時固定。能力値参照は実行時に別途評価する）。
+    /// </summary>
+    internal static CardEffect ResolveAmountAtUse(
+        CardEffect effect, BattleState state, CombatActor caster)
+    {
+        // 能力値参照は予約時に固定しない（実行時の有効値を使う）。
+        if (AmountSourceEvaluator.IsActorStatSource(effect.AmountSource))
+            return effect;
+        // 使用時に確定した値は実行時に再評価しない（実行時の root は敵の資源ではない）。
+        var resolved = ResolveAmount(effect, state, caster);
+        return string.IsNullOrEmpty(effect.AmountSource)
+            ? resolved
+            : resolved with { AmountSource = null };
+    }
+
+    /// <summary>敵の予約実行時・予告投影時に、能力値参照 AmountSource を有効値で確定させる。</summary>
+    internal static CardEffect ResolveActorStatAtExecution(
+        CardEffect effect, BattleState state, CombatActor caster)
+        => AmountSourceEvaluator.IsActorStatSource(effect.AmountSource)
+            ? ResolveAmount(effect, state, caster) with { AmountSource = null }
+            : effect;
+
     private static CardEffect ResolveAmount(
         CardEffect effect, BattleState state, CombatActor caster)
     {
         if (string.IsNullOrEmpty(effect.AmountSource)) return effect;
         int evaluated = AmountSourceEvaluator.Evaluate(effect.AmountSource!, state, caster);
-        return effect with { Amount = evaluated };
+        return effect with { Amount = AmountSourceEvaluator.Scale(evaluated, effect.AmountScalePercent) };
     }
 
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyExhaustSelf(
@@ -99,7 +137,8 @@ internal static class EffectApplier
         var events = new List<BattleEvent> { ev };
         // Phase 10.5.L1.5: OnCardExhausted relic / power 発火
         return FireOnCardExhausted(
-            state, events, rng, catalog, playingCardInstanceId);
+            state, caster.InstanceId, events, rng, catalog,
+            playingCardInstanceId);
     }
 
     /// <summary>
@@ -108,31 +147,38 @@ internal static class EffectApplier
     /// state を更新して返す。
     /// </summary>
     private static (BattleState, IReadOnlyList<BattleEvent>) FireOnCardDiscarded(
-        BattleState state, List<BattleEvent> baseEvents, IRng rng,
+        BattleState state, string casterActorInstanceId,
+        List<BattleEvent> baseEvents, IRng rng,
         DataCatalog catalog, string? playingCardInstanceId)
         => FireTrigger(
-            state, baseEvents, "OnCardDiscarded", rng, catalog,
+            state, casterActorInstanceId, baseEvents,
+            "OnCardDiscarded", rng, catalog,
             playingCardInstanceId);
 
     private static (BattleState, IReadOnlyList<BattleEvent>) FireOnCardExhausted(
-        BattleState state, List<BattleEvent> baseEvents, IRng rng,
+        BattleState state, string casterActorInstanceId,
+        List<BattleEvent> baseEvents, IRng rng,
         DataCatalog catalog, string? playingCardInstanceId)
         => FireTrigger(
-            state, baseEvents, "OnCardExhausted", rng, catalog,
+            state, casterActorInstanceId, baseEvents,
+            "OnCardExhausted", rng, catalog,
             playingCardInstanceId);
 
     private static (BattleState, IReadOnlyList<BattleEvent>) FireTrigger(
-        BattleState state, List<BattleEvent> baseEvents, string trigger,
+        BattleState state, string casterActorInstanceId,
+        List<BattleEvent> baseEvents, string trigger,
         IRng rng, DataCatalog catalog, string? playingCardInstanceId)
     {
         var s = state;
-        var (afterRelic, evsRelic) = RelicTriggerProcessor.Fire(
-            s, trigger, catalog, rng, orderStart: baseEvents.Count,
+        var (afterRelic, evsRelic) = RelicTriggerProcessor.FireFromProjectedOwner(
+            s, casterActorInstanceId, trigger, catalog, rng,
+            orderStart: baseEvents.Count,
             playingCardInstanceId: playingCardInstanceId);
         s = afterRelic;
         baseEvents.AddRange(evsRelic);
-        var (afterPower, evsPower) = PowerTriggerProcessor.Fire(
-            s, trigger, catalog, rng, orderStart: baseEvents.Count,
+        var (afterPower, evsPower) = PowerTriggerProcessor.FireFromProjectedOwner(
+            s, casterActorInstanceId, trigger, catalog, rng,
+            orderStart: baseEvents.Count,
             playingCardInstanceId: playingCardInstanceId);
         s = afterPower;
         baseEvents.AddRange(evsPower);
@@ -140,17 +186,77 @@ internal static class EffectApplier
     }
 
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyGainEnergy(
-        BattleState state, CombatActor caster, CardEffect effect)
+        BattleState state, CombatActor caster, CardEffect effect, IRng rng)
     {
-        if (effect.Scope != EffectScope.Self)
-            throw new InvalidOperationException(
-                $"gainEnergy requires Scope=Self, got {effect.Scope}");
-        var next = state with { Energy = EnergyMath.AddSaturating(state.Energy, effect.Amount) };
-        var ev = new BattleEvent(
-            BattleEventKind.GainEnergy, Order: 0,
-            CasterInstanceId: caster.InstanceId,
-            Amount: effect.Amount);
-        return (next, new[] { ev });
+        var targets = ResolveParticipantResourceTargets(
+            state, caster, effect, rng, "gainEnergy");
+        var events = new List<BattleEvent>();
+        var next = state;
+        foreach (var target in targets)
+        {
+            next = ApplyToParticipantResources(
+                next, caster, target,
+                projected => projected with
+                {
+                    Energy = EnergyMath.AddSaturating(
+                        projected.Energy, effect.Amount),
+                });
+            events.Add(new BattleEvent(
+                BattleEventKind.GainEnergy,
+                Order: events.Count,
+                CasterInstanceId: caster.InstanceId,
+                TargetInstanceId: target.InstanceId,
+                Amount: effect.Amount));
+        }
+        return (next, events);
+    }
+
+    private static (BattleState, IReadOnlyList<BattleEvent>) ApplyGainComboGauge(
+        BattleState state, CombatActor caster, CardEffect effect, IRng rng)
+    {
+        var targets = ResolveParticipantResourceTargets(
+            state, caster, effect, rng, "gainComboGauge");
+        var events = new List<BattleEvent>();
+        var next = state;
+        foreach (var target in targets)
+        {
+            int actualChange = 0;
+            next = ApplyToParticipantResources(
+                next, caster, target,
+                projected =>
+                {
+                    int before = Math.Clamp(
+                        projected.ComboGauge, 0, BattleEngine.MaxComboGauge);
+                    int after = (int)Math.Clamp(
+                        (long)before + effect.Amount,
+                        0L,
+                        BattleEngine.MaxComboGauge);
+                    actualChange = after - before;
+                    return projected with { ComboGauge = after };
+                });
+            if (actualChange == 0)
+                continue;
+            events.Add(new BattleEvent(
+                BattleEventKind.ComboGaugeChanged,
+                Order: events.Count,
+                CasterInstanceId: caster.InstanceId,
+                TargetInstanceId: target.InstanceId,
+                Amount: actualChange,
+                Note: $"remaining={ResolveParticipantComboGauge(next, target)}"));
+        }
+        return (next, events);
+    }
+
+    private static int ResolveParticipantComboGauge(
+        BattleState state,
+        CombatActor target)
+    {
+        if (state.Participants.IsDefaultOrEmpty)
+            return state.ComboGauge;
+        return BattleParticipantAccess.TryGetByActor(
+                state, target.InstanceId, out var participant)
+            ? participant.ComboGauge
+            : 0;
     }
 
     // ========== Phase 10.5.F handlers ==========
@@ -176,6 +282,8 @@ internal static class EffectApplier
         int overkill = Math.Max(0, damage - hpBefore);
         int newHp = Math.Max(0, current.CurrentHp - damage);
         var updated = current with { CurrentHp = newHp };
+        bool revived = BattleStatusRules.TryRevive(updated, out var afterRevive);
+        updated = afterRevive;
         var next = ReplaceActor(state, caster.InstanceId, updated);
         var resolvedSource = source ?? new CombatSource(
             CombatSourceKind.Unattributed,
@@ -199,7 +307,20 @@ internal static class EffectApplier
                 HitLanded: damage > 0),
         };
         int order = 1;
-        if (current.IsAlive && !updated.IsAlive)
+        if (revived)
+        {
+            events.Add(new BattleEvent(
+                BattleEventKind.RemoveStatus, Order: order++,
+                TargetInstanceId: caster.InstanceId,
+                Note: BattleStatusIds.Revive,
+                Source: current.GetStatusSource(BattleStatusIds.Revive)));
+            events.Add(new BattleEvent(
+                BattleEventKind.Heal, Order: order++,
+                TargetInstanceId: caster.InstanceId,
+                Amount: updated.CurrentHp,
+                Note: BattleStatusIds.Revive));
+        }
+        else if (current.IsAlive && !updated.IsAlive)
         {
             events.Add(new BattleEvent(
                 BattleEventKind.ActorDeath, Order: order++,
@@ -210,11 +331,11 @@ internal static class EffectApplier
                 ActualHpLoss: actualHpLoss, Overkill: overkill,
                 HitLanded: damage > 0));
         }
-        else if (updated.DefinitionId == "hero" && updated.IsAlive && actualHpLoss > 0)
+        else if (updated.IsAlive && actualHpLoss > 0)
         {
-            // 10.5.E: hero に damage が入った直後 OnDamageReceived power fire
-            var (afterPower, evsPower) = PowerTriggerProcessor.FireOnDamageReceived(
-                next, catalog, rng, orderStart: order,
+            var (afterPower, evsPower) =
+                PowerTriggerProcessor.FireOnDamageReceivedFromProjectedOwner(
+                next, caster.InstanceId, catalog, rng, orderStart: order,
                 playingCardInstanceId: playingCardInstanceId);
             next = afterPower;
             foreach (var ev in evsPower) { events.Add(ev with { Order = order++ }); }
@@ -228,7 +349,9 @@ internal static class EffectApplier
     /// hand 上限 (10) 超過分は discard に流す。CardRefId / Pile は必須。
     /// </summary>
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyAddCard(
-        BattleState state, CombatActor caster, CardEffect effect)
+        BattleState state, CombatActor caster, CardEffect effect, IRng rng,
+        DataCatalog catalog, string? playingCardInstanceId,
+        CardPoolClass sourcePoolClass)
     {
         if (string.IsNullOrEmpty(effect.CardRefId))
             throw new InvalidOperationException(
@@ -242,12 +365,19 @@ internal static class EffectApplier
         int added = 0;
         for (int i = 0; i < effect.Amount; i++)
         {
+            var allocation = AllocateBattleCardInstanceId(
+                s, effect.CardRefId!, playingCardInstanceId);
+            s = allocation.State;
             var instance = new BattleCardInstance(
-                InstanceId: NewBattleInstanceId(effect.CardRefId!),
+                InstanceId: allocation.InstanceId,
                 CardDefinitionId: effect.CardRefId!,
                 IsUpgraded: false,
-                CostOverride: null);
-            s = AddInstanceToPile(s, instance, effect.Pile!);
+                CostOverride: null)
+            {
+                PoolClassOverride = sourcePoolClass,
+            };
+            s = AddInstanceToPile(
+                s, instance, effect.Pile!, rng, caster, catalog);
             added++;
         }
 
@@ -260,12 +390,110 @@ internal static class EffectApplier
     }
 
     /// <summary>
+    /// Resolves the pool of the effect that is creating a card. Effect-only
+    /// executions supply their immutable snapshot pool explicitly because the
+    /// original card may no longer exist in any pile. Ordinary card and power
+    /// effects resolve their concrete source instance across every owner zone,
+    /// then fall back to the source definition. Non-card/unknown sources
+    /// intentionally generate Universal cards.
+    /// </summary>
+    private static CardPoolClass ResolveSourcePoolClass(
+        BattleState state,
+        DataCatalog catalog,
+        CombatSource? source,
+        string? playingCardInstanceId,
+        CardPoolClass? explicitPoolClass)
+    {
+        if (explicitPoolClass is { } explicitPool)
+            return explicitPool;
+
+        if (source is not null)
+        {
+            if (source.Kind is not (
+                    CombatSourceKind.CardEffect
+                    or CombatSourceKind.PowerEffect))
+                return CardPoolClass.Universal;
+
+            if (TryResolveCardInstancePoolClass(
+                    state, catalog, source.InstanceId, out var instancePool))
+                return instancePool;
+
+            return !string.IsNullOrEmpty(source.DefinitionId)
+                && catalog.TryGetCard(source.DefinitionId, out var sourceDefinition)
+                ? sourceDefinition.PoolClass ?? CardPoolClass.Universal
+                : CardPoolClass.Universal;
+        }
+
+        return TryResolveCardInstancePoolClass(
+                state, catalog, playingCardInstanceId, out var playingPool)
+            ? playingPool
+            : CardPoolClass.Universal;
+    }
+
+    private static bool TryResolveCardInstancePoolClass(
+        BattleState state,
+        DataCatalog catalog,
+        string? instanceId,
+        out CardPoolClass poolClass)
+    {
+        if (string.IsNullOrEmpty(instanceId))
+        {
+            poolClass = default;
+            return false;
+        }
+
+        foreach (var card in EnumerateBattleCards(state))
+        {
+            if (!string.Equals(
+                    card.InstanceId, instanceId, StringComparison.Ordinal))
+                continue;
+
+            catalog.TryGetCard(card.CardDefinitionId, out var definition);
+            poolClass = card.EffectivePoolClass(definition);
+            return true;
+        }
+
+        poolClass = default;
+        return false;
+    }
+
+    private static IEnumerable<BattleCardInstance> EnumerateBattleCards(
+        BattleState state)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var card in EnumerateRootBattleCards(state).Concat(
+                     BattleParticipantAccess.EffectiveParticipants(state)
+                         .SelectMany(EnumerateParticipantBattleCards)))
+        {
+            if (seen.Add(card.InstanceId))
+                yield return card;
+        }
+    }
+
+    private static IEnumerable<BattleCardInstance> EnumerateRootBattleCards(
+        BattleState state) => state.DrawPile
+        .Concat(state.Hand)
+        .Concat(state.DiscardPile)
+        .Concat(state.ExhaustPile)
+        .Concat(state.SummonHeld)
+        .Concat(state.PowerCards);
+
+    private static IEnumerable<BattleCardInstance> EnumerateParticipantBattleCards(
+        BattleParticipantState participant) => participant.DrawPile
+        .Concat(participant.Hand)
+        .Concat(participant.DiscardPile)
+        .Concat(participant.ExhaustPile)
+        .Concat(participant.SummonHeld)
+        .Concat(participant.PowerCards);
+
+    /// <summary>
     /// 10.5.F: discard pile から N 枚を hand or exhaust に移動。
     /// Select=all/random 対応。choose は NotImplementedException (10.5.M で実装)。
     /// hand overflow は discard に戻す。
     /// </summary>
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyRecoverFromDiscard(
-        BattleState state, CombatActor caster, CardEffect effect, IRng rng)
+        BattleState state, CombatActor caster, CardEffect effect, IRng rng,
+        DataCatalog catalog)
     {
         if (effect.Pile != "hand" && effect.Pile != "exhaust")
             throw new InvalidOperationException(
@@ -302,7 +530,8 @@ internal static class EffectApplier
         var s = state with { DiscardPile = discardBuilder.ToImmutable() };
         foreach (var card in picked)
         {
-            s = AddInstanceToPile(s, card, effect.Pile!);
+            s = AddInstanceToPile(
+                s, card, effect.Pile!, rng, caster, catalog);
         }
 
         var ev = new BattleEvent(
@@ -314,25 +543,127 @@ internal static class EffectApplier
     }
 
     /// <summary>
+    /// Moves ordinary cards from Exhaust to another ordinary pile. Armed
+    /// Contingencies participate in the same selection pool, but leaving
+    /// Exhaust disarms them before they enter the destination. Returning the
+    /// same instance to Exhaust later therefore never arms it implicitly.
+    /// </summary>
+    private static (BattleState, IReadOnlyList<BattleEvent>) ApplyRecoverFromExhaust(
+        BattleState state, CombatActor caster, CardEffect effect, IRng rng,
+        DataCatalog catalog)
+    {
+        ValidateRecoverFromExhaustDestination(effect.Pile);
+
+        string select = effect.Select ?? "random";
+        var source = state.ExhaustPile.ToBuilder();
+        var picked = new List<BattleCardInstance>();
+
+        if (select == "all")
+        {
+            picked.AddRange(source);
+            source.Clear();
+        }
+        else if (select == "choose")
+        {
+            int target = Math.Min(effect.Amount, source.Count);
+            for (int i = 0; i < target; i++)
+            {
+                picked.Add(source[0]);
+                source.RemoveAt(0);
+            }
+        }
+        else if (select == "random")
+        {
+            int target = Math.Min(effect.Amount, source.Count);
+            for (int i = 0; i < target; i++)
+            {
+                int index = rng.NextInt(0, source.Count);
+                picked.Add(source[index]);
+                source.RemoveAt(index);
+            }
+        }
+        else
+        {
+            throw new InvalidOperationException(
+                $"recoverFromExhaust invalid Select '{effect.Select}', expected all|random|choose");
+        }
+
+        return CompleteRecoverFromExhaust(
+            state, caster, effect, select, source, picked, rng, catalog);
+    }
+
+    private static (BattleState, IReadOnlyList<BattleEvent>) CompleteRecoverFromExhaust(
+        BattleState state,
+        CombatActor caster,
+        CardEffect effect,
+        string select,
+        ImmutableArray<BattleCardInstance>.Builder remainingExhaust,
+        IReadOnlyList<BattleCardInstance> picked,
+        IRng rng,
+        DataCatalog catalog)
+    {
+        if (picked.Count == 0)
+            return (state, Array.Empty<BattleEvent>());
+
+        // Prune at the source-removal boundary, not after the destination is
+        // populated. This preserves the "leave once = disarmed" invariant even
+        // when a later effect in the same resolution returns the card to Exhaust.
+        var s = BattleEngine.PruneArmedContingencies(state with
+        {
+            ExhaustPile = remainingExhaust.ToImmutable(),
+        });
+        foreach (var card in picked)
+        {
+            s = AddInstanceToPile(
+                s, card, effect.Pile!, rng, caster, catalog);
+        }
+
+        return (s, new[]
+        {
+            new BattleEvent(
+                BattleEventKind.RecoverFromExhaust,
+                Order: 0,
+                CasterInstanceId: caster.InstanceId,
+                Amount: picked.Count,
+                Note: $"exhaust:{select}:{effect.Pile}"),
+        });
+    }
+
+    private static void ValidateRecoverFromExhaustDestination(string? pile)
+    {
+        if (pile is not ("hand" or "draw" or "discard"))
+            throw new InvalidOperationException(
+                $"recoverFromExhaust requires Pile='hand', 'draw', or 'discard', got '{pile}'");
+    }
+
+    /// <summary>
     /// 10.5.F: ターン開始時の Energy 追加量（互換名 EnergyMax）を永続的に増やす。
     /// 当ターンの Energy はそのままで、次ターン以降の持越し加算へ反映する。
     /// </summary>
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyGainMaxEnergy(
-        BattleState state, CombatActor caster, CardEffect effect)
+        BattleState state, CombatActor caster, CardEffect effect, IRng rng)
     {
-        if (effect.Scope != EffectScope.Self)
-            throw new InvalidOperationException(
-                $"gainMaxEnergy requires Scope=Self, got {effect.Scope}");
-
-        var next = state with
+        var targets = ResolveParticipantResourceTargets(
+            state, caster, effect, rng, "gainMaxEnergy");
+        var events = new List<BattleEvent>();
+        var next = state;
+        foreach (var target in targets)
         {
-            EnergyMax = EnergyMath.AddSaturating(state.EnergyMax, effect.Amount),
-        };
-        var ev = new BattleEvent(
-            BattleEventKind.GainMaxEnergy, Order: 0,
-            CasterInstanceId: caster.InstanceId,
-            Amount: effect.Amount);
-        return (next, new[] { ev });
+            next = ApplyToParticipantResources(
+                next, caster, target,
+                projected => projected with
+                {
+                    EnergyMax = EnergyMath.AddSaturating(
+                        projected.EnergyMax, effect.Amount),
+                });
+            events.Add(new BattleEvent(
+                BattleEventKind.GainMaxEnergy,
+                Order: events.Count,
+                CasterInstanceId: caster.InstanceId,
+                TargetInstanceId: target.InstanceId,
+                Amount: effect.Amount));
+        }
+        return (next, events);
     }
 
     /// <summary>
@@ -340,10 +671,13 @@ internal static class EffectApplier
     /// hand 上限超過時は discard に流す。draw は top (先頭) に挿入。
     /// </summary>
     private static BattleState AddInstanceToPile(
-        BattleState state, BattleCardInstance instance, string pile) => pile switch
+        BattleState state, BattleCardInstance instance, string pile, IRng rng,
+        CombatActor owner, DataCatalog catalog) => pile switch
     {
-        "hand" => state.Hand.Length < DrawHelper.HandCap
-            ? state with { Hand = state.Hand.Add(instance) }
+        "hand" => state.Hand.Length < ResolveHandLimit(state, owner, catalog)
+            ? state with { Hand = state.Hand.Add(
+                BattleStatusRules.ApplyConfusionOnHandEntry(
+                    state, instance, rng, owner)) }
             : state with { DiscardPile = state.DiscardPile.Add(instance) },
         "draw"    => state with { DrawPile = state.DrawPile.Insert(0, instance) },
         "discard" => state with { DiscardPile = state.DiscardPile.Add(instance) },
@@ -353,11 +687,81 @@ internal static class EffectApplier
     };
 
     /// <summary>
-    /// 10.5.F: addCard 等で生成する InstanceId 採番。RNG 非依存で衝突予防。
-    /// 形式: "{cardRefId}-{Guid 8 char}"。
+    /// Allocates a replay-stable, battle-wide card id without consuming RNG.
+    /// The monotonic ordinal is persisted in BattleState; the collision scan
+    /// also makes migrated or hand-crafted states safe when it starts at zero.
     /// </summary>
-    private static string NewBattleInstanceId(string cardRefId)
-        => $"{cardRefId}-{Guid.NewGuid().ToString("N").Substring(0, 8)}";
+    private static (BattleState State, string InstanceId)
+        AllocateBattleCardInstanceId(
+            BattleState state,
+            string cardRefId,
+            string? playingCardInstanceId)
+    {
+        long ordinal = Math.Max(0L, state.NextGeneratedCardOrdinal);
+        while (ordinal < long.MaxValue)
+        {
+            string candidate = $"{cardRefId}-generated-{ordinal}";
+            if (!ContainsCardInstanceId(
+                    state, candidate, playingCardInstanceId))
+            {
+                return (
+                    state with { NextGeneratedCardOrdinal = ordinal + 1L },
+                    candidate);
+            }
+
+            ordinal++;
+        }
+
+        throw new InvalidOperationException(
+            "The generated battle-card instance id sequence is exhausted.");
+    }
+
+    private static bool ContainsCardInstanceId(
+        BattleState state,
+        string candidate,
+        string? playingCardInstanceId)
+    {
+        if (string.Equals(
+                candidate,
+                playingCardInstanceId,
+                StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        static bool Contains(
+            ImmutableArray<BattleCardInstance> cards,
+            string instanceId) => cards.Any(card => string.Equals(
+                card.InstanceId, instanceId, StringComparison.Ordinal));
+
+        if (Contains(state.DrawPile, candidate)
+            || Contains(state.Hand, candidate)
+            || Contains(state.DiscardPile, candidate)
+            || Contains(state.ExhaustPile, candidate)
+            || Contains(state.SummonHeld, candidate)
+            || Contains(state.PowerCards, candidate))
+        {
+            return true;
+        }
+
+        if (state.Participants.IsDefaultOrEmpty)
+            return false;
+
+        foreach (var participant in state.Participants)
+        {
+            if (Contains(participant.DrawPile, candidate)
+                || Contains(participant.Hand, candidate)
+                || Contains(participant.DiscardPile, candidate)
+                || Contains(participant.ExhaustPile, candidate)
+                || Contains(participant.SummonHeld, candidate)
+                || Contains(participant.PowerCards, candidate))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyAttack(
         BattleState state, CombatActor caster, CardEffect effect, CombatSource? source,
@@ -368,7 +772,15 @@ internal static class EffectApplier
         var hit = new AttackHit(
             effect.Amount,
             source ?? CombatSource.Unattributed,
-            causeChain ?? DamageCauseChain.Empty);
+            causeChain ?? DamageCauseChain.Empty)
+        {
+            // PlayCard projects the acting participant into the legacy root
+            // fields before effects run. Capture that command-time selection
+            // here so later target changes cannot redirect an earlier card.
+            TargetInstanceId = effect.Scope == EffectScope.Single
+                ? GetSelectedEnemyInstanceId(state)
+                : null,
+        };
         var updated = effect.Scope switch
         {
             EffectScope.Single => current with { AttackSingle = current.AttackSingle.Add(hit) },
@@ -377,19 +789,42 @@ internal static class EffectApplier
             _ => current, // Self は CardEffect.Normalize で弾かれる想定
         };
         var next = ReplaceActor(state, caster.InstanceId, updated);
-        return (next, Array.Empty<BattleEvent>());
+        if (effect.Scope is not (EffectScope.Single or EffectScope.Random or EffectScope.All))
+            return (next, Array.Empty<BattleEvent>());
+
+        return (next, new[]
+        {
+            new BattleEvent(
+                BattleEventKind.GainAttack,
+                Order: 0,
+                CasterInstanceId: current.InstanceId,
+                TargetInstanceId: current.InstanceId,
+                Amount: effect.Amount,
+                Note: effect.Scope.ToString().ToLowerInvariant(),
+                Source: source,
+                CauseChain: causeChain),
+        });
+    }
+
+    private static string? GetSelectedEnemyInstanceId(BattleState state)
+    {
+        if (state.TargetEnemyIndex is not { } index
+            || index < 0
+            || index >= state.Enemies.Length)
+            return null;
+
+        return state.Enemies[index].InstanceId;
     }
 
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyBlock(
-        BattleState state, CombatActor caster, CardEffect effect)
+        BattleState state, CombatActor caster, CardEffect effect, IRng rng)
     {
         // Why: 防御カードを「味方単体対象 (含 hero)」でも撃てるようにするため、
         // scope=Self 以外 (Single+Ally / All+Ally など) も ResolveTargets 経由で
         // 受ける。stale ref 対策で各 target を InstanceId で再取得する。
-        // FakeRng は使わない (block は決定論)。
         IReadOnlyList<CombatActor> targets = effect.Scope == EffectScope.Self
             ? new[] { caster }
-            : ResolveTargets(state, caster, effect, new RoguelikeCardGame.Core.Random.SystemRng(0));
+            : ResolveTargets(state, caster, effect, rng);
         if (targets.Count == 0) return (state, Array.Empty<BattleEvent>());
 
         var s = state;
@@ -412,10 +847,12 @@ internal static class EffectApplier
 
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyStatusChange(
         BattleState state, CombatActor caster, CardEffect effect, IRng rng,
-        CombatSource? source)
+        DataCatalog catalog, CombatSource? source)
     {
-        if (string.IsNullOrEmpty(effect.Name))
-            throw new InvalidOperationException($"buff/debuff effect requires Name (status id), got null/empty");
+        var changes = effect.EffectiveStatusChanges();
+        if (changes.Count == 0)
+            throw new InvalidOperationException(
+                "buff/debuff effect requires name/amount or a non-empty statusChanges array");
 
         var targets = ResolveTargets(state, caster, effect, rng);
         if (targets.Count == 0)
@@ -424,6 +861,19 @@ internal static class EffectApplier
         var events = new List<BattleEvent>();
         int order = 0;
         var s = state;
+        var currentCaster = FindActor(state, caster.InstanceId) ?? caster;
+        // Resonance follows the resolved target set, not the authored scope.
+        // A Single ally buff explicitly aimed at the caster is a self-only
+        // application; a buff aimed at somebody else or at multiple actors is
+        // not.  This also keeps Random/All deterministic after target choice.
+        bool mayTriggerResonance = effect.Action == "buff"
+            && targets.Count == 1
+            && string.Equals(
+                targets[0].InstanceId,
+                caster.InstanceId,
+                StringComparison.Ordinal)
+            && currentCaster.GetStatus(BattleStatusIds.Resonance) > 0;
+        var resonanceChanges = new List<StatusChange>();
 
         // InstanceId snapshot で各 target を更新
         var targetIds = targets.Select(t => t.InstanceId).ToList();
@@ -433,80 +883,161 @@ internal static class EffectApplier
             CombatActor? current = FindActor(s, tid);
             if (current is null) continue;
 
-            int currentAmount = current.GetStatus(effect.Name);
-            int newAmount = currentAmount + effect.Amount;
-
-            // Phase 10.6.B フォローアップ: strength / dexterity は signed (負値も保持)。
-            // weak / vulnerable / poison 等の ailment は従来どおり 0 以下で remove。
-            bool isSigned = SignedStatuses.Contains(effect.Name);
-            ImmutableDictionary<string, int> newStatuses;
-            if (isSigned)
+            // A grouped debuff is one application. Resistance therefore blocks the
+            // complete group and spends one stack instead of applying only part of it.
+            bool isDebuff = changes.Any(change => IsHarmfulStatusChange(effect.Action, change));
+            int resistance = current.GetStatus(BattleStatusIds.Resistance);
+            if (isDebuff && resistance > 0)
             {
-                // signed: 0 のみ remove、それ以外 (正/負) は保持
-                newStatuses = newAmount == 0
-                    ? current.Statuses.Remove(effect.Name)
-                    : current.Statuses.SetItem(effect.Name, newAmount);
-            }
-            else
-            {
-                // unsigned: 0 以下で remove (既存挙動)
-                newStatuses = newAmount <= 0
-                    ? current.Statuses.Remove(effect.Name)
-                    : current.Statuses.SetItem(effect.Name, newAmount);
-            }
-
-            var statusSources = current.StatusSources;
-            bool statusRemoved = isSigned ? newAmount == 0 : newAmount <= 0;
-            if (statusRemoved)
-            {
-                statusSources = statusSources.Remove(effect.Name);
-            }
-            else if (effect.Amount > 0)
-            {
-                // The most recent positive application owns future status ticks.
-                // A null producer deliberately replaces any stale owner with
-                // Unattributed instead of crediting the previous applier.
-                statusSources = statusSources.SetItem(
-                    effect.Name, source ?? CombatSource.Unattributed);
-            }
-
-            var updated = current with
-            {
-                Statuses = newStatuses,
-                StatusSources = statusSources,
-            };
-            s = ReplaceActor(s, tid, updated);
-
-            // signed 系は値変化時に常に ApplyStatus 発火 (負値含む)
-            // unsigned 系は newAmount > 0 のときのみ ApplyStatus
-            bool didApply = isSigned
-                ? (newAmount != 0 && currentAmount != newAmount)
-                : (newAmount > 0 && currentAmount != newAmount);
-            bool didRemove = isSigned
-                ? (newAmount == 0 && currentAmount != 0)
-                : (newAmount <= 0 && currentAmount > 0);
-
-            if (didApply)
-            {
+                var resisted = BattleStatusRules.Decrement(
+                    current, BattleStatusIds.Resistance);
+                s = ReplaceActor(s, tid, resisted);
                 events.Add(new BattleEvent(
-                    BattleEventKind.ApplyStatus, Order: order++,
+                    resistance == 1
+                        ? BattleEventKind.RemoveStatus
+                        : BattleEventKind.ApplyStatus,
+                    Order: order++,
                     CasterInstanceId: caster.InstanceId,
                     TargetInstanceId: tid,
-                    Amount: effect.Amount,
-                    Note: effect.Name,
-                    Source: source ?? CombatSource.Unattributed));
+                    Amount: -1,
+                    Note: BattleStatusIds.Resistance,
+                    Source: current.GetStatusSource(BattleStatusIds.Resistance)));
+                continue;
             }
-            else if (didRemove)
+
+            foreach (var change in changes)
             {
-                events.Add(new BattleEvent(
-                    BattleEventKind.RemoveStatus, Order: order++,
-                    TargetInstanceId: tid,
-                    Note: effect.Name,
-                    Source: source ?? CombatSource.Unattributed));
+                current = FindActor(s, tid);
+                if (current is null) break;
+
+                int currentAmount = current.GetStatus(change.Name);
+                bool isPositiveAfterglow =
+                    string.Equals(
+                        change.Name,
+                        BattleStatusIds.Afterglow,
+                        StringComparison.Ordinal)
+                    && change.Amount > 0;
+                int newAmount = isPositiveAfterglow
+                    ? 1
+                    : (int)Math.Clamp(
+                        (long)currentAmount + change.Amount,
+                        int.MinValue,
+                        int.MaxValue);
+
+                // Phase 10.6.B フォローアップ: strength / dexterity は signed (負値も保持)。
+                // weak / vulnerable / poison 等の ailment は従来どおり 0 以下で remove。
+                bool isSigned = SignedStatuses.Contains(change.Name);
+                ImmutableDictionary<string, int> newStatuses;
+                if (isSigned)
+                {
+                    // signed: 0 のみ remove、それ以外 (正/負) は保持
+                    newStatuses = newAmount == 0
+                        ? current.Statuses.Remove(change.Name)
+                        : current.Statuses.SetItem(change.Name, newAmount);
+                }
+                else
+                {
+                    // unsigned: 0 以下で remove (既存挙動)
+                    newStatuses = newAmount <= 0
+                        ? current.Statuses.Remove(change.Name)
+                        : current.Statuses.SetItem(change.Name, newAmount);
+                }
+
+                var statusSources = current.StatusSources;
+                bool statusRemoved = isSigned ? newAmount == 0 : newAmount <= 0;
+                var statusDisplayOrder = BattleStatusRules.NormalizeStatusDisplayOrder(current);
+                if (statusRemoved)
+                {
+                    statusSources = statusSources.Remove(change.Name);
+                    statusDisplayOrder = statusDisplayOrder.Remove(change.Name);
+                }
+                else if (change.Amount > 0)
+                {
+                    // The most recent positive application owns future status ticks.
+                    // A null producer deliberately replaces any stale owner with
+                    // Unattributed instead of crediting the previous applier.
+                    statusSources = statusSources.SetItem(
+                        change.Name, source ?? CombatSource.Unattributed);
+                    if (currentAmount == 0)
+                        statusDisplayOrder = statusDisplayOrder.Remove(change.Name).Add(change.Name);
+                }
+
+                var updated = current with
+                {
+                    Statuses = newStatuses,
+                    StatusSources = statusSources,
+                    StatusDisplayOrder = statusDisplayOrder,
+                };
+                s = ReplaceActor(s, tid, updated);
+
+                // signed 系は値変化時に常に ApplyStatus 発火 (負値含む)
+                // unsigned 系は newAmount > 0 のときのみ ApplyStatus
+                bool didApply = isPositiveAfterglow
+                    ? currentAmount <= 0
+                    : isSigned
+                        ? (newAmount != 0 && currentAmount != newAmount)
+                        : (newAmount > 0 && currentAmount != newAmount);
+                bool didRemove = isSigned
+                    ? (newAmount == 0 && currentAmount != 0)
+                    : (newAmount <= 0 && currentAmount > 0);
+
+                if (didApply)
+                {
+                    events.Add(new BattleEvent(
+                        BattleEventKind.ApplyStatus, Order: order++,
+                        CasterInstanceId: caster.InstanceId,
+                        TargetInstanceId: tid,
+                        Amount: isPositiveAfterglow
+                            ? Math.Max(0, newAmount - currentAmount)
+                            : change.Amount,
+                        Note: change.Name,
+                        Source: source ?? CombatSource.Unattributed));
+
+                    if (mayTriggerResonance
+                        && string.Equals(tid, caster.InstanceId, StringComparison.Ordinal)
+                        && change.Amount > 0
+                        && !string.Equals(
+                            change.Name,
+                            BattleStatusIds.Resonance,
+                            StringComparison.Ordinal)
+                        && StatusDefinition.Get(change.Name).Kind == StatusKind.Buff)
+                    {
+                        resonanceChanges.Add(isPositiveAfterglow
+                            ? change with { Amount = 1 }
+                            : change);
+                    }
+                }
+                else if (didRemove)
+                {
+                    events.Add(new BattleEvent(
+                        BattleEventKind.RemoveStatus, Order: order++,
+                        TargetInstanceId: tid,
+                        Note: change.Name,
+                        Source: source ?? CombatSource.Unattributed));
+                }
             }
         }
 
+        if (resonanceChanges.Count > 0)
+            s = PositiveBuffApplicationRules.ApplyResonance(
+                s,
+                caster.InstanceId,
+                currentCaster.GetStatus(BattleStatusIds.Resonance),
+                resonanceChanges,
+                source,
+                events,
+                ref order,
+                catalog,
+                rng);
+
         return (s, events);
+    }
+
+    private static bool IsHarmfulStatusChange(string action, StatusChange change)
+    {
+        var statusDefinition = StatusDefinition.Get(change.Name);
+        return statusDefinition.Kind == StatusKind.Debuff && change.Amount > 0
+            || action == "debuff" && SignedStatuses.Contains(change.Name) && change.Amount < 0;
     }
 
     private static IReadOnlyList<CombatActor> ResolveTargets(
@@ -574,6 +1105,145 @@ internal static class EffectApplier
         bool casterIsAlly = caster.Side == ActorSide.Ally;
         return (casterIsAlly && side == EffectSide.Ally)
             || (!casterIsAlly && side == EffectSide.Enemy);
+    }
+
+    /// <summary>
+    /// Card resources belong to battle participants, not to the shared battle
+    /// root. Self targets the acting participant; Single/Random/All may target
+    /// another allied participant through the normal actor targeting rules.
+    /// </summary>
+    private static IReadOnlyList<CombatActor> ResolveParticipantResourceTargets(
+        BattleState state,
+        CombatActor caster,
+        CardEffect effect,
+        IRng rng,
+        string action)
+    {
+        if (effect.Scope != EffectScope.Self && effect.Side != EffectSide.Ally)
+            throw new InvalidOperationException(
+                $"{action} requires Side=Ally for scope {effect.Scope}, got {effect.Side}");
+
+        IReadOnlyList<CombatActor> targets;
+        if (effect.Scope is EffectScope.Random or EffectScope.All)
+        {
+            // Resource effects can only be applied to actors backed by a
+            // BattleParticipant. A legacy fixed-move summon may share the
+            // allied actor pool, but it has no hand/energy/card-cost state and
+            // therefore must not enter an All result or a Random draw.
+            var candidates = ResolveSidePool(state, caster, effect.Side!.Value)
+                .Where(target => target.IsAlive
+                    && OwnsParticipantResources(state, target))
+                .ToList();
+            if (effect.Scope == EffectScope.All)
+            {
+                targets = candidates;
+            }
+            else if (candidates.Count == 0)
+            {
+                targets = Array.Empty<CombatActor>();
+            }
+            else
+            {
+                targets = new[] { candidates[rng.NextInt(0, candidates.Count)] };
+            }
+        }
+        else
+        {
+            // Preserve explicit Single semantics: selecting an actor that has
+            // no participant remains an authoring/command error rather than a
+            // silent no-op.
+            targets = ResolveTargets(state, caster, effect, rng);
+        }
+
+        foreach (var target in targets)
+        {
+            if (!OwnsParticipantResources(state, target))
+                throw new InvalidOperationException(
+                    $"{action} target '{target.InstanceId}' does not own card resources");
+        }
+        return targets;
+    }
+
+    private static bool OwnsParticipantResources(
+        BattleState state,
+        CombatActor target) => target.Side == ActorSide.Enemy
+            ? EnemyCardPlanner.TryGetParticipant(state, target.InstanceId, out _)
+            : !state.Participants.IsDefaultOrEmpty
+            ? BattleParticipantAccess.TryGetByActor(
+                state, target.InstanceId, out _)
+            : ProvisionalSoloHeroOwnerResolver.Resolve(state)?.Hero.InstanceId
+                == target.InstanceId;
+
+    /// <summary>
+    /// Mutates one participant's projected card-resource root, preserving the
+    /// acting participant's in-flight changes when the target is somebody else.
+    /// The returned root is always restored to the acting participant so the
+    /// surrounding PlayCard/trigger command can continue normally.
+    /// </summary>
+    private static BattleState ApplyToParticipantResources(
+        BattleState state,
+        CombatActor caster,
+        CombatActor target,
+        Func<BattleState, BattleState> mutate)
+    {
+        // 敵カード計画中は敵参加者が root へ投影されている。敵の資源効果は
+        // 自分自身の手札・山札・エナジーにだけ作用する。
+        if (caster.Side == ActorSide.Enemy || target.Side == ActorSide.Enemy)
+        {
+            if (!string.Equals(caster.InstanceId, target.InstanceId, StringComparison.Ordinal))
+                throw new InvalidOperationException(
+                    $"Enemy card resource effects can only target the caster itself ('{caster.InstanceId}' -> '{target.InstanceId}').");
+            return mutate(state);
+        }
+
+        if (state.Participants.IsDefaultOrEmpty)
+        {
+            var legacyOwner = ProvisionalSoloHeroOwnerResolver.Resolve(state)?.Hero;
+            if (legacyOwner is null || legacyOwner.InstanceId != target.InstanceId)
+                throw new InvalidOperationException(
+                    $"Actor '{target.InstanceId}' does not own legacy card resources");
+            return mutate(state);
+        }
+
+        if (!BattleParticipantAccess.TryGetByActor(
+                state, caster.InstanceId, out var actingParticipant))
+            throw new InvalidOperationException(
+                $"Caster '{caster.InstanceId}' does not own participant resources");
+        if (!BattleParticipantAccess.TryGetByActor(
+                state, target.InstanceId, out var targetParticipant))
+            throw new InvalidOperationException(
+                $"Target '{target.InstanceId}' does not own participant resources");
+
+        if (actingParticipant.ParticipantId == targetParticipant.ParticipantId)
+            return mutate(state);
+
+        var committedActor = BattleParticipantAccess.CommitRootToParticipant(
+            state, actingParticipant.ParticipantId);
+        var projectedTarget = BattleParticipantAccess.ProjectToRoot(
+            committedActor, targetParticipant.ParticipantId);
+        projectedTarget = mutate(projectedTarget);
+        var committedTarget = BattleParticipantAccess.CommitRootToParticipant(
+            projectedTarget, targetParticipant.ParticipantId);
+        return BattleParticipantAccess.ProjectToRoot(
+            committedTarget, actingParticipant.ParticipantId);
+    }
+
+    private static int ResolveHandLimit(
+        BattleState state,
+        CombatActor owner,
+        DataCatalog catalog)
+    {
+        string definitionId = owner.DefinitionId;
+        if (owner.Side == ActorSide.Enemy)
+            return catalog.TryGetEnemy(definitionId, out var enemy) && enemy.IsCardControlled
+                ? enemy.HandLimit
+                : DrawHelper.HandCap;
+        if (BattleParticipantAccess.TryGetByActor(
+                state, owner.InstanceId, out var participant))
+            definitionId = participant.CharacterId;
+        return catalog.TryGetUnit(definitionId, out var unit)
+            ? unit.HandLimit
+            : DrawHelper.HandCap;
     }
 
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyHeal(
@@ -652,20 +1322,47 @@ internal static class EffectApplier
     }
 
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyDraw(
-        BattleState state, CombatActor caster, CardEffect effect, IRng rng)
+        BattleState state, CombatActor caster, CardEffect effect, IRng rng,
+        DataCatalog catalog)
     {
-        if (effect.Scope != EffectScope.Self)
-            throw new InvalidOperationException(
-                $"draw requires Scope=Self, got {effect.Scope}");
-
-        var newState = DrawHelper.Draw(state, effect.Amount, rng, out int actualDrawn);
-        if (actualDrawn == 0) return (state, Array.Empty<BattleEvent>());
-
-        var evs = new[] {
-            new BattleEvent(BattleEventKind.Draw, Order: 0,
-                CasterInstanceId: caster.InstanceId, Amount: actualDrawn),
-        };
-        return (newState, evs);
+        var targets = ResolveParticipantResourceTargets(
+            state, caster, effect, rng, "draw");
+        var events = new List<BattleEvent>();
+        var next = state;
+        foreach (var target in targets)
+        {
+            int actualDrawn = 0;
+            int shuffledCardCount = 0;
+            next = ApplyToParticipantResources(
+                next, caster, target,
+                projected => DrawHelper.Draw(
+                    projected,
+                    effect.Amount,
+                    rng,
+                    ResolveHandLimit(projected, target, catalog),
+                    FindActor(projected, target.InstanceId) ?? target,
+                    out actualDrawn,
+                    out shuffledCardCount));
+            if (shuffledCardCount > 0)
+            {
+                events.Add(new BattleEvent(
+                    BattleEventKind.Shuffle,
+                    Order: events.Count,
+                    CasterInstanceId: caster.InstanceId,
+                    TargetInstanceId: target.InstanceId,
+                    Amount: shuffledCardCount));
+            }
+            if (actualDrawn == 0) continue;
+            events.Add(new BattleEvent(
+                BattleEventKind.Draw,
+                Order: events.Count,
+                CasterInstanceId: caster.InstanceId,
+                TargetInstanceId: target.InstanceId,
+                Amount: actualDrawn));
+        }
+        return events.Count == 0
+            ? (state, Array.Empty<BattleEvent>())
+            : (next, events);
     }
 
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyDiscard(
@@ -831,7 +1528,8 @@ internal static class EffectApplier
         };
         // Phase 10.5.L1.5: OnCardDiscarded relic / power 発火
         return FireOnCardDiscarded(
-            next, events, rng, catalog, playingCardInstanceId);
+            next, caster.InstanceId, events, rng, catalog,
+            playingCardInstanceId);
     }
 
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyExhaustCard(
@@ -877,7 +1575,8 @@ internal static class EffectApplier
         };
         // Phase 10.5.L1.5: OnCardExhausted relic / power 発火
         return FireOnCardExhausted(
-            next, events, rng, catalog, excludedHandInstanceId);
+            next, caster.InstanceId, events, rng, catalog,
+            excludedHandInstanceId);
     }
 
     /// <summary>
@@ -917,7 +1616,7 @@ internal static class EffectApplier
         // - "choose": UI input が未実装のため、暫定的に random と同じ挙動で fallback。
         //   M6.9: exhaustCard と同様、UI 選択フロー実装まで random fallback で動かす。
 
-        // Pile 検証は OpenSourcePile で（exhaust pile は使わない）
+        // Pile validation and selection are centralized in OpenSourcePile.
         var (sourceBuilder, applyResult) = OpenSourcePile(state, effect.Pile);
 
         // 強化候補抽出: IsUpgraded=false かつ definition.IsUpgradable
@@ -925,10 +1624,14 @@ internal static class EffectApplier
         for (int i = 0; i < sourceBuilder.Count; i++)
         {
             var card = sourceBuilder[i];
-            if (card.InstanceId == excludedHandInstanceId) continue;
+            if (IsHandPile(effect.Pile)
+                && card.InstanceId == excludedHandInstanceId)
+            {
+                continue;
+            }
             if (card.IsUpgraded) continue;
             if (!catalog.TryGetCard(card.CardDefinitionId, out var def)) continue;
-            if (def.UpgradedCost is null && def.UpgradedEffects is null) continue;
+            if (!def.IsUpgradable) continue;
             candidates.Add(i);
         }
 
@@ -970,10 +1673,16 @@ internal static class EffectApplier
                 s => state with { DiscardPile = s.ToImmutable() }),
             "draw" => (state.DrawPile.ToBuilder(),
                 s => state with { DrawPile = s.ToImmutable() }),
-            null => throw new InvalidOperationException("upgrade requires Pile (hand|discard|draw)"),
-            _ => throw new InvalidOperationException($"upgrade invalid Pile '{pileName}', expected hand|discard|draw"),
+            "exhaust" => (state.ExhaustPile.ToBuilder(),
+                s => state with { ExhaustPile = s.ToImmutable() }),
+            null => throw new InvalidOperationException("upgrade requires Pile (hand|discard|draw|exhaust)"),
+            _ => throw new InvalidOperationException($"upgrade invalid Pile '{pileName}', expected hand|discard|draw|exhaust"),
         };
     }
+
+    private static bool IsHandPile(string? pileName) =>
+        string.IsNullOrEmpty(pileName)
+        || string.Equals(pileName, "hand", StringComparison.Ordinal);
 
     /// <summary>
     /// 10.2.D: summon action。effect.UnitId のキャラを catalog から取り出し、
@@ -999,7 +1708,15 @@ internal static class EffectApplier
         if (emptySlot == -1)
             return (state, Array.Empty<BattleEvent>());  // 不発、silent skip
 
-        string newInstanceId = $"summon_inst_{state.Turn}_{rng.NextInt(0, 1 << 30):x}";
+        string instanceIdBase =
+            $"summon_inst_{state.Turn}_{rng.NextInt(0, 1 << 30):x}";
+        string newInstanceId = instanceIdBase;
+        int collisionOrdinal = 1;
+        while (state.Allies.Any(actor => actor.InstanceId == newInstanceId)
+               || state.Enemies.Any(actor => actor.InstanceId == newInstanceId))
+        {
+            newInstanceId = $"{instanceIdBase}_{collisionOrdinal++}";
+        }
         var newActor = new CombatActor(
             InstanceId: newInstanceId,
             DefinitionId: effect.UnitId,
@@ -1012,10 +1729,17 @@ internal static class EffectApplier
             AttackRandom: AttackPool.Empty,
             AttackAll: AttackPool.Empty,
             Statuses: ImmutableDictionary<string, int>.Empty,
-            CurrentMoveId: unitDef.InitialMoveId,
-            RemainingLifetimeTurns: unitDef.LifetimeTurns,
+            // Card-controlled allies own a participant/deck and do not use
+            // the legacy fixed-move or summon-lifetime systems.
+            CurrentMoveId: unitDef.IsCardControlled ? null : unitDef.InitialMoveId,
+            // Allied summons no longer have an authoring/runtime lifetime.
+            // RemainingLifetimeTurns stays on old snapshots only so existing
+            // saves can still be read and cleaned up safely.
+            RemainingLifetimeTurns: null,
             AssociatedSummonHeldInstanceId: null)    // PlayCard card-move logic で設定
         {
+            AttackPower = unitDef.Attack,
+            DefensePower = unitDef.Defense,
             OwnerPlayerSlot = source?.OwnerSlot
                 ?? caster.OwnerPlayerSlot
                 ?? (caster.DefinitionId == "hero" ? caster.SlotIndex : null),
@@ -1070,10 +1794,56 @@ internal static class EffectApplier
 
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyModifyCardCost(
         BattleState state, CombatActor caster, CardEffect effect, IRng rng,
-        CombatSource? source, string? excludedHandInstanceId)
+        DataCatalog catalog, CombatSource? source, string? excludedHandInstanceId)
     {
         var duration = ValidateModifyCardCost(effect);
         RejectUnsupportedModifyCardCostChoose(effect, source);
+        var targets = ResolveParticipantResourceTargets(
+            state, caster, effect, rng, "modifyCardCost");
+        var allEvents = new List<BattleEvent>();
+        var next = state;
+        foreach (var target in targets)
+        {
+            IReadOnlyList<BattleEvent> targetEvents = Array.Empty<BattleEvent>();
+            next = ApplyToParticipantResources(
+                next, caster, target,
+                projected =>
+                {
+                    var currentTarget = FindActor(projected, target.InstanceId)
+                        ?? target;
+                    var (after, events) = ApplyModifyCardCostToProjectedTarget(
+                        projected,
+                        caster.InstanceId,
+                        currentTarget,
+                        effect,
+                        duration,
+                        rng,
+                        catalog,
+                        source,
+                        target.InstanceId == caster.InstanceId
+                            ? excludedHandInstanceId
+                            : null);
+                    targetEvents = events;
+                    return after;
+                });
+            foreach (var battleEvent in targetEvents)
+                allEvents.Add(battleEvent with { Order = allEvents.Count });
+        }
+        return (next, allEvents);
+    }
+
+    private static (BattleState, IReadOnlyList<BattleEvent>)
+        ApplyModifyCardCostToProjectedTarget(
+            BattleState state,
+            string eventCasterInstanceId,
+            CombatActor costOwner,
+            CardEffect effect,
+            CardCostModifierDuration duration,
+            IRng rng,
+            DataCatalog catalog,
+            CombatSource? source,
+            string? excludedHandInstanceId)
+    {
         var (pileBuilder, applyResult) = OpenCardCostPile(state, effect.Pile!);
         var eligibleIds = EligibleCardInstanceIds(
             pileBuilder, effect.Pile!, excludedHandInstanceId);
@@ -1103,13 +1873,15 @@ internal static class EffectApplier
         }
 
         return ApplyCardCostModifierToSelected(
-            state, caster, effect, duration, pileBuilder, applyResult,
-            selectedIds, source);
+            state, eventCasterInstanceId, costOwner, effect, duration,
+            pileBuilder, applyResult,
+            selectedIds, catalog, source);
     }
 
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyModifyCardCostChosen(
         BattleState state, CombatActor caster, CardEffect effect,
-        ImmutableArray<string> selectedInstanceIds, CombatSource? source)
+        ImmutableArray<string> selectedInstanceIds, DataCatalog catalog,
+        CombatSource? source)
     {
         var duration = ValidateModifyCardCost(effect);
         RejectUnsupportedModifyCardCostChoose(effect, source);
@@ -1118,18 +1890,21 @@ internal static class EffectApplier
                 $"modifyCardCost chosen path requires Select='choose', got '{effect.Select}'");
         var (pileBuilder, applyResult) = OpenCardCostPile(state, effect.Pile!);
         return ApplyCardCostModifierToSelected(
-            state, caster, effect, duration, pileBuilder, applyResult,
-            selectedInstanceIds, source);
+            state, caster.InstanceId, caster, effect, duration,
+            pileBuilder, applyResult,
+            selectedInstanceIds, catalog, source);
     }
 
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyCardCostModifierToSelected(
         BattleState state,
-        CombatActor caster,
+        string eventCasterInstanceId,
+        CombatActor costOwner,
         CardEffect effect,
         CardCostModifierDuration duration,
         ImmutableArray<BattleCardInstance>.Builder pileBuilder,
         Func<ImmutableArray<BattleCardInstance>.Builder, BattleState> applyResult,
         IReadOnlyList<string> selectedInstanceIds,
+        DataCatalog? catalog,
         CombatSource? source)
     {
         if (selectedInstanceIds.Count == 0)
@@ -1140,7 +1915,6 @@ internal static class EffectApplier
         string? sourceId = source?.InstanceId
             ?? source?.DefinitionId
             ?? source?.ActorInstanceId;
-        var modifier = new CardCostModifier(effect.Amount, duration, sourceId);
         string note = $"{effect.CostDuration}:{effect.Pile}";
 
         foreach (var instanceId in selectedInstanceIds)
@@ -1157,13 +1931,28 @@ internal static class EffectApplier
             }
             if (index < 0) continue;
 
-            pileBuilder[index] = pileBuilder[index].AddCostModifier(modifier);
+            var selectedCard = pileBuilder[index];
+            int modifierAmount = effect.Amount;
+            if (string.Equals(effect.AmountSource, "currentCost", StringComparison.Ordinal))
+            {
+                if (catalog is null || !catalog.TryGetCard(selectedCard.CardDefinitionId, out var definition))
+                    throw new InvalidOperationException(
+                        $"card '{selectedCard.CardDefinitionId}' not in catalog");
+                long? currentCost = BattleCardCostCalculator.GetRawCostBeforeCombo(
+                    selectedCard, definition, costOwner,
+                    isInHand: effect.Pile == "hand");
+                if (currentCost is null or <= 0) continue;
+                modifierAmount = (int)Math.Clamp(-currentCost.Value, int.MinValue, int.MaxValue);
+            }
+            if (modifierAmount == 0) continue;
+            pileBuilder[index] = selectedCard.AddCostModifier(
+                new CardCostModifier(modifierAmount, duration, sourceId));
             events.Add(new BattleEvent(
                 BattleEventKind.ModifyCardCost,
                 Order: events.Count,
-                CasterInstanceId: caster.InstanceId,
+                CasterInstanceId: eventCasterInstanceId,
                 TargetInstanceId: instanceId,
-                Amount: effect.Amount,
+                Amount: modifierAmount,
                 Note: note,
                 Source: source));
         }
@@ -1175,10 +1964,12 @@ internal static class EffectApplier
 
     private static CardCostModifierDuration ValidateModifyCardCost(CardEffect effect)
     {
-        if (effect.Scope != EffectScope.Self)
+        if (effect.Scope != EffectScope.Self && effect.Side != EffectSide.Ally)
             throw new InvalidOperationException(
-                $"modifyCardCost requires Scope=Self, got {effect.Scope}");
-        if (effect.Amount == 0)
+                $"modifyCardCost requires Side=Ally for scope {effect.Scope}, got {effect.Side}");
+        bool resolvesFromCurrentCost = string.Equals(
+            effect.AmountSource, "currentCost", StringComparison.Ordinal);
+        if (effect.Amount == 0 && !resolvesFromCurrentCost)
             throw new InvalidOperationException(
                 "modifyCardCost Amount must not be 0");
         if (effect.CardCount is <= 0)
@@ -1204,6 +1995,9 @@ internal static class EffectApplier
         CardEffect effect, CombatSource? source = null)
     {
         if (effect.Select != "choose") return;
+        if (effect.Scope != EffectScope.Self)
+            throw new InvalidOperationException(
+                "modifyCardCost select='choose' only supports Scope=Self");
         bool isTriggered = !string.IsNullOrEmpty(effect.Trigger)
             || source is { Kind: not CombatSourceKind.CardEffect };
         if (isTriggered)
@@ -1273,7 +2067,7 @@ internal static class EffectApplier
     /// <summary>
     /// Choose effect で実際にプレイヤー選択 modal を出すべきかを判定。
     /// candidates &lt;= selection count の場合は auto-skip。
-    /// 既存4 action の selection count は Amount、modifyCardCost は CardCount (default 1)。
+    /// Card-selection actions use Amount; modifyCardCost uses CardCount (default 1).
     /// </summary>
     /// <param name="playingCardInstanceId">
     /// 現在プレイ中のカードの InstanceId (pause emit 時に渡す)。candidate set から除外される。
@@ -1296,16 +2090,17 @@ internal static class EffectApplier
     /// <summary>Choose 対応 action 一覧。</summary>
     private static bool IsChooseSupportedAction(string action)
         => action is "discard" or "exhaustCard" or "upgrade"
-            or "recoverFromDiscard" or "modifyCardCost";
+            or "recoverFromDiscard" or "recoverFromExhaust"
+            or "modifyCardCost";
 
     /// <summary>
     /// 各 action の choose 候補 (BattleCardInstance.InstanceId 一覧) を返す。
-    /// upgrade のみ「強化可能 (UpgradedCost or UpgradedEffects あり &amp;&amp; !IsUpgraded)」フィルタ適用。
+    /// upgrade のみ「CardDefinition.IsUpgradable &amp;&amp; !IsUpgraded」フィルタ適用。
     /// 候補なしのときも default ではなく ImmutableArray&lt;string&gt;.Empty を返す。
     /// </summary>
     /// <param name="playingCardInstanceId">
-    /// 現在プレイ中のカードの InstanceId。候補から除外する (FinalizeCardPlay が hand から
-    /// 取り出す前提で動いているため、自分自身を選ばれると確定時に Hand 不在エラーになる)。
+    /// 現在プレイ中のカードの InstanceId。手札を選択元とする場合だけ候補から除外する。
+    /// 伏策のように実カードが除外へ存在する効果実行では、同じInstanceIdも通常候補になる。
     /// 後方互換のため null default。null の場合は除外しない。
     /// </param>
     internal static ImmutableArray<string> GetChooseCandidates(
@@ -1323,26 +2118,63 @@ internal static class EffectApplier
             foreach (var c in pile)
             {
                 // Phase 10.5.M2-Choose final review (I-1): プレイ中のカード自身を除外。
-                if (c.InstanceId == playingCardInstanceId) continue;
+                if (ShouldExcludeInFlightHandCard(
+                        effect,
+                        c.InstanceId,
+                        playingCardInstanceId))
+                {
+                    continue;
+                }
                 if (c.IsUpgraded) continue;
                 if (!catalog.TryGetCard(c.CardDefinitionId, out var def)) continue;
-                // Phase 10.5.M2-Choose: 既存 ApplyUpgrade と同じ「真の強化候補」フィルタを使う
-                // (UpgradedKeywords のみのカードは ApplyUpgrade が rejection するため、modal にも出さない)。
-                if (def.UpgradedCost is null && def.UpgradedEffects is null) continue;
+                // CardDefinition.IsUpgradable is the single source of truth. Keyword-only
+                // and usage-limit-only upgrades are valid candidates too.
+                if (!def.IsUpgradable) continue;
                 builder.Add(c.InstanceId);
             }
             return builder.ToImmutable();
         }
-        // discard / exhaustCard / recoverFromDiscard / modifyCardCost は
-        // pile 全カード (プレイ中のカードを除く)
+        // Non-upgrade actions use every card in their source pile. Only an
+        // in-flight card still occupying Hand needs the safety exclusion.
         var nonUpgradeBuilder = ImmutableArray.CreateBuilder<string>();
         foreach (var c in pile)
         {
             // Phase 10.5.M2-Choose final review (I-1): プレイ中のカード自身を除外。
-            if (c.InstanceId == playingCardInstanceId) continue;
+            if (ShouldExcludeInFlightHandCard(
+                    effect,
+                    c.InstanceId,
+                    playingCardInstanceId))
+            {
+                continue;
+            }
             nonUpgradeBuilder.Add(c.InstanceId);
         }
         return nonUpgradeBuilder.ToImmutable();
+    }
+
+    private static bool ShouldExcludeInFlightHandCard(
+        CardEffect effect,
+        string candidateInstanceId,
+        string? playingCardInstanceId)
+    {
+        if (!string.Equals(
+                candidateInstanceId,
+                playingCardInstanceId,
+                StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return effect.Action switch
+        {
+            "discard" => true,
+            "exhaustCard" or "upgrade" => IsHandPile(effect.Pile),
+            "modifyCardCost" => string.Equals(
+                effect.Pile,
+                "hand",
+                StringComparison.Ordinal),
+            _ => false,
+        };
     }
 
     private static ImmutableArray<BattleCardInstance> ResolveChoosePile(
@@ -1351,6 +2183,11 @@ internal static class EffectApplier
         // discard と recoverFromDiscard は pile 固定
         if (effect.Action == "discard") return state.Hand;
         if (effect.Action == "recoverFromDiscard") return state.DiscardPile;
+        if (effect.Action == "recoverFromExhaust")
+        {
+            ValidateRecoverFromExhaustDestination(effect.Pile);
+            return state.ExhaustPile;
+        }
         if (effect.Action == "modifyCardCost")
         {
             return effect.Pile switch
@@ -1370,6 +2207,7 @@ internal static class EffectApplier
             "" or "hand" => state.Hand,
             "draw" => state.DrawPile,
             "discard" => state.DiscardPile,
+            "exhaust" when effect.Action == "upgrade" => state.ExhaustPile,
             _ => ImmutableArray<BattleCardInstance>.Empty,
         };
     }
@@ -1391,6 +2229,7 @@ internal static class EffectApplier
         {
             "discard" => "hand",
             "recoverFromDiscard" => "discard",
+            "recoverFromExhaust" => "exhaust",
             _ => string.IsNullOrEmpty(effect.Pile) ? "hand" : effect.Pile!,
         };
         return new PendingChoice(
@@ -1423,9 +2262,12 @@ internal static class EffectApplier
                 state, caster, effect, selectedInstanceIds, rng, catalog,
                 playingCardInstanceId),
             "upgrade" => ApplyUpgradeChosen(state, caster, effect, selectedInstanceIds, catalog),
-            "recoverFromDiscard" => ApplyRecoverFromDiscardChosen(state, caster, effect, selectedInstanceIds),
+            "recoverFromDiscard" => ApplyRecoverFromDiscardChosen(
+                state, caster, effect, selectedInstanceIds, rng, catalog),
+            "recoverFromExhaust" => ApplyRecoverFromExhaustChosen(
+                state, caster, effect, selectedInstanceIds, rng, catalog),
             "modifyCardCost" => ApplyModifyCardCostChosen(
-                state, caster, effect, selectedInstanceIds, source),
+                state, caster, effect, selectedInstanceIds, catalog, source),
             _ => throw new InvalidOperationException(
                 $"ApplyChoseEffect: action '{effect.Action}' does not support choose"),
         };
@@ -1503,14 +2345,15 @@ internal static class EffectApplier
                 Amount: moved, Note: effect.Pile),
         };
         return FireOnCardExhausted(
-            next, events, rng, catalog, playingCardInstanceId);
+            next, caster.InstanceId, events, rng, catalog,
+            playingCardInstanceId);
     }
 
     /// <summary>
     /// 選択済 ids で effect.Pile (hand/discard/draw) のカードを強化。
     /// Note: effect.Pile (既存 ApplyUpgrade と同じ)。trigger fire なし。
-    /// 強化可能フィルタは既存 ApplyUpgrade / GetChooseCandidates と同じ条件
-    /// (UpgradedCost or UpgradedEffects あり) を使用するため、validate-time で弾かれた
+    /// 強化可能フィルタは既存 ApplyUpgrade / GetChooseCandidates と同じ
+    /// CardDefinition.IsUpgradable を使用するため、validate-time で弾かれた
     /// 候補のみが届く想定。defensive な skip 分岐は残しているが通常経路では発火しない。
     /// </summary>
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyUpgradeChosen(
@@ -1533,7 +2376,7 @@ internal static class EffectApplier
             // 既存 ApplyUpgrade と同じ「強化可能」判定
             if (card.IsUpgraded) continue;
             if (!catalog.TryGetCard(card.CardDefinitionId, out var def)) continue;
-            if (def.UpgradedCost is null && def.UpgradedEffects is null) continue;
+            if (!def.IsUpgradable) continue;
             sourceBuilder[idx] = card with { IsUpgraded = true };
             upgradedCount++;
         }
@@ -1555,7 +2398,8 @@ internal static class EffectApplier
     /// </summary>
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyRecoverFromDiscardChosen(
         BattleState state, CombatActor caster, CardEffect effect,
-        ImmutableArray<string> selectedInstanceIds)
+        ImmutableArray<string> selectedInstanceIds, IRng rng,
+        DataCatalog catalog)
     {
         if (effect.Pile != "hand" && effect.Pile != "exhaust")
             throw new InvalidOperationException(
@@ -1583,7 +2427,8 @@ internal static class EffectApplier
         var s = state with { DiscardPile = discardBuilder.ToImmutable() };
         foreach (var card in picked)
         {
-            s = AddInstanceToPile(s, card, effect.Pile!);
+            s = AddInstanceToPile(
+                s, card, effect.Pile!, rng, caster, catalog);
         }
 
         var ev = new BattleEvent(
@@ -1592,5 +2437,53 @@ internal static class EffectApplier
             Amount: picked.Count,
             Note: $"choose:{effect.Pile}");
         return (s, new[] { ev });
+    }
+
+    private static (BattleState, IReadOnlyList<BattleEvent>) ApplyRecoverFromExhaustChosen(
+        BattleState state, CombatActor caster, CardEffect effect,
+        ImmutableArray<string> selectedInstanceIds, IRng rng,
+        DataCatalog catalog)
+    {
+        ValidateRecoverFromExhaustDestination(effect.Pile);
+        if (state.ExhaustPile.IsDefaultOrEmpty
+            || selectedInstanceIds.IsDefaultOrEmpty)
+        {
+            return (state, Array.Empty<BattleEvent>());
+        }
+
+        var remaining = state.ExhaustPile.ToBuilder();
+        var picked = new List<BattleCardInstance>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (string instanceId in selectedInstanceIds)
+        {
+            if (!seen.Add(instanceId)) continue;
+
+            int index = -1;
+            for (int i = 0; i < remaining.Count; i++)
+            {
+                if (string.Equals(
+                        remaining[i].InstanceId,
+                        instanceId,
+                        StringComparison.Ordinal))
+                {
+                    index = i;
+                    break;
+                }
+            }
+            if (index < 0) continue;
+
+            picked.Add(remaining[index]);
+            remaining.RemoveAt(index);
+        }
+
+        return CompleteRecoverFromExhaust(
+            state,
+            caster,
+            effect,
+            "choose",
+            remaining,
+            picked,
+            rng,
+            catalog);
     }
 }

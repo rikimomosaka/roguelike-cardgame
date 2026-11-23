@@ -84,6 +84,24 @@ public class DealDamageHelperTests
         Assert.False(updated.StatusSources.ContainsKey("barrier"));
     }
 
+    [Fact] public void Barrier_consumes_after_available_block_has_been_spent()
+    {
+        var attacker = BattleFixtures.Hero();
+        var target = BattleFixtures.WithStatus(BattleFixtures.Goblin(hp: 20), "barrier", 1) with
+        {
+            Block = BlockPool.Empty.Add(2),
+        };
+
+        var (updated, events, _) = DealDamageHelper.Apply(
+            attacker, target, 5, "single", orderBase: 0);
+
+        Assert.Equal(20, updated.CurrentHp);
+        Assert.Equal(0, updated.GetStatus("barrier"));
+        Assert.Equal(0, updated.Block.Sum);
+        Assert.Equal(2, events.Single(e => e.Kind == BattleEventKind.DealDamage).BlockedAmount);
+        Assert.Equal(0, events.Single(e => e.Kind == BattleEventKind.DealDamage).ActualHpLoss);
+    }
+
     [Fact] public void Dexterity_boosts_block()
     {
         // target.Block=Sum=2, AddCount=1, dex=3 → Display=5、attack=4 → absorbed=4, rawDamage=0、残 Block=1

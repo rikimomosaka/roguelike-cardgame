@@ -1,0 +1,192 @@
+.battle-replay {
+  position: absolute;
+  left: 50%;
+  bottom: 274px;
+  /* Keep the transport controls between the tactical and ultimate buttons. */
+  width: min(294px, calc(100% - 320px));
+  transform: translateX(-50%);
+  z-index: 28;
+  color: var(--fg);
+  pointer-events: auto;
+}
+
+.battle-replay__toolbar {
+  min-height: 72px;
+  box-sizing: border-box;
+  padding: 4px 7px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: center;
+  justify-items: stretch;
+  gap: 6px;
+  border: 1px solid var(--gold-border);
+  border-radius: 4px;
+  background: rgba(24, 13, 8, 0.94);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.65);
+  white-space: nowrap;
+}
+
+.battle-replay__timeline {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 6px;
+  color: var(--fg-muted);
+  font-size: 9px;
+}
+
+.battle-replay__timeline input {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--gold);
+}
+
+.battle-replay__button,
+.battle-replay__speed select {
+  min-height: 25px;
+  border: 1px solid var(--fg-muted);
+  border-radius: 3px;
+  background: linear-gradient(180deg, rgba(119, 68, 33, 0.55), rgba(39, 21, 13, 0.96));
+  color: var(--gold-soft);
+  font: 12px var(--font-body);
+  cursor: pointer;
+}
+
+.battle-replay__button {
+  padding: 2px 3px;
+  min-width: 0;
+  width: 100%;
+}
+
+.battle-replay__button:hover:not(:disabled),
+.battle-replay__speed select:hover {
+  border-color: var(--gold);
+}
+
+.battle-replay__button:disabled {
+  cursor: default;
+  opacity: 0.38;
+}
+
+.battle-replay__button--play {
+  min-width: 48px;
+}
+
+.battle-replay__progress {
+  min-width: 48px;
+  color: #fff;
+  text-align: center;
+  font: 12px var(--font-digit);
+  font-variant-numeric: tabular-nums;
+}
+
+.battle-replay__feed {
+  min-width: 54px;
+  padding: 2px 5px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  text-align: center;
+  font: 10px var(--font-label);
+  letter-spacing: 1px;
+}
+
+.battle-replay__feed--live { color: #6dd6ff; }
+.battle-replay__feed--ready { color: #8ee28e; }
+.battle-replay__feed--complete { color: var(--gold); }
+
+.battle-replay__speed {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 3px;
+  color: var(--fg-muted);
+  font-size: 10px;
+}
+
+.battle-replay__speed select {
+  padding: 1px 3px;
+  max-width: 100%;
+}
+
+.battle-replay__entry {
+  position: absolute;
+  left: 50%;
+  /* Keep the Ready/NoLegalAction entry above the transport controls. */
+  bottom: 86px;
+  /* Match the tactical/combo/ultimate control width instead of extending
+     beyond the two skill buttons at the sides. */
+  width: 100%;
+  min-height: 54px;
+  box-sizing: border-box;
+  transform: translateX(-50%);
+  padding: 9px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  border: 1px solid rgba(201, 152, 90, 0.72);
+  border-radius: 5px;
+  background: rgba(16, 9, 6, 0.94);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7);
+  text-align: center;
+}
+
+.battle-replay__entry--externalEffect {
+  border-color: rgba(105, 190, 238, 0.75);
+  background: rgba(12, 24, 32, 0.94);
+}
+
+.battle-replay__entry--empty {
+  color: var(--fg-muted);
+}
+
+.battle-replay__card {
+  flex: 0 0 var(--card-width);
+  height: var(--card-height);
+}
+
+.battle-replay__card > .card {
+  transform: scale(1.12);
+  transform-origin: 50% 50%;
+}
+
+.battle-replay__entry-body {
+  min-width: 0;
+  max-width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.battle-replay__entry-title {
+  color: var(--gold-soft);
+  font-size: 15px;
+}
+
+.battle-replay__source,
+.battle-replay__note {
+  color: var(--fg-muted);
+  font-size: 10px;
+}
+
+.battle-replay__effect,
+.battle-replay__intent {
+  font-size: 12px;
+}
+
+.battle-replay__intent { color: #ffb16d; }
+
+@media (max-width: 860px) {
+  .battle-replay {
+    width: min(294px, calc(100% - 110px));
+  }
+
+  .battle-replay__toolbar {
+    gap: 3px;
+  }
+
+  .battle-replay__button {
+    padding-inline: 5px;
+  }
+}

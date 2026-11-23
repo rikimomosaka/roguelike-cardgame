@@ -220,6 +220,24 @@ public class BattleEngineUsePotionTests
     }
 
     [Fact]
+    public void UsePotion_enforces_a_potion_level_limit_for_duplicate_copies()
+    {
+        var potion = BattleFixtures.Potion("limited",
+            new CardEffect("heal", EffectScope.Self, null, 1)) with { UsesPerTurn = 1 };
+        var catalog = BattleFixtures.MinimalCatalog(potions: new[] { potion });
+        var state = BattleFixtures.MinimalState(
+            potions: ImmutableArray.Create("limited", "limited", ""));
+
+        var (afterFirst, _) = BattleEngine.UsePotion(
+            state, 0, null, null, MakeRng(), catalog);
+
+        Assert.Equal(1, afterFirst.PotionUsesThisTurn["limited"]);
+        Assert.Throws<InvalidOperationException>(() => BattleEngine.UsePotion(
+            afterFirst, 1, null, null, MakeRng(), catalog));
+        Assert.Equal("limited", afterFirst.Potions[1]);
+    }
+
+    [Fact]
     public void UsePotion_uses_living_hero_with_lowest_slot_when_array_order_differs()
     {
         var potion = BattleFixtures.Potion("heal_owner",

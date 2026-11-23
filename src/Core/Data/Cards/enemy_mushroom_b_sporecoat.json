@@ -1,0 +1,25 @@
+{
+  "id": "enemy_mushroom_b_sporecoat",
+  "name": "胞子の衣",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy mushroom_b unique (from move sporecoat)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 6
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -5,17 +5,19 @@
    ============================================================= */
 
 .card {
+  --card-art-mask: url('/cards/frames/masks/attack.png');
   width: var(--card-width);
   height: var(--card-height);
   flex: 0 0 auto;
   position: relative;
-  border: 1px solid var(--border-mid);
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
-  overflow: hidden;
-  background: var(--bg-0);
-  display: flex;
-  flex-direction: column;
-  padding: 3px 3px 4px;
+  /* The affiliation cost plate intentionally projects past the top-left card
+     edge.  Artwork and pulse layers own their clipping independently. */
+  overflow: visible;
+  background: transparent;
+  line-height: normal;
+  padding: 0;
   box-sizing: border-box;
   transition: border-color 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease;
   cursor: default;
@@ -23,20 +25,64 @@
 }
 
 .card[role='button'] { cursor: pointer; }
-.card[role='button']:hover { border-color: var(--border-hover); }
-
-.card.is-selected {
-  border-color: var(--gold);
-  box-shadow: 0 0 14px rgba(255, 213, 79, 0.5);
+.card.is-combo-continuing::before {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  z-index: 2;
+  border: 1px solid rgba(255, 226, 126, 0.34);
+  border-radius: calc(var(--radius-md) - 1px);
+  box-shadow:
+    inset 0 0 5px rgba(255, 190, 52, 0.18),
+    0 0 3px rgba(255, 225, 120, 0.22);
+  pointer-events: none;
+}
+.card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+  pointer-events: none;
+}
+.card[role='button']:hover {
+  border-color: rgba(255, 238, 184, 0.72);
+}
+.card[role='button']:hover::after {
+  border-color: rgba(255, 238, 184, 0.72);
 }
 
 /* Why: 手札のうちプレイ可能なカードのフチを黄色く光らせて強調する
    (ユーザ要望)。コスト不足等で is-playable が付かないカードは光らない。 */
 .card.is-playable {
-  border-color: #f1c95b;
+  border-color: rgba(241, 201, 91, 0.72);
   box-shadow:
-    0 0 8px rgba(241, 201, 91, 0.6),
-    0 0 16px rgba(241, 201, 91, 0.25);
+    0 0 7px rgba(241, 201, 91, 0.46),
+    0 0 13px rgba(241, 201, 91, 0.18);
+}
+.card.is-playable::after {
+  border-color: rgba(241, 201, 91, 0.72);
+}
+
+/* The inner two pixels always retain the acquisition class. Selection uses
+   only the outer one-pixel border, while playability is conveyed by light.
+   This keeps the three meanings from competing for the same thick frame. */
+.card.is-selected,
+.card.is-selected.is-playable,
+.card.is-selected[role='button']:hover {
+  border-color: var(--gold);
+  box-shadow:
+    0 0 6px rgba(255, 213, 79, 0.72),
+    0 0 11px rgba(255, 213, 79, 0.32);
+}
+.card.is-selected::after {
+  border-color: var(--gold);
+}
+.card.is-selected.is-playable::after,
+.card.is-selected[role='button']:hover::after {
+  border-color: var(--gold);
 }
 
 .card.is-locked {
@@ -44,74 +90,268 @@
   cursor: default;
 }
 .card.is-locked .card__name { color: #5a4a3a; }
-.card.is-locked .card__cost,
-.card.is-locked .card__type { display: none; }
+.card.is-locked .card__cost { display: none; }
 .card.is-locked .card__illust { font-size: 22px; color: #3a2a1a; }
 
-/* ---------- Background (by card type) ---------- */
-.card__bg {
-  position: absolute; inset: 0; z-index: 0;
-  background: repeating-linear-gradient(45deg, rgba(0,0,0,0.18) 0 2px, transparent 2px 4px);
-  image-rendering: pixelated;
+.card--type-attack {
+  --card-art-mask: url('/cards/frames/masks/attack.png');
 }
-.card--type-attack .card__bg {
-  background:
-    linear-gradient(180deg, #6a2a1a 0%, #3a1a10 100%),
-    repeating-linear-gradient(45deg, rgba(0,0,0,0.2) 0 2px, transparent 2px 4px);
+.card--type-skill {
+  --card-art-mask: url('/cards/frames/masks/skill.png');
 }
-.card--type-skill .card__bg {
-  background:
-    linear-gradient(180deg, #2a4a3a 0%, #10201a 100%),
-    repeating-linear-gradient(45deg, rgba(0,0,0,0.2) 0 2px, transparent 2px 4px);
+.card--type-power {
+  --card-art-mask: url('/cards/frames/masks/power.png');
 }
-.card--type-power .card__bg {
-  background:
-    linear-gradient(180deg, #4a2a5a 0%, #1a1025 100%),
-    repeating-linear-gradient(45deg, rgba(0,0,0,0.2) 0 2px, transparent 2px 4px);
+.card--type-curse {
+  --card-art-mask: url('/cards/frames/masks/curse.png');
 }
-.card--type-curse .card__bg {
-  background: linear-gradient(180deg, #1a1a1a 0%, #000 100%);
-}
-.card--type-status .card__bg {
-  background: linear-gradient(180deg, #3a3a4a 0%, #101018 100%);
-}
-.card--type-unit .card__bg {
-  background:
-    linear-gradient(180deg, #6a5a1a 0%, #3a2f10 100%),
-    repeating-linear-gradient(45deg, rgba(0,0,0,0.2) 0 2px, transparent 2px 4px);
+.card--type-status {
+  --card-art-mask: url('/cards/frames/masks/status.png');
 }
 .card--type-unit {
-  border-color: #d4b048;
-  box-shadow: 0 0 4px rgba(212,176,72,0.45);
+  --card-art-mask: url('/cards/frames/masks/unit.png');
+}
+
+/* ---------- PNG card composition ----------
+   The visible stack is affiliation frame -> masked artwork -> type frame ->
+   live card text. Every raster layer uses the same 5:7 canvas as the card. */
+.card__affiliation-frame,
+.card__type-frame,
+.card__illust.card__illust {
+  position: absolute;
+  inset: -1px;
+  width: calc(100% + 2px);
+  height: calc(100% + 2px);
+  display: block;
+  object-fit: fill;
+  image-rendering: pixelated;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.card__affiliation-frame {
+  z-index: 0;
+}
+
+.card__illust {
+  z-index: 1;
+  line-height: normal;
+  -webkit-mask-image: var(--card-art-mask);
+  mask-image: var(--card-art-mask);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+/* The source covers the complete type-mask envelope. The mask performs the
+   final crop, so callers may provide ordinary square or landscape artwork
+   without pre-cutting it to each frame silhouette. */
+.card__art-content {
+  position: absolute;
+  left: 3%;
+  top: 13.4%;
+  width: 94%;
+  height: 50.4%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    repeating-linear-gradient(0deg, rgba(0,0,0,0.25) 0 2px, transparent 2px 4px),
+    var(--bg-2);
+  font-family: var(--font-label);
+  font-size: 9px;
+  line-height: normal;
+  color: #6a4a2a;
+  letter-spacing: 1px;
+}
+
+.card__art-content > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+.card__type-frame {
+  z-index: 2;
+}
+
+/* Armed 伏策 is an independent card state. Keep its cyan signal entirely
+   inside the canonical box so it never replaces the acquisition frame,
+   selection border, or playable glow. */
+.card__contingency-ring {
+  position: absolute;
+  inset: 3px;
+  z-index: 6;
+  border: 1px solid rgba(111, 235, 255, 0.9);
+  border-radius: calc(var(--radius-md) - 2px);
+  box-shadow:
+    inset 0 0 7px rgba(72, 203, 255, 0.3),
+    inset 0 0 2px rgba(216, 250, 255, 0.85);
+  pointer-events: none;
+  animation: card-contingency-pulse 1.8s ease-in-out infinite;
+}
+
+.card__contingency-badge {
+  position: absolute;
+  top: 70px;
+  left: 6px;
+  right: 6px;
+  z-index: 7;
+  box-sizing: border-box;
+  padding: 2px 3px;
+  overflow: hidden;
+  border: 1px solid rgba(111, 235, 255, 0.82);
+  border-radius: 3px;
+  background: rgba(8, 20, 34, 0.92);
+  color: #c9f8ff;
+  font-family: var(--font-body);
+  font-size: 7px;
+  line-height: 1.25;
+  text-align: center;
+  text-shadow: 0 1px 0 #000, 0 0 3px rgba(72, 203, 255, 0.8);
+  pointer-events: none;
+}
+
+@keyframes card-contingency-pulse {
+  0%, 100% { opacity: 0.66; }
+  50% { opacity: 1; }
+}
+
+.card__combo-aura {
+  position: absolute;
+  inset: 0;
+  /* Draw over the raster frames, but below all live card text (z=3). */
+  z-index: 2;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  pointer-events: none;
+}
+
+.card__combo-pulse {
+  position: absolute;
+  inset: 1px;
+  box-sizing: border-box;
+  border: 2px solid rgba(255, 236, 166, 0.42);
+  border-radius: calc(var(--radius-md) - 1px);
+  background:
+    radial-gradient(
+      ellipse at center,
+      rgba(255, 207, 78, 0) 57%,
+      rgba(255, 207, 78, 0.08) 72%,
+      rgba(255, 207, 78, 0.2) 91%,
+      rgba(255, 239, 174, 0.26) 100%
+    );
+  box-shadow:
+    inset 0 0 11px rgba(255, 190, 45, 0.32),
+    inset 0 0 3px rgba(255, 248, 205, 0.54),
+    0 0 5px rgba(255, 213, 92, 0.28);
+  opacity: 0.28;
+  transform: scale(0.975);
+  transform-origin: center;
+  animation: card-combo-pulse 1.65s ease-in-out infinite;
+}
+
+@keyframes card-combo-pulse {
+  0%, 100% {
+    opacity: 0.26;
+    transform: scale(0.975);
+    filter: brightness(0.9);
+  }
+  50% {
+    opacity: 0.64;
+    transform: scale(1);
+    filter: brightness(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card__contingency-ring { animation: none; }
+  .card__combo-pulse {
+    opacity: 0.58;
+    transform: none;
+    filter: none;
+    animation: none;
+  }
 }
 
 /* ---------- Top strip (cost + name) ---------- */
 .card__top {
-  position: relative; z-index: 2;
-  height: 22px; flex-shrink: 0;
+  position: absolute;
+  /* Keep the projecting cost plate above the card's selection/playable rim. */
+  z-index: 7;
+  top: 4px;
+  left: 0;
+  right: 0;
+  height: 22px;
+}
+
+.card__cost-unavailable {
+  position: absolute;
+  left: -7px;
+  /* Pixel font's glyph box sits visually low; lift the overlay so the X itself,
+     not only its CSS box, is centered on the projecting 28px cost plate. */
+  top: -9px;
+  width: 28px;
+  height: 28px;
+  /* This state may coexist with a changed-cost stack. Keep the red X above
+     both current/original plates even though the stack follows it in the DOM. */
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  color: #ff5d5d;
+  font-family: var(--font-body);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+  text-shadow: 0 0 2px #000, 1px 1px 0 #000;
+  pointer-events: none;
 }
 
 .card__cost {
-  position: absolute; left: 0; top: 0;
-  width: 22px; height: 22px;
-  border-radius: 50%;
+  position: absolute; left: -7px; top: -6px;
+  width: 28px; height: 28px;
   background: transparent;
-  border: 1px solid var(--fg-muted);
+  border: 0;
   display: grid;
   place-items: center;
   font-family: var(--font-digit);
-  font-size: 16px;
+  font-size: 20px;
   line-height: 1;
-  color: var(--gold);
+  color: var(--fg-white);
   font-weight: 400;
   font-variant-numeric: tabular-nums;
-  box-shadow: 0 0 4px rgba(255, 213, 79, 0.35);
+  box-shadow: none;
   text-shadow: var(--text-shadow-pixel);
   z-index: 1;
-  overflow: hidden;
+  overflow: visible;
+}
+
+.card__cost-base {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .card__cost-n {
+  position: relative;
+  z-index: 2;
   width: 100%;
   height: 100%;
   display: grid;
@@ -120,69 +360,109 @@
   white-space: nowrap;
   box-sizing: border-box;
   /* Silkscreen's visible glyph sits slightly below its line-box center.
-     Reduced original costs use their own optical offsets at the circle level. */
+     Changed original costs use their own optical offsets at the plate level. */
   transform: translate(
     var(--card-cost-digit-x, 0),
-    var(--card-cost-digit-y, -1px)
+    var(--card-cost-digit-y, -2px)
   );
   transform-origin: center;
 }
 
-/* Why: コンボ軽減時は「現在コスト (上, 強調) / 元コスト (下, 灰色)」の
-   2 個円を縦並び表示する。1 個の円に "1→0" を詰め込むより視認性が高い。
-   各円は通常 .card__cost と同じ 22x22 サイズを保つ。 */
+/* A changed cost keeps the current 28px placement box (with its 30px plate)
+   prominent and repeats the same asset below for the de-emphasized original. */
 .card__cost-stack {
   position: absolute;
-  left: 0;
-  top: 0;
-  width: 22px;
-  display: grid;
-  grid-template-columns: 22px;
-  grid-template-rows: 22px 22px;
-  row-gap: 2px;
-  justify-items: start;
-  align-items: start;
-  z-index: 2;
+  left: -7px;
+  top: -6px;
+  width: 28px;
+  height: 50px;
+  z-index: 5;
 }
 .card__cost-stack .card__cost {
-  position: relative;
-  left: auto;
-  top: auto;
+  position: absolute;
   margin: 0;
 }
+.card__cost-stack .card__cost--current {
+  left: 0;
+  top: 0;
+  z-index: 2;
+}
 .card__cost--current .card__cost-n {
-  color: #f1c95b;
+  color: var(--fg-white);
   font-weight: 400;
   /* Keep the normal pixel outline, but do not glow/bolden the glyph itself. */
   text-shadow: var(--text-shadow-pixel);
 }
+.card__cost-n--reduced {
+  color: var(--gold);
+}
+.card__cost-n--increased {
+  color: var(--state-block);
+}
+.card__cost-n--same {
+  color: var(--fg-white);
+}
 .card__cost--orig {
   --card-cost-digit-x: 0;
-  --card-cost-digit-y: 0;
+  --card-cost-digit-y: -1px;
+  left: 3px;
+  top: 27px;
+  z-index: 1;
+  width: 22px;
+  height: 22px;
 }
 .card__cost--orig .card__cost-n {
-  color: #aaa;
+  color: #d6d6d6;
   font-size: 13px;
 }
+.card__cost--orig .card__cost-base {
+  filter: grayscale(0.72) brightness(0.68);
+  opacity: 0.94;
+}
 
-/* Fit multi-character costs inside the 20px inner diameter. The circle keeps
-   its canonical 22px geometry; only the complete number is optically fitted. */
+/* Increase only the current affiliation plate, keeping its 28px layout box
+   and the centered card title unchanged. The one-pixel expansion on every
+   side preserves the plate's optical centre while giving the 20px digit more
+   breathing room. */
+.card__cost--current .card__cost-base {
+  inset: -1px;
+  width: calc(100% + 2px);
+  height: calc(100% + 2px);
+}
+
+/* Fit multi-character costs inside the plate while preserving one readable
+   number.  Both current and original values keep their own optical scale. */
 .card__cost-n[data-digits='2'] {
-  font-size: 13px;
+  font-size: 16px;
   letter-spacing: -1px;
 }
 
 .card__cost-n[data-digits='3'] {
+  font-size: 12px;
+  letter-spacing: -1px;
+}
+
+.card__cost--orig .card__cost-n[data-digits='2'] {
   font-size: 10px;
   letter-spacing: -1px;
 }
 
+.card__cost--orig .card__cost-n[data-digits='3'] {
+  font-size: 8px;
+  letter-spacing: -1px;
+}
+
 .card__name {
-  width: 100%; height: 22px;
-  padding: 0 4px 0 28px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 22px;
+  padding: 0 22px;
   box-sizing: border-box;
   display: flex;
   align-items: center;
+  justify-content: center;
+  text-align: center;
   font-family: var(--font-body);
   font-size: 14px;
   letter-spacing: 0.5px;
@@ -194,17 +474,16 @@
   line-height: 1.1;
 }
 
-/* Why: カード名の文字数に応じて font-size を段階縮小し、見切れずに
-   フル表示する (ユーザ要望: 「ストライク」「ウィスプ召喚」「強打+」等の
-   多文字名を全部表示)。基準は cost 円 (28px) 控除後の利用幅 ~80px。
-   日本語は 1 文字 ~14px なので 5 文字までは 14px が限界。 */
-.card__name[data-len="6"] { font-size: 12px; letter-spacing: 0.3px; }
-.card__name[data-len="7"] { font-size: 11px; letter-spacing: 0.2px; }
-.card__name[data-len="8"] { font-size: 10px; letter-spacing: 0; }
-.card__name[data-len="9"],
-.card__name[data-len="10"],
+/* Reserve the same space on both sides. The name therefore shares the exact
+   center of the card while the left reservation keeps it clear of the cost. */
+.card__name[data-len="5"] { font-size: 13px; letter-spacing: 0.2px; }
+.card__name[data-len="6"] { font-size: 11px; letter-spacing: 0.1px; }
+.card__name[data-len="7"] { font-size: 9px; letter-spacing: 0; }
+.card__name[data-len="8"] { font-size: 8px; letter-spacing: 0; }
+.card__name[data-len="9"] { font-size: 7px; letter-spacing: 0; }
+.card__name[data-len="10"] { font-size: 6.5px; letter-spacing: 0; }
 .card__name[data-len="11"],
-.card__name[data-len="12"] { font-size: 9px; letter-spacing: 0; }
+.card__name[data-len="12"] { font-size: 6px; letter-spacing: 0; }
 
 .card__plus {
   color: #7dffe8;
@@ -212,106 +491,124 @@
   margin-left: 1px;
 }
 
-/* ---------- Illustration (4:3 horizontal, Phase 10.5.M2) ----------
-   旧: 1:1 正方形 → カードの上半分のみで描画。
-   新: 4:3 横長 (高さ -25%) で上に寄せ、下半分は description 用 .card__desc に明け渡す。 */
-.card__illust {
-  position: relative; z-index: 1;
-  aspect-ratio: 4 / 3;
-  width: calc(100% - 6px);
-  margin: 4px auto 0;
-  background:
-    repeating-linear-gradient(0deg, rgba(0,0,0,0.25) 0 2px, transparent 2px 4px),
-    var(--bg-2);
-  border: 1px solid rgba(201, 152, 90, 0.35);
-  image-rendering: pixelated;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* The visible type word is baked into the type-frame PNG. Keep equivalent
+   semantic labels in the DOM without reserving any visual card space. */
+.card__type,
+.card__affiliation-label,
+.card__state-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
   font-family: var(--font-label);
-  font-size: 9px;
-  color: #6a4a2a;
-  letter-spacing: 1px;
-  flex-shrink: 0;
+  font-size: 8px;
 }
 
 /* ---------- Description (Phase 10.5.M2) ----------
    カード下半分に formatter 出力テキストを描画。CardDesc が marker を span 化し、
    ここで黒フチ + 小さめ font + 中央寄せに整形する。 */
 .card__desc {
-  position: relative; z-index: 2;
-  flex: 1 1 auto;
+  position: absolute;
+  z-index: 3;
+  top: 100px;
+  right: 6px;
+  bottom: 5px;
+  left: 10px;
+  box-sizing: border-box;
   display: flex;
   align-items: flex-start;
   justify-content: center;
   text-align: center;
-  padding: 4px 4px 2px;
+  /* The former 2px top inset put the first outlined glyph too close to the
+     illustrated rule. Move every line-count layout down by exactly 2px. */
+  padding: 4px 1px 1px;
   font-family: var(--font-body);
+  font-synthesis: none;
   font-size: 9px;
   line-height: 1.25;
   color: #ffffff;
-  /* 4 方向 black outline (text-stroke 互換)。 */
+  /* Four hard one-pixel offsets form a crisp outline without blur. */
   text-shadow:
-    -1px -1px 0 #000,
-    1px -1px 0 #000,
-    -1px  1px 0 #000,
-    1px  1px 0 #000,
-    0    0   2px rgba(0,0,0,0.7);
+    -1px 0 0 #000,
+    1px 0 0 #000,
+    0 -1px 0 #000,
+    0 1px 0 #000;
   overflow: hidden;
   letter-spacing: 0;
+}
+
+/* Two and three lines have enough vertical room for a more readable rhythm. */
+.card__desc .card-desc[data-lines='2'],
+.card__desc .card-desc[data-lines='3'] {
+  line-height: 1.35;
+}
+
+/* Four lines already use the balanced dense rhythm. */
+.card__desc .card-desc[data-lines='4'] {
+  line-height: 1.08;
+}
+
+/* Five full glyph rows need a slight vertical-only squeeze after the global
+   2px downward shift. Horizontal CardDesc fitting remains independent. */
+.card__desc .card-desc[data-lines='5'] {
+  line-height: 1;
+  transform: scaleY(0.88);
+  transform-origin: center top;
 }
 
 /* card__desc 内の CardDesc 系 span は色を保つが、text-shadow は親から継承される
    ので各色の数字/keyword 等も黒フチが乗る。 */
 
-/* ---------- Bottom type label ---------- */
-.card__type {
-  position: relative; z-index: 2;
-  margin-top: auto;
-  text-align: center;
-  padding: 2px 0 1px;
-  font-family: var(--font-label);
-  font-size: 8px;
-  letter-spacing: 2px;
-  color: var(--border-light);
-  text-shadow: 0 1px 0 #000;
-}
-
-/* ---------- Rarity (cost ring + name + illust frame) ---------- */
-.card--rarity-c .card__cost   { border-color: #d8d8d8; color: #f0f0f0; box-shadow: 0 0 4px rgba(216,216,216,0.3); }
+/* ---------- Rarity (name colour only) ---------- */
 .card--rarity-c .card__name   { color: var(--rarity-c); }
-.card--rarity-c .card__illust { border-color: rgba(216,216,216,0.4); }
 
-.card--rarity-r .card__cost   { border-color: #5a8ac9; color: var(--rarity-r); box-shadow: 0 0 4px rgba(90,138,201,0.5); }
 .card--rarity-r .card__name   { color: var(--rarity-r); }
-.card--rarity-r .card__illust { border-color: rgba(90,138,201,0.55); }
 
-.card--rarity-e .card__cost   { border-color: #a06ad4; color: var(--rarity-e); box-shadow: 0 0 4px rgba(160,106,212,0.55); }
 .card--rarity-e .card__name   { color: var(--rarity-e); }
-.card--rarity-e .card__illust { border-color: rgba(160,106,212,0.6); }
 
-.card--rarity-l .card__cost   { border-color: #c9a838; color: var(--rarity-l); box-shadow: 0 0 6px rgba(255,229,138,0.6); }
 .card--rarity-l .card__name   { color: var(--rarity-l); }
-.card--rarity-l .card__illust { border-color: rgba(201,168,56,0.65); box-shadow: inset 0 0 6px rgba(201,168,56,0.2); }
 
 /* Why: Phase 10.5.G で追加された CardRarity.Token (= 't') の placeholder スタイル。
    当面 Common (--rarity-c) と同色で扱い、差別化は別フェーズで実施する。 */
-.card--rarity-t .card__cost   { border-color: #d8d8d8; color: #f0f0f0; box-shadow: 0 0 4px rgba(216,216,216,0.3); }
 .card--rarity-t .card__name   { color: var(--rarity-c); }
-.card--rarity-t .card__illust { border-color: rgba(216,216,216,0.4); }
 
-/* Reduced-cost state must win over the rarity ring. Keeping the old cost
-   neutral and unlit prevents the two close rings from visually merging. */
+/* Cost digits use state, not card rarity, as their visual meaning. */
+.card .card__cost {
+  border-color: transparent;
+  color: var(--fg-white);
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Current and changed-original values each carry their affiliation plate. */
 .card .card__cost--current {
-  border-color: #f1c95b;
-  color: #f1c95b;
-  background: rgba(241, 201, 91, 0.15);
-  box-shadow: 0 0 5px rgba(241, 201, 91, 0.5);
+  border-color: transparent;
+  color: var(--fg-white);
+  background: transparent;
+  box-shadow: none;
+}
+
+/* These selectors intentionally match the cost container specificity so the
+   neutral current-cost rule above cannot hide the semantic digit colors. */
+.card .card__cost-n--reduced {
+  color: var(--gold);
+}
+.card .card__cost-n--increased {
+  color: var(--state-block);
+}
+.card .card__cost-n--same {
+  color: var(--fg-white);
 }
 
 .card .card__cost--orig {
-  border-color: #888;
-  color: #aaa;
-  background: rgba(60, 60, 60, 0.45);
+  border-color: transparent;
+  color: #d6d6d6;
+  background: transparent;
   box-shadow: none;
 }

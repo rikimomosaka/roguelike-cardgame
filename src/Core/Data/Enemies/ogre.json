@@ -6,51 +6,33 @@
   "act": 1,
   "heightTier": 7,
   "tier": "Strong",
-  "initialMoveId": "club_smash",
-  "moves": [
+  "attack": 6,
+  "defense": 6,
+  "initialEnergy": 0,
+  "energyPerTurn": 1,
+  "drawPerTurn": 3,
+  "handLimit": 5,
+  "aiProfileId": "low_cost_combo",
+  "deck": [
     {
-      "id": "club_smash",
-      "kind": "Attack",
-      "nextMoveId": "stomp",
-      "effects": [
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 14
-        }
-      ]
+      "cardId": "enemy_ogre_club_smash",
+      "count": 2
     },
     {
-      "id": "stomp",
-      "kind": "Multi",
-      "nextMoveId": "roar",
-      "effects": [
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 6
-        },
-        {
-          "action": "block",
-          "scope": "self",
-          "amount": 6
-        }
-      ]
+      "cardId": "enemy_ogre_stomp",
+      "count": 2
     },
     {
-      "id": "roar",
-      "kind": "Buff",
-      "nextMoveId": "club_smash",
-      "effects": [
-        {
-          "action": "buff",
-          "scope": "self",
-          "name": "strength",
-          "amount": 2
-        }
-      ]
+      "cardId": "enemy_ogre_roar",
+      "count": 2
+    },
+    {
+      "cardId": "enemy_common_attack",
+      "count": 4
+    },
+    {
+      "cardId": "enemy_common_defend",
+      "count": 2
     }
   ]
 }

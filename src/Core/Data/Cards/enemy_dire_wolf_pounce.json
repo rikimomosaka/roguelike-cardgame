@@ -1,0 +1,26 @@
+{
+  "id": "enemy_dire_wolf_pounce",
+  "name": "飛びかかり",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy dire_wolf unique (from move pounce)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 11
+          }
+        ]
+      }
+    }
+  ]
+}

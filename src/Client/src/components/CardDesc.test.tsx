@@ -22,6 +22,112 @@ describe('CardDesc', () => {
     expect(kw?.getAttribute('data-keyword')).toBe('wild')
   })
 
+  it('marks a disabled Wild keyword with a strike-through label and red suffix', () => {
+    const { container } = render(<CardDesc text="[K:wild]" disabledKeywords={['wild']} />)
+    const keyword = container.querySelector('.card-desc-keyword--disabled')
+    expect(keyword).toBeInTheDocument()
+    expect(keyword?.querySelector('.card-desc-keyword__label')).toBeInTheDocument()
+    expect(keyword?.querySelector('.card-desc-keyword__disabled')?.textContent).toBe(' (無効)')
+  })
+
+  it('recomputes horizontal fitting when a keyword becomes disabled', () => {
+    const clientWidth = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get')
+      .mockImplementation(function (this: HTMLElement) {
+        return this.classList.contains('card-desc-line') ? 80 : 0
+      })
+    const scrollWidth = vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get')
+      .mockImplementation(function (this: HTMLElement) {
+        if (!this.classList.contains('card-desc-line-inner')) return 0
+        return this.textContent?.includes('(無効)') ? 120 : 70
+      })
+
+    try {
+      const text = '[K:wild]/[K:finisher]'
+      const { container, rerender } = render(
+        <CardDesc text={text} disabledKeywords={[]} />,
+      )
+      const inner = container.querySelector<HTMLElement>('.card-desc-line-inner')!
+      expect(inner.dataset.fit).toBeUndefined()
+      expect(inner.style.transform).toBe('')
+
+      rerender(<CardDesc text={text} disabledKeywords={['wild']} />)
+
+      expect(inner.dataset.fit).toBe('scaled')
+      expect(inner.style.transform).toContain('scaleX(')
+    } finally {
+      clientWidth.mockRestore()
+      scrollWidth.mockRestore()
+    }
+  })
+
+  it('uses sub-pixel width and reserves black-outline space for a boundary line', () => {
+    const clientWidth = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get')
+      .mockImplementation(function (this: HTMLElement) {
+        return this.classList.contains('card-desc-line') ? 100 : 0
+      })
+    const scrollWidth = vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get')
+      .mockImplementation(function (this: HTMLElement) {
+        return this.classList.contains('card-desc-line-inner') ? 96 : 0
+      })
+    const nativeGetComputedStyle = window.getComputedStyle.bind(window)
+    const computedStyle = vi.spyOn(window, 'getComputedStyle')
+      .mockImplementation((element, pseudoElement) => {
+        if (!element.classList.contains('card-desc-line-inner')) {
+          return nativeGetComputedStyle(element, pseudoElement)
+        }
+        const letterSpacing = (element as HTMLElement).style.letterSpacing
+        const width = letterSpacing === '-0.2px' ? '95.9px' : '96.25px'
+        return { width } as CSSStyleDeclaration
+      })
+
+    try {
+      const { container } = render(<CardDesc text="伏策：相手のアタック時" />)
+      const inner = container.querySelector<HTMLElement>('.card-desc-line-inner')!
+
+      expect(inner.dataset.fit).toBe('tracking')
+      expect(inner.style.letterSpacing).toBe('-0.2px')
+      expect(inner.style.transform).toBe('')
+    } finally {
+      computedStyle.mockRestore()
+      clientWidth.mockRestore()
+      scrollWidth.mockRestore()
+    }
+  })
+
+  it('uses the final fractional tracked width when calculating horizontal scale', () => {
+    const clientWidth = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get')
+      .mockImplementation(function (this: HTMLElement) {
+        return this.classList.contains('card-desc-line') ? 100 : 0
+      })
+    const scrollWidth = vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get')
+      .mockImplementation(function (this: HTMLElement) {
+        return this.classList.contains('card-desc-line-inner') ? 111 : 0
+      })
+    const nativeGetComputedStyle = window.getComputedStyle.bind(window)
+    const computedStyle = vi.spyOn(window, 'getComputedStyle')
+      .mockImplementation((element, pseudoElement) => {
+        if (!element.classList.contains('card-desc-line-inner')) {
+          return nativeGetComputedStyle(element, pseudoElement)
+        }
+        const letterSpacing = (element as HTMLElement).style.letterSpacing
+        return { width: letterSpacing === '-0.6px' ? '110.5px' : '120.75px' } as CSSStyleDeclaration
+      })
+
+    try {
+      const { container } = render(<CardDesc text="再演：コスト2以下のアタック・スキル" />)
+      const inner = container.querySelector<HTMLElement>('.card-desc-line-inner')!
+      const scale = inner.style.transform.match(/^scaleX\((.+)\)$/)
+
+      expect(inner.dataset.fit).toBe('scaled')
+      expect(inner.style.left).toBe('2px')
+      expect(Number(scale?.[1])).toBeCloseTo(96 / 110.5, 10)
+    } finally {
+      computedStyle.mockRestore()
+      clientWidth.mockRestore()
+      scrollWidth.mockRestore()
+    }
+  })
+
   it('keeps Wild and SuperWild tooltip descriptions aligned with the game rules', () => {
     expect(KEYWORD_DEFS.wild.desc).toBe(
       'このカード及び次に使うカードではコンボが途切れない。このコンボ中、以降のワイルドを無効にする。',
@@ -31,13 +137,68 @@ describe('CardDesc', () => {
     )
   })
 
+  it('defines the four class-mechanic keywords with canonical Japanese wording', () => {
+    expect(KEYWORD_DEFS.momentum).toEqual({
+      name: '乗勢',
+      desc: '効果の実行時、自身のこのターンの最大コンボがX以上であれば適用される。',
+    })
+    expect(KEYWORD_DEFS.finisher.name).toBe('終撃')
+    expect(KEYWORD_DEFS.reprise.name).toBe('再演')
+    expect(KEYWORD_DEFS.reprise.desc).toContain('この戦闘中')
+    expect(KEYWORD_DEFS.reprise.desc).toContain('効果の解決を完了')
+    expect(KEYWORD_DEFS.contingency).toEqual({
+      name: '伏策',
+      desc: '使用時は効果が実行されず、発動待ちとして除外する。伏策条件を満たした時に効果を実行し、捨札へ移動する。',
+    })
+  })
+
   it('defines both hand-wide cost statuses for nested tooltips', () => {
-    expect(STATUS_DEFS.handCostReduction).toMatchObject({ name: '手札軽減' })
-    expect(STATUS_DEFS.handCostIncrease).toMatchObject({ name: '手札増加' })
+    expect(STATUS_DEFS.handCostReduction).toMatchObject({ name: '節制' })
+    expect(STATUS_DEFS.handCostIncrease).toMatchObject({ name: '浪費' })
+  })
+
+  it('defines every expanded status with the canonical Japanese wording', () => {
+    expect(Object.keys(STATUS_DEFS)).toHaveLength(41)
+    expect(STATUS_DEFS.poison.desc).toBe('ターン開始時に[N:X]ダメージを受け、[S:poison]が1減少する。')
+    expect(STATUS_DEFS.reflect.desc).toBe(
+      'アタックを受けた時、攻撃元にアタックの回数分だけ[N:X]ダメージを返す(この際ブロックを無視する)。',
+    )
+    expect(STATUS_DEFS.pursuit).toEqual({
+      name: '追撃',
+      desc: '攻撃直前に、「敵全体に[N:X]アタック。」を得て、[S:pursuit]が1減少する。',
+    })
+    expect(STATUS_DEFS.confusion.desc).toContain('0～3のランダムな数値')
+    expect(STATUS_DEFS.distress.name).toBe('動揺')
+    expect(STATUS_DEFS.virulentPoison.desc).toBe('[S:poison]によって受けるダメージが[N:X]倍になる。')
+    expect(STATUS_DEFS.scorch).toEqual({
+      name: '灼痕',
+      desc: '[S:burn]が消滅する時、代わりに[S:scorch]が1減少する。',
+    })
+    expect(STATUS_DEFS.haste).toEqual({
+      name: '加速',
+      desc: 'ターン開始時のエナジー回復量を+[N:X]し、[S:haste]が消滅する。',
+    })
+    expect(STATUS_DEFS.afterimage.name).toBe('残光')
+    expect(STATUS_DEFS.steadfast.name).toBe('堅持')
+    expect(STATUS_DEFS.cover.name).toBe('護衛')
+    expect(STATUS_DEFS.defensiveStance.name).toBe('守勢')
+    expect(STATUS_DEFS.comboCarryover.name).toBe('連環')
+    expect(STATUS_DEFS.afterglow.name).toBe('余韻')
+    expect(STATUS_DEFS.resonance.name).toBe('共鳴')
+    expect(STATUS_DEFS.disruption.name).toBe('攪乱')
+  })
+
+  it('renders substituted status values and names with highlighted marker classes', () => {
+    const { container } = render(
+      <CardDesc text="ターン開始時に[N:3]ダメージを受け、[S:poison]が1減少する。" />,
+    )
+
+    expect(container.querySelector('.card-desc-num')).toHaveTextContent('3')
+    expect(container.querySelector('.card-desc-status')).toHaveTextContent('毒')
   })
 
   it('renders [T:OnTurnStart] as JP label', () => {
-    const { container } = render(<CardDesc text="[T:OnTurnStart]の度にカードを [N:1] 枚引く。" />)
+    const { container } = render(<CardDesc text="[T:OnTurnStart]にカードを [N:1] 枚引く。" />)
     expect(container.textContent).toContain('ターン開始時')
     const trig = container.querySelector('.card-desc-trigger')
     expect(trig?.textContent).toBe('ターン開始時')
@@ -75,6 +236,27 @@ describe('CardDesc', () => {
     const { container } = render(<CardDesc text={'行 1。\n行 2。'} />)
     const lines = container.querySelectorAll('.card-desc-line')
     expect(lines.length).toBe(2)
+    expect(container.querySelector('.card-desc')).toHaveAttribute('data-lines', '2')
+  })
+
+  it('caps the layout line band at five for dense in-card descriptions', () => {
+    const { container } = render(<CardDesc text={'一。\n二。\n三。\n四。\n五。\n六。'} />)
+
+    expect(container.querySelectorAll('.card-desc-line')).toHaveLength(6)
+    expect(container.querySelector('.card-desc')).toHaveAttribute('data-lines', '5')
+    expect(container.querySelector('.card-desc')).toHaveAttribute('data-line-overflow', 'true')
+  })
+
+  it('marks a fully consumed per-turn usage line with the reached-state class', () => {
+    const reached = render(<CardDesc text={'ターン中2度だけ使用可能(2/2)。\n1枚引く。'} />)
+    const available = render(<CardDesc text={'ターン中2度だけ使用可能(1/2)。\n1枚引く。'} />)
+
+    expect(reached.container.querySelector('.card-desc-line')).toHaveClass(
+      'card-desc-line--usage-limit-reached',
+    )
+    expect(available.container.querySelector('.card-desc-line')).not.toHaveClass(
+      'card-desc-line--usage-limit-reached',
+    )
   })
 
   it('handles literal \\n escape sequence', () => {
@@ -83,6 +265,18 @@ describe('CardDesc', () => {
     const { container } = render(<CardDesc text={text} />)
     const lines = container.querySelectorAll('.card-desc-line')
     expect(lines.length).toBe(2)
+  })
+
+  it('keeps a modifyCardCost formatter sentence on one fitted line', () => {
+    const text = '手札の全カードのコストを使用されるまで-[N:1]。'
+    const compact = render(<CardDesc text={text} />)
+    expect(compact.container.querySelectorAll('.card-desc-line')).toHaveLength(1)
+    expect(compact.container.querySelector('.card-desc-line')).toHaveTextContent(
+      '手札の全カードのコストを使用されるまで-1。',
+    )
+
+    const expanded = render(<CardDesc text={text} compress={false} />)
+    expect(expanded.container.querySelectorAll('.card-desc-line-plain')).toHaveLength(1)
   })
 
   it('renders multiple markers in one line', () => {

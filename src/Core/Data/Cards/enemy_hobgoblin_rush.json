@@ -1,0 +1,26 @@
+{
+  "id": "enemy_hobgoblin_rush",
+  "name": "突進",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy hobgoblin unique (from move rush)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 14
+          }
+        ]
+      }
+    }
+  ]
+}

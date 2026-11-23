@@ -1,0 +1,26 @@
+{
+  "id": "enemy_act3_brute_crush",
+  "name": "粉砕",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy act3_brute unique (from move crush)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 21
+          }
+        ]
+      }
+    }
+  ]
+}

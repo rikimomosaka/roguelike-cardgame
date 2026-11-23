@@ -95,6 +95,16 @@ public class CardTextFormatterTests
     }
 
     [Fact]
+    public void Draw_all_allies_names_the_resource_owner()
+    {
+        var s = CardTextFormatter.FormatEffects(new[]
+        {
+            E("draw", EffectScope.All, EffectSide.Ally, 2),
+        });
+        Assert.Equal("味方全体が[N:2]枚引く。", s);
+    }
+
+    [Fact]
     public void Discard_self_default_random()
     {
         // Select なしは旧仕様 (ランダム) の文言を維持
@@ -154,14 +164,29 @@ public class CardTextFormatterTests
     public void Heal_self()
     {
         var s = CardTextFormatter.FormatEffects(new[] { E("heal", EffectScope.Self, null, 5) });
-        Assert.Equal("自身にHPを[N:5]回復。", s);
+        Assert.Equal("自身に[N:5]HP回復。", s);
     }
 
     [Fact]
     public void Heal_ally_single()
     {
         var s = CardTextFormatter.FormatEffects(new[] { E("heal", EffectScope.Single, EffectSide.Ally, 3) });
-        Assert.Equal("味方単体にHPを[N:3]回復。", s);
+        Assert.Equal("味方単体に[N:3]HP回復。", s);
+    }
+
+    [Theory]
+    [InlineData(EffectScope.Random, "ランダムな味方に[N:4]HP回復。")]
+    [InlineData(EffectScope.All, "味方全体に[N:4]HP回復。")]
+    public void Heal_ally_scope_variants_use_amount_before_hp(
+        EffectScope scope,
+        string expected)
+    {
+        var s = CardTextFormatter.FormatEffects(new[]
+        {
+            E("heal", scope, EffectSide.Ally, 4),
+        });
+
+        Assert.Equal(expected, s);
     }
 
     // --- Summon ---
@@ -220,6 +245,28 @@ public class CardTextFormatterTests
     {
         var s = CardTextFormatter.FormatEffects(new[] { E("gainEnergy", EffectScope.Self, null, 1) });
         Assert.Equal("エナジー+[N:1]。", s);
+    }
+
+    [Fact]
+    public void GainEnergy_single_ally_names_the_resource_owner()
+    {
+        var s = CardTextFormatter.FormatEffects(new[]
+        {
+            E("gainEnergy", EffectScope.Single, EffectSide.Ally, 1),
+        });
+        Assert.Equal("味方単体のエナジー+[N:1]。", s);
+    }
+
+    [Fact]
+    public void ModifyCardCost_all_allies_names_the_resource_owner()
+    {
+        var effect = new CardEffect(
+            "modifyCardCost", EffectScope.All, EffectSide.Ally, -1,
+            Pile: "hand", Select: "all", CostDuration: "untilPlayed");
+        var s = CardTextFormatter.FormatEffects(new[] { effect });
+        Assert.Equal(
+            "味方全体の手札の全カードのコストを使用されるまで-[N:1]。",
+            s);
     }
 
     [Fact]
@@ -413,18 +460,36 @@ public class CardTextFormatterTests
     }
 
     [Fact]
+    public void RecoverFromDiscard_choose_to_hand_uses_the_canonical_possessive_wording()
+    {
+        var e = new CardEffect("recoverFromDiscard", EffectScope.Self, null, 1, Pile: "hand", Select: "choose");
+        var s = CardTextFormatter.FormatEffects(new[] { e });
+        Assert.Equal("捨札の選んだ[N:1]枚を手札に戻す。", s);
+    }
+
+    [Fact]
     public void RecoverFromDiscard_choose_to_exhaust()
     {
         var e = new CardEffect("recoverFromDiscard", EffectScope.Self, null, 1, Pile: "exhaust", Select: "choose");
         var s = CardTextFormatter.FormatEffects(new[] { e });
-        Assert.Equal("捨札から選んで[N:1]枚、除外する。", s);
+        Assert.Equal("捨札の選んだ[N:1]枚を除外する。", s);
+    }
+
+    [Fact]
+    public void RecoverFromExhaust_choose_to_draw()
+    {
+        var e = new CardEffect(
+            "recoverFromExhaust", EffectScope.Self, null, 2,
+            Pile: "draw", Select: "choose");
+        var s = CardTextFormatter.FormatEffects(new[] { e });
+        Assert.Equal("除外から選んで[N:2]枚、山札に戻す。", s);
     }
 
     [Fact]
     public void GainMaxEnergy()
     {
         var s = CardTextFormatter.FormatEffects(new[] { E("gainMaxEnergy", EffectScope.Self, null, 1) });
-        Assert.Equal("ターン開始時のエナジー追加量+[N:1]。", s);
+        Assert.Equal("ターン開始時のエナジー回復量+[N:1]。", s);
     }
 
     // --- 10.5.B: Power trigger marker ---
@@ -434,7 +499,7 @@ public class CardTextFormatterTests
     {
         var e = new CardEffect("draw", EffectScope.Self, null, 1, Trigger: "OnTurnStart");
         var s = CardTextFormatter.FormatEffects(new[] { e });
-        Assert.Equal("[T:OnTurnStart]の度に[N:1]枚引く。", s);
+        Assert.Equal("[T:OnTurnStart]に[N:1]枚引く。", s);
     }
 
     [Fact]
@@ -443,7 +508,23 @@ public class CardTextFormatterTests
         // 同一 Trigger + 同一 spec が連続したら × N 回
         var e = new CardEffect("draw", EffectScope.Self, null, 1, Trigger: "OnTurnStart");
         var s = CardTextFormatter.FormatEffects(new[] { e, e });
-        Assert.Equal("[T:OnTurnStart]の度に[N:1]枚引く×[N:2]。", s);
+        Assert.Equal("[T:OnTurnStart]に[N:1]枚引く×[N:2]。", s);
+    }
+
+    [Fact]
+    public void Trigger_chance_is_rendered_and_different_chances_do_not_group()
+    {
+        var chance20 = new CardEffect(
+            "debuff", EffectScope.Single, EffectSide.Enemy, 1,
+            Name: "weak", Trigger: "OnHit", ChancePercent: 20);
+        var chance25 = chance20 with { ChancePercent = 25 };
+
+        var s = CardTextFormatter.FormatEffects(new[] { chance20, chance25 });
+
+        Assert.Equal(
+            "[T:OnHit]に[N:20]%の確率で敵単体に[S:weak][N:1]を付与。\n" +
+            "[T:OnHit]に[N:25]%の確率で敵単体に[S:weak][N:1]を付与。",
+            s);
     }
 
     [Fact]
@@ -452,7 +533,21 @@ public class CardTextFormatterTests
         var a = new CardEffect("draw", EffectScope.Self, null, 1, Trigger: "OnTurnStart");
         var b = new CardEffect("draw", EffectScope.Self, null, 1, Trigger: "OnPlayCard");
         var s = CardTextFormatter.FormatEffects(new[] { a, b });
-        Assert.Equal("[T:OnTurnStart]の度に[N:1]枚引く。\n[T:OnPlayCard]の度に[N:1]枚引く。", s);
+        Assert.Equal("[T:OnTurnStart]に[N:1]枚引く。\n[T:OnPlayCard]に[N:1]枚引く。", s);
+    }
+
+    [Fact]
+    public void Consecutive_virulent_poison_applications_display_the_total_amount()
+    {
+        var effect = new CardEffect(
+            "debuff", EffectScope.Single, EffectSide.Enemy, 1,
+            Name: "virulentPoison");
+
+        var text = CardTextFormatter.FormatEffects(new[] { effect, effect });
+
+        Assert.Equal(
+            "敵単体に[S:virulentPoison][N:2]を付与。",
+            text);
     }
 
     // --- 10.5.B: AmountSource (Variable X) marker ---
@@ -471,6 +566,18 @@ public class CardTextFormatterTests
         var e = new CardEffect("block", EffectScope.Self, null, 0, AmountSource: "drawPileCount");
         var s = CardTextFormatter.FormatEffects(new[] { e });
         Assert.Equal("自身に[V:X|山札の数]ブロック。", s);
+    }
+
+    [Fact]
+    public void AmountSource_selfBlock_uses_the_player_facing_label()
+    {
+        var effect = new CardEffect(
+            "attack", EffectScope.Single, EffectSide.Enemy, 0,
+            AmountSource: "selfBlock");
+
+        var text = CardTextFormatter.FormatEffects(new[] { effect });
+
+        Assert.Equal("敵単体に[V:X|自身のブロック]アタック。", text);
     }
 
     [Fact]
@@ -592,7 +699,7 @@ public class CardTextFormatterTests
             new CardEffect("energyPerTurnBonus", EffectScope.Self, null, 1, Trigger: "Passive")
         };
         var text = CardTextFormatter.FormatEffects(effects);
-        Assert.Contains("ターン開始時のエナジー追加量 +[N:1]", text);
+        Assert.Equal("ターン開始時のエナジー回復量+[N:1]。", text);
     }
 
     [Fact]
@@ -612,7 +719,7 @@ public class CardTextFormatterTests
             new CardEffect("goldRewardMultiplier", EffectScope.Self, null, 50, Trigger: "Passive")
         };
         var text = CardTextFormatter.FormatEffects(effects);
-        Assert.Contains("戦闘ゴールド報酬 +[N:50]%", text);
+        Assert.Equal("[T:OnBattleEnd]のゴールド報酬 +[N:50]%。", text);
     }
 
     [Fact]
@@ -622,7 +729,7 @@ public class CardTextFormatterTests
             new CardEffect("goldRewardMultiplier", EffectScope.Self, null, -20, Trigger: "Passive")
         };
         var text = CardTextFormatter.FormatEffects(effects);
-        Assert.Contains("戦闘ゴールド報酬 -[N:20]%", text);
+        Assert.Equal("[T:OnBattleEnd]のゴールド報酬 -[N:20]%。", text);
     }
 
     [Fact]
@@ -642,7 +749,7 @@ public class CardTextFormatterTests
             new CardEffect("rewardCardChoicesBonus", EffectScope.Self, null, 1, Trigger: "Passive")
         };
         var text = CardTextFormatter.FormatEffects(effects);
-        Assert.Contains("カード報酬選択肢 +[N:1] 枚", text);
+        Assert.Equal("カード報酬選択肢+[N:1]。", text);
     }
 
     [Fact]
@@ -652,7 +759,7 @@ public class CardTextFormatterTests
             new CardEffect("rewardRerollAvailable", EffectScope.Self, null, 1, Trigger: "Passive")
         };
         var text = CardTextFormatter.FormatEffects(effects);
-        Assert.Contains("カード報酬を [N:1] 回リロール可能", text);
+        Assert.Equal("カード報酬のリロール回数+[N:1]。", text);
     }
 
     [Fact]
@@ -682,20 +789,20 @@ public class CardTextFormatterTests
             new CardEffect("restHealBonus", EffectScope.Self, null, 5, Trigger: "Passive")
         };
         var text = CardTextFormatter.FormatEffects(effects);
-        Assert.Contains("休憩所での回復 +[N:5]", text);
+        Assert.Equal("[T:OnRest]の回復量 +[N:5]。", text);
     }
 
     [Fact]
     public void FormatEffects_Passive_NoTriggerPrefix()
     {
-        // Passive trigger には trigger プレフィックスマーカ ([T:...]) や接尾「の度に」が付かない
+        // Passive trigger には trigger プレフィックスマーカ ([T:...]) や接尾「に」が付かない
         var effects = new[] {
             new CardEffect("energyPerTurnBonus", EffectScope.Self, null, 1, Trigger: "Passive")
         };
         var text = CardTextFormatter.FormatEffects(effects);
         Assert.DoesNotContain("[T:", text);
         Assert.DoesNotContain("の度に", text);
-        Assert.DoesNotContain("。", text);
+        Assert.EndsWith("。", text);
     }
 
     [Fact]
@@ -725,15 +832,185 @@ public class CardTextFormatterTests
     }
 
     [Theory]
-    [InlineData(-2, "untilPlayed", "手札のカードをランダムに[N:3]枚、コストを[N:2]減らす（使用するまで）。")]
-    [InlineData(1, "untilTurnEnd", "手札のカードをランダムに[N:3]枚、コストを[N:1]増やす（このターン終了まで）。")]
-    public void FormatEffects_ModifyCardCost(
-        int amount, string duration, string expected)
+    [MemberData(nameof(ModifyCardCostCanonicalCases))]
+    public void FormatEffects_ModifyCardCost_uses_the_canonical_phrase_for_every_combination(
+        string pile,
+        string select,
+        string duration,
+        int amount,
+        string expected)
     {
         var effect = new CardEffect(
             "modifyCardCost", EffectScope.Self, null, amount,
-            Pile: "hand", Select: "random", CostDuration: duration, CardCount: 3);
+            Pile: pile, Select: select, CostDuration: duration, CardCount: 3);
 
         Assert.Equal(expected, CardTextFormatter.FormatEffects(new[] { effect }));
+    }
+
+    public static IEnumerable<object[]> ModifyCardCostCanonicalCases()
+    {
+        var piles = new[]
+        {
+            (Id: "hand", Label: "手札"),
+            (Id: "discard", Label: "捨札"),
+            (Id: "exhaust", Label: "除外"),
+            (Id: "draw", Label: "山札"),
+        };
+        var selections = new[]
+        {
+            (Id: "choose", Label: "選んだ[N:3]枚"),
+            (Id: "random", Label: "ランダムな[N:3]枚"),
+            (Id: "all", Label: "全カード"),
+        };
+        var durations = new[]
+        {
+            (Id: "untilPlayed", Label: "使用されるまで"),
+            (Id: "untilTurnEnd", Label: "ターン中"),
+        };
+        var amounts = new[]
+        {
+            (Value: -2, Label: "-[N:2]"),
+            (Value: 2, Label: "+[N:2]"),
+        };
+
+        foreach (var pile in piles)
+        foreach (var selection in selections)
+        foreach (var duration in durations)
+        foreach (var amount in amounts)
+        {
+            yield return new object[]
+            {
+                pile.Id,
+                selection.Id,
+                duration.Id,
+                amount.Value,
+                $"{pile.Label}の{selection.Label}のコストを{duration.Label}{amount.Label}。",
+            };
+        }
+    }
+
+    [Fact]
+    public void FormatEffects_ModifyCardCost_chosen_one_matches_the_card_wording()
+    {
+        var effect = new CardEffect(
+            "modifyCardCost", EffectScope.Self, null, -1,
+            Pile: "hand", Select: "choose", CostDuration: "untilPlayed", CardCount: 1);
+
+        Assert.Equal(
+            "手札の選んだ[N:1]枚のコストを使用されるまで-[N:1]。",
+            CardTextFormatter.FormatEffects(new[] { effect }));
+    }
+
+    [Fact]
+    public void FormatEffects_ModifyAllCardCosts_UsesCompactSignedWording()
+    {
+        var effect = new CardEffect(
+            "modifyCardCost", EffectScope.Self, null, -1,
+            Pile: "draw", Select: "all", CostDuration: "untilPlayed");
+
+        Assert.Equal(
+            "山札の全カードのコストを使用されるまで-[N:1]。",
+            CardTextFormatter.FormatEffects(new[] { effect }));
+    }
+
+    [Fact]
+    public void FormatEffects_ModifyCardCost_CurrentCost_Explains_zeroing_each_selected_card()
+    {
+        var effect = new CardEffect(
+            "modifyCardCost", EffectScope.Self, null, 0,
+            Pile: "hand", Select: "random", AmountSource: "currentCost",
+            CostDuration: "untilPlayed", CardCount: 2);
+
+        Assert.Equal(
+            "手札のランダムな[N:2]枚のコストを使用されるまで0にする。",
+            CardTextFormatter.FormatEffects(new[] { effect }));
+    }
+
+    [Theory]
+    [InlineData("energy", "現在のエナジー")]
+    [InlineData("powerCardCount", "パワーカード枚数")]
+    public void FormatEffects_uses_Japanese_labels_for_new_amount_sources(
+        string amountSource, string expectedLabel)
+    {
+        var effect = new CardEffect(
+            "attack", EffectScope.Single, EffectSide.Enemy, 0,
+            AmountSource: amountSource);
+
+        Assert.Contains($"[V:X|{expectedLabel}]", CardTextFormatter.FormatEffects(new[] { effect }));
+    }
+
+    [Fact]
+    public void FormatEffects_HealHp_has_an_authoring_preview()
+    {
+        var effect = new CardEffect("healHp", EffectScope.Self, null, 4);
+
+        Assert.Equal("[N:4]HP回復。", CardTextFormatter.FormatEffects(new[] { effect }));
+    }
+
+    [Fact]
+    public void Format_places_card_level_usage_limit_before_all_effects()
+    {
+        var def = MakeAttackDef(6) with { UsesPerTurn = 2 };
+
+        var text = CardTextFormatter.Format(def, upgraded: false);
+
+        Assert.StartsWith("ターン中2度だけ使用可能(0/2)。\n", text);
+        Assert.Equal(2, text.Split('\n').Length);
+    }
+
+    [Fact]
+    public void FormatWithUsageCount_updates_one_card_level_counter()
+    {
+        var def = MakeAttackDef(6) with { UsesPerTurn = 2 };
+
+        var text = CardTextFormatter.FormatWithUsageCount(
+            def, upgraded: false, CardActorContext.Empty, usageCount: 1);
+
+        Assert.StartsWith("ターン中2度だけ使用可能(1/2)。\n", text);
+    }
+
+    [Fact]
+    public void FormatUsableEffects_uses_the_same_canonical_usage_header()
+    {
+        var text = CardTextFormatter.FormatUsableEffects(
+            new[] { E("draw", EffectScope.Self, null, 1) },
+            keywords: null,
+            context: CardActorContext.Empty,
+            usesPerTurn: 3,
+            usesThisTurn: 2);
+
+        Assert.Equal(
+            "ターン中3度だけ使用可能(2/3)。\n[N:1]枚引く。",
+            text);
+    }
+
+    [Fact]
+    public void Format_uses_the_upgraded_keyword_set_without_base_inheritance()
+    {
+        var def = MakeAttackDef(
+            6,
+            keywords: new[] { "wild" },
+            upgradedKeywords: System.Array.Empty<string>());
+
+        Assert.Contains("[K:wild]", CardTextFormatter.Format(def, upgraded: false));
+        Assert.DoesNotContain("[K:wild]", CardTextFormatter.Format(def, upgraded: true));
+    }
+
+    [Fact]
+    public void FormatEffects_groups_same_target_debuffs_in_one_sentence()
+    {
+        var effect = new CardEffect(
+            "debuff", EffectScope.Self, null, 0,
+            StatusChanges: new[]
+            {
+                new StatusChange("silence", 1),
+                new StatusChange("handCostIncrease", 2),
+                new StatusChange("exhaustion", 2),
+                new StatusChange("distress", 2),
+            });
+
+        Assert.Equal(
+            "自身に[S:silence][N:1]・[S:handCostIncrease][N:2]・[S:exhaustion][N:2]・[S:distress][N:2]を付与。",
+            CardTextFormatter.FormatEffects(new[] { effect }));
     }
 }

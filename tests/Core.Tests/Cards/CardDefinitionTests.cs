@@ -126,4 +126,36 @@ public class CardDefinitionTests
         Assert.NotNull(def.Keywords);
         Assert.Contains("wild", def.Keywords);
     }
+
+    [Fact]
+    public void Normal_and_upgraded_keywords_are_independent()
+    {
+        var def = new CardDefinition(
+            "x", "x", null, CardRarity.Common, CardType.Skill,
+            Cost: 1, UpgradedCost: null,
+            Effects: System.Array.Empty<CardEffect>(),
+            UpgradedEffects: null,
+            Keywords: new[] { "wild" },
+            UpgradedKeywords: System.Array.Empty<string>());
+
+        Assert.Contains("wild", def.EffectiveKeywords(upgraded: false)!);
+        Assert.Empty(def.EffectiveKeywords(upgraded: true)!);
+        Assert.True(def.IsUpgradable);
+    }
+
+    [Fact]
+    public void Normal_and_upgraded_usage_limits_are_independent()
+    {
+        var def = new CardDefinition(
+            "x", "x", null, CardRarity.Common, CardType.Skill,
+            Cost: 1, UpgradedCost: null,
+            Effects: System.Array.Empty<CardEffect>(),
+            UpgradedEffects: null,
+            Keywords: null,
+            UsesPerTurn: 1,
+            UpgradedUsesPerTurn: 3);
+
+        Assert.Equal(1, def.EffectiveUsesPerTurn(upgraded: false));
+        Assert.Equal(3, def.EffectiveUsesPerTurn(upgraded: true));
+    }
 }

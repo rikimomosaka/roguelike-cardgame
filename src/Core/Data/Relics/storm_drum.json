@@ -1,0 +1,21 @@
+{
+  "id": "storm_drum",
+  "name": "雷鳴太鼓",
+  "displayName": null,
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-17T00:00:00Z",
+      "label": "initial",
+      "spec": {
+        "rarity": 3,
+        "description": "ひと打ちすれば稲妻が戦場を走り、すべての敵へ追い討ちを告げる。",
+        "effects": [
+          { "action": "buff", "scope": "self", "name": "pursuit", "amount": 2, "trigger": "OnBattleStart" }
+        ],
+        "implemented": true
+      }
+    }
+  ]
+}

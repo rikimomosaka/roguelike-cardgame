@@ -27,8 +27,8 @@
 
 /* Phase 10.5.M3: 各効果文を 1 行に保つ。
    inner span の自然幅が親幅を超えた場合、CardDescLine の useLayoutEffect が
-   transform: scaleX で圧縮する (テキスト潰しではなく文字間隔を詰める形)。
-   1.5 倍超のときは .card-desc-line--wrap が付与され折返しモードへ。 */
+   まず letter-spacing を狭め、それでも収まらない行だけ transform: scaleX で
+   横幅を圧縮する。formatter が決めた改行位置は変えず、追加の折返しはしない。 */
 .card-desc-line {
   display: block;
   width: 100%;
@@ -36,15 +36,17 @@
   white-space: nowrap;
 }
 .card-desc-line-inner {
+  position: relative;
   display: inline-block;
   white-space: nowrap;
+  transform-origin: left top;
 }
-.card-desc-line--wrap {
-  white-space: normal;
+.card-desc-line--scaled {
+  text-align: left;
 }
-.card-desc-line--wrap .card-desc-line-inner {
-  display: inline;
-  white-space: normal;
+
+.card-desc-line--usage-limit-reached {
+  color: #ff5d5d;
 }
 
 /* 数字 (デフォルト黄色)。battle 中のダメージ修正比較は 10.5.C で modifier を上書き。
@@ -71,8 +73,19 @@
 /* キーワード (ワイルド等)。tooltip 二段目で詳細定義が出る。 */
 .card-desc-keyword {
   color: #c5d4ff;
-  font-weight: bold;
+  font-weight: 400;
   cursor: help;
+}
+
+.card-desc-keyword--disabled .card-desc-keyword__label {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.card-desc-keyword__disabled {
+  color: #ff5d5d;
+  font-weight: 400;
+  text-decoration: none;
 }
 
 /* Phase 10.5.M6.7: 召喚は status と同じオレンジ系で「動詞的な作用」を表現。
@@ -83,8 +96,8 @@
 
 /* ステータス (筋力 / 脆弱 / 毒 等)。tooltip 二段目で詳細定義が出る。 */
 .card-desc-status {
-  color: #ffd9a0;
-  font-weight: bold;
+  color: #ffd23f;
+  font-weight: 400;
   cursor: help;
 }
 
@@ -93,7 +106,7 @@
    仕様に揃えるため。 */
 .card-desc-trigger {
   color: #ffffff;
-  font-weight: bold;
+  font-weight: 400;
 }
 
 .card-desc-trigger__icon {
@@ -116,7 +129,7 @@
 /* 変数 X / Y / Z (handCount 等の動的 amount)。緑系で「未計算の値」を示す。 */
 .card-desc-var {
   color: #c8ffb3;
-  font-weight: bold;
+  font-weight: 400;
 }
 
 /* カード参照 ([C:strike] など)。紫系で「他カード」を示す。 */

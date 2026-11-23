@@ -6,46 +6,33 @@
   "act": 1,
   "heightTier": 10,
   "tier": "Boss",
-  "initialMoveId": "roar",
-  "moves": [
+  "attack": 35,
+  "defense": 17,
+  "initialEnergy": 0,
+  "energyPerTurn": 1,
+  "drawPerTurn": 3,
+  "handLimit": 5,
+  "aiProfileId": "low_cost_combo",
+  "deck": [
     {
-      "id": "roar",
-      "kind": "Buff",
-      "nextMoveId": "slam",
-      "effects": [
-        {
-          "action": "buff",
-          "scope": "self",
-          "name": "strength",
-          "amount": 5
-        }
-      ]
+      "cardId": "enemy_slime_king_roar",
+      "count": 2
     },
     {
-      "id": "slam",
-      "kind": "Attack",
-      "nextMoveId": "divide",
-      "effects": [
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 35
-        }
-      ]
+      "cardId": "enemy_slime_king_slam",
+      "count": 2
     },
     {
-      "id": "divide",
-      "kind": "Buff",
-      "nextMoveId": "slam",
-      "effects": [
-        {
-          "action": "buff",
-          "scope": "self",
-          "name": "strength",
-          "amount": 1
-        }
-      ]
+      "cardId": "enemy_slime_king_divide",
+      "count": 2
+    },
+    {
+      "cardId": "enemy_common_attack",
+      "count": 4
+    },
+    {
+      "cardId": "enemy_common_defend",
+      "count": 2
     }
   ]
 }

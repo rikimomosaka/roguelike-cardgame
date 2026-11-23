@@ -1,26 +1,65 @@
 {
-    "id":  "reward_rare_01",
-    "name":  "強襲",
-    "displayName":  null,
-    "activeVersion":  "v1",
-    "versions":  [
-                     {
-                         "version":  "v1",
-                         "createdAt":  "2026-05-01T03:54:50Z",
-                         "label":  "original",
-                         "spec":  {
-                                      "rarity":  2,
-                                      "cardType":  "Attack",
-                                      "cost":  2,
-                                      "effects":  [
-                                                      {
-                                                          "action":  "attack",
-                                                          "scope":  "single",
-                                                          "side":  "enemy",
-                                                          "amount":  18
-                                                      }
-                                                  ]
-                                  }
-                     }
-                 ]
+  "id": "striker_rare_rising_flurry",
+  "name": "刻み上げ",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Striker",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 2,
+        "cardType": "Attack",
+        "cost": 0,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 2
+          },
+          {
+            "action": "attack",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 2
+          },
+          {
+            "action": "attack",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 6,
+            "maxComboMin": 3
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "attack",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 3
+          },
+          {
+            "action": "attack",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 3
+          },
+          {
+            "action": "attack",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 8,
+            "maxComboMin": 3
+          }
+        ]
+      }
+    }
+  ]
 }

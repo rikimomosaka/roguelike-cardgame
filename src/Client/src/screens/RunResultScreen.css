@@ -509,3 +509,33 @@
   white-space: nowrap;
   border: 0;
 }
+.rr__reveal {
+  animation: rr-stage-reveal 300ms steps(5, end) both;
+}
+
+.rr__reveal--outcome { animation-delay: 80ms; }
+.rr__reveal--stats { animation-delay: 260ms; }
+.rr__reveal--inventory { animation-delay: 520ms; }
+.rr__reveal--footer { animation-delay: 720ms; }
+
+.rr__journey-node {
+  animation: rr-node-reveal 180ms steps(3, end) both;
+}
+
+@keyframes rr-stage-reveal {
+  from { opacity: 0; transform: translateY(9px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes rr-node-reveal {
+  from { opacity: 0; transform: scale(0.55); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rr__reveal,
+  .rr__journey-node {
+    animation: none;
+    transition: none;
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "id": "enhancer_rare_excitation_wave",
+  "name": "励起波",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Enhancer",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 2,
+        "cardType": "Skill",
+        "cost": 2,
+        "effects": [
+          {
+            "action": "heal",
+            "scope": "all",
+            "side": "ally",
+            "amount": 3
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "heal",
+            "scope": "all",
+            "side": "ally",
+            "amount": 5
+          }
+        ],
+        "keywords": [
+          "exhaust"
+        ],
+        "upgradedKeywords": [
+          "exhaust"
+        ]
+      }
+    }
+  ]
+}

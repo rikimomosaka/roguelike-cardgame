@@ -1,0 +1,26 @@
+{
+  "id": "enemy_act2_grunt_slash",
+  "name": "斬撃",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy act2_grunt unique (from move slash)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 9
+          }
+        ]
+      }
+    }
+  ]
+}

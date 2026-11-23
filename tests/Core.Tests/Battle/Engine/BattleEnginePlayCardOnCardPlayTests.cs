@@ -85,6 +85,154 @@ public class BattleEnginePlayCardOnCardPlayTests
     }
 
     [Fact]
+    public void Unit_card_binds_its_direct_summon_not_the_later_OnPlayCard_relic_summon()
+    {
+        var unitCard = new CardDefinition(
+            "summon_direct", "Summon Direct", null,
+            CardRarity.Common, CardType.Unit,
+            Cost: 1, UpgradedCost: null,
+            Effects:
+            [
+                new CardEffect(
+                    "summon", EffectScope.Self, null, 0,
+                    UnitId: "direct_minion"),
+            ],
+            UpgradedEffects: null, Keywords: null);
+        var relic = BattleFixtures.Relic(
+            "summon_relic", "OnPlayCard", true,
+            new CardEffect(
+                "summon", EffectScope.Self, null, 0,
+                UnitId: "relic_minion"));
+        var catalog = BattleFixtures.MinimalCatalog(
+            cards: [unitCard],
+            units:
+            [
+                BattleFixtures.MinionDef("direct_minion"),
+                BattleFixtures.MinionDef("relic_minion"),
+            ],
+            relics: [relic]);
+        var card = BattleFixtures.MakeBattleCard(unitCard.Id, "unit-card-1");
+        var state = BattleFixtures.MinimalState(
+            hand: [card],
+            ownedRelicIds: [relic.Id]) with { Energy = 1 };
+        var rng = new FakeRng(
+            [0x1111, 0x2222], System.Array.Empty<double>());
+
+        var (after, _) = BattleEngine.PlayCard(
+            state, handIndex: 0, targetEnemyIndex: 0,
+            targetAllyIndex: 0, rng, catalog);
+
+        Assert.Equal("unit-card-1", Assert.Single(after.SummonHeld).InstanceId);
+        var direct = Assert.Single(
+            after.Allies, actor => actor.DefinitionId == "direct_minion");
+        var relicSummon = Assert.Single(
+            after.Allies, actor => actor.DefinitionId == "relic_minion");
+        Assert.Equal("unit-card-1", direct.AssociatedSummonHeldInstanceId);
+        Assert.Null(relicSummon.AssociatedSummonHeldInstanceId);
+    }
+
+    [Fact]
+    public void Secondary_participant_keeps_direct_Unit_summon_ownership_across_cleanup()
+    {
+        var unitCard = new CardDefinition(
+            "secondary_summon", "Secondary Summon", null,
+            CardRarity.Common, CardType.Unit,
+            Cost: 1, UpgradedCost: null,
+            Effects:
+            [
+                new CardEffect(
+                    "summon", EffectScope.Self, null, 0,
+                    UnitId: "direct_minion"),
+            ],
+            UpgradedEffects: null, Keywords: null);
+        var relic = BattleFixtures.Relic(
+            "secondary_summon_relic", "OnPlayCard", true,
+            new CardEffect(
+                "summon", EffectScope.Self, null, 0,
+                UnitId: "relic_minion"));
+        var owner = BattleFixtures.SummonActor(
+            "secondary-owner", "secondary-character", 1, hp: 30);
+        var state = BattleFixtures.MinimalState(
+            ownedRelicIds: ImmutableArray<string>.Empty) with
+        {
+            Allies = [BattleFixtures.Hero(), owner],
+        };
+        state = BattleParticipantAccess.InitializePrimary(state);
+        var secondary = state.Participants[0] with
+        {
+            ParticipantId = "player:secondary",
+            ActorInstanceId = owner.InstanceId,
+            ControllerKind = BattleParticipantControllerKind.Human,
+            OwnerPlayerSlot = owner.SlotIndex,
+            CharacterId = owner.DefinitionId,
+            Energy = 1,
+            Hand =
+            [
+                BattleFixtures.MakeBattleCard(
+                    unitCard.Id, "secondary-unit-card"),
+            ],
+            DrawPile = ImmutableArray<BattleCardInstance>.Empty,
+            DiscardPile = ImmutableArray<BattleCardInstance>.Empty,
+            ExhaustPile = ImmutableArray<BattleCardInstance>.Empty,
+            SummonHeld = ImmutableArray<BattleCardInstance>.Empty,
+            PowerCards = ImmutableArray<BattleCardInstance>.Empty,
+            OwnedRelicIds = [relic.Id],
+        };
+        state = BattleParticipantAccess.Add(state, secondary);
+        var catalog = BattleFixtures.MinimalCatalog(
+            cards: [unitCard],
+            units:
+            [
+                BattleFixtures.MinionDef("direct_minion"),
+                BattleFixtures.MinionDef("relic_minion"),
+            ],
+            relics: [relic]);
+
+        var (summoned, _) = BattleEngine.PlayCard(
+            state, secondary.ParticipantId, handIndex: 0,
+            targetEnemyIndex: 0, targetAllyIndex: 1,
+            new FakeRng([0x1111, 0x2222], System.Array.Empty<double>()),
+            catalog);
+
+        var direct = Assert.Single(
+            summoned.Allies,
+            actor => actor.DefinitionId == "direct_minion");
+        Assert.Equal(
+            "secondary-unit-card",
+            direct.AssociatedSummonHeldInstanceId);
+        Assert.Null(Assert.Single(
+            summoned.Allies,
+            actor => actor.DefinitionId == "relic_minion")
+            .AssociatedSummonHeldInstanceId);
+        var afterPlay = summoned.Participants.Single(participant =>
+            participant.ParticipantId == secondary.ParticipantId);
+        Assert.Equal(
+            "secondary-unit-card",
+            Assert.Single(afterPlay.SummonHeld).InstanceId);
+        Assert.Empty(summoned.SummonHeld);
+
+        var dead = summoned with
+        {
+            Allies = summoned.Allies
+                .Select(actor => actor.InstanceId == direct.InstanceId
+                    ? actor with { CurrentHp = 0 }
+                    : actor)
+                .ToImmutableArray(),
+        };
+        var events = new System.Collections.Generic.List<BattleEvent>();
+        int order = 0;
+        var cleaned = SummonCleanup.Apply(dead, events, ref order);
+        var afterCleanup = cleaned.Participants.Single(participant =>
+            participant.ParticipantId == secondary.ParticipantId);
+
+        Assert.Empty(afterCleanup.SummonHeld);
+        Assert.Equal(
+            "secondary-unit-card",
+            Assert.Single(afterCleanup.DiscardPile).InstanceId);
+        Assert.Empty(cleaned.DiscardPile);
+    }
+
+    [Fact]
     public void OnPlayCard_relic_random_cost_change_excludes_the_playing_card()
     {
         var relic = BattleFixtures.Relic(

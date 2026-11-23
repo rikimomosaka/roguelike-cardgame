@@ -65,6 +65,31 @@ public class BestiaryControllerTests : IClassFixture<TempDataFactory>
         Assert.NotNull(dto);
         Assert.Empty(dto!.DiscoveredCardBaseIds);
         Assert.NotEmpty(dto.AllKnownCardBaseIds);
+        var player = Assert.Single(dto.PlayerCharacters, character =>
+            character.Id == "default" && character.Kind == "player"
+            && character.IsDiscovered && !string.IsNullOrWhiteSpace(character.Name));
+        Assert.Equal(80, player.MaxHp);
+        Assert.Equal("Striker", player.CharacterClass);
+        Assert.Contains("連閃", player.TraitDescription);
+        Assert.Contains(player.Actions, action => action.Category == "戦技");
+        Assert.Contains(player.Actions, action => action.Category == "奥義");
+        Assert.False(string.IsNullOrWhiteSpace(player.Description));
+
+        var ally = Assert.Single(dto.AllyCharacters, character =>
+            character.Id == "wisp" && character.Name == "ウィスプ"
+            && character.Kind == "ally");
+        Assert.False(ally.IsDiscovered);
+        Assert.Null(ally.CharacterClass);
+        Assert.Equal(30, ally.MaxHp);
+        Assert.Null(ally.LifetimeTurns);
+        Assert.Equal(4, ally.Actions.Count);
+        Assert.Contains(ally.Actions, action =>
+            action.Category == "行動カード"
+            && action.Name == "鬼火 ×2"
+            && action.Description.Contains("[N:1]"));
+        Assert.Contains(ally.SummonCards, card =>
+            card.Id == "starter_summon_3" && card.Name == "ウィスプ");
+        Assert.DoesNotContain("wisp_will_o_wisp", dto.AllKnownCardBaseIds);
         for (int i = 1; i < dto.AllKnownCardBaseIds.Count; i++)
             Assert.True(string.CompareOrdinal(dto.AllKnownCardBaseIds[i - 1], dto.AllKnownCardBaseIds[i]) <= 0);
     }
@@ -104,5 +129,27 @@ public class BestiaryControllerTests : IClassFixture<TempDataFactory>
         Assert.True(dto.DiscoveredRelicIds.SequenceEqual(new[] { "relic_a", "relic_b" }));
         Assert.True(dto.EncounteredEnemyIds.SequenceEqual(new[] { "enemy_cultist" }));
         Assert.Empty(dto.DiscoveredPotionIds);
+    }
+
+    [Fact]
+    public async Task Get_DiscoveredSummonCard_RevealsReferencedAllyCharacter()
+    {
+        _factory.ResetData();
+        const string acc = "bestiary-ctrl-summon";
+        var client = _factory.CreateClient();
+        await EnsureAccountAsync(client, acc);
+        WithAccount(client, acc);
+
+        var repo = _factory.Services.GetRequiredService<IBestiaryRepository>();
+        var seeded = BestiaryState.Empty with
+        {
+            DiscoveredCardBaseIds = ImmutableHashSet.Create("starter_summon_3"),
+        };
+        await repo.SaveAsync(acc, seeded, CancellationToken.None);
+
+        var dto = await client.GetFromJsonAsync<BestiaryDto>("/api/v1/bestiary");
+
+        var wisp = Assert.Single(dto!.AllyCharacters, character => character.Id == "wisp");
+        Assert.True(wisp.IsDiscovered);
     }
 }

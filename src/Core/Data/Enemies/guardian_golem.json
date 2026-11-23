@@ -6,51 +6,33 @@
   "act": 1,
   "heightTier": 9,
   "tier": "Boss",
-  "initialMoveId": "defensive_mode",
-  "moves": [
+  "attack": 16,
+  "defense": 20,
+  "initialEnergy": 0,
+  "energyPerTurn": 1,
+  "drawPerTurn": 3,
+  "handLimit": 5,
+  "aiProfileId": "low_cost_combo",
+  "deck": [
     {
-      "id": "defensive_mode",
-      "kind": "Defend",
-      "nextMoveId": "twin_slam",
-      "effects": [
-        {
-          "action": "block",
-          "scope": "self",
-          "amount": 20
-        }
-      ]
+      "cardId": "enemy_guardian_golem_defensive_mode",
+      "count": 2
     },
     {
-      "id": "twin_slam",
-      "kind": "Attack",
-      "nextMoveId": "fierce_bash",
-      "effects": [
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 16
-        },
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 16
-        }
-      ]
+      "cardId": "enemy_guardian_golem_twin_slam",
+      "count": 2
     },
     {
-      "id": "fierce_bash",
-      "kind": "Attack",
-      "nextMoveId": "defensive_mode",
-      "effects": [
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 32
-        }
-      ]
+      "cardId": "enemy_guardian_golem_fierce_bash",
+      "count": 2
+    },
+    {
+      "cardId": "enemy_common_attack",
+      "count": 4
+    },
+    {
+      "cardId": "enemy_common_defend",
+      "count": 2
     }
   ]
 }

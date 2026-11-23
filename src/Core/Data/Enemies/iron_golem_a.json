@@ -6,32 +6,29 @@
   "act": 1,
   "heightTier": 8,
   "tier": "Elite",
-  "initialMoveId": "iron_fist",
-  "moves": [
+  "attack": 12,
+  "defense": 12,
+  "initialEnergy": 0,
+  "energyPerTurn": 1,
+  "drawPerTurn": 3,
+  "handLimit": 5,
+  "aiProfileId": "low_cost_combo",
+  "deck": [
     {
-      "id": "iron_fist",
-      "kind": "Attack",
-      "nextMoveId": "plating",
-      "effects": [
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 12
-        }
-      ]
+      "cardId": "enemy_iron_golem_a_iron_fist",
+      "count": 2
     },
     {
-      "id": "plating",
-      "kind": "Defend",
-      "nextMoveId": "iron_fist",
-      "effects": [
-        {
-          "action": "block",
-          "scope": "self",
-          "amount": 12
-        }
-      ]
+      "cardId": "enemy_iron_golem_a_plating",
+      "count": 2
+    },
+    {
+      "cardId": "enemy_common_attack",
+      "count": 6
+    },
+    {
+      "cardId": "enemy_common_defend",
+      "count": 2
     }
   ]
 }

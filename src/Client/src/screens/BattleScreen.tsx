@@ -14,30 +14,40 @@
 // HpLv) は dtoAdapter から参照できるよう export している。
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import type { CSSProperties, ReactNode } from 'react'
+import type { CSSProperties, KeyboardEvent, MouseEventHandler, ReactNode } from 'react'
 import { Card } from '../components/Card'
 import type { CardRarity, CardType } from '../components/Card'
-import { rarityCodeFromNumber } from '../components/rarity'
+import { rarityCodeFromName, rarityCodeFromNumber } from '../components/rarity'
 import { useTooltipTarget } from '../components/Tooltip'
 import type { TooltipContent } from '../components/Tooltip'
 import {
   endTurn,
+  createBattleCommandId,
   finalizeBattle,
   getBattle,
+  getBattleReplay,
   playCard,
   resolveCardChoice,
   setBattleTarget,
+  setBattleReady,
   startBattle,
   usePotion as consumeBattlePotion,
   useTacticalSkill as activateTacticalSkill,
   useUltimateSkill as activateUltimateSkill,
 } from '../api/battle'
+import type { BattleCommandContext } from '../api/battle'
+import type { CardCatalog } from '../api/catalog'
 import type {
   ActorSide,
   BattleActionResponseDto,
   BattleCardInstanceDto,
+  BattleParticipantDto,
+  EnemyParticipantSummaryDto,
+  BattleReplayCardDto,
+  BattleReplayEntryDto,
   BattleStateDto,
   CombatActorDto,
+  FinisherRecordDto,
   RunResultDto,
   RunSnapshotDto,
 } from '../api/types'
@@ -47,17 +57,42 @@ import { useEnemyCatalog } from '../hooks/useEnemyCatalog'
 import { useUnitCatalog } from '../hooks/useUnitCatalog'
 import { TopBar } from '../components/TopBar'
 import {
+  BGM_DUCK_PRESETS,
+  panForBattleSlot,
+  selectBattleSoundRecipe,
+  selectCharacterSkillSound,
+  useAudio,
+  type CharacterSoundClass,
+} from '../audio'
+import { selectSe } from '../audio/audioManifest'
+import {
+  DEFAULT_CHARACTER_PORTRAIT,
+  resolveCharacterPortrait,
+  usePresentationSettings,
+} from '../presentation'
+import {
   hpLevel,
   toCharacterDemo,
   toHandCardDemo,
+  toIntentDemos,
 } from './battleScreen/dtoAdapter'
-import { readAttackAnimationHit } from './battleScreen/attackAnimation'
+import {
+  consumeAnimatedBlock,
+  displayAnimatedBlock,
+  gainAnimatedBlock,
+  readAttackAnimationHit,
+  resolveBattleElementCenter,
+  updateDisplayedDexterity,
+  type AnimatedBlockState,
+} from './battleScreen/attackAnimation'
 import {
   formatAttackIntentSummary,
   formatAttackScopeLabel,
   toAttackIntentSummarySegments,
 } from './battleScreen/intentSummary'
 import { CardChoiceModal } from './battleScreen/CardChoiceModal'
+import { FinisherRecordModal } from './battleScreen/FinisherRecordModal'
+import { characterSkillCutinDurationMs } from './battleScreen/characterSkillCutinPresentation'
 import {
   formatComboDescription,
   formatMaxComboThisTurn,
@@ -78,6 +113,59 @@ import {
   ULTIMATE_SKILL_COST,
   ULTIMATE_SKILL_DESCRIPTION,
 } from './battleScreen/comboSkillPresentation'
+import {
+  findParticipantForActor,
+  findPrimaryParticipant,
+  projectParticipantForDisplay,
+  placeActorsBySlot,
+  replayEntryToActionResponse,
+  replayPresentationAtEntryStart,
+  replayPresentationAtPosition,
+  snapshotActor,
+  snapshotBattleState,
+  snapshotParticipant,
+} from './battleScreen/participantPresentation'
+import {
+  battleAudioCuesForEvent,
+  battleContactSoundRecipe,
+  battleSoundRecipeForEvent,
+  bgmDuckPresetForEvent,
+  comboToneTier,
+  statusAudioCue,
+  type BattleAudioCue,
+} from './battleScreen/battleAudioCues'
+import {
+  BattleReplayControls,
+  type ReplaySpeed,
+} from './battleScreen/BattleReplayControls'
+import {
+  CombatFeedbackStack,
+  type CombatFeedbackItem,
+  type CombatFeedbackKind,
+} from './battleScreen/CombatFeedbackLayer'
+import {
+  appendCombatFeedback,
+  blockGainFeedbackText,
+  combatFeedbackLifetimeMs,
+} from './battleScreen/combatFeedbackTiming'
+import {
+  actorSizeClassForTier,
+  resolveActorImpactAnchorY,
+  resolveActorStageProfile,
+} from './battleScreen/actorVisualManifest'
+import {
+  normalizeMotionPlaybackSpeed,
+  scaledOneShotMotionDuration,
+} from './battleScreen/motionPresentation'
+import {
+  hasDrawPresentationTrigger,
+  hasShufflePresentationTrigger,
+} from './battleScreen/drawPresentation'
+import {
+  resolveFeedbackStatusId,
+  statusFeedbackText,
+} from './battleScreen/statusFeedback'
+import { attackGainFeedbackText } from './battleScreen/attackGainFeedback'
 import './BattleScreen.css'
 
 // -------------------- Exported intermediate types --------------------
@@ -112,8 +200,7 @@ export type BuffDemo = {
 
 export type IntentKind = 'attack' | 'defend' | 'buff' | 'heal' | 'unknown'
 
-/** Why: 攻撃チップは通常/ランダム/全体を 1 個に統合し、各数値を別色で表示する。
- *  num/icon は単一値だが、attack 用に分解された breakdown を別フィールドで持つ。 */
+/** 通常/ランダム/全体の攻撃予定を、種類ごとの独立した行へ投影するための内訳。 */
 export type IntentAttackBreakdown = {
   single?: number
   random?: number
@@ -153,6 +240,8 @@ export type SpriteSheetDemo = {
 
 export type CharacterDemo = {
   occupied: boolean
+  /** Stable battle identity used only to anchor presentation overlays. */
+  instanceId?: string
   name: string
   desc: string
   sprite: string
@@ -164,6 +253,10 @@ export type CharacterDemo = {
   /** キャラのサイズ段階 (1 〜 10)。1 = スライム級の小型、5 = 標準、10 = 巨大ボス級。
    *  立ち絵 image 表示時は heightTier に応じて高さが決定される (縦横比は維持)。 */
   heightTier?: number
+  /** Playable-character passive shown when hovering the character sprite. */
+  traitName?: string
+  /** Marker-bearing passive text rendered with the common card tooltip. */
+  traitDescription?: string
   hpCur: number
   hpMax: number
   hpLv: HpLv
@@ -178,14 +271,30 @@ export type CharacterDemo = {
 }
 
 export type HandCardDemo = {
+  /** Replay cards retain their source instance so the hand can hide them once played. */
+  instanceId?: string
   name: string
   cost: number | string
+  comboReductionEligible?: boolean
+  comboContinues?: boolean
+  comboRingHighlighted?: boolean
+  wildDisabled?: boolean
+  cardUsageLimitReached?: boolean
+  costUnavailable?: boolean
   /** 現在コストと異なる、コンボ参照用の元コスト。変更なしは null/undefined。 */
   costOrig?: number | null
+  /** Original definition cost retained for the hover breakdown even when unchanged. */
+  costOriginal?: number | null
+  costChanges?: BattleCardInstanceDto['costChanges']
+  /** Armed 伏策 presentation, normally populated only for Exhaust cards. */
+  isContingencyArmed?: boolean
+  contingencyTriggerText?: string | null
   type: CardType
   rarity: CardRarity
+  poolClass?: import('../api/catalog').CardPoolClass | null
   art?: ReactNode
   playable?: boolean
+  unavailableReason?: string
   desc: string
   /** 強化済みフラグ。Card 側で "+" を描画。 */
   upgraded?: boolean
@@ -216,16 +325,24 @@ type Props = {
 // -------------------- Animation timing --------------------
 
 const STEP_DELAY_MS = 80         // 既存 fallback (汎用 event)
-// Keep these values in sync with the hero sprite metadata and the slot
-// keyframes in BattleScreen.css. At 240/300ms every pose is still shown for
-// several browser frames while chained hits resolve without a long pause.
-const ATTACK_SLIDE_MS = 240      // 攻撃側 slot の slide-in/out 1 周
-const HIT_FLASH_MS = 300         // 被弾 slot の赤点滅 + のけぞり
+// Readability floors used when an actor has no authored motion duration.
+// A valid manifest duration takes precedence, and the slot keyframes receive
+// that same value so the sheet and physical lunge always finish together.
+// Contact deliberately lands before halfway, leaving a readable recovery.
+const ATTACK_SLIDE_MS = 440      // minimum anticipation -> lunge -> recovery
+const ATTACK_CONTACT_MS = 180    // hit feedback is emitted at the lunge apex
+const HIT_FLASH_MS = 420         // minimum red flash + recoil
 // 手札カード exit (捨札方向に縮小フェード / 喪失行きは中央拡大→回転消滅)。
 // M6.9: 喪失アニメは 700ms (中央移動 + ホールド + 回転消滅) なので長い方に合わせる。
 //  短い discard アニメ (260ms) は完了後に DOM が残るがレイアウト的に害無し
 //  (.is-leaving は pointer-events: none)。
 const CARD_LEAVE_MS = 700
+const CARD_PLAY_CENTER_MS = 360
+const CARD_PLAY_DISCARD_MS = 420
+const CARD_PLAY_EXHAUST_MS = 460
+const REENACT_APPEAR_MS = 140
+const REENACT_HOLD_MS = 260
+const REENACT_LEAVE_MS = 160
 // Why: 死亡アニメーションは廃止 (ユーザ要望)。HP=0 で alive filter から外れて
 // 自然消滅するため、後追い blink は入れない。
 
@@ -242,6 +359,8 @@ type SlotAnim = {
   attackerId?: string
   attackerSide?: 'Ally' | 'Enemy'
   hitIds?: ReadonlyArray<string>
+  blockedIds?: ReadonlyArray<string>
+  playbackSpeed?: number
 }
 
 // -------------------- Layout helpers --------------------
@@ -272,21 +391,44 @@ function heightForTier(tier: number): number {
   return 38 + clamped * 22  // 1→60, 5→148, 10→258
 }
 
-function padSlots(chars: CharacterDemo[], n: number): CharacterDemo[] {
-  const out = [...chars]
+function emptyCharacterSlot(): CharacterDemo {
+  return {
+    occupied: false,
+    name: '',
+    desc: '',
+    sprite: '',
+    spriteKind: 'enemy',
+    hpCur: 0,
+    hpMax: 0,
+    hpLv: '0',
+    blockValue: 0,
+    buffs: [],
+  }
+}
+
+type CharacterSkillBurst = {
+  id: number
+  kind: 'tactical' | 'ultimate'
+  characterId: string
+  characterClass: CharacterSoundClass
+  name: string
+  portrait: string
+  durationMs: number
+}
+
+function toCharacterSoundClass(value: string | undefined): CharacterSoundClass {
+  switch (value?.toLowerCase()) {
+    case 'guardian': return 'Guardian'
+    case 'tactician': return 'Tactician'
+    case 'enhancer': return 'Enhancer'
+    default: return 'Striker'
+  }
+}
+
+function padSlots(chars: Array<CharacterDemo | null>, n: number): CharacterDemo[] {
+  const out = chars.slice(0, n).map(character => character ?? emptyCharacterSlot())
   while (out.length < n) {
-    out.push({
-      occupied: false,
-      name: '',
-      desc: '',
-      sprite: '',
-      spriteKind: 'enemy',
-      hpCur: 0,
-      hpMax: 0,
-      hpLv: '0',
-      blockValue: 0,
-      buffs: [],
-    })
+    out.push(emptyCharacterSlot())
   }
   return out.slice(0, n)
 }
@@ -301,7 +443,7 @@ function useTip(c: TooltipContent | null) {
 // 不要になったため削除。RelicDemo / PotionDemo 型は他から参照されていれば残す。
 
 function StatusBuff({ buff }: { buff: BuffDemo }) {
-  const tip = useTip({ name: buff.name, desc: buff.desc })
+  const tip = useTip({ name: buff.name, desc: buff.desc, suppressRefs: true })
   const isImageIcon = buff.icon.startsWith('/')
   return (
     <span className={`status-buff status-buff--${buff.kind}`} {...tip}>
@@ -371,27 +513,35 @@ function IntentSegment({
   tipProps: ReturnType<typeof useTooltipTarget>
 }) {
   const isImageIcon = intent.icon.startsWith('/')
-  return (
-    <span className={`intent__seg intent__seg--${intent.kind}`} {...tipProps}>
-      {isImageIcon ? (
-        <img className="intent__icon intent__icon--img" src={intent.icon}
-             alt="" draggable={false} />
-      ) : (
-        <span className="intent__icon">{intent.icon}</span>
-      )}
-      {intent.kind === 'attack' && intent.attack ? (
-        // 合計値を先頭にした X(NHIT) で幅を抑える。複数 scope も
-        // 同じ表記で並べ、隣のキャラクターの予告との干渉を避ける。
+
+  const renderIcon = () => (isImageIcon ? (
+    <img className="intent__icon intent__icon--img" src={intent.icon}
+         alt="" draggable={false} />
+  ) : (
+    <span className="intent__icon">{intent.icon}</span>
+  ))
+
+  const renderAttackScopeIcon = (scope: 'single' | 'random' | 'all') => {
+    const src = scope === 'all'
+      ? '/icons/ui/attack_all.png'
+      : scope === 'random'
+        ? '/icons/ui/attack_random.png'
+        : '/icons/ui/attack.png'
+    return <img className="intent__icon intent__icon--img" src={src} alt="" draggable={false} />
+  }
+
+  if (intent.kind === 'attack' && intent.attack) {
+    const segments = toAttackIntentSummarySegments(intent.attack)
+    return (
+      <span className="intent__seg intent__seg--attack intent__seg--attack-scopes" {...tipProps}>
         <span className="intent__nums">
-          {(() => {
-            const segments = toAttackIntentSummarySegments(intent.attack)
-            return segments.map((segment, index) => (
+          {segments.map(segment => (
+            <span className="intent__scope-row" key={segment.scope}>
+              {renderAttackScopeIcon(segment.scope)}
               <span
                 className="intent__scope-summary"
                 data-attack-summary={formatAttackIntentSummary(segment)}
-                key={segment.scope}
               >
-                {index > 0 ? <span className="intent__scope-separator">｜</span> : null}
                 <span className={`intent__num intent__num--${segment.scope}`}>
                   {segment.total}
                 </span>
@@ -404,10 +554,17 @@ function IntentSegment({
                   <span className="intent__hit-count">({segment.hits}HIT)</span>
                 </span>
               </span>
-            ))
-          })()}
+            </span>
+          ))}
         </span>
-      ) : intent.num !== undefined ? (
+      </span>
+    )
+  }
+
+  return (
+    <span className={`intent__seg intent__seg--${intent.kind}`} {...tipProps}>
+      {renderIcon()}
+      {intent.num !== undefined ? (
         <span className="intent__num">{intent.num}</span>
       ) : null}
     </span>
@@ -423,11 +580,11 @@ function IntentChip({ intent }: { intent: IntentDemo }) {
   )
 }
 
-/** Why: 複数 intent (攻撃 + 防御 など) を 1 枠内に並べる。
- *  - 「＆」区切りなしで連続表示 (ユーザ要望)
+/** Why: 複数 intent (攻撃 + 防御 など) を 1 行動につき 1 行で並べる。
+ *  - 攻撃内の Single / Random / All もそれぞれ独立した行にする
  *  - hover でどの segment に当てても全 intent の name/desc を統合した
  *    tooltip を表示 (片方だけでなく両方の説明を見たい、というユーザ要望) */
-function IntentChipRow({ intents }: { intents: IntentDemo[] }) {
+export function IntentChipRow({ intents }: { intents: IntentDemo[] }) {
   // Why: tooltip 重複削除。タイトルは ＆ 区切り、本文は intent ごとに ■ + desc
   // のみ (■ の後の name 重複を廃止)、複数 intent は改行で並べる。
   const mergedName = intents.map(i => i.name).join(' ＆ ')
@@ -452,7 +609,167 @@ type SlotProps = {
   /** Why: 攻撃中 / 被弾中の演出クラス付与用 (死亡演出は廃止)。 */
   attackingDir?: 'toward-enemy' | 'toward-ally'
   isHit?: boolean
+  isBlocked?: boolean
+  /** Replay speed applied only while this slot is in a one-shot motion. */
+  motionPlaybackSpeed?: number
   onClick?: () => void
+  /** Opens this ally's participant action feed without changing battle targeting. */
+  onViewActions?: () => void
+  replayFeedState?: 'live' | 'ready' | 'complete'
+  participantReady?: boolean
+  feedbackItems?: readonly CombatFeedbackItem[]
+}
+
+/**
+ * 敵の行動再生用の参加者表現。敵の手札の中身は公開しないため、
+ * 再生に必要な識別子とエナジーだけを持つ（計画はターン開始時に完了済み＝Ready）。
+ */
+function enemyReplayParticipant(summary: EnemyParticipantSummaryDto): BattleParticipantDto {
+  return {
+    participantId: summary.participantId,
+    actorInstanceId: summary.actorInstanceId,
+    controllerKind: 'Cpu',
+    ownerPlayerSlot: null,
+    characterId: '',
+    targetAllyIndex: null,
+    targetEnemyIndex: null,
+    energy: summary.energy,
+    energyPerTurn: 0,
+    drawPerTurn: 0,
+    drawPile: [],
+    hand: [],
+    discardPile: [],
+    exhaustPile: [],
+    summonHeld: [],
+    powerCards: [],
+    comboCount: 0,
+    maxComboThisTurn: 0,
+    comboGauge: 0,
+    lastPlayedOrigCost: null,
+    nextCardComboFreePass: false,
+    wildUsedInCurrentCombo: false,
+    usedCharacterSkillIdsThisTurn: [],
+    characterSkillUsesThisTurn: {},
+    cardUsesThisTurn: {},
+    cardUseLockedThisTurn: false,
+    ownedRelicIds: [],
+    potions: [],
+    potionUsesThisTurn: {},
+    pendingCardPlay: null,
+    cpuCardPlaysThisTurn: 0,
+    isReady: true,
+  }
+}
+
+type BattleReplayViewState = {
+  /** Frozen fallback for legacy entries that predate decision snapshots. */
+  battle: BattleStateDto
+  participant: BattleParticipantDto
+  actor: CombatActorDto
+  subjectName: string
+  /** The replay feed is immutable across live turn transitions. */
+  turn: number
+  entries: BattleReplayEntryDto[]
+  feedState: string
+  latestSequence: number
+  position: number
+  playing: boolean
+  speed: ReplaySpeed
+  loading: boolean
+  /** Forces a fresh playback even when restart is pressed at position zero. */
+  playbackEpoch: number
+  /** True while playback is parked at the append-only live/ready tail. */
+  followTail: boolean
+}
+
+type ReplayActionCardState = {
+  demo: HandCardDemo
+  stage: 'idle' | 'centering' | 'holding' | 'leaving'
+}
+
+type ReenactCardState = {
+  id: string
+  demo: HandCardDemo
+  stage: 'appearing' | 'holding' | 'leaving'
+  movement?: 'popup'
+    | 'contingency-discard'
+    | 'contingency-exhaust'
+    | 'contingency-draw'
+    | 'contingency-hand'
+    | 'contingency-none'
+  fromX?: number
+  fromY?: number
+  toX?: number
+  toY?: number
+}
+
+type PendingContingencyCard = {
+  card: BattleCardInstanceDto
+  destination: 'discard' | 'exhaust'
+}
+
+function battleCardDescription(
+  card: BattleCardInstanceDto,
+  catalog: CardCatalog | null,
+): string {
+  const definition = catalog?.[card.cardDefinitionId]
+  return card.isUpgraded
+    ? card.adjustedUpgradedDescription
+      ?? card.adjustedDescription
+      ?? definition?.upgradedDescription
+      ?? definition?.description
+      ?? ''
+    : card.adjustedDescription ?? definition?.description ?? ''
+}
+
+function battleCardDestination(
+  card: BattleCardInstanceDto,
+  catalog: CardCatalog | null,
+): 'discard' | 'exhaust' {
+  const description = battleCardDescription(card, catalog)
+  return /\[K:(?:exhaust|contingency)\]/.test(description)
+    ? 'exhaust'
+    : 'discard'
+}
+
+function findPendingContingencyCard(
+  battle: BattleStateDto,
+  catalog: CardCatalog | null,
+): PendingContingencyCard | null {
+  const owners = [
+    {
+      pendingCardPlay: battle.pendingCardPlay,
+      exhaustPile: battle.exhaustPile,
+    },
+    ...(battle.participants ?? []).map(participant => ({
+      pendingCardPlay: participant.pendingCardPlay,
+      exhaustPile: participant.exhaustPile,
+    })),
+  ]
+
+  for (const owner of owners) {
+    const pendingId = owner.pendingCardPlay?.cardInstanceId
+    if (!pendingId) continue
+    const card = owner.exhaustPile.find(candidate => candidate.instanceId === pendingId)
+    if (!card) continue
+    const description = battleCardDescription(card, catalog)
+    if (!/\[K:contingency\]/.test(description)) continue
+    return {
+      card,
+      destination: /\[K:exhaust\]/.test(description) ? 'exhaust' : 'discard',
+    }
+  }
+
+  return null
+}
+
+type PlayStepsOptions = {
+  /** Replay uses its immutable before-state instead of the changing live state. */
+  baselineState?: BattleStateDto
+  /** Never commits/finalizes live battle state; animations only. */
+  presentationOnly?: boolean
+  speed?: number
+  isCancelled?: () => boolean
 }
 
 type ActiveCharacterAnimation = {
@@ -461,6 +778,16 @@ type ActiveCharacterAnimation = {
 }
 
 const CHARACTER_MOTION_PRIORITY: readonly CharacterMotion[] = ['hurt', 'attack', 'idle']
+
+function readableMotionDuration(
+  sheet: SpriteSheetDemo | undefined,
+  minimumMs: number,
+): number {
+  const authored = sheet?.durationMs
+  return Number.isFinite(authored) && (authored ?? 0) > 0
+    ? Math.max(minimumMs, Math.round(authored!))
+    : minimumMs
+}
 
 /**
  * Pick the highest-priority animation that is both active and usable.
@@ -497,7 +824,26 @@ function selectCharacterAnimation(
   return null
 }
 
-function Slot({ char, isTargeted, showTargetVisual, attackingDir, isHit, onClick }: SlotProps) {
+function Slot({
+  char,
+  isTargeted,
+  showTargetVisual,
+  attackingDir,
+  isHit,
+  isBlocked,
+  motionPlaybackSpeed = 1,
+  onClick,
+  onViewActions,
+  replayFeedState,
+  participantReady,
+  feedbackItems = [],
+}: SlotProps) {
+  const traitTip = useTip(char.traitDescription
+    ? {
+        name: char.traitName ?? '特性',
+        desc: char.traitDescription,
+      }
+    : null)
   // Why: 影の横幅は描画後の sprite 横幅と同じにしたい。silhouette は決定論的
   //  (tier-height × 0.55) で同期計算できる。画像は naturalWidth/Height が
   //  load 後にしか取れないので onLoad で aspect を State に保持し、それ以降
@@ -537,11 +883,21 @@ function Slot({ char, isTargeted, showTargetVisual, attackingDir, isHit, onClick
     })
   }
   const displayHeight = char.heightTier !== undefined ? heightForTier(char.heightTier) : 148
+  const stageProfile = resolveActorStageProfile(char.image)
+  const actorSizeClass = actorSizeClassForTier(char.heightTier)
+  const spriteLift = Math.round(displayHeight * stageProfile.liftRatio)
+  const actorImpactY = resolveActorImpactAnchorY(char.image, displayHeight)
+  const oneShotPlaybackSpeed = attackingDir !== undefined || isHit
+    ? normalizeMotionPlaybackSpeed(motionPlaybackSpeed)
+    : 1
   const animationFrameAspect = activeAnimation !== null
     ? activeAnimation.sheet.frameWidth / activeAnimation.sheet.frameHeight
     : null
   const animationFrameWidth = animationFrameAspect !== null
     ? displayHeight * animationFrameAspect
+    : null
+  const idleFrameAspect = char.animations?.idle
+    ? char.animations.idle.frameWidth / char.animations.idle.frameHeight
     : null
   const animationStepCount = activeAnimation !== null
     ? activeAnimation.sheet.frameCount
@@ -561,8 +917,12 @@ function Slot({ char, isTargeted, showTargetVisual, attackingDir, isHit, onClick
   const shadowWidth: number | null = (() => {
     if (char.heightTier === undefined) return null // text fallback: CSS default
     const h = heightForTier(char.heightTier)
-    if (animationFrameAspect !== null && Number.isFinite(animationFrameAspect)) {
-      return h * animationFrameAspect
+    // Wide attack cells reserve room for weapons. They must not make the
+    // grounded shadow expand during the strike, so stage it from the neutral
+    // idle footprint whenever one exists.
+    const groundedAspect = idleFrameAspect ?? animationFrameAspect
+    if (groundedAspect !== null && Number.isFinite(groundedAspect)) {
+      return h * groundedAspect
     }
     if (char.image) {
       return imageAspect !== null && Number.isFinite(imageAspect)
@@ -574,6 +934,24 @@ function Slot({ char, isTargeted, showTargetVisual, attackingDir, isHit, onClick
   })()
   const shadowStyle: CSSProperties | undefined =
     shadowWidth !== null ? { width: `${Math.round(shadowWidth)}px` } : undefined
+  const attackMotionDuration = scaledOneShotMotionDuration(readableMotionDuration(
+    char.animations?.attack,
+    ATTACK_SLIDE_MS,
+  ), oneShotPlaybackSpeed)
+  const hitMotionDuration = scaledOneShotMotionDuration(readableMotionDuration(
+    char.animations?.hurt,
+    HIT_FLASH_MS,
+  ), oneShotPlaybackSpeed)
+  const slotMotionStyle = {
+    '--slot-attack-duration': `${attackMotionDuration}ms`,
+    '--slot-hit-duration': `${hitMotionDuration}ms`,
+    '--slot-attack-duration-reduced': `${Math.max(1, Math.round(attackMotionDuration * 0.48))}ms`,
+    '--slot-hit-duration-reduced': `${Math.max(1, Math.round(hitMotionDuration * 0.48))}ms`,
+    '--sprite-lift': `${spriteLift}px`,
+    '--actor-impact-y': `${actorImpactY}px`,
+    '--actor-effect-height': `${Math.max(54, Math.round(displayHeight * 0.78))}px`,
+    '--actor-effect-width': `${Math.max(54, Math.min(148, Math.round(shadowWidth ?? displayHeight * 0.64)))}px`,
+  } as CSSProperties
 
   if (!char.occupied) {
     return <div className="battle__slot" data-occupied="0" />
@@ -586,21 +964,55 @@ function Slot({ char, isTargeted, showTargetVisual, attackingDir, isHit, onClick
     attackingDir === 'toward-enemy' ? 'is-attacking-enemy' : '',
     attackingDir === 'toward-ally' ? 'is-attacking-ally' : '',
     isHit ? 'is-hit' : '',
+    isBlocked ? 'is-blocked' : '',
   ].filter(Boolean).join(' ')
   // Why: スプレッドにすることで onClick が undefined のとき role/tabIndex 属性自体が
   // JSX に出ない。axe/aria リンターの "role must be valid ARIA role: {expression}"
   // 誤検出（条件式値の静的解析不可）を回避する目的。
   const interactiveProps = onClick
-    ? { onClick, role: 'button' as const, tabIndex: 0 }
+    ? {
+        onClick,
+        onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return
+          event.preventDefault()
+          onClick()
+        },
+        role: 'button' as const,
+        tabIndex: 0,
+        'aria-label': `${char.name}を対象にする`,
+        'aria-pressed': isTargeted === true,
+      }
     : {}
   return (
     <div
       className={cls}
       data-occupied="1"
+      data-actor-id={char.instanceId}
+      data-size-class={actorSizeClass}
+      data-airborne={stageProfile.airborne ? 'true' : 'false'}
+      style={slotMotionStyle}
       {...interactiveProps}
     >
+      <CombatFeedbackStack items={feedbackItems} />
+      {isHit ? (
+        <span className="battle-hit-flash" data-presentation="flash" aria-hidden="true" />
+      ) : null}
+      {isBlocked && !isHit ? (
+        <span className="battle-block-spark" data-presentation="flash" aria-hidden="true">
+          <i /><i /><i /><i />
+        </span>
+      ) : null}
+      {participantReady !== undefined ? (
+        <div
+          className={`status-readiness ${participantReady ? 'is-ready' : 'is-planning'}`}
+          data-ready={participantReady ? 'true' : 'false'}
+          aria-label={participantReady ? 'READY' : '行動中'}
+        >
+          {participantReady ? 'READY' : '行動中…'}
+        </div>
+      ) : null}
       {char.intents && char.intents.length > 0 ? (
-        // Why: 1 個の枠内に複数 intent を ＆ 区切りで並べる (ユーザ要望)。
+        // Why: 複数 intent と攻撃範囲の内訳を、行動1つにつき1行で並べる。
         <div className="intents">
           <IntentChipRow intents={char.intents} />
         </div>
@@ -613,7 +1025,12 @@ function Slot({ char, isTargeted, showTargetVisual, attackingDir, isHit, onClick
       {activeAnimation || char.image ? (
         <div
           className={`sprite sprite--image sprite--${char.spriteKind}`}
-          data-motion={activeAnimation?.motion}
+          data-motion={activeAnimation?.motion ?? 'idle'}
+          tabIndex={char.traitDescription ? 0 : undefined}
+          aria-label={char.traitDescription
+            ? `${char.name}の特性 ${char.traitName ?? '特性'}`
+            : undefined}
+          {...traitTip}
           style={
             ({
               '--tier-height': `${displayHeight}px`,
@@ -623,7 +1040,8 @@ function Slot({ char, isTargeted, showTargetVisual, attackingDir, isHit, onClick
                     '--sprite-frame-count': activeAnimation.sheet.frameCount,
                     '--sprite-step-count': animationStepCount,
                     '--sprite-step-position': animationStepPosition,
-                    '--sprite-duration': `${activeAnimation.sheet.durationMs}ms`,
+                    '--sprite-duration': `${scaledOneShotMotionDuration(activeAnimation.sheet.durationMs, oneShotPlaybackSpeed)}ms`,
+                    '--sprite-duration-reduced': `${scaledOneShotMotionDuration(activeAnimation.sheet.durationMs * 0.48, oneShotPlaybackSpeed)}ms`,
                     '--sprite-end-x': `${animationEndX}px`,
                     '--sprite-iteration-count': activeAnimation.sheet.loop ? 'infinite' : '1',
                     '--sprite-fill-mode': activeAnimation.sheet.loop ? 'none' : 'forwards',
@@ -659,11 +1077,20 @@ function Slot({ char, isTargeted, showTargetVisual, attackingDir, isHit, onClick
         <div
           className={`sprite sprite--silhouette sprite--${char.spriteKind}`}
           style={{ '--tier-height': `${heightForTier(char.heightTier)}px` } as CSSProperties}
-          aria-label={`${char.name} (placeholder)`}
+          aria-label={char.traitDescription
+            ? `${char.name}の特性 ${char.traitName ?? '特性'}`
+            : `${char.name} (placeholder)`}
+          tabIndex={char.traitDescription ? 0 : undefined}
+          {...traitTip}
         />
       ) : (
         <div
           className={`sprite sprite--${char.spriteKind}${char.sprite.length > 2 ? ' sprite--text' : ''}`}
+          tabIndex={char.traitDescription ? 0 : undefined}
+          aria-label={char.traitDescription
+            ? `${char.name}の特性 ${char.traitName ?? '特性'}`
+            : undefined}
+          {...traitTip}
         >
           {char.sprite}
         </div>
@@ -682,6 +1109,20 @@ function Slot({ char, isTargeted, showTargetVisual, attackingDir, isHit, onClick
       </div>
       {char.blockValue > 0 && <StatusBlock value={char.blockValue} />}
       <StatusName name={char.name} />
+      {onViewActions ? (
+        <button
+          type="button"
+          className="status-replay-button"
+          data-feed-state={replayFeedState ?? 'live'}
+          aria-label={`${char.name}の行動を見る`}
+          onClick={event => {
+            event.stopPropagation()
+            onViewActions()
+          }}
+        >
+          行動
+        </button>
+      ) : null}
       {/* Why: バフ/デバフ/ブロック値が現れてもキャラ位置が動かないよう、常に
           status-buffs 行を確保。空配列ならエンプティ row として min-height だけ
           残す (CSS 側で 24px 確保)。 */}
@@ -716,9 +1157,106 @@ type HandCardProps = {
   /** Why: 同じカードが <PlayingCard> overlay で表示されている間は手札側を
    *  非表示にする (visibility: hidden で fan layout 維持)。重複表示防止。 */
   hidden?: boolean
+  /** Busy/choice/replay locks must not masquerade as a card-rule failure. */
+  interactionLocked?: boolean
 }
 
-function HandCard({ card, fan, onClick, leaving, leaveDx, leaveDy, leavingMode, onCardElement, hidden }: HandCardProps) {
+type BattleCardVisualProps = {
+  card: HandCardDemo
+  className?: string
+  detailsDisabled?: boolean
+  ariaHidden?: boolean
+  onClick?: MouseEventHandler<HTMLDivElement>
+}
+
+/**
+ * Canonical battle card face. Hand cards and every animated copy use this
+ * exact prop mapping, so zooming/moving a card never drops its description,
+ * cost history, keyword state, or other face elements.
+ */
+function BattleCardVisual({
+  card,
+  className,
+  detailsDisabled,
+  ariaHidden,
+  onClick,
+}: BattleCardVisualProps) {
+  return (
+    <Card
+      name={card.name}
+      cost={card.cost}
+      costOrig={card.costOrig}
+      costOriginal={card.costOriginal}
+      costChanges={card.costChanges}
+      comboReductionEligible={card.comboReductionEligible}
+      comboContinues={card.comboContinues}
+      comboRingHighlighted={card.comboRingHighlighted}
+      wildDisabled={card.wildDisabled}
+      costUnavailable={card.costUnavailable}
+      type={card.type}
+      rarity={card.rarity}
+      poolClass={card.poolClass}
+      art={card.art}
+      upgraded={card.upgraded}
+      description={card.description ?? card.desc}
+      upgradedDescription={card.upgradedDescription}
+      contingencyArmed={card.isContingencyArmed}
+      contingencyTriggerText={card.contingencyTriggerText}
+      className={className}
+      detailsDisabled={detailsDisabled}
+      ariaHidden={ariaHidden}
+      onClick={onClick}
+    />
+  )
+}
+
+function toReplayCardDemo(
+  card: BattleReplayCardDto,
+  catalog: import('../api/catalog').CardCatalog | null,
+): HandCardDemo {
+  const rawType = card.cardType.toLowerCase()
+  const type: CardType = (
+    rawType === 'attack' || rawType === 'skill' || rawType === 'power'
+      || rawType === 'curse' || rawType === 'status' || rawType === 'unit'
+  ) ? rawType : 'skill'
+  const costChanges: NonNullable<BattleCardInstanceDto['costChanges']> = card.costChanges.map(change => ({
+    kind: change.kind === 'fixed' || change.kind === 'modifier' || change.kind === 'status'
+      || change.kind === 'combo' || change.kind === 'unknown'
+      ? change.kind
+      : 'unknown',
+    value: change.value,
+    sourceId: change.sourceId,
+    sourceName: change.sourceName,
+  }))
+  return {
+    instanceId: card.cardInstanceId,
+    name: card.displayName,
+    cost: card.currentCost,
+    costOrig: card.currentCost !== card.originalCost ? card.originalCost : null,
+    costOriginal: card.originalCost,
+    costChanges,
+    type,
+    rarity: rarityCodeFromName(card.rarity) ?? 'c',
+    poolClass: card.poolClass ?? catalog?.[card.definitionId]?.poolClass ?? null,
+    desc: card.description,
+    description: card.description,
+    upgraded: card.isUpgraded,
+    playable: false,
+  }
+}
+
+function HandCard({
+  card,
+  fan,
+  onClick,
+  leaving,
+  leaveDx,
+  leaveDy,
+  leavingMode,
+  onCardElement,
+  hidden,
+  interactionLocked = false,
+}: HandCardProps) {
   // We need the rendered `.card` element to be a direct child of
   // `.hand` (CSS selector `.hand > .card` keys off this). Card.tsx
   // does not expose a ref. We use a sibling probe <span> (via
@@ -726,6 +1264,43 @@ function HandCard({ card, fan, onClick, leaving, leaveDx, leaveDy, leavingMode, 
   // `.card` root — and imperatively apply CSS vars (fan-x/y/r,
   // leave-dx/dy) on it.
   const [cardEl, setCardEl] = useState<HTMLDivElement | null>(null)
+  const dragRef = useRef<{
+    pointerId: number
+    startX: number
+    startY: number
+    moved: boolean
+  } | null>(null)
+  const suppressNextClickRef = useRef(false)
+  const attemptTimerRef = useRef<number | null>(null)
+  const handEntryTimerRef = useRef<number | null>(null)
+  const [showUnavailableReason, setShowUnavailableReason] = useState(false)
+
+  const showFailedAttempt = useCallback(() => {
+    if (!card.unavailableReason || interactionLocked) return
+    if (attemptTimerRef.current !== null) window.clearTimeout(attemptTimerRef.current)
+    setShowUnavailableReason(true)
+    // Re-trigger the short rejection nudge on repeated attempts.
+    cardEl?.classList.remove('is-play-rejected')
+    requestAnimationFrame(() => cardEl?.classList.add('is-play-rejected'))
+    attemptTimerRef.current = window.setTimeout(() => {
+      attemptTimerRef.current = null
+      setShowUnavailableReason(false)
+      cardEl?.classList.remove('is-play-rejected')
+    }, 1450)
+  }, [card.unavailableReason, cardEl, interactionLocked])
+
+  const activateCard = useCallback(() => {
+    if (onClick) {
+      onClick()
+      return
+    }
+    showFailedAttempt()
+  }, [onClick, showFailedAttempt])
+
+  useEffect(() => () => {
+    if (attemptTimerRef.current !== null) window.clearTimeout(attemptTimerRef.current)
+    if (handEntryTimerRef.current !== null) window.clearTimeout(handEntryTimerRef.current)
+  }, [])
 
   const probeRefCb = useCallback((probe: HTMLSpanElement | null) => {
     if (!probe) {
@@ -745,6 +1320,32 @@ function HandCard({ card, fan, onClick, leaving, leaveDx, leaveDy, leavingMode, 
     cardEl.style.setProperty('--fan-r', `${fan.r}deg`)
   }, [cardEl, fan.x, fan.y, fan.r])
 
+  // `card-enter` used to live permanently on every hand card. A temporary
+  // rejection animation replaced it, then removing the rejection class
+  // re-applied `card-enter` about 1.45s after a failed drag/click and looked
+  // exactly like an erroneous draw. Scope entry motion to the initial mount.
+  useEffect(() => {
+    if (!cardEl || leaving) return
+    const finishEntry = () => {
+      cardEl.classList.remove('is-hand-entering')
+      if (handEntryTimerRef.current !== null) {
+        window.clearTimeout(handEntryTimerRef.current)
+        handEntryTimerRef.current = null
+      }
+    }
+    const onAnimationEnd = (event: AnimationEvent) => {
+      if (event.target === cardEl
+          && (!event.animationName || event.animationName === 'card-enter')) finishEntry()
+    }
+    cardEl.classList.add('is-hand-entering')
+    cardEl.addEventListener('animationend', onAnimationEnd)
+    handEntryTimerRef.current = window.setTimeout(finishEntry, 300)
+    return () => {
+      cardEl.removeEventListener('animationend', onAnimationEnd)
+      finishEntry()
+    }
+  }, [cardEl, leaving])
+
   // Why: leaving 時の行先 dx/dy は keyframe で参照される CSS 変数として注入。
   //  static keyframe (旧 +320/+10 hardcode) を動的にしてゾーン間移動の終点を
   //  実 pile 中心に合わせる (B 要件)。
@@ -763,31 +1364,116 @@ function HandCard({ card, fan, onClick, leaving, leaveDx, leaveDy, leavingMode, 
     return () => onCardElement(null)
   }, [cardEl, onCardElement])
 
+  useEffect(() => {
+    if (!cardEl || (!onClick && (!card.unavailableReason || interactionLocked)) || leaving || hidden) return
+    const resetDragVisual = () => {
+      cardEl.classList.remove('is-dragging')
+      cardEl.style.removeProperty('--drag-x')
+      cardEl.style.removeProperty('--drag-y')
+    }
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.button !== 0) return
+      dragRef.current = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        moved: false,
+      }
+      // Synthetic accessibility/E2E PointerEvents do not have an active
+      // browser pointer and therefore may reject capture. Drag state itself
+      // remains valid; real mouse/touch pointers still take capture normally.
+      try {
+        cardEl.setPointerCapture?.(event.pointerId)
+      } catch {
+        // No active native pointer to capture.
+      }
+      cardEl.classList.add('is-dragging')
+      cardEl.style.setProperty('--drag-x', '0px')
+      cardEl.style.setProperty('--drag-y', '0px')
+    }
+    const onPointerMove = (event: PointerEvent) => {
+      const drag = dragRef.current
+      if (!drag || drag.pointerId !== event.pointerId) return
+      const dx = Math.max(-180, Math.min(180, event.clientX - drag.startX))
+      const dy = Math.max(-220, Math.min(34, event.clientY - drag.startY))
+      if (Math.abs(dx) + Math.abs(dy) > 8) drag.moved = true
+      cardEl.style.setProperty('--drag-x', `${dx}px`)
+      cardEl.style.setProperty('--drag-y', `${dy}px`)
+      if (Math.abs(dx) + Math.abs(dy) > 8) event.preventDefault()
+    }
+    const finishPointer = (event: PointerEvent) => {
+      const drag = dragRef.current
+      if (!drag || drag.pointerId !== event.pointerId) return
+      const dx = event.clientX - drag.startX
+      const dy = event.clientY - drag.startY
+      dragRef.current = null
+      resetDragVisual()
+      if (drag.moved) {
+        // A drag that returns below the play threshold is still a drag, not a
+        // click. Suppress the synthetic click browsers emit after pointerup.
+        suppressNextClickRef.current = true
+        window.setTimeout(() => { suppressNextClickRef.current = false }, 0)
+      }
+      if (dy <= -82 && Math.abs(dx) <= 210) {
+        activateCard()
+      }
+    }
+    const cancelPointer = (event: PointerEvent) => {
+      if (dragRef.current?.pointerId !== event.pointerId) return
+      dragRef.current = null
+      resetDragVisual()
+    }
+    cardEl.addEventListener('pointerdown', onPointerDown)
+    cardEl.addEventListener('pointermove', onPointerMove)
+    cardEl.addEventListener('pointerup', finishPointer)
+    cardEl.addEventListener('pointercancel', cancelPointer)
+    return () => {
+      dragRef.current = null
+      resetDragVisual()
+      cardEl.removeEventListener('pointerdown', onPointerDown)
+      cardEl.removeEventListener('pointermove', onPointerMove)
+      cardEl.removeEventListener('pointerup', finishPointer)
+      cardEl.removeEventListener('pointercancel', cancelPointer)
+    }
+  }, [activateCard, card.unavailableReason, cardEl, hidden, interactionLocked, leaving, onClick])
+
+  const handleCardClick: MouseEventHandler<HTMLDivElement> | undefined =
+    (onClick || (card.unavailableReason && !interactionLocked))
+    ? (event) => {
+        if (suppressNextClickRef.current) {
+          event.preventDefault()
+          return
+        }
+        activateCard()
+      }
+    : undefined
+
   return (
     <>
-      <Card
-        name={card.name}
-        cost={card.cost}
-        costOrig={card.costOrig}
-        type={card.type}
-        rarity={card.rarity}
-        art={card.art}
-        upgraded={card.upgraded}
-        /* Why: tooltip / 右クリック長押しの +/- 切替を Card 内蔵で扱うため、
-           description / upgradedDescription を渡す。HandCardDemo.desc は
-           upgrade 状態に応じて事前解決済だが、両方持って Card に判定を委ねる。 */
-        description={card.description ?? card.desc}
-        upgradedDescription={card.upgradedDescription}
+      <BattleCardVisual
+        card={card}
         className={[
-          card.playable ? 'is-playable' : '',
+          card.playable && !card.cardUsageLimitReached ? 'is-playable' : '',
           leaving ? 'is-leaving' : '',
           // M6.6: 喪失行きは別 class でその場回転縮小消滅アニメへ。
           leaving && leavingMode === 'exhaust' ? 'is-leaving-exhaust' : '',
           hidden ? 'is-playing-hidden' : '',
         ].filter(Boolean).join(' ') || undefined}
-        onClick={leaving ? undefined : onClick}
+        onClick={leaving ? undefined : handleCardClick}
       />
       <span ref={probeRefCb} aria-hidden="true" className="hand__probe" />
+      {card.unavailableReason && !leaving && showUnavailableReason ? (
+        <span
+          className="hand-card-unavailable is-visible"
+          style={{
+            '--fan-x': `${fan.x}px`,
+            '--fan-y': `${fan.y}px`,
+          } as CSSProperties}
+          role="status"
+        >
+          {card.unavailableReason}
+        </span>
+      ) : null}
     </>
   )
 }
@@ -860,11 +1546,21 @@ function PileModal({ kind, cards, onClose }: PileModalProps) {
                     name={disp.name}
                     cost={disp.cost}
                     costOrig={disp.costOrig}
+                    costOriginal={card.originalCost}
+                    costChanges={card.costChanges}
+                    comboReductionEligible={card.comboReductionEligible ?? false}
+                    comboContinues={card.comboContinues ?? card.comboReductionEligible ?? false}
+                    comboRingHighlighted={card.comboRingHighlighted ?? false}
+                    wildDisabled={card.wildDisabled ?? false}
+                    costUnavailable={(card.cardUsageLimitReached ?? false) || (card.cardPlayRestricted ?? false)}
                     type={disp.type}
                     rarity={disp.rarity}
+                    poolClass={card.poolClass ?? def?.poolClass ?? null}
                     description={disp.description}
                     upgradedDescription={disp.upgradedDescription}
                     upgraded={card.isUpgraded}
+                    contingencyArmed={card.isContingencyArmed}
+                    contingencyTriggerText={card.contingencyTriggerText}
                   />
                 </li>
               )
@@ -886,16 +1582,19 @@ export function ComboChip({
   maxComboThisTurn,
   lastPlayedOrigCost,
   nextCardComboFreePass,
+  comboCarryoverPending = false,
 }: {
   count: number
   maxComboThisTurn: number
   lastPlayedOrigCost: number | null
   nextCardComboFreePass: boolean
+  comboCarryoverPending?: boolean
 }) {
   const desc = formatComboDescription({
     count,
     lastPlayedOrigCost,
     nextCardComboFreePass,
+    comboCarryoverPending,
   })
   const tip = useTip({
     name: 'コンボ',
@@ -904,12 +1603,24 @@ export function ComboChip({
   })
   return (
     <div
-      className={`battle__combo${maxComboThisTurn > 1 ? ' is-active' : ''}`}
-      aria-label={`このターンの最大コンボ ×${maxComboThisTurn}`}
+      className={`battle__combo${count > 1 ? ' is-active' : ''}`}
+      aria-label={`現在${count}コンボ${maxComboThisTurn > count ? ` 最大${maxComboThisTurn}` : ''}`}
       {...tip}
     >
+      <span className="battle__combo-v">
+        <span
+          key={count}
+          className="battle__combo-current"
+          data-milestone={count >= 15 ? '15' : count >= 10 ? '10' : count >= 5 ? '5' : undefined}
+          data-motion="decorative"
+        >
+          {count}
+        </span>
+        {maxComboThisTurn > count ? (
+          <span className="battle__combo-max">(MAX{maxComboThisTurn})</span>
+        ) : null}
+      </span>
       <span className="battle__combo-k">COMBO</span>
-      <span className="battle__combo-v">×{maxComboThisTurn}</span>
     </div>
   )
 }
@@ -940,29 +1651,97 @@ export function ComboGauge({ value }: { value: number }) {
           key={index}
         />
       ))}
+      <span className="combo-gauge__value" aria-hidden="true">
+        {clampedValue}/{COMBO_GAUGE_MAX}
+      </span>
     </div>
   )
 }
 
 type ComboSkillKind = 'tactical' | 'ultimate'
 
+const CATALOG_USAGE_HEADER_RE = /^(?:(?:ターン中|1ターンに)\d+度だけ使用可能\(\d+\/\d+\)。(?:\r?\n|$))+/u
+
+function withoutCatalogUsageHeader(description: string): string {
+  return description.replace(CATALOG_USAGE_HEADER_RE, '')
+}
+
 function ComboSkillControl({
   kind,
   disabled,
   onClick,
+  skillName,
+  gaugeCost,
+  energyCost,
+  description,
+  oncePerTurn,
+  usesPerTurn,
+  usesThisTurn,
+  unconfigured,
+  disabledReason,
 }: {
   kind: ComboSkillKind
   disabled: boolean
   onClick: () => void
+  skillName?: string
+  gaugeCost?: number
+  energyCost?: number
+  description?: string
+  oncePerTurn?: boolean
+  usesPerTurn?: number
+  usesThisTurn?: number
+  unconfigured?: boolean
+  disabledReason?: string
 }) {
   const tactical = kind === 'tactical'
-  const label = tactical ? '戦技' : '奥義'
-  const cost = tactical ? TACTICAL_SKILL_COST : ULTIMATE_SKILL_COST
-  const desc = tactical ? TACTICAL_SKILL_DESCRIPTION : ULTIMATE_SKILL_DESCRIPTION
-  const accessibleName = `${label}（コンボゲージ${cost}消費）`
+  const baseLabel = tactical ? '戦技' : '奥義'
+  const configured = !unconfigured
+    && (skillName !== undefined || gaugeCost !== undefined
+      || energyCost !== undefined || description !== undefined)
+  const label = unconfigured
+    ? `${baseLabel}：未設定`
+    : skillName
+    ? `${baseLabel}：${skillName}`
+    : baseLabel
+  const cost = gaugeCost ?? (tactical ? TACTICAL_SKILL_COST : ULTIMATE_SKILL_COST)
+  const costText = energyCost && energyCost > 0
+    ? `エナジー${energyCost} / コンボゲージ${cost}`
+    : `コンボゲージ${cost}`
+  const compactCostText = unconfigured
+    ? '未設定'
+    : energyCost && energyCost > 0
+      ? `消費 E${energyCost} / G${cost}`
+      : `消費 ${cost}`
+  // The built-in fallback skills also have the current one-use-per-turn rule. Keep the
+  // counter visible even before character metadata has loaded so the tooltip never falls
+  // back to the obsolete uncounted wording.
+  const usageLimit = usesPerTurn ?? (oncePerTurn || !configured ? 1 : 0)
+  const usageCount = usesThisTurn ?? 0
+  // Current catalogs expose usesPerTurn separately. Strip a legacy catalog's initial
+  // (0/N) line as well, then render exactly one counter from the live battle state.
+  const effectDescription = withoutCatalogUsageHeader(
+    description ?? (tactical ? TACTICAL_SKILL_DESCRIPTION : ULTIMATE_SKILL_DESCRIPTION),
+  )
+  const liveUsageDescription = `ターン中${usageLimit}度だけ使用可能(${usageCount}/${usageLimit})。`
+  const desc = unconfigured
+    ? 'このキャラクターには設定されていません。'
+    : usageLimit > 0
+    ? effectDescription.length > 0
+      ? `${liveUsageDescription}\n${effectDescription}`
+      : liveUsageDescription
+    : effectDescription
+  const accessibleName = unconfigured
+    ? `${baseLabel}（未設定）`
+    : `${label}（${configured ? costText : `コンボゲージ${cost}`}消費）`
+  const statusLine = unconfigured ? '(未設定)' : configured ? (
+    <>
+      <div>({costText}消費)</div>
+      {disabledReason ? <div className="combo-skill-tip__reason">使用不可：{disabledReason}</div> : null}
+    </>
+  ) : `(コンボゲージ${cost}消費)`
   const tip = useTip({
     name: label,
-    statusLine: `(コンボゲージ${cost}消費)`,
+    statusLine,
     desc,
   })
 
@@ -971,21 +1750,22 @@ function ComboSkillControl({
       className={`combo-skill-control combo-skill-control--${kind}`}
       data-combo-skill={kind}
       role="group"
-      aria-label={accessibleName}
-      aria-disabled={disabled}
-      tabIndex={disabled ? 0 : undefined}
+      aria-label={unconfigured ? `${baseLabel} 未設定` : `${accessibleName} ${costText}`}
+      aria-disabled={disabled || unconfigured}
+      tabIndex={disabled || unconfigured ? 0 : undefined}
       {...tip}
     >
       <button
         type="button"
         className="combo-skill-button"
+        data-dual-cost={energyCost && energyCost > 0 ? 'true' : undefined}
         aria-label={accessibleName}
         aria-describedby={tip['aria-describedby']}
-        disabled={disabled}
+        disabled={disabled || unconfigured}
         onClick={onClick}
       >
-        <span className="combo-skill-button__name">{label}</span>
-        <span className="combo-skill-button__cost">消費 {cost}</span>
+        <span className="combo-skill-button__name">{baseLabel}</span>
+        <span className="combo-skill-button__cost">{compactCostText}</span>
       </button>
     </div>
   )
@@ -996,21 +1776,43 @@ export function BattleComboControls({
   maxComboThisTurn,
   lastPlayedOrigCost,
   nextCardComboFreePass,
+  comboCarryoverPending = false,
   comboGauge,
   tacticalDisabled,
   ultimateDisabled,
   onUseTactical,
   onUseUltimate,
+  tacticalSkill,
+  ultimateSkill,
+  tacticalUsesThisTurn,
+  ultimateUsesThisTurn,
+  tacticalUnconfigured,
+  ultimateUnconfigured,
+  finisherRecord,
+  onOpenFinisherRecord,
+  tacticalDisabledReason,
+  ultimateDisabledReason,
 }: {
   count: number
   maxComboThisTurn: number
   lastPlayedOrigCost: number | null
   nextCardComboFreePass: boolean
+  comboCarryoverPending?: boolean
   comboGauge: number
   tacticalDisabled: boolean
   ultimateDisabled: boolean
   onUseTactical: () => void
   onUseUltimate: () => void
+  tacticalSkill?: { name: string; comboGaugeCost: number; energyCost: number; description: string; oncePerTurn: boolean; usesPerTurn?: number }
+  ultimateSkill?: { name: string; comboGaugeCost: number; energyCost: number; description: string; oncePerTurn: boolean; usesPerTurn?: number; requiresCardsInHand?: boolean }
+  tacticalUsesThisTurn?: number
+  ultimateUsesThisTurn?: number
+  tacticalUnconfigured?: boolean
+  ultimateUnconfigured?: boolean
+  finisherRecord?: FinisherRecordDto | null
+  onOpenFinisherRecord?: () => void
+  tacticalDisabledReason?: string
+  ultimateDisabledReason?: string
 }) {
   return (
     <div className="battle__combo-controls">
@@ -1018,6 +1820,15 @@ export function BattleComboControls({
         kind="tactical"
         disabled={tacticalDisabled}
         onClick={onUseTactical}
+        skillName={tacticalSkill?.name}
+        gaugeCost={tacticalSkill?.comboGaugeCost}
+        energyCost={tacticalSkill?.energyCost}
+        description={tacticalSkill?.description}
+        oncePerTurn={tacticalSkill?.oncePerTurn}
+        usesPerTurn={tacticalSkill?.usesPerTurn}
+        usesThisTurn={tacticalUsesThisTurn}
+        unconfigured={tacticalUnconfigured}
+        disabledReason={tacticalDisabledReason}
       />
       <div className="battle__combo-column">
         <ComboChip
@@ -1025,13 +1836,33 @@ export function BattleComboControls({
           maxComboThisTurn={maxComboThisTurn}
           lastPlayedOrigCost={lastPlayedOrigCost}
           nextCardComboFreePass={nextCardComboFreePass}
+          comboCarryoverPending={comboCarryoverPending}
         />
         <ComboGauge value={comboGauge} />
+        {finisherRecord && finisherRecord.cards.length > 0 ? (
+          <button
+            type="button"
+            className="finisher-record-button"
+            onClick={onOpenFinisherRecord}
+            aria-label={`保存された残光を表示（${finisherRecord.cards.length}枚）`}
+          >
+            保存された残光 {finisherRecord.cards.length}
+          </button>
+        ) : null}
       </div>
       <ComboSkillControl
         kind="ultimate"
         disabled={ultimateDisabled}
         onClick={onUseUltimate}
+        skillName={ultimateSkill?.name}
+        gaugeCost={ultimateSkill?.comboGaugeCost}
+        energyCost={ultimateSkill?.energyCost}
+        description={ultimateSkill?.description}
+        oncePerTurn={ultimateSkill?.oncePerTurn}
+        usesPerTurn={ultimateSkill?.usesPerTurn}
+        usesThisTurn={ultimateUsesThisTurn}
+        unconfigured={ultimateUnconfigured}
+        disabledReason={ultimateDisabledReason}
       />
     </div>
   )
@@ -1078,14 +1909,42 @@ export function BattleScreen({
   menuOpen,
   onOpenMenu,
 }: Props) {
+  const { playComboTone, playSe, playLayeredSe, duckBgm } = useAudio()
+  const { effectiveMotionLevel } = usePresentationSettings()
+  const playBattleCue = useCallback((cue: BattleAudioCue, seed: string | number = 0) => {
+    void playSe(selectSe(cue, seed))
+  }, [playSe])
   const [state, setState] = useState<BattleStateDto | null>(null)
+  const [replayView, setReplayView] = useState<BattleReplayViewState | null>(null)
+  const [replayActionCard, setReplayActionCard] = useState<ReplayActionCardState | null>(null)
+  const [reenactCard, setReenactCard] = useState<ReenactCardState | null>(null)
+  const [replayActionInProgress, setReplayActionInProgress] = useState(false)
+  const [replayActionBaseline, setReplayActionBaseline] = useState<BattleStateDto | null>(null)
+  const replayAnimationTokenRef = useRef(0)
+  const replayStartTimerRef = useRef<number | null>(null)
+  useEffect(() => () => {
+    if (replayStartTimerRef.current !== null) {
+      window.clearTimeout(replayStartTimerRef.current)
+    }
+  }, [])
+  const [readyNotice, setReadyNotice] = useState<string | null>(null)
+  const previousPrimaryReadyRef = useRef<{ turn: number; participantId: string; ready: boolean } | null>(null)
+  const manualUnreadyRef = useRef(false)
+  // The server can reset `isReady` while the current turn's attack
+  // resolution is still being animated. Keep the player's READY intent
+  // visible until the authoritative turn number advances.
+  const readyIntentRef = useRef<{ turn: number; participantId: string } | null>(null)
   const [animating, setAnimating] = useState(false)
   const [busy, setBusy] = useState(false)
   // React state is committed asynchronously, so two clicks in the same render can both
   // observe busy=false. Keep an immediate guard for every mutating battle command.
   const busyRef = useRef(false)
   const [error, setError] = useState<string | null>(null)
+  useEffect(() => {
+    if (error) void playSe(selectSe('uiError', error))
+  }, [error, playSe])
   const [pileOpen, setPileOpen] = useState<PileKind | null>(null)
+  const [finisherRecordModal, setFinisherRecordModal] = useState<FinisherRecordDto | null>(null)
   // Why: ターン終了時 attack アニメーションの transient state。
   // attackerId: slide 中の slot、hitId: 赤点滅の被弾 slot、dyingIds: 撃破点滅中。
   const [slotAnim, setSlotAnim] = useState<SlotAnim>({})
@@ -1100,10 +1959,70 @@ export function BattleScreen({
   // AttackFire.Amount (= totalAttack) と DealDamage.Amount (= damage) の差分を
   // block 消費量として累積する。
   const [blockOverlay, setBlockOverlay] = useState<Record<string, number>>({})
+  const [combatFeedback, setCombatFeedback] = useState<CombatFeedbackItem[]>([])
+  const feedbackSequenceRef = useRef(0)
+  const feedbackTimersRef = useRef<Map<number, number>>(new Map())
+  const pushCombatFeedback = useCallback((
+    targetId: string,
+    kind: CombatFeedbackKind,
+    text: string,
+  ) => {
+    const id = ++feedbackSequenceRef.current
+    setCombatFeedback(current => appendCombatFeedback(
+      current,
+      { id, targetId, kind, text },
+    ))
+    const timer = window.setTimeout(() => {
+      feedbackTimersRef.current.delete(id)
+      setCombatFeedback(current => current.filter(item => item.id !== id))
+    }, combatFeedbackLifetimeMs(kind))
+    feedbackTimersRef.current.set(id, timer)
+  }, [])
+  const clearCombatFeedback = useCallback(() => {
+    for (const timer of feedbackTimersRef.current.values()) window.clearTimeout(timer)
+    feedbackTimersRef.current.clear()
+    setCombatFeedback([])
+  }, [])
+  useEffect(() => () => {
+    for (const timer of feedbackTimersRef.current.values()) window.clearTimeout(timer)
+    feedbackTimersRef.current.clear()
+  }, [])
   // Why: 戦闘フェーズ banner (戦闘開始 / プレイヤーのターン / 敵のターン / 勝利)。
   // Map screen の ACT START と同じ 2 秒帯フォーマットで画面中央にオーバーレイ。
   // banner 表示中は他のアニメーション/入力を遅延させる (await showBanner)。
   const [phaseBanner, setPhaseBanner] = useState<string | null>(null)
+  const [characterSkillBurst, setCharacterSkillBurst] = useState<CharacterSkillBurst | null>(null)
+  const skillBurstSequenceRef = useRef(0)
+  const skillBurstTimerRef = useRef<number | null>(null)
+  const showCharacterSkillBurst = useCallback((
+    kind: CharacterSkillBurst['kind'],
+    characterId: string,
+    characterClass: CharacterSoundClass,
+    name: string,
+    playbackSpeed = 1,
+    motionEnabled = true,
+  ): number => {
+    if (skillBurstTimerRef.current !== null) window.clearTimeout(skillBurstTimerRef.current)
+    const id = ++skillBurstSequenceRef.current
+    const durationMs = characterSkillCutinDurationMs(kind, playbackSpeed, motionEnabled)
+    setCharacterSkillBurst({
+      id,
+      kind,
+      characterId,
+      characterClass,
+      name,
+      portrait: resolveCharacterPortrait(characterId),
+      durationMs,
+    })
+    skillBurstTimerRef.current = window.setTimeout(() => {
+      skillBurstTimerRef.current = null
+      setCharacterSkillBurst(current => current?.id === id ? null : current)
+    }, durationMs)
+    return durationMs
+  }, [])
+  useEffect(() => () => {
+    if (skillBurstTimerRef.current !== null) window.clearTimeout(skillBurstTimerRef.current)
+  }, [])
   // resolvedRef は finalize 後の二重呼び出しを抑止するためのラッチ。
   const resolvedRef = useRef(false)
   // Why: hand から消えたカードを exit アニメーション中だけ残しておくバッファ。
@@ -1120,7 +2039,16 @@ export function BattleScreen({
     destination: 'discard' | 'exhaust'
   }
   const [leavingHand, setLeavingHand] = useState<LeavingHandEntry[]>([])
+  type ExhaustingCardEntry = {
+    id: string
+    demo: HandCardDemo
+    startX: number
+    startY: number
+    startRot: number
+  }
+  const [exhaustingCards, setExhaustingCards] = useState<ExhaustingCardEntry[]>([])
   const prevHandRef = useRef<{
+    initialized: boolean
     list: BattleCardInstanceDto[]
     demos: HandCardDemo[]
     fans: { x: number; y: number; r: number }[]
@@ -1128,6 +2056,7 @@ export function BattleScreen({
      *  前回スナップショット (instanceId 集合)。差分検出で除外行きを識別。 */
     exhaustIds: Set<string>
   }>({
+    initialized: false,
     list: [],
     demos: [],
     fans: [],
@@ -1139,6 +2068,9 @@ export function BattleScreen({
   //  - drawPileRef / discardPileRef / exhaustPileRef: 行先パイル中心の計測用
   //  - handWrapRef: パイル位置不明時の fallback (画面下中央)
   const handCardRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+  // Keep the last painted center even after React unmounts the hand node. The
+  // state diff that identifies a random/chosen exhaust runs after that commit.
+  const handCardVisuals = useRef<Map<string, { x: number; y: number; rot: number }>>(new Map())
   const drawPileRef = useRef<HTMLButtonElement | null>(null)
   const discardPileRef = useRef<HTMLButtonElement | null>(null)
   const exhaustPileRef = useRef<HTMLButtonElement | null>(null)
@@ -1231,10 +2163,73 @@ export function BattleScreen({
     onBattleStateChange?.(state)
   }, [state, onBattleStateChange])
 
-  // Why: state.hand が更新された瞬間に「直前 hand にいたが今いない」カードを
-  // 検出し、leavingHand に追加する。表示中は CSS .is-leaving で捨札方向に
-  // 縮小フェードし、CARD_LEAVE_MS 経過で除去 (ユーザ要望: ゾーン間移動
-  // アニメーション)。前回の hand list / demo / fan は ref で保持。
+  // A pending Contingency choice can outlive the response that carried its
+  // trigger (for example after reconnect). Rebuild the held centre card from
+  // the authoritative pending choice and Exhaust-zone card instead of relying
+  // on transient animation history.
+  useEffect(() => {
+    if (!state || replayView || animating) return
+    const pending = findPendingContingencyCard(state, cardCatalog)
+    if (!pending) return
+    const pendingId = `contingency:${pending.card.instanceId}`
+    const appStage = document.querySelector('.app-stage') as HTMLElement | null
+    const exhaustCenter = resolveBattleElementCenter(
+      exhaustPileRef.current?.getBoundingClientRect(),
+      appStage?.getBoundingClientRect(),
+      { x: 1216, y: 558 },
+    )
+    setReenactCard(current => current?.id === pendingId
+      ? { ...current, stage: 'holding' }
+      : {
+          id: pendingId,
+          demo: {
+            ...toHandCardDemo(pending.card, cardCatalog, state.energy),
+            instanceId: pending.card.instanceId,
+          },
+          stage: 'holding',
+          movement: pending.destination === 'exhaust'
+            ? 'contingency-exhaust'
+            : 'contingency-discard',
+          fromX: exhaustCenter.x,
+          fromY: exhaustCenter.y,
+        })
+  }, [animating, cardCatalog, replayView, state])
+
+  useEffect(() => {
+    if (!state) return
+    const current = findPrimaryParticipant(state)
+    if (!current) return
+    const previous = previousPrimaryReadyRef.current
+    if (
+      previous
+      && previous.turn === state.turn
+      && previous.participantId === current.participantId
+      && previous.ready
+      && !current.isReady
+    ) {
+      if (manualUnreadyRef.current) {
+        manualUnreadyRef.current = false
+      } else if (state.phase === 'PlayerInput') {
+        setReadyNotice('新しく行える行動が増えたため、READYが解除されました。')
+      }
+    }
+    previousPrimaryReadyRef.current = {
+      turn: state.turn,
+      participantId: current.participantId,
+      ready: current.isReady,
+    }
+  }, [state])
+
+  useEffect(() => {
+    if (!readyNotice) return
+    const timer = window.setTimeout(() => setReadyNotice(null), 3600)
+    return () => window.clearTimeout(timer)
+  }, [readyNotice])
+
+  // Why: state.hand / exhaustPile が更新された瞬間にゾーン移動を検出する。
+  // 捨札行きは leavingHand、除外行きは viewport中央を基準にした専用overlayへ
+  // 分ける。後者を hand 内の相対transformで動かすと、選択位置やfan回転、
+  // app-stageのscaleによって画面左へずれていた。
   // 注意: hooks は条件付き呼び出し不可なので state===null 早期 return より
   // 前で宣言する。state===null のときは body 冒頭で no-op return する。
   useEffect(() => {
@@ -1243,14 +2238,13 @@ export function BattleScreen({
     const prev = prevHandRef.current
     const currentIds = new Set(hand.map(c => c.instanceId))
     const newlyLeaving: LeavingHandEntry[] = []
-    // M6.6: hand から消えたカードが exhaust pile に新規追加されたか判定するため、
-    //  前回 vs 今回の exhaustPile 差分を計算。新規 exhaust エントリは destination='exhaust'
-    //  に設定し、CSS でその場回転縮小消滅アニメに切替える。
     const currentExhaustIds = new Set(state.exhaustPile.map(c => c.instanceId))
     const newlyExhaustedIds = new Set<string>()
-    currentExhaustIds.forEach(id => {
-      if (!prev.exhaustIds.has(id)) newlyExhaustedIds.add(id)
-    })
+    if (prev.initialized) {
+      currentExhaustIds.forEach(id => {
+        if (!prev.exhaustIds.has(id)) newlyExhaustedIds.add(id)
+      })
+    }
     // Why: ゾーン間移動の終点は捨札パイル中心 (B 要件)。要素 rect が取れる場合は
     // それを使い、取れない場合は手札 wrap 中央を fallback にする。
     const playingId = playingCard?.entry.card.instanceId
@@ -1264,24 +2258,23 @@ export function BattleScreen({
       if (currentIds.has(card.instanceId)) return
       // playingCard が引き取るカードは leavingHand から除外 (二重アニメ防止)。
       if (card.instanceId === playingId) return
-      const cardEl = handCardRefs.current.get(card.instanceId)
-      const r = cardEl?.getBoundingClientRect()
-      const cardCx = r ? r.left + r.width / 2 : fallbackHandCx
-      const cardCy = r ? r.top + r.height / 2 : fallbackHandCy
-      const isExhaust = newlyExhaustedIds.has(card.instanceId)
-      // exhaust 行きは位置移動しないので destDx/Dy は 0 (CSS keyframe 側で参照されない)。
-      const destDx = isExhaust ? 0 : discardCx - cardCx
-      const destDy = isExhaust ? 0 : discardCy - cardCy
+      // Exhausted cards are rendered by the fixed overlay below, never by a
+      // position inherited from the hand row.
+      if (newlyExhaustedIds.has(card.instanceId)) return
+      const visual = handCardVisuals.current.get(card.instanceId)
+      const cardCx = visual?.x ?? fallbackHandCx
+      const cardCy = visual?.y ?? fallbackHandCy
       newlyLeaving.push({
         card,
         demo: prev.demos[idx],
         fan: prev.fans[idx],
-        destDx,
-        destDy,
-        destination: isExhaust ? 'exhaust' : 'discard',
+        destDx: discardCx - cardCx,
+        destDy: discardCy - cardCy,
+        destination: 'discard',
       })
     })
     if (newlyLeaving.length > 0) {
+      playBattleCue('cardDiscard', newlyLeaving[0].card.instanceId)
       setLeavingHand(prevList => [...prevList, ...newlyLeaving])
       const ids = newlyLeaving.map(e => e.card.instanceId)
       window.setTimeout(() => {
@@ -1289,6 +2282,40 @@ export function BattleScreen({
           prevList.filter(e => !ids.includes(e.card.instanceId)),
         )
       }, CARD_LEAVE_MS)
+    }
+    if (newlyExhaustedIds.size > 0) {
+      const appStageEl = document.querySelector('.app-stage') as HTMLElement | null
+      const appRect = appStageEl?.getBoundingClientRect()
+      const appScaleX = appRect && appRect.width > 0 ? appRect.width / 1280 : 1
+      const appScaleY = appRect && appRect.height > 0 ? appRect.height / 720 : 1
+      const appLeft = appRect?.left ?? 0
+      const appTop = appRect?.top ?? 0
+      const createdAt = Date.now()
+      const newAnimations: ExhaustingCardEntry[] = []
+      state.exhaustPile.forEach((card, order) => {
+        if (!newlyExhaustedIds.has(card.instanceId) || card.instanceId === playingId) return
+        const prevIndex = prev.list.findIndex(item => item.instanceId === card.instanceId)
+        const visual = handCardVisuals.current.get(card.instanceId)
+        const screenX = visual?.x ?? fallbackHandCx
+        const screenY = visual?.y ?? fallbackHandCy
+        newAnimations.push({
+          id: `${card.instanceId}:${createdAt}:${order}`,
+          demo: prevIndex >= 0
+            ? prev.demos[prevIndex]
+            : toHandCardDemo(card, cardCatalog, state.energy),
+          startX: (screenX - appLeft) / appScaleX,
+          startY: (screenY - appTop) / appScaleY,
+          startRot: visual?.rot ?? (prevIndex >= 0 ? prev.fans[prevIndex]?.r ?? 0 : 0),
+        })
+      })
+      if (newAnimations.length > 0) {
+        playBattleCue('cardExhaust', newAnimations[0].id)
+        setExhaustingCards(current => [...current, ...newAnimations])
+        const animationIds = new Set(newAnimations.map(item => item.id))
+        window.setTimeout(() => {
+          setExhaustingCards(current => current.filter(item => !animationIds.has(item.id)))
+        }, CARD_LEAVE_MS)
+      }
     }
     // 次回比較用に現在の hand / demos / fans / exhaustIds を ref に保存。demos と
     // fans は render 内の handDemos / fan と同じ計算で生成 (cardCatalog 等は dep に
@@ -1302,19 +2329,21 @@ export function BattleScreen({
     )
     const newFans = fanLayout(newDemos.length)
     prevHandRef.current = {
+      initialized: true,
       list: hand.slice(),
       demos: newDemos,
       fans: newFans,
       exhaustIds: currentExhaustIds,
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state?.hand])
+  }, [state?.hand, state?.exhaustPile, cardCatalog, playBattleCue])
 
   // Why: 山札補充は playSteps 内で「部分ドロー → reshuffle 演出 → 残りドロー」
   //  の 3 段階表示を組み立てるため、setState 後 useEffect 検出ではなく
   //  playSteps から直接 triggerReshuffleAnim を呼ぶ方式に変更。
   const triggerReshuffleAnim = useCallback((cards: BattleCardInstanceDto[]) => {
     if (cards.length === 0) return
+    playBattleCue('cardShuffle', cards[0].instanceId)
     const drawEl = drawPileRef.current
     const discEl = discardPileRef.current
     if (!drawEl || !discEl) return
@@ -1355,14 +2384,19 @@ export function BattleScreen({
     window.setTimeout(() => {
       setReshuffleEntries([])
     }, cards.length * stagger + duration + 50)
-  }, [])
+  }, [playBattleCue])
 
   // Why: 1 枚を山札アイコン → 手札の予定 fan 位置へ飛ばす。返り値は flight 時間 (ms)。
   //  - playSteps の stagger ループで「triggerDrawAnim → sleep(flight) → setState (hand に追加)」を 1 サイクル。
   //  - 目標は `.hand-wrap` 中心 + fanLayout(newHandSize)[targetIndex]。
   //  - reshuffle と同じく .app-stage の transform を考慮した local 座標で渡す。
   const DRAW_FLIGHT_MS = 260
-  function triggerDrawAnim(card: BattleCardInstanceDto, targetIndex: number, newHandSize: number) {
+  const triggerDrawAnim = useCallback((
+    card: BattleCardInstanceDto,
+    targetIndex: number,
+    newHandSize: number,
+  ) => {
+    playBattleCue('cardDraw', card.instanceId)
     const drawEl = drawPileRef.current
     const handEl = handWrapRef.current
     if (!drawEl || !handEl) return
@@ -1388,7 +2422,7 @@ export function BattleScreen({
     window.setTimeout(() => {
       setDrawAnimEntries(prev => prev.filter(e => e.id !== id))
     }, DRAW_FLIGHT_MS + 30)
-  }
+  }, [playBattleCue])
 
   // 戦闘フェーズ banner: text を 2 秒間オーバーレイ表示してから clear。
   // Map の ACT START と同じ 2s フェード仕様 (CSS keyframes 側で 10/88/100% 遷移)。
@@ -1424,7 +2458,26 @@ export function BattleScreen({
   //  - その他 event (BattleStart / TurnStart / GainBlock / Draw / etc.):
   //    短い fallback delay。HP に影響しないので state 未確定でも見た目は同等。
   const playSteps = useCallback(
-    async (resp: BattleActionResponseDto) => {
+    async (resp: BattleActionResponseDto, options: PlayStepsOptions = {}) => {
+      const presentationOnly = options.presentationOnly === true
+      const baselineState = options.baselineState ?? state
+      const playbackSpeed = Math.max(0.25, options.speed ?? 1)
+      const motionScale = effectiveMotionLevel === 'off'
+        ? 0
+        : effectiveMotionLevel === 'reduced' ? 0.48 : 1
+      const isCancelled = options.isCancelled ?? (() => false)
+      const waitForPresentation = async (durationMs: number) => {
+        await sleep(Math.round(durationMs * motionScale / playbackSpeed))
+        return !isCancelled()
+      }
+      const clearTransientPresentation = () => {
+        setSlotAnim({})
+        setDamageOverlay({})
+        setBlockOverlay({})
+        setReenactCard(null)
+        clearCombatFeedback()
+        setAnimating(false)
+      }
       setAnimating(true)
       const steps = resp.steps
       // Why: 初回 (state===null) の場合、setState せずに banner を流すと
@@ -1432,7 +2485,7 @@ export function BattleScreen({
       // 初回は最初に resp.state を設定して battle UI を出してから演出に入る。
       // 初回 response (battle start) に DealDamage は含まれないため、
       // setState(resp.state) しても progressive HP は問題にならない。
-      if (state === null) {
+      if (!presentationOnly && state === null) {
         setState(resp.state)
       }
       // Why: playSteps 中は setState を呼ばず、ローカル overlay を更新して
@@ -1442,6 +2495,78 @@ export function BattleScreen({
       // を回避できる。block も同じ仕組みで progressive に減らす。
       const dmg: Record<string, number> = {}
       const blk: Record<string, number> = {}
+      const blockStateByActor: Record<string, AnimatedBlockState> = {}
+      const baselineActor = (actorInstanceId: string) => baselineState
+        ? [...baselineState.allies, ...baselineState.enemies]
+            .find(candidate => candidate.instanceId === actorInstanceId)
+        : undefined
+      const actorMotionDuration = (
+        actorInstanceId: string | undefined,
+        motion: 'attack' | 'hurt',
+        minimumMs: number,
+      ) => {
+        if (!actorInstanceId) return minimumMs
+        const actor = baselineActor(actorInstanceId)
+        if (!actor) return minimumMs
+        const participant = baselineState
+          ? findParticipantForActor(baselineState, actorInstanceId)
+          : null
+        const demo = toCharacterDemo(
+          actor,
+          { enemies: enemyCatalog, units: unitCatalog, characters: characterCatalog },
+          accountId,
+          participant?.characterId ?? snapshot.run.characterId,
+        )
+        return readableMotionDuration(demo.animations?.[motion], minimumMs)
+      }
+      const currentBlockState = (actorInstanceId: string) => {
+        if (Object.prototype.hasOwnProperty.call(blockStateByActor, actorInstanceId)) {
+          return blockStateByActor[actorInstanceId]
+        }
+        const actor = baselineActor(actorInstanceId)
+        const dexterity = actor?.statuses?.dexterity ?? 0
+        const addCount = actor?.blockAddCount ?? 0
+        const initial: AnimatedBlockState = {
+          rawSum: actor?.blockRawSum
+            ?? Math.max(0, (actor?.blockDisplay ?? 0) - addCount * dexterity),
+          addCount,
+          dexterity,
+        }
+        blockStateByActor[actorInstanceId] = initial
+        return initial
+      }
+      const commitBlockOverlay = (actorInstanceId: string) => {
+        const baselineDisplay = baselineActor(actorInstanceId)?.blockDisplay ?? 0
+        blk[actorInstanceId] = baselineDisplay
+          - displayAnimatedBlock(currentBlockState(actorInstanceId))
+      }
+      const applyRuntimeStatusChange = (
+        actorInstanceId: string,
+        statusId: string | undefined,
+        amount: number | undefined,
+        removed: boolean | undefined,
+      ) => {
+        if (statusId !== 'dexterity') return
+        const current = currentBlockState(actorInstanceId)
+        blockStateByActor[actorInstanceId] = {
+          ...current,
+          dexterity: updateDisplayedDexterity(
+            current.dexterity,
+            statusId,
+            amount,
+            removed,
+          ),
+        }
+        commitBlockOverlay(actorInstanceId)
+      }
+      const pileCenter = (
+        element: HTMLElement | null,
+        fallback: { x: number; y: number },
+      ) => {
+        const pileRect = element?.getBoundingClientRect()
+        const appRect = document.querySelector('.app-stage')?.getBoundingClientRect()
+        return resolveBattleElementCenter(pileRect, appRect, fallback)
+      }
       // Why: 「敵のターン」 banner は 1 turn につき 1 回 (味方攻撃終了 → 初の
       // 敵 caster AttackFire の前) で出す。表示済フラグでガードする。
       let shownEnemyTurnBanner = false
@@ -1451,14 +2576,76 @@ export function BattleScreen({
         const step = steps[i]
         const ev = step.event
 
+        // Live card-zone sounds are owned by the animation that actually moves
+        // the card. Replay presentation has no live zone watcher, so its
+        // journal events remain audible here.
+        const deferredToLiveZoneAnimation = !presentationOnly && (
+          ev.kind === 'Draw'
+          || ev.kind === 'Shuffle'
+          || ev.kind === 'Discard'
+          || ev.kind === 'Exhaust'
+        )
+        if (ev.kind !== 'AttackFire' && !deferredToLiveZoneAnimation) {
+          const seed = `${ev.order}:${ev.targetInstanceId ?? ev.cardId ?? ''}`
+          const duckPreset = bgmDuckPresetForEvent(ev)
+          if (duckPreset) duckBgm(BGM_DUCK_PRESETS[duckPreset])
+
+          if (ev.kind === 'UseCharacterSkill') {
+            const participant = baselineState?.participants?.find(candidate =>
+              candidate.actorInstanceId === ev.casterInstanceId)
+            const characterId = participant?.characterId ?? snapshot.run.characterId
+            const characterClass = toCharacterSoundClass(
+              characterCatalog?.[characterId]?.characterClass,
+            )
+            const kind = ev.note?.toLowerCase() === 'ultimate' ? 'ultimate' : 'tactical'
+            const skillName = (
+              characterCatalog?.[characterId]?.skills?.find(skill => skill.id === kind)?.name
+            ) ?? (kind === 'ultimate' ? '奥義' : '戦技')
+            const cutinDurationMs = showCharacterSkillBurst(
+              kind,
+              characterId,
+              characterClass,
+              skillName,
+              playbackSpeed,
+              effectiveMotionLevel !== 'off',
+            )
+            void playLayeredSe(selectCharacterSkillSound(kind, characterClass, seed, {
+              pan: -0.28,
+            }))
+            // The cut-in is an inserted activation beat, not a decorative
+            // overlay. Finish its equally timed entrance/exit before the
+            // following skill effects begin behind it.
+            await sleep(cutinDurationMs)
+            if (isCancelled()) {
+              clearTransientPresentation()
+              return
+            }
+          } else {
+            const recipe = battleSoundRecipeForEvent(ev)
+            if (recipe) {
+              void playLayeredSe(selectBattleSoundRecipe(recipe, seed))
+            } else {
+              for (const cue of battleAudioCuesForEvent(ev)) playBattleCue(cue, seed)
+            }
+          }
+        }
+        if (ev.kind === 'PlayCard') {
+          // Current responses carry the exact reset-before-Finisher value.
+          // Legacy responses still receive the required first-tier sound.
+          playComboTone(comboToneTier(ev.comboCountAfter) ?? 1)
+        }
+
         // 「戦闘開始」「プレイヤーのターン」 banner: BattleStart / TurnStart
         // event をそのまま trigger にする (engine が emit するタイミング)。
-        if (ev.kind === 'BattleStart') {
+        if (!presentationOnly && ev.kind === 'BattleStart') {
+          if (baselineState === null && resp.state.hand.length > 0) {
+            playBattleCue('cardDraw', `opening:${resp.state.hand[0].instanceId}`)
+          }
           await showBanner('戦闘開始')
           i++
           continue
         }
-        if (ev.kind === 'TurnStart') {
+        if (!presentationOnly && ev.kind === 'TurnStart') {
           await showBanner('プレイヤーのターン')
           i++
           continue
@@ -1466,11 +2653,12 @@ export function BattleScreen({
 
         // 「敵のターン」 banner: 最初の敵 caster の AttackFire 直前に出す。
         // 攻撃 burst を始める前に判定し、敵側ならまず banner を流す。
-        if (ev.kind === 'AttackFire' && !shownEnemyTurnBanner) {
+        if ((ev.kind === 'GainAttack' || ev.kind === 'AttackFire')
+            && !shownEnemyTurnBanner) {
           const isEnemyCaster = ev.casterInstanceId
             ? step.snapshotAfter.enemies.some(e => e.instanceId === ev.casterInstanceId)
             : false
-          if (isEnemyCaster) {
+          if (isEnemyCaster && !presentationOnly) {
             await showBanner('敵のターン')
             shownEnemyTurnBanner = true
           }
@@ -1483,10 +2671,33 @@ export function BattleScreen({
             continue
           }
           const casterId = hit.casterId
+          const firstTargetActor = hit.targets[0]
+            ? baselineActor(hit.targets[0].targetId)
+            : undefined
+          const attackPan = firstTargetActor
+            ? panForBattleSlot(
+                firstTargetActor.side === 'Ally' ? 'player' : 'enemy',
+                firstTargetActor.slotIndex,
+                4,
+              )
+            : 0
+          const contactRecipe = battleContactSoundRecipe(
+            hit.targets.reduce((sum, target) => sum + target.blockConsumed, 0),
+            hit.targets.reduce((sum, target) => sum + target.damage, 0),
+          )
+          if (contactRecipe) {
+            void playLayeredSe(selectBattleSoundRecipe(
+              contactRecipe,
+              `${ev.order}:${casterId ?? ''}:${hit.hitIndex ?? 0}`,
+              { pan: attackPan },
+            ))
+          } else {
+            playBattleCue('attack', `${ev.order}:${casterId ?? ''}:${hit.hitIndex ?? 0}`)
+          }
 
           // slide 方向は caster side で決定 (現在の state ベースで判定)。
-          const side = casterId && state
-            ? (state.allies.some(a => a.instanceId === casterId) ? 'Ally' : 'Enemy')
+          const side = casterId && baselineState
+            ? (baselineState.allies.some(a => a.instanceId === casterId) ? 'Ally' : 'Enemy')
             : undefined
 
           // Why: damage > 0 の target だけ赤 flash する。block で完全相殺
@@ -1494,30 +2705,431 @@ export function BattleScreen({
           const flashTargets = Array.from(new Set(
             hit.targets.filter(target => target.damage > 0).map(target => target.targetId),
           ))
+          const blockedTargets = Array.from(new Set(
+            hit.targets.filter(target => target.blockConsumed > 0).map(target => target.targetId),
+          ))
+          const attackDurationMs = actorMotionDuration(
+            casterId,
+            'attack',
+            ATTACK_SLIDE_MS,
+          )
+          const affectedTargetIds = Array.from(new Set([
+            ...flashTargets,
+            ...blockedTargets,
+          ]))
+          const hitDurationMs = affectedTargetIds.reduce(
+            (longest, targetId) => Math.max(
+              longest,
+              actorMotionDuration(targetId, 'hurt', HIT_FLASH_MS),
+            ),
+            HIT_FLASH_MS,
+          )
+          // Outer lunge and authored attack sheet share a duration. Contact
+          // stays near the lunge apex while retaining the former 180ms
+          // minimum, so a longer manifest animation can never be truncated.
+          const contactDurationMs = Math.min(
+            Math.max(1, attackDurationMs - STEP_DELAY_MS),
+            Math.max(ATTACK_CONTACT_MS, Math.round(attackDurationMs * 0.41)),
+          )
+          const recoveryDurationMs = Math.max(0, attackDurationMs - contactDurationMs)
 
           // 1論理ヒットにつき1 slide。damage/block もそのヒットの中盤で反映する。
-          setSlotAnim({ attackerId: casterId, attackerSide: side })
-          await sleep(ATTACK_SLIDE_MS / 2)
+          setSlotAnim({ attackerId: casterId, attackerSide: side, playbackSpeed })
+          if (!await waitForPresentation(contactDurationMs)) {
+            clearTransientPresentation()
+            return
+          }
+          const hitCues = new Set<BattleAudioCue>()
+          for (const change of hit.stateChanges) {
+            if (change.hpDelta > 0) hitCues.add('heal')
+            if (change.hpDelta < 0) hitCues.add('hurt')
+            if (change.gainsBlock && change.blockDelta > 0) hitCues.add('gainBlock')
+            if (change.consumesBlock && change.blockDelta < 0) hitCues.add('block')
+            const feedbackStatusId = resolveFeedbackStatusId(change.statusId)
+            if (feedbackStatusId && !change.statusRemoved) {
+              hitCues.add(statusAudioCue(feedbackStatusId, change.statusDelta ?? 0))
+            }
+          }
+          for (const cue of hitCues) {
+            playBattleCue(cue, `${ev.order}:${cue}:${hit.hitIndex ?? 0}`)
+          }
           for (const target of hit.targets) {
+            if (target.blockConsumed > 0) {
+              pushCombatFeedback(
+                target.targetId,
+                'block',
+                `BLOCK -${target.blockConsumed}`,
+              )
+            }
+            if (target.damage > 0) {
+              pushCombatFeedback(target.targetId, 'damage', `-${target.damage}`)
+            } else if (target.blockConsumed > 0) {
+              pushCombatFeedback(target.targetId, 'guard', '完全防御')
+            }
             if (target.damage > 0) {
               dmg[target.targetId] = (dmg[target.targetId] ?? 0) + target.damage
             }
-            if (target.blockConsumed > 0) {
-              blk[target.targetId] = (blk[target.targetId] ?? 0) + target.blockConsumed
+            blockStateByActor[target.targetId] = consumeAnimatedBlock(
+              currentBlockState(target.targetId),
+              target.blockConsumed,
+            )
+            commitBlockOverlay(target.targetId)
+          }
+          for (const change of hit.stateChanges) {
+            if ((change.attackGainAmount ?? 0) > 0) {
+              pushCombatFeedback(
+                change.targetId,
+                'attack',
+                attackGainFeedbackText(
+                  change.attackGainScope,
+                  change.attackGainAmount ?? 0,
+                ),
+              )
+            }
+            if (change.hpDelta > 0) {
+              pushCombatFeedback(change.targetId, 'heal', `+${change.hpDelta} HP`)
+            } else if (change.hpDelta < 0) {
+              pushCombatFeedback(change.targetId, 'damage', `${change.hpDelta}`)
+            }
+            if (change.gainsBlock && change.blockDelta > 0) {
+              pushCombatFeedback(
+                change.targetId,
+                'block',
+                blockGainFeedbackText(change.blockDelta),
+              )
+            }
+            if (change.statusId) {
+              const feedbackStatusId = resolveFeedbackStatusId(change.statusId)
+              const statusKind = statusAudioCue(
+                feedbackStatusId,
+                change.statusDelta ?? 0,
+              ) === 'debuff' ? 'debuff' : 'buff'
+              pushCombatFeedback(
+                change.targetId,
+                statusKind,
+                statusFeedbackText(
+                  change.statusId,
+                  change.statusDelta ?? 0,
+                  change.statusRemoved === true,
+                ),
+              )
+            }
+            applyRuntimeStatusChange(
+              change.targetId,
+              resolveFeedbackStatusId(change.statusId) ?? undefined,
+              change.statusDelta,
+              change.statusRemoved,
+            )
+            if (change.hpDelta !== 0) {
+              dmg[change.targetId] = (dmg[change.targetId] ?? 0) - change.hpDelta
+            }
+            if (change.gainsBlock) {
+              blockStateByActor[change.targetId] = gainAnimatedBlock(
+                currentBlockState(change.targetId),
+                change.blockDelta,
+              )
+              commitBlockOverlay(change.targetId)
+            } else if (change.consumesBlock) {
+              blockStateByActor[change.targetId] = consumeAnimatedBlock(
+                currentBlockState(change.targetId),
+                Math.max(0, -change.blockDelta),
+              )
+              commitBlockOverlay(change.targetId)
             }
           }
           setDamageOverlay({ ...dmg })
           setBlockOverlay({ ...blk })
-          if (flashTargets.length > 0) {
-            setSlotAnim({ attackerId: casterId, attackerSide: side, hitIds: flashTargets })
+          if (flashTargets.length > 0 || blockedTargets.length > 0) {
+            setSlotAnim({
+              attackerId: casterId,
+              attackerSide: side,
+              hitIds: flashTargets,
+              blockedIds: blockedTargets,
+              playbackSpeed,
+            })
           }
-          await sleep(ATTACK_SLIDE_MS / 2)
+          if (!await waitForPresentation(recoveryDurationMs)) {
+            clearTransientPresentation()
+            return
+          }
           setSlotAnim(prev => ({ ...prev, attackerId: undefined, attackerSide: undefined }))
-          if (flashTargets.length > 0) {
-            await sleep(Math.max(0, HIT_FLASH_MS - ATTACK_SLIDE_MS / 2))
+          if (flashTargets.length > 0 || blockedTargets.length > 0) {
+            if (!await waitForPresentation(Math.max(0, hitDurationMs - recoveryDurationMs))) {
+              clearTransientPresentation()
+              return
+            }
           }
           setSlotAnim({})
+          // Commit one neutral frame between consecutive hits. Without this
+          // beat React can batch `{}` and the next identical attacker state,
+          // leaving the same CSS animation continuously mounted so later hits
+          // appear motionless.
+          if (!await waitForPresentation(24)) {
+            clearTransientPresentation()
+            return
+          }
           i = hit.nextStepIndex
+          continue
+        }
+
+        if (ev.kind === 'ReenactCardEffects') {
+          if (ev.card) {
+            const reenactId = [
+              ev.order,
+              ev.card.cardInstanceId,
+              ev.note ?? '',
+            ].join(':')
+            setReenactCard({
+              id: reenactId,
+              demo: toReplayCardDemo(ev.card, cardCatalog),
+              stage: 'appearing',
+              movement: 'popup',
+            })
+            if (!await waitForPresentation(16)) {
+              clearTransientPresentation()
+              return
+            }
+            setReenactCard(current => current?.id === reenactId
+              ? { ...current, stage: 'holding' }
+              : current)
+            if (!await waitForPresentation(REENACT_APPEAR_MS + REENACT_HOLD_MS)) {
+              clearTransientPresentation()
+              return
+            }
+            setReenactCard(current => current?.id === reenactId
+              ? { ...current, stage: 'leaving' }
+              : current)
+            if (!await waitForPresentation(REENACT_LEAVE_MS)) {
+              clearTransientPresentation()
+              return
+            }
+            setReenactCard(current => current?.id === reenactId ? null : current)
+          } else if (!await waitForPresentation(STEP_DELAY_MS)) {
+            clearTransientPresentation()
+            return
+          }
+          i++
+          continue
+        }
+
+        if (ev.kind === 'ContingencyTriggered') {
+          if (ev.card) {
+            const reenactId = `contingency:${ev.card.cardInstanceId}`
+            const exhaustCenter = pileCenter(
+              exhaustPileRef.current,
+              { x: 1216, y: 558 },
+            )
+            setReenactCard({
+              id: reenactId,
+              demo: toReplayCardDemo(ev.card, cardCatalog),
+              stage: 'appearing',
+              movement: /\[K:exhaust\]/.test(ev.card.description ?? '')
+                ? 'contingency-exhaust'
+                : 'contingency-discard',
+              fromX: exhaustCenter.x,
+              fromY: exhaustCenter.y,
+            })
+            if (!await waitForPresentation(16)) {
+              clearTransientPresentation()
+              return
+            }
+            setReenactCard(current => current?.id === reenactId
+              ? { ...current, stage: 'holding' }
+              : current)
+            if (!await waitForPresentation(REENACT_APPEAR_MS + REENACT_HOLD_MS)) {
+              clearTransientPresentation()
+              return
+            }
+          } else if (!await waitForPresentation(STEP_DELAY_MS)) {
+            clearTransientPresentation()
+            return
+          }
+          i++
+          continue
+        }
+
+        if (ev.kind === 'ContingencyResolved') {
+          if (ev.card) {
+            const reenactId = `contingency:${ev.card.cardInstanceId}`
+            const destination = ev.note === 'exhaust'
+              ? 'exhaust'
+              : ev.note === 'draw'
+                ? 'draw'
+                : ev.note === 'hand'
+                  ? 'hand'
+                  : ev.note === 'discard'
+                    ? 'discard'
+                    : 'none'
+            const exhaustCenter = pileCenter(
+              exhaustPileRef.current,
+              { x: 1216, y: 558 },
+            )
+            const destinationCenter = destination === 'exhaust'
+              ? exhaustCenter
+              : destination === 'draw'
+                ? pileCenter(drawPileRef.current, { x: 64, y: 656 })
+                : destination === 'hand'
+                  ? pileCenter(handWrapRef.current, { x: 640, y: 656 })
+                  : destination === 'discard'
+                    ? pileCenter(discardPileRef.current, { x: 1216, y: 656 })
+                    : { x: 640, y: 360 }
+            const movement: ReenactCardState['movement'] = destination === 'exhaust'
+              ? 'contingency-exhaust'
+              : destination === 'draw'
+                ? 'contingency-draw'
+                : destination === 'hand'
+                  ? 'contingency-hand'
+                  : destination === 'discard'
+                    ? 'contingency-discard'
+                    : 'contingency-none'
+            setReenactCard(current => current?.id === reenactId
+              ? {
+                  ...current,
+                  stage: 'holding',
+                  movement,
+                  toX: destinationCenter.x,
+                  toY: destinationCenter.y,
+                }
+              : {
+                  id: reenactId,
+                  demo: toReplayCardDemo(ev.card!, cardCatalog),
+                  stage: 'holding',
+                  movement,
+                  fromX: exhaustCenter.x,
+                  fromY: exhaustCenter.y,
+                  toX: destinationCenter.x,
+                  toY: destinationCenter.y,
+                })
+            if (!await waitForPresentation(16)) {
+              clearTransientPresentation()
+              return
+            }
+            setReenactCard(current => current?.id === reenactId
+              ? { ...current, stage: 'leaving' }
+              : current)
+            if (!await waitForPresentation(REENACT_LEAVE_MS)) {
+              clearTransientPresentation()
+              return
+            }
+            setReenactCard(current => current?.id === reenactId ? null : current)
+          } else if (!await waitForPresentation(STEP_DELAY_MS)) {
+            clearTransientPresentation()
+            return
+          }
+          i++
+          continue
+        }
+
+        // State snapshots in the current action DTO are action-final, so show
+        // actor resources from the event deltas until that final state commits.
+        // Attack-associated deltas are handled as part of the logical hit above.
+        if (ev.kind === 'DealDamage' && ev.targetInstanceId) {
+          const hpLoss = Math.max(0, ev.actualHpLoss ?? ev.amount ?? 0)
+          const blocked = Math.max(0, ev.blockedAmount ?? 0)
+          if (blocked > 0) {
+            pushCombatFeedback(ev.targetInstanceId, 'block', `BLOCK -${blocked}`)
+          }
+          if (hpLoss > 0) {
+            pushCombatFeedback(ev.targetInstanceId, 'damage', `-${hpLoss}`)
+          } else if (blocked > 0) {
+            pushCombatFeedback(ev.targetInstanceId, 'guard', '完全防御')
+          }
+          dmg[ev.targetInstanceId] = (dmg[ev.targetInstanceId] ?? 0) + hpLoss
+          if (ev.damageType === 'Attack') {
+            blockStateByActor[ev.targetInstanceId] = consumeAnimatedBlock(
+              currentBlockState(ev.targetInstanceId),
+              Math.max(0, ev.blockedAmount ?? 0),
+            )
+            commitBlockOverlay(ev.targetInstanceId)
+          }
+          setDamageOverlay({ ...dmg })
+          setBlockOverlay({ ...blk })
+          if (!await waitForPresentation(STEP_DELAY_MS)) {
+            clearTransientPresentation()
+            return
+          }
+          i++
+          continue
+        }
+
+        if (ev.kind === 'Heal' && ev.targetInstanceId) {
+          const amount = Math.max(0, ev.amount ?? 0)
+          if (amount > 0) pushCombatFeedback(ev.targetInstanceId, 'heal', `+${amount} HP`)
+          dmg[ev.targetInstanceId] = (dmg[ev.targetInstanceId] ?? 0) - amount
+          setDamageOverlay({ ...dmg })
+          if (!await waitForPresentation(STEP_DELAY_MS)) {
+            clearTransientPresentation()
+            return
+          }
+          i++
+          continue
+        }
+
+        if (ev.kind === 'GainBlock' && ev.targetInstanceId) {
+          if ((ev.amount ?? 0) > 0) {
+            pushCombatFeedback(
+              ev.targetInstanceId,
+              'block',
+              blockGainFeedbackText(ev.amount ?? 0),
+            )
+          }
+          blockStateByActor[ev.targetInstanceId] = gainAnimatedBlock(
+            currentBlockState(ev.targetInstanceId),
+            ev.amount ?? 0,
+          )
+          commitBlockOverlay(ev.targetInstanceId)
+          setBlockOverlay({ ...blk })
+          if (!await waitForPresentation(STEP_DELAY_MS)) {
+            clearTransientPresentation()
+            return
+          }
+          i++
+          continue
+        }
+
+        if (ev.kind === 'GainAttack') {
+          const actorInstanceId = ev.casterInstanceId ?? ev.targetInstanceId
+          const amount = ev.amount ?? 0
+          if (actorInstanceId && amount > 0) {
+            pushCombatFeedback(
+              actorInstanceId,
+              'attack',
+              attackGainFeedbackText(ev.note, amount),
+            )
+          }
+          if (!await waitForPresentation(STEP_DELAY_MS)) {
+            clearTransientPresentation()
+            return
+          }
+          i++
+          continue
+        }
+
+        if ((ev.kind === 'ApplyStatus' || ev.kind === 'RemoveStatus')
+            && ev.targetInstanceId) {
+          if (ev.note) {
+            const feedbackStatusId = resolveFeedbackStatusId(ev.note)
+            const feedbackKind = ev.kind === 'RemoveStatus'
+              ? 'buff'
+              : statusAudioCue(feedbackStatusId, ev.amount) === 'debuff' ? 'debuff' : 'buff'
+            pushCombatFeedback(
+              ev.targetInstanceId,
+              feedbackKind,
+              statusFeedbackText(ev.note, ev.amount ?? 0, ev.kind === 'RemoveStatus'),
+            )
+          }
+          applyRuntimeStatusChange(
+            ev.targetInstanceId,
+            resolveFeedbackStatusId(ev.note) ?? undefined,
+            ev.kind === 'ApplyStatus' ? (ev.amount ?? 0) : undefined,
+            ev.kind === 'RemoveStatus',
+          )
+          setBlockOverlay({ ...blk })
+          if (!await waitForPresentation(STEP_DELAY_MS)) {
+            clearTransientPresentation()
+            return
+          }
+          i++
           continue
         }
 
@@ -1532,7 +3144,10 @@ export function BattleScreen({
         // その他 (BattleStart / TurnStart / GainBlock / Draw / etc.)
         // HP 以外のフィールドは playSteps 終了時に state 確定で反映するため、
         // ここでは見た目を変えずに短い delay のみ取る。
-        await sleep(STEP_DELAY_MS)
+        if (!await waitForPresentation(STEP_DELAY_MS)) {
+          clearTransientPresentation()
+          return
+        }
         i++
       }
 
@@ -1545,19 +3160,24 @@ export function BattleScreen({
       //  staging 中は resp.state を baseline にするので HP/energy/status は
       //  最終値で表示される。damageOverlay 等の累積を二重適用しないよう、
       //  staging 開始前にオーバレイをクリアする。
-      if (state) {
+      if (!presentationOnly && state) {
+        const drawActorId = findPrimaryParticipant(state)?.actorInstanceId
+          ?? state.allies.find(actor => actor.definitionId === 'hero')?.instanceId
+        const hasDrawTrigger = hasDrawPresentationTrigger(steps, drawActorId)
+        const hasShuffleTrigger = hasShufflePresentationTrigger(steps, drawActorId)
         const oldHandIds = new Set(state.hand.map(c => c.instanceId))
         const newlyDrawn = resp.state.hand.filter(c => !oldHandIds.has(c.instanceId))
         const preDrawIds = new Set(state.drawPile.map(c => c.instanceId))
         const postReshuffleDrawn = newlyDrawn.filter(c => !preDrawIds.has(c.instanceId))
         const preReshuffleDrawn = newlyDrawn.filter(c => preDrawIds.has(c.instanceId))
         // reshuffle が起きた = pre.discard が消えて draw に補充された
-        const reshuffleHappened =
+        const reshuffleHappened = hasShuffleTrigger
+          &&
           state.discardPile.length > 0
           && resp.state.discardPile.length < state.discardPile.length
           && postReshuffleDrawn.length + resp.state.drawPile.length > 0
 
-        const shouldStage = reshuffleHappened || newlyDrawn.length >= 1
+        const shouldStage = reshuffleHappened || (hasDrawTrigger && newlyDrawn.length >= 1)
         if (shouldStage) {
           // Why: HP overlay 等は events ループで累積済み。staging 用 setState は
           //  resp.state ベースなので、ここでクリアして二重適用を避ける。
@@ -1654,20 +3274,83 @@ export function BattleScreen({
       setSlotAnim({})
       setDamageOverlay({})
       setBlockOverlay({})
-      setState(resp.state)
+      const pendingContingency = presentationOnly
+        ? null
+        : findPendingContingencyCard(resp.state, cardCatalog)
+      if (pendingContingency) {
+        const pendingId = `contingency:${pendingContingency.card.instanceId}`
+        const exhaustCenter = pileCenter(
+          exhaustPileRef.current,
+          { x: 1216, y: 558 },
+        )
+        setReenactCard(current => current?.id === pendingId
+          ? { ...current, stage: 'holding' }
+          : {
+              id: pendingId,
+              demo: {
+                ...toHandCardDemo(
+                  pendingContingency.card,
+                  cardCatalog,
+                  resp.state.energy,
+                ),
+                instanceId: pendingContingency.card.instanceId,
+              },
+              stage: 'holding',
+              movement: pendingContingency.destination === 'exhaust'
+                ? 'contingency-exhaust'
+                : 'contingency-discard',
+              fromX: exhaustCenter.x,
+              fromY: exhaustCenter.y,
+            })
+      } else {
+        setReenactCard(null)
+      }
+      if (isCancelled()) {
+        setAnimating(false)
+        return
+      }
+      if (!presentationOnly) setState(resp.state)
 
       // Victory のみ「勝利」banner を出す (ユーザ要望、Defeat は banner なし)。
-      if (resp.state.outcome === 'Victory') {
+      if (!presentationOnly && resp.state.outcome === 'Victory') {
         await showBanner('勝利')
       }
       setAnimating(false)
 
-      if (resp.state.outcome === 'Victory' || resp.state.outcome === 'Defeat') {
+      if (!presentationOnly
+        && (resp.state.outcome === 'Victory' || resp.state.outcome === 'Defeat')) {
         await handleFinalize()
       }
     },
-    [handleFinalize, state, showBanner, triggerReshuffleAnim],
+    [
+      accountId,
+      cardCatalog,
+      characterCatalog,
+      clearCombatFeedback,
+      duckBgm,
+      effectiveMotionLevel,
+      enemyCatalog,
+      handleFinalize,
+      playBattleCue,
+      playComboTone,
+      playLayeredSe,
+      pushCombatFeedback,
+      snapshot.run.characterId,
+      showCharacterSkillBurst,
+      state,
+      showBanner,
+      triggerDrawAnim,
+      triggerReshuffleAnim,
+      unitCatalog,
+    ],
   )
+
+  // Keep the replay effect stable while still calling the latest animation
+  // pipeline. Live state updates must not restart the action currently shown.
+  const playStepsRef = useRef(playSteps)
+  useEffect(() => {
+    playStepsRef.current = playSteps
+  }, [playSteps])
 
   // 初期化: GET /battle → 既存ならそれを表示、なければ POST /start。
   useEffect(() => {
@@ -1697,6 +3380,195 @@ export function BattleScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountId])
 
+  const replayParticipantId = replayView?.participant.participantId
+  const replayActorId = replayView?.actor.instanceId
+  const replayTurn = replayView?.turn
+  const replayLatestSequence = replayView?.latestSequence ?? 0
+  const replayFeedComplete = replayView?.feedState.toLowerCase() === 'complete'
+  const replayCurrentEntry = replayView?.entries[replayView.position]
+  const replayCurrentSequence = replayCurrentEntry?.sequence
+
+  // Keep a LIVE/READY feed open as an append-only stream. The participant and
+  // actor snapshots above it remain frozen, so new live battle DTOs never leak
+  // into a replay already being watched.
+  useEffect(() => {
+    if (!replayParticipantId || !replayActorId || replayTurn === undefined || replayFeedComplete) return
+    let cancelled = false
+    const poll = async () => {
+      try {
+        const incoming = await getBattleReplay(accountId, {
+          participantId: replayParticipantId,
+          actorInstanceId: replayActorId,
+          turn: replayTurn,
+          afterSequence: replayLatestSequence,
+        })
+        if (cancelled) return
+        setReplayView(previous => {
+          if (!previous
+            || previous.participant.participantId !== replayParticipantId
+            || previous.turn !== replayTurn) {
+            return previous
+          }
+          const bySequence = new Map(previous.entries.map(entry => [entry.sequence, entry]))
+          incoming.entries.forEach(entry => bySequence.set(entry.sequence, entry))
+          const mergedEntries = Array.from(bySequence.values())
+            .sort((a, b) => a.sequence - b.sequence)
+          const wasAtTail = previous.position >= previous.entries.length
+          const previousFeedCanReopen = ['live', 'ready'].includes(
+            previous.feedState.toLowerCase(),
+          )
+          const resumeAtAppendedTail = previous.followTail
+            && !previous.playing
+            && wasAtTail
+            && mergedEntries.length > previous.position
+            && previousFeedCanReopen
+          return {
+            ...previous,
+            entries: mergedEntries,
+            feedState: incoming.feedState,
+            latestSequence: Math.max(previous.latestSequence, incoming.latestSequence),
+            loading: false,
+            playing: previous.playing || resumeAtAppendedTail,
+          }
+        })
+      } catch {
+        // A transient poll failure must not close the replay or disturb battle commands.
+      }
+    }
+    const timer = window.setInterval(() => void poll(), 900)
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+    }
+  }, [
+    accountId,
+    replayActorId,
+    replayFeedComplete,
+    replayLatestSequence,
+    replayParticipantId,
+    replayTurn,
+  ])
+
+  // Replay the immutable decision journal through the same attack/hit pipeline
+  // as a live command. The cursor advances only after the visual transition
+  // from StateBefore to StateAfter has completed.
+  useEffect(() => {
+    if (!replayView?.playing || replayView.loading) return
+    const entry = replayView.entries[replayView.position]
+    if (!entry) {
+      if (replayView.feedState.toLowerCase() !== 'live') {
+        setReplayView(previous => previous
+          ? { ...previous, playing: false, followTail: true }
+          : null)
+      }
+      return
+    }
+
+    const token = ++replayAnimationTokenRef.current
+    const isCancelled = () => replayAnimationTokenRef.current !== token
+    const waitReplay = async (durationMs: number) => {
+      await sleep(Math.round(durationMs / Math.max(0.25, replayView.speed)))
+      return !isCancelled()
+    }
+    const before = replayPresentationAtEntryStart(
+      replayView.turn,
+      replayView.participant.participantId,
+      replayView.actor.instanceId,
+      replayView.battle,
+      replayView.entries,
+      replayView.position,
+      replayView.participant,
+      replayView.actor,
+    ).state
+    const after = replayPresentationAtPosition(
+      replayView.turn,
+      replayView.participant.participantId,
+      replayView.actor.instanceId,
+      replayView.battle,
+      replayView.entries,
+      replayView.position + 1,
+      replayView.participant,
+      replayView.actor,
+    ).state
+    const response = replayEntryToActionResponse(entry, before, after)
+
+    const run = async () => {
+      setReplayActionBaseline(before)
+      setReplayActionInProgress(true)
+      if (entry.card) {
+        setReplayActionCard({ demo: toReplayCardDemo(entry.card, cardCatalog), stage: 'idle' })
+        if (!await waitReplay(16)) return
+        setReplayActionCard(current => current ? { ...current, stage: 'centering' } : null)
+        if (!await waitReplay(200)) return
+        setReplayActionCard(current => current ? { ...current, stage: 'holding' } : null)
+        playBattleCue('cardPlay', `replay:${entry.sequence}`)
+        playComboTone(comboToneTier(entry.comboCountAfter) ?? 1)
+      }
+
+      await playStepsRef.current(response, {
+        baselineState: before,
+        presentationOnly: true,
+        speed: replayView.speed,
+        isCancelled,
+      })
+      if (isCancelled()) return
+
+      // Keep a decision card readable briefly even when it only queued intent
+      // and consequently produced no immediate battle effect events.
+      if (entry.card && response.steps.length === 0 && !await waitReplay(160)) return
+      if (entry.card) {
+        setReplayActionCard(current => current ? { ...current, stage: 'leaving' } : null)
+        if (!await waitReplay(280)) return
+      }
+      // Keep a readable beat between consecutive actions. The card motion
+      // remains unchanged; this only separates one play from the next.
+      if (!await waitReplay(220)) return
+      if (isCancelled()) return
+
+      setReplayActionCard(null)
+      setReenactCard(null)
+      setReplayActionBaseline(null)
+      setReplayActionInProgress(false)
+      setReplayView(previous => {
+        if (!previous
+          || previous.position !== replayView.position
+          || previous.entries[previous.position]?.sequence !== entry.sequence) {
+          return previous
+        }
+        return {
+          ...previous,
+          position: Math.min(previous.entries.length, previous.position + 1),
+        }
+      })
+    }
+    void run()
+
+    return () => {
+      if (replayAnimationTokenRef.current === token) {
+        replayAnimationTokenRef.current += 1
+      }
+      setReplayActionCard(null)
+      setReenactCard(null)
+      setReplayActionBaseline(null)
+      setReplayActionInProgress(false)
+      setSlotAnim({})
+      setDamageOverlay({})
+      setBlockOverlay({})
+      setAnimating(false)
+    }
+    // The current sequence is the stable identity for the action being played.
+    // Depending on the whole append-only entries array would restart animation
+    // whenever a later live-feed entry arrives during the current action.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    replayCurrentSequence,
+    replayView?.loading,
+    replayView?.playbackEpoch,
+    replayView?.playing,
+    replayView?.position,
+    replayView?.speed,
+  ])
+
   function beginBattleCommand(): boolean {
     if (animating || busyRef.current) return false
     busyRef.current = true
@@ -1723,18 +3595,31 @@ export function BattleScreen({
     }
   }
 
+  function commandContext(
+    kind: string,
+    participant = state ? findPrimaryParticipant(state) : null,
+  ): BattleCommandContext {
+    return {
+      commandId: createBattleCommandId(kind),
+      ...(participant
+        ? {
+            participantId: participant.participantId,
+            actorInstanceId: participant.actorInstanceId,
+          }
+        : {}),
+      ...(state?.actionRevision !== undefined
+        ? { expectedRevision: state.actionRevision }
+        : {}),
+    }
+  }
+
   // Phase 10.5.M6.6: 行先パイルを判定する。
   //  formatter は exhaustSelf action / "exhaust" keyword を共に [K:exhaust]
   //  marker として description に出力するため、それを含むかで判定する。
   //  これで「使ったら喪失」系カードは playing-card overlay の Stage 3 で
   //  data-leaving-mode="exhaust" になり、その場回転縮小消滅アニメに切替わる。
   function destinationFor(card: BattleCardInstanceDto): 'discard' | 'exhaust' {
-    const def = cardCatalog?.[card.cardDefinitionId]
-    const desc = card.isUpgraded
-      ? def?.upgradedDescription ?? def?.description
-      : def?.description
-    if (desc && /\[K:exhaust\]/.test(desc)) return 'exhaust'
-    return 'discard'
+    return battleCardDestination(card, cardCatalog)
   }
 
   async function handlePlayCard(handIndex: number) {
@@ -1743,6 +3628,8 @@ export function BattleScreen({
     // engine ロジックで無効化されるが、わざわざ呼ばないのが望ましい。
     const card = state?.hand[handIndex]
     if (!card) return
+    const commandParticipant = state ? findPrimaryParticipant(state) : null
+    const playCommand = commandContext('play-card', commandParticipant)
     // Server/Coreが投影した現在支払コストを使用し、Clientではルールを再計算しない。
     const payCost = card.currentCost
     if (payCost === null) return
@@ -1755,12 +3642,19 @@ export function BattleScreen({
 
     // 多段階 play アニメ用に DOM 位置を計測する。
     // demo / fan は現フレームで生成された値を ref から拾う (render との 1:1)。
-    const demo = prevHandRef.current.demos[handIndex]
-    const fanEntry = prevHandRef.current.fans[handIndex]
+    // Use the currently rendered presentation. The initial hand can mount
+    // before the async catalog arrives; a stale pre-catalog snapshot has no
+    // description and caused the enlarged card face to appear blank.
+    const demo = handDemos[handIndex]
+    const fanEntry = fan[handIndex]
     const cardEl = handCardRefs.current.get(card.instanceId)
     if (!cardEl || !demo || !fanEntry) {
       // Fallback: 計測不能 → アニメ無しで従来動作。
-      const resp = await playCard(accountId, { handIndex })
+      const resp = await playCard(accountId, {
+        handIndex,
+        cardInstanceId: card.instanceId,
+        ...playCommand,
+      })
       await playSteps(resp)
       return
     }
@@ -1835,17 +3729,29 @@ export function BattleScreen({
       requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
     })
 
-    // Stage 1: centering (200ms)
+    const cardMotionScale = effectiveMotionLevel === 'off'
+      ? 0
+      : effectiveMotionLevel === 'reduced' ? 0.48 : 1
+
+    // Stage 1: hand -> centre. The compositor-only transform is intentionally
+    // long enough to follow with the eye; reduced/off settings shorten it.
     setPlayingCard(p => (p ? { ...p, stage: 'centering' } : null))
-    await sleep(200)
+    await sleep(Math.round(CARD_PLAY_CENTER_MS * cardMotionScale))
     // Stage 2: holding (server 呼び出し + playSteps の演出をホールド)
     setPlayingCard(p => (p ? { ...p, stage: 'holding' } : null))
-    const resp = await playCard(accountId, { handIndex })
+    const resp = await playCard(accountId, {
+      handIndex,
+      cardInstanceId: card.instanceId,
+      ...playCommand,
+    })
     await playSteps(resp)
     // Stage 3: leaving (パイル中心 / 喪失なら回転縮小消滅)
-    //   discard: 280ms / exhaust: 320ms (CSS と一致)。
+    //   discard/exhaust: centre -> destination pile (CSS と一致)。
+    playBattleCue(dest === 'exhaust' ? 'cardExhaust' : 'cardDiscard', card.instanceId)
     setPlayingCard(p => (p ? { ...p, stage: 'leaving' } : null))
-    await sleep(dest === 'exhaust' ? 320 : 280)
+    await sleep(Math.round((
+      dest === 'exhaust' ? CARD_PLAY_EXHAUST_MS : CARD_PLAY_DISCARD_MS
+    ) * cardMotionScale))
     } catch (e) {
       setAnimating(false)
       setError((e as Error).message)
@@ -1856,17 +3762,114 @@ export function BattleScreen({
     }
   }
 
+  async function handleOpenReplay(
+    participant: BattleParticipantDto,
+    actor: CombatActorDto,
+    subjectName: string,
+  ) {
+    if (!state) return
+    const replayTurn = state.turn
+    const participantSnapshot = snapshotParticipant(participant)
+    const actorSnapshot = snapshotActor(actor)
+    const battleSnapshot = snapshotBattleState(state)
+    setReplayView({
+      battle: battleSnapshot,
+      participant: participantSnapshot,
+      actor: actorSnapshot,
+      subjectName,
+      turn: replayTurn,
+      entries: [],
+      feedState: participant.isReady ? 'ready' : 'live',
+      latestSequence: 0,
+      position: 0,
+      // Show the participant's initial hand before the first card begins.
+      playing: false,
+      speed: 1,
+      loading: true,
+      playbackEpoch: 0,
+      followTail: true,
+    })
+    try {
+      const replay = await getBattleReplay(accountId, {
+        participantId: participant.participantId,
+        actorInstanceId: actor.instanceId,
+        turn: replayTurn,
+      })
+      setReplayView(previous => {
+        if (!previous
+          || previous.participant.participantId !== participant.participantId
+          || previous.turn !== replayTurn) {
+          return previous
+        }
+        return {
+          ...previous,
+          entries: replay.entries.slice().sort((a, b) => a.sequence - b.sequence),
+          feedState: replay.feedState,
+          latestSequence: replay.latestSequence,
+          loading: false,
+        }
+      })
+      if (replayStartTimerRef.current !== null) {
+        window.clearTimeout(replayStartTimerRef.current)
+      }
+      replayStartTimerRef.current = window.setTimeout(() => {
+        replayStartTimerRef.current = null
+        setReplayView(previous => previous
+          ? { ...previous, playing: true, followTail: true }
+          : null)
+      }, 1000)
+    } catch (e) {
+      setReplayView(previous => previous
+        ? { ...previous, loading: false, playing: false, followTail: false }
+        : null)
+      setError((e as Error).message)
+    }
+  }
+
   async function handleEndTurn() {
-    await withBusy(async () => {
-      const resp = await endTurn(accountId)
+    const participant = state ? findPrimaryParticipant(state) : null
+    const requestingReady = !!participant && !participant.isReady
+    if (participant?.isReady) {
+      manualUnreadyRef.current = true
+      readyIntentRef.current = null
+    } else if (participant && state) {
+      readyIntentRef.current = {
+        turn: state.turn,
+        participantId: participant.participantId,
+      }
+    }
+    const completed = await withBusy(async () => {
+      const resp = participant
+        ? await setBattleReady(accountId, {
+            participantId: participant.participantId,
+            isReady: !participant.isReady,
+            actorInstanceId: participant.actorInstanceId,
+            commandId: createBattleCommandId('ready'),
+            ...(state?.actionRevision !== undefined
+              ? { expectedRevision: state.actionRevision }
+              : {}),
+          })
+        : await endTurn(accountId, {
+            commandId: createBattleCommandId('end-turn'),
+            expectedRevision: state?.actionRevision ?? 0,
+          })
       await playSteps(resp)
       return resp
     })
+    if (!completed) {
+      manualUnreadyRef.current = false
+      if (requestingReady) readyIntentRef.current = null
+    }
   }
 
   async function handleUsePotion(potionIndex: number) {
     await withBusy(async () => {
-      const resp = await consumeBattlePotion(accountId, { potionIndex })
+      const commandParticipant = state ? findPrimaryParticipant(state) : null
+      const resp = await consumeBattlePotion(accountId, {
+        potionIndex,
+        potionId: state?.potions[potionIndex],
+        ...commandContext('use-potion', commandParticipant),
+      })
       await playSteps(resp)
       return resp
     })
@@ -1874,7 +3877,10 @@ export function BattleScreen({
 
   async function handleUseTacticalSkill() {
     await withBusy(async () => {
-      const resp = await activateTacticalSkill(accountId)
+      const resp = await activateTacticalSkill(
+        accountId,
+        commandContext('use-tactical-skill'),
+      )
       await playSteps(resp)
       return resp
     })
@@ -1882,15 +3888,23 @@ export function BattleScreen({
 
   async function handleUseUltimateSkill() {
     await withBusy(async () => {
-      const resp = await activateUltimateSkill(accountId)
+      const resp = await activateUltimateSkill(
+        accountId,
+        commandContext('use-ultimate-skill'),
+      )
       await playSteps(resp)
       return resp
     })
   }
 
   async function handleSetTarget(side: ActorSide, slotIndex: number) {
+    const commandParticipant = state ? findPrimaryParticipant(state) : null
     const newState = await withBusy(() =>
-      setBattleTarget(accountId, { side, slotIndex }),
+      setBattleTarget(accountId, {
+        side,
+        slotIndex,
+        ...commandContext('set-target', commandParticipant),
+      }),
     )
     if (newState) setState(newState)
   }
@@ -1907,18 +3921,64 @@ export function BattleScreen({
     )
   }
 
+  const primaryParticipant = findPrimaryParticipant(state)
+  const replayPresentation = replayView
+    ? replayActionBaseline
+      ? replayPresentationAtPosition(
+          replayView.turn,
+          replayView.participant.participantId,
+          replayView.actor.instanceId,
+          replayActionBaseline,
+          [],
+          0,
+          replayView.participant,
+          replayView.actor,
+        )
+      : replayPresentationAtPosition(
+          replayView.turn,
+          replayView.participant.participantId,
+          replayView.actor.instanceId,
+          replayView.battle,
+          replayView.entries,
+          replayView.position,
+          replayView.participant,
+          replayView.actor,
+        )
+    : null
+  const displayedParticipant = replayPresentation?.participant ?? primaryParticipant
+  const displayBaseState = replayPresentation?.state ?? state
+  const projectedDisplayedState = projectParticipantForDisplay(displayBaseState, displayedParticipant)
+  const replayPlayingInstanceId = replayActionCard?.demo.instanceId
+  const displayedState = replayPlayingInstanceId
+    ? {
+        ...projectedDisplayedState,
+        hand: projectedDisplayedState.hand.filter(card => card.instanceId !== replayPlayingInstanceId),
+      }
+    : projectedDisplayedState
+  const primaryIsReady = primaryParticipant?.isReady ?? false
+  const readyIntent = readyIntentRef.current
+  const viewingReplay = replayView !== null
+  const armedContingencyCount = displayedState.exhaustPile.filter(
+    card => card.isContingencyArmed,
+  ).length
+
   // データソース変換
-  const heroActorRaw = state.allies.find(
+  const heroActorRaw = displayedState.allies.find(
     (a) => a.definitionId === 'hero',
   ) as CombatActorDto | undefined
   // damageOverlay 反映: TopBar/HUD の HP 表示も progressive に減らす。
   const heroActor = heroActorRaw
     ? {
         ...heroActorRaw,
-        currentHp: Math.max(
-          0,
-          heroActorRaw.currentHp - (damageOverlay[heroActorRaw.instanceId] ?? 0),
-        ),
+        currentHp: replayPresentation && !replayActionInProgress
+          ? heroActorRaw.currentHp
+          : Math.min(
+              heroActorRaw.maxHp,
+              Math.max(
+                0,
+              heroActorRaw.currentHp - (damageOverlay[heroActorRaw.instanceId] ?? 0),
+              ),
+            ),
       }
     : undefined
   const heroHp = heroActor
@@ -1940,38 +4000,60 @@ export function BattleScreen({
   const applyOverlay = (a: CombatActorDto): CombatActorDto => {
     const dmg = damageOverlay[a.instanceId] ?? 0
     const blk = blockOverlay[a.instanceId] ?? 0
-    if (dmg <= 0 && blk <= 0) return a
+    if (dmg === 0 && blk === 0) return a
     return {
       ...a,
-      currentHp: Math.max(0, a.currentHp - dmg),
+      currentHp: Math.min(a.maxHp, Math.max(0, a.currentHp - dmg)),
       blockDisplay: Math.max(0, a.blockDisplay - blk),
     }
   }
-  const allAllies = state.allies.map(applyOverlay)
-  const allEnemies = state.enemies.map(applyOverlay)
+  const applyCurrentOverlay = replayPresentation && !replayActionInProgress
+    ? (actor: CombatActorDto) => actor
+    : applyOverlay
+  const allAllies = displayedState.allies.map(applyCurrentOverlay)
+  const allEnemies = displayedState.enemies.map(applyCurrentOverlay)
   const aliveAllies = allAllies.filter((a) => a.currentHp > 0)
   const aliveEnemies = allEnemies.filter((e) => e.currentHp > 0)
 
   // 4 スロット zero-pad で side ごとに描画。
-  const allyDemos = aliveAllies.map((a) =>
-    toCharacterDemo(a, { enemies: enemyCatalog, units: unitCatalog, characters: characterCatalog }, accountId),
+  const playerActorsBySlot = placeActorsBySlot(aliveAllies, 4)
+  const enemyActorsBySlot = placeActorsBySlot(aliveEnemies, 4)
+  const playerSlots = padSlots(
+    playerActorsBySlot
+      .map(actor => actor
+        ? toCharacterDemo(
+            actor,
+            { enemies: enemyCatalog, units: unitCatalog, characters: characterCatalog },
+            accountId,
+            findParticipantForActor(displayedState, actor.instanceId)?.characterId
+              ?? snapshot.run.characterId,
+          )
+        : null),
+    4,
   )
-  const enemyDemos = aliveEnemies.map((e) =>
-    toCharacterDemo(e, { enemies: enemyCatalog, units: unitCatalog, characters: characterCatalog }, accountId),
+  const enemySlots = padSlots(
+    enemyActorsBySlot
+      .map(actor => actor
+        ? toCharacterDemo(
+            actor,
+            { enemies: enemyCatalog, units: unitCatalog, characters: characterCatalog },
+            accountId,
+          )
+        : null),
+    4,
   )
-  const playerSlots = padSlots(allyDemos, 4)
-  const enemySlots = padSlots(enemyDemos, 4)
 
   // Why: 片側に occupied slot が 1 つしか無い場合、選択肢が無いので
   // ターゲティング三角形 + sprite glow は描かない (ユーザ要望)。
   const playerOccupiedCount = playerSlots.filter(c => c.occupied).length
   const enemyOccupiedCount = enemySlots.filter(c => c.occupied).length
+  const showTransientBattleAnimation = !viewingReplay || replayActionInProgress
 
-  const handDemos = state.hand.map((c) =>
+  const handDemos = displayedState.hand.map((c) =>
     toHandCardDemo(
       c,
       cardCatalog,
-      state.energy,
+      displayedState.energy,
     ),
   )
   const fan = fanLayout(handDemos.length)
@@ -1979,16 +4061,97 @@ export function BattleScreen({
   // Phase 10.5.M2-Choose T7: pendingCardPlay 中は modal 以外の全操作 (手札クリック /
   //  ターゲット切替 / end-turn / potion) を disable し、Server 側 RejectIfPending と
   //  二重防御する。
-  const interactionsDisabled = animating || busy || state.pendingCardPlay !== null
+  const interactionsDisabled = animating
+    || busy
+    || state.pendingCardPlay !== null
+    || primaryIsReady
+    || viewingReplay
+  const readyToggleDisabled = animating
+    || busy
+    || state.pendingCardPlay !== null
+    || viewingReplay
+    || state.phase !== 'PlayerInput'
+  const displayedSkillOwnerId = displayedParticipant?.characterId
+    ?? snapshot.run.characterId
+  const characterSkills = characterCatalog?.[displayedSkillOwnerId]?.skills
+    ?? unitCatalog?.[displayedSkillOwnerId]?.skills
+    ?? []
+  const tacticalSkill = characterSkills.find((skill) => skill.id === 'tactical')
+  const ultimateSkill = characterSkills.find((skill) => skill.id === 'ultimate')
   const comboSkillAvailability = getComboSkillAvailability({
-    comboGauge: state.comboGauge,
-    phase: state.phase,
+    comboGauge: displayedState.comboGauge,
+    energy: displayedState.energy,
+    phase: displayedState.phase,
     animating,
     busy,
-    hasPendingChoice: state.pendingCardPlay !== null,
-    handCount: state.hand.length,
-    tacticalUsedThisTurn: state.usedCharacterSkillIdsThisTurn.includes('tactical'),
+    hasPendingChoice: displayedState.pendingCardPlay !== null,
+    handCount: displayedState.hand.length,
+    tacticalUsedThisTurn: displayedState.usedCharacterSkillIdsThisTurn.includes('tactical'),
+    tacticalUsesThisTurn: displayedState.characterSkillUsesThisTurn?.tactical ??
+      (displayedState.usedCharacterSkillIdsThisTurn.includes('tactical') ? 1 : 0),
+    tacticalUsesPerTurn: tacticalSkill?.usesPerTurn ?? (tacticalSkill?.oncePerTurn ? 1 : 0),
+    ultimateUsesThisTurn: displayedState.characterSkillUsesThisTurn?.ultimate ?? 0,
+    ultimateUsesPerTurn: ultimateSkill?.usesPerTurn ?? (ultimateSkill?.oncePerTurn ? 1 : 0),
+    tacticalGaugeCost: tacticalSkill?.comboGaugeCost,
+    ultimateGaugeCost: ultimateSkill?.comboGaugeCost,
+    skillsRestricted: displayedState.characterSkillsRestricted ?? false,
+    tacticalEnergyCost: tacticalSkill?.energyCost,
+    ultimateEnergyCost: ultimateSkill?.energyCost,
+    ultimateRequiresHand: false,
   })
+  const sharedSkillDisabledReason = viewingReplay
+    ? 'リプレイ表示中'
+    : busy || animating
+      ? '効果処理中'
+      : displayedState.pendingCardPlay !== null
+        ? 'カード選択中'
+        : displayedState.phase !== 'PlayerInput'
+          ? '計画フェーズ外'
+          : displayedState.characterSkillsRestricted
+            ? '戦技・奥義が封印中'
+            : undefined
+  const skillDisabledReason = (
+    kind: ComboSkillKind,
+    disabled: boolean,
+  ): string | undefined => {
+    if (!disabled) return undefined
+    if (sharedSkillDisabledReason) return sharedSkillDisabledReason
+    const skill = kind === 'tactical' ? tacticalSkill : ultimateSkill
+    const uses = kind === 'tactical'
+      ? displayedState.characterSkillUsesThisTurn?.tactical ??
+        (displayedState.usedCharacterSkillIdsThisTurn.includes('tactical') ? 1 : 0)
+      : displayedState.characterSkillUsesThisTurn?.ultimate ?? 0
+    const limit = skill?.usesPerTurn ?? (skill?.oncePerTurn ? 1 : 0)
+    if (limit > 0 && uses >= limit) return 'このターンの使用回数に到達'
+    const gaugeCost = skill?.comboGaugeCost
+      ?? (kind === 'tactical' ? TACTICAL_SKILL_COST : ULTIMATE_SKILL_COST)
+    if (displayedState.comboGauge < gaugeCost) {
+      return `コンボゲージ不足 ${displayedState.comboGauge}/${gaugeCost}`
+    }
+    if (displayedState.energy < (skill?.energyCost ?? 0)) {
+      return `エナジー不足 ${displayedState.energy}/${skill?.energyCost ?? 0}`
+    }
+    return '現在使用できません'
+  }
+  const tacticalDisabledReason = skillDisabledReason(
+    'tactical',
+    comboSkillAvailability.tacticalDisabled || viewingReplay,
+  )
+  const ultimateDisabledReason = skillDisabledReason(
+    'ultimate',
+    comboSkillAvailability.ultimateDisabled || viewingReplay,
+  )
+  const phaseLabel: Record<BattleStateDto['phase'], string> = {
+    PlayerInput: 'PLANNING',
+    PlayerAttacking: 'ALLY ACTION',
+    EnemyAttacking: 'ENEMY ACTION',
+    Resolved: 'RESULT',
+  }
+  const readyParticipants = displayedState.participants?.filter(participant =>
+    participant.isReady
+      || (readyIntent?.participantId === participant.participantId
+        && readyIntent.turn === displayedState.turn)).length ?? 0
+  const participantCount = displayedState.participants?.length ?? 1
 
   return (
     <div className="battle-screen">
@@ -2000,10 +4163,12 @@ export function BattleScreen({
       <TopBar
         currentHp={heroHp.cur}
         maxHp={heroHp.max}
+        instantHp={replayActionInProgress}
         gold={snapshot.run.gold}
-        potions={state.potions}
+        potions={displayedState.potions}
+        potionUsesThisTurn={displayedState.potionUsesThisTurn}
         deck={snapshot.run.deck}
-        relics={state.ownedRelicIds}
+        relics={displayedState.ownedRelicIds}
         onDiscardPotion={() => { /* battle 中は discard 不可 */ }}
         onUsePotion={
           interactionsDisabled
@@ -2017,20 +4182,39 @@ export function BattleScreen({
         peekDisabled={!onTogglePeek}
         playSeconds={snapshot.run.playSeconds}
       />
-      <div className="battle" data-act={snapshot.run.currentAct}>
+      <div
+        className={`battle${((slotAnim.hitIds?.length ?? 0) + (slotAnim.blockedIds?.length ?? 0)) > 0 ? ' is-impacting' : ''}`}
+        data-act={snapshot.run.currentAct}
+      >
         <div className="battle__pattern" />
-        <div className="battle__content">
+        <div className="battle__content" data-presentation="shake">
         {/* Stage */}
         <div className="battle__stage">
+          <div className="battle-state-ribbon" role="status" aria-live="polite">
+            <span className="battle-state-ribbon__turn">TURN {displayedState.turn}</span>
+            <span className={`battle-state-ribbon__phase is-${displayedState.phase.toLowerCase()}`}>
+              {phaseLabel[displayedState.phase] ?? displayedState.phase}
+            </span>
+            <span className="battle-state-ribbon__ready">
+              READY {readyParticipants}/{participantCount}
+            </span>
+          </div>
           <div className="battle__chars">
             <div className="battle__side battle__side--player">
               {playerSlots.map((c, i) => {
-                // Why: 死亡 actor を除外した aliveAllies に対する index で参照する。
-                // state.allies[i] では死亡 actor を含むため整合しない。
-                const actor = aliveAllies[i]
+                // Visual placement uses stable SlotIndex; command targeting
+                // below resolves the actor back to its DTO array index.
+                const actor = playerActorsBySlot[i] ?? undefined
+                const actorParticipant = actor
+                  ? findParticipantForActor(displayedState, actor.instanceId)
+                  : null
+                const actorArrayIndex = actor
+                  ? displayedState.allies.findIndex(candidate =>
+                      candidate.instanceId === actor.instanceId)
+                  : -1
                 const isTargeted =
-                  actor !== undefined &&
-                  state.targetAllyIndex === actor.slotIndex
+                  actorArrayIndex >= 0 &&
+                  displayedState.targetAllyIndex === actorArrayIndex
                 // Why: hero クリックは「targetAllyIndex を hero (slot 0) に
                 // 戻す」操作として有効化する。召喚 ally を選択した後に hero へ
                 // 戻せない不具合への対応。targetEnemyIndex も同時にクリアして
@@ -2039,15 +4223,20 @@ export function BattleScreen({
                 // Engine 仕様に従う。ここでは Ally,0 を呼ぶことで味方ターゲットを
                 // hero に戻す挙動を提供)。
                 const onClick =
-                  c.occupied && actor && !interactionsDisabled
-                    ? () => void handleSetTarget('Ally', actor.slotIndex)
+                  c.occupied && actorArrayIndex >= 0 && !interactionsDisabled
+                    ? () => void handleSetTarget('Ally', actorArrayIndex)
                     : undefined
                 // Why: ally が攻撃側の時は敵側 (右) に slide。
                 const attackingDir =
-                  actor && slotAnim.attackerId === actor.instanceId
+                  showTransientBattleAnimation && actor && slotAnim.attackerId === actor.instanceId
                     ? ('toward-enemy' as const)
                     : undefined
-                const isHit = !!(actor && (slotAnim.hitIds ?? []).includes(actor.instanceId))
+                const isHit = !!(showTransientBattleAnimation
+                  && actor
+                  && (slotAnim.hitIds ?? []).includes(actor.instanceId))
+                const isBlocked = !!(showTransientBattleAnimation
+                  && actor
+                  && (slotAnim.blockedIds ?? []).includes(actor.instanceId))
                 return (
                   <Slot
                     key={`p-${i}`}
@@ -2056,27 +4245,56 @@ export function BattleScreen({
                     showTargetVisual={playerOccupiedCount > 1}
                     attackingDir={attackingDir}
                     isHit={isHit}
+                    isBlocked={isBlocked}
+                    motionPlaybackSpeed={slotAnim.playbackSpeed}
                     onClick={onClick}
+                    onViewActions={
+                      !viewingReplay && !animating && !busy && state.pendingCardPlay === null
+                        && actor && actorParticipant
+                        && actorParticipant.participantId !== primaryParticipant?.participantId
+                        ? () => void handleOpenReplay(actorParticipant, actor, c.name)
+                        : undefined
+                    }
+                    replayFeedState={actorParticipant?.isReady ? 'ready' : 'live'}
+                    feedbackItems={actor
+                      ? combatFeedback.filter(item => item.targetId === actor.instanceId)
+                      : []}
+                    participantReady={actorParticipant
+                      ? actorParticipant.isReady
+                        || (readyIntent?.participantId === actorParticipant.participantId
+                          && readyIntent.turn === displayedState.turn)
+                        || displayedState.phase === 'PlayerAttacking'
+                        || displayedState.phase === 'EnemyAttacking'
+                      : undefined}
                   />
                 )
               })}
             </div>
             <div className="battle__side battle__side--enemy">
               {enemySlots.map((c, i) => {
-                const actor = aliveEnemies[i]
+                const actor = enemyActorsBySlot[i] ?? undefined
+                const actorArrayIndex = actor
+                  ? displayedState.enemies.findIndex(candidate =>
+                      candidate.instanceId === actor.instanceId)
+                  : -1
                 const isTargeted =
-                  actor !== undefined &&
-                  state.targetEnemyIndex === actor.slotIndex
+                  actorArrayIndex >= 0 &&
+                  displayedState.targetEnemyIndex === actorArrayIndex
                 const onClick =
-                  c.occupied && actor && !interactionsDisabled
-                    ? () => void handleSetTarget('Enemy', actor.slotIndex)
+                  c.occupied && actorArrayIndex >= 0 && !interactionsDisabled
+                    ? () => void handleSetTarget('Enemy', actorArrayIndex)
                     : undefined
                 // Why: enemy が攻撃側の時は味方側 (左) に slide。
                 const attackingDir =
-                  actor && slotAnim.attackerId === actor.instanceId
+                  showTransientBattleAnimation && actor && slotAnim.attackerId === actor.instanceId
                     ? ('toward-ally' as const)
                     : undefined
-                const isHit = !!(actor && (slotAnim.hitIds ?? []).includes(actor.instanceId))
+                const isHit = !!(showTransientBattleAnimation
+                  && actor
+                  && (slotAnim.hitIds ?? []).includes(actor.instanceId))
+                const isBlocked = !!(showTransientBattleAnimation
+                  && actor
+                  && (slotAnim.blockedIds ?? []).includes(actor.instanceId))
                 return (
                   <Slot
                     key={`e-${i}`}
@@ -2085,7 +4303,25 @@ export function BattleScreen({
                     showTargetVisual={enemyOccupiedCount > 1}
                     attackingDir={attackingDir}
                     isHit={isHit}
+                    isBlocked={isBlocked}
+                    motionPlaybackSpeed={slotAnim.playbackSpeed}
                     onClick={onClick}
+                    onViewActions={(() => {
+                      // カード制御の敵も、このターンに計画したカード使用を再生できる。
+                      const enemyParticipant = actor
+                        ? state.enemyParticipants?.find(candidate =>
+                            candidate.actorInstanceId === actor.instanceId)
+                        : undefined
+                      return !viewingReplay && !animating && !busy && state.pendingCardPlay === null
+                        && actor && enemyParticipant
+                        ? () => void handleOpenReplay(
+                            enemyReplayParticipant(enemyParticipant), actor, c.name)
+                        : undefined
+                    })()}
+                    replayFeedState="ready"
+                    feedbackItems={actor
+                      ? combatFeedback.filter(item => item.targetId === actor.instanceId)
+                      : []}
                   />
                 )
               })}
@@ -2093,7 +4329,7 @@ export function BattleScreen({
           </div>
 
           {/* Energy orb */}
-          <EnergyOrb cur={state.energy} recoveryPerTurn={state.energyPerTurn} />
+          <EnergyOrb cur={displayedState.energy} recoveryPerTurn={displayedState.energyPerTurn} />
 
           {/* Piles (clickable to open modal) */}
           <button
@@ -2101,54 +4337,172 @@ export function BattleScreen({
             type="button"
             className="pile pile--draw"
             onClick={() => setPileOpen('draw')}
-            aria-label={`山札 (${state.drawPile.length}枚) を表示`}
+            aria-label={`山札 (${displayedState.drawPile.length}枚) を表示`}
           >
             <img className="pile__sym pile__sym--img" src="/icons/ui/pile_draw.png" alt="" draggable={false} />
             <span className="pile__lbl">山札</span>
-            <span className="pile__num">{state.drawPile.length}</span>
+            <span className="pile__num">{displayedState.drawPile.length}</span>
           </button>
           <button
             ref={exhaustPileRef}
             type="button"
-            className="pile pile--exhaust"
+            className={[
+              'pile pile--exhaust',
+              armedContingencyCount > 0 ? 'has-armed-contingency' : '',
+            ].filter(Boolean).join(' ')}
             onClick={() => setPileOpen('exhaust')}
-            aria-label={`除外 (${state.exhaustPile.length}枚) を表示`}
+            aria-label={armedContingencyCount > 0
+              ? `除外 (${displayedState.exhaustPile.length}枚、伏策待機中${armedContingencyCount}枚) を表示`
+              : `除外 (${displayedState.exhaustPile.length}枚) を表示`}
           >
             <img className="pile__sym pile__sym--img" src="/icons/ui/pile_exhaust.png" alt="" draggable={false} />
             <span className="pile__lbl">除外</span>
-            <span className="pile__num">{state.exhaustPile.length}</span>
+            <span className="pile__num">{displayedState.exhaustPile.length}</span>
+            {armedContingencyCount > 0 ? (
+              <span className="pile__armed">伏策 {armedContingencyCount}</span>
+            ) : null}
           </button>
           <button
             ref={discardPileRef}
             type="button"
             className="pile pile--discard"
             onClick={() => setPileOpen('discard')}
-            aria-label={`捨札 (${state.discardPile.length}枚) を表示`}
+            aria-label={`捨札 (${displayedState.discardPile.length}枚) を表示`}
           >
             <img className="pile__sym pile__sym--img" src="/icons/ui/pile_discard.png" alt="" draggable={false} />
             <span className="pile__lbl">捨札</span>
-            <span className="pile__num">{state.discardPile.length}</span>
+            <span className="pile__num">{displayedState.discardPile.length}</span>
           </button>
 
-          {/* Tactical / COMBO + gauge / Ultimate controls + Turn end */}
+          {readyNotice ? (
+            <div className="battle-ready-notice" role="status" aria-live="polite">
+              {readyNotice}
+            </div>
+          ) : null}
+
+          {replayView ? (
+            <BattleReplayControls
+              subjectName={replayView.subjectName}
+              feedState={replayView.feedState}
+              entries={replayView.entries}
+              position={replayView.position}
+              playing={replayView.playing}
+              loading={replayView.loading}
+              speed={replayView.speed}
+              onBack={() => {
+                if (replayStartTimerRef.current !== null) {
+                  window.clearTimeout(replayStartTimerRef.current)
+                  replayStartTimerRef.current = null
+                }
+                setReplayView(null)
+              }}
+              onRestart={() => {
+                if (replayStartTimerRef.current !== null) {
+                  window.clearTimeout(replayStartTimerRef.current)
+                }
+                setReplayView(previous => previous
+                  ? {
+                      ...previous,
+                      position: 0,
+                      playing: false,
+                      followTail: true,
+                      playbackEpoch: previous.playbackEpoch + 1,
+                    }
+                  : null)
+                replayStartTimerRef.current = window.setTimeout(() => {
+                  replayStartTimerRef.current = null
+                  setReplayView(previous => previous
+                    ? { ...previous, playing: true, followTail: true }
+                    : null)
+                }, 1000)
+              }}
+              onTogglePlaying={() => setReplayView(previous => previous
+                ? {
+                    ...previous,
+                    playing: !previous.playing,
+                    followTail: previous.playing ? false : true,
+                  }
+                : null)}
+              onSkip={() => setReplayView(previous => previous
+                ? {
+                    ...previous,
+                    position: previous.entries.length,
+                    playing: false,
+                    followTail: false,
+                  }
+                  : null)}
+              onStepBack={() => setReplayView(previous => previous
+                ? {
+                    ...previous,
+                    position: Math.max(0, previous.position - 1),
+                    playing: false,
+                    followTail: false,
+                  }
+                : null)}
+              onStepForward={() => setReplayView(previous => previous
+                ? {
+                    ...previous,
+                    position: Math.min(previous.entries.length, previous.position + 1),
+                    playing: false,
+                    followTail: false,
+                  }
+                : null)}
+              onSeek={position => setReplayView(previous => previous
+                ? {
+                    ...previous,
+                    position: Math.max(0, Math.min(previous.entries.length, position)),
+                    playing: false,
+                    followTail: false,
+                  }
+                : null)}
+              onSpeedChange={speed => setReplayView(previous => previous
+                ? { ...previous, speed }
+                : null)}
+              renderCard={entry => entry.card
+                ? <BattleCardVisual card={toReplayCardDemo(entry.card, cardCatalog)} detailsDisabled />
+                : null}
+            />
+          ) : null}
+
+          {/* Tactical / COMBO + gauge / Ultimate controls + Ready toggle */}
           <BattleComboControls
-            count={state.comboCount}
-            maxComboThisTurn={state.maxComboThisTurn}
-            lastPlayedOrigCost={state.lastPlayedOrigCost}
-            nextCardComboFreePass={state.nextCardComboFreePass}
-            comboGauge={state.comboGauge}
-            tacticalDisabled={comboSkillAvailability.tacticalDisabled}
-            ultimateDisabled={comboSkillAvailability.ultimateDisabled}
+            count={displayedState.comboCount}
+            maxComboThisTurn={displayedState.maxComboThisTurn}
+            lastPlayedOrigCost={displayedState.lastPlayedOrigCost}
+            nextCardComboFreePass={displayedState.nextCardComboFreePass}
+            comboCarryoverPending={displayedState.comboCarryoverPending ?? false}
+            comboGauge={displayedState.comboGauge}
+            tacticalDisabled={comboSkillAvailability.tacticalDisabled || viewingReplay}
+            ultimateDisabled={comboSkillAvailability.ultimateDisabled || viewingReplay}
             onUseTactical={() => void handleUseTacticalSkill()}
             onUseUltimate={() => void handleUseUltimateSkill()}
+            tacticalSkill={tacticalSkill}
+            ultimateSkill={ultimateSkill}
+            tacticalUnconfigured={viewingReplay && !tacticalSkill}
+            ultimateUnconfigured={viewingReplay && !ultimateSkill}
+            tacticalDisabledReason={tacticalDisabledReason}
+            ultimateDisabledReason={ultimateDisabledReason}
+            tacticalUsesThisTurn={displayedState.characterSkillUsesThisTurn?.tactical ??
+              (displayedState.usedCharacterSkillIdsThisTurn.includes('tactical') ? 1 : 0)}
+            ultimateUsesThisTurn={displayedState.characterSkillUsesThisTurn?.ultimate ??
+              (displayedState.usedCharacterSkillIdsThisTurn.includes('ultimate') ? 1 : 0)}
+            finisherRecord={displayedState.finisherRecord}
+            onOpenFinisherRecord={() => {
+              if (displayedState.finisherRecord) {
+                setFinisherRecordModal(displayedState.finisherRecord)
+              }
+            }}
           />
           <button
             type="button"
-            className="end-turn"
+            className={`end-turn${primaryIsReady ? ' is-ready' : ''}`}
             onClick={() => void handleEndTurn()}
-            disabled={interactionsDisabled}
+            disabled={readyToggleDisabled}
+            aria-pressed={primaryIsReady}
           >
-            TURN END
+            <span className="end-turn__label">
+              {primaryIsReady ? 'READY 解除' : 'READY'}
+            </span>
           </button>
 
           {/* Hand (fanned).
@@ -2158,9 +4512,10 @@ export function BattleScreen({
           <div className="hand-wrap" ref={handWrapRef}>
             <div className="hand">
               {handDemos.map((c, i) => {
-                const inst = state.hand[i]
+                const inst = displayedState.hand[i]
                 const id = inst?.instanceId ?? `idx-${i}`
                 const isPlaying =
+                  !viewingReplay &&
                   !!inst &&
                   !!playingCard &&
                   playingCard.entry.card.instanceId === inst.instanceId
@@ -2170,14 +4525,26 @@ export function BattleScreen({
                     card={c}
                     fan={fan[i]}
                     onClick={
-                      interactionsDisabled
+                      interactionsDisabled || !c.playable || c.cardUsageLimitReached
                         ? undefined
                         : () => void handlePlayCard(i)
                     }
+                    interactionLocked={interactionsDisabled}
                     onCardElement={(el) => {
                       if (!inst) return
-                      if (el) handCardRefs.current.set(inst.instanceId, el)
-                      else handCardRefs.current.delete(inst.instanceId)
+                      if (el) {
+                        handCardRefs.current.set(inst.instanceId, el)
+                        const rect = el.getBoundingClientRect()
+                        handCardVisuals.current.set(inst.instanceId, {
+                          x: rect.left + rect.width / 2,
+                          y: rect.top + rect.height / 2,
+                          rot: fan[i]?.r ?? 0,
+                        })
+                      } else {
+                        // Keep handCardVisuals: the removal diff runs after this
+                        // DOM node has unmounted and still needs its last center.
+                        handCardRefs.current.delete(inst.instanceId)
+                      }
                     }}
                     hidden={isPlaying}
                   />
@@ -2185,7 +4552,7 @@ export function BattleScreen({
               })}
               {/* leaving cards: 直前の hand には居たが今 hand にいないカード。
                   exit アニメ完了後に leavingHand から削除される。 */}
-              {leavingHand.map((lh) => (
+              {!viewingReplay && leavingHand.map((lh) => (
                 <HandCard
                   key={`leaving-${lh.card.instanceId}`}
                   card={lh.demo}
@@ -2207,11 +4574,24 @@ export function BattleScreen({
         <PileModal
           kind={pileOpen}
           cards={
-            pileOpen === 'draw' ? state.drawPile
-              : pileOpen === 'discard' ? state.discardPile
-              : state.exhaustPile
+            pileOpen === 'draw' ? displayedState.drawPile
+              : pileOpen === 'discard' ? displayedState.discardPile
+              : displayedState.exhaustPile
           }
           onClose={() => setPileOpen(null)}
+        />
+      ) : null}
+      {finisherRecordModal ? (
+        <FinisherRecordModal
+          record={finisherRecordModal}
+          onClose={() => setFinisherRecordModal(null)}
+          plannedIntent={finisherRecordModal.plannedAfterimageIntent ? (
+            <div className="intents finisher-record__intents">
+              <IntentChipRow
+                intents={toIntentDemos(finisherRecordModal.plannedAfterimageIntent)}
+              />
+            </div>
+          ) : null}
         />
       ) : null}
       {/* Phase 10.5.M2-Choose T7: pendingCardPlay 中の choose modal。
@@ -2233,7 +4613,13 @@ export function BattleScreen({
             setChooseError(null)
             try {
               const completed = await withBusy(async () => {
-                const resp = await resolveCardChoice(accountId, { selectedInstanceIds })
+                const commandParticipant = findPrimaryParticipant(state)
+                const resp = await resolveCardChoice(accountId, {
+                  selectedInstanceIds,
+                  pendingCardInstanceId:
+                    commandParticipant?.pendingCardPlay?.cardInstanceId,
+                  ...commandContext('resolve-card-choice', commandParticipant),
+                })
                 await playSteps(resp)
                 return true
               })
@@ -2266,13 +4652,74 @@ export function BattleScreen({
           <span className="battle-screen__phase-banner-text">{phaseBanner}</span>
         </div>
       )}
+      {characterSkillBurst ? (
+        <div
+          key={characterSkillBurst.id}
+          className={[
+            'character-skill-burst',
+            `character-skill-burst--${characterSkillBurst.kind}`,
+            `character-skill-burst--${characterSkillBurst.characterClass.toLowerCase()}`,
+          ].join(' ')}
+          data-character-id={characterSkillBurst.characterId}
+          data-skill-kind={characterSkillBurst.kind}
+          style={{
+            '--skill-burst-duration': `${characterSkillBurst.durationMs}ms`,
+          } as CSSProperties}
+          role="status"
+          aria-live="polite"
+        >
+          <span className="character-skill-burst__portrait-wrap" aria-hidden="true">
+            <img
+              className="character-skill-burst__portrait"
+              src={characterSkillBurst.portrait}
+              alt=""
+              draggable={false}
+              onError={(event) => {
+                if (!event.currentTarget.src.endsWith(DEFAULT_CHARACTER_PORTRAIT)) {
+                  event.currentTarget.src = DEFAULT_CHARACTER_PORTRAIT
+                }
+              }}
+            />
+          </span>
+          <span className="character-skill-burst__copy">
+            <span className="character-skill-burst__kind">
+              {characterSkillBurst.kind === 'ultimate' ? '奥義' : '戦技'}
+            </span>
+            <span className="character-skill-burst__name">{characterSkillBurst.name}</span>
+          </span>
+          <span className="character-skill-burst__sigil" aria-hidden="true">
+            {characterSkillBurst.characterClass === 'Guardian' ? '◆'
+              : characterSkillBurst.characterClass === 'Tactician' ? '⌖'
+                : characterSkillBurst.characterClass === 'Enhancer' ? '♪' : '✦'}
+          </span>
+        </div>
+      ) : null}
+      {/* Cards moved to exhaust by random/all/choose effects share one fixed,
+          viewport-centred animation. Their source position no longer depends
+          on the selected hand slot or the hand container's transform. */}
+      {exhaustingCards.map((entry) => (
+        <div
+          key={entry.id}
+          className="effect-exhaust-card"
+          data-animation-kind="effect-exhaust"
+          style={{
+            '--exhaust-start-x': `${entry.startX}px`,
+            '--exhaust-start-y': `${entry.startY}px`,
+            '--exhaust-start-rot': `${entry.startRot}deg`,
+            '--exhaust-center-x': '640px',
+            '--exhaust-center-y': '360px',
+          } as CSSProperties}
+        >
+          <BattleCardVisual card={entry.demo} detailsDisabled ariaHidden />
+        </div>
+      ))}
       {/* Why: 多段階 play アニメ用の overlay。.battle-screen 直下に置くことで
           祖先要素の transform/will-change で containing block が作られて
           position: fixed が viewport 基準にならないリスクを排除する。
           state.hand から消えても LeavingHand とは別ルートで表示し続け、
           centering → holding (server + playSteps) → leaving の 3 段で
           top/left + transform を切り替えるアニメーション。 */}
-      {playingCard && (
+      {!viewingReplay && playingCard && (
         <div
           className="playing-card"
           data-play-stage={playingCard.stage}
@@ -2287,15 +4734,44 @@ export function BattleScreen({
             '--dest-y': `${playingCard.destY}px`,
           } as CSSProperties}
         >
-          <Card
-            name={playingCard.entry.demo.name}
-            cost={playingCard.entry.demo.cost}
-            costOrig={playingCard.entry.demo.costOrig}
-            type={playingCard.entry.demo.type}
-            rarity={playingCard.entry.demo.rarity}
-            art={playingCard.entry.demo.art}
-            upgraded={playingCard.entry.demo.upgraded}
-          />
+          <BattleCardVisual card={playingCard.entry.demo} detailsDisabled ariaHidden />
+        </div>
+      )}
+      {viewingReplay && replayActionCard && (
+        <div
+          className="playing-card replay-playing-card"
+          data-replay-action="card"
+          data-play-stage={replayActionCard.stage}
+          data-leaving-mode="discard"
+          style={{
+            '--start-x': '50%',
+            '--start-y': '82%',
+            '--start-rot': '0deg',
+            '--center-x': '50%',
+            '--center-y': '50%',
+            '--dest-x': '12%',
+            '--dest-y': '85%',
+          } as CSSProperties}
+        >
+          <BattleCardVisual card={replayActionCard.demo} detailsDisabled ariaHidden />
+        </div>
+      )}
+      {reenactCard && (
+        <div
+          key={reenactCard.id}
+          className="reenact-card"
+          data-reenact-card={reenactCard.demo.instanceId}
+          data-reenact-stage={reenactCard.stage}
+          data-reenact-movement={reenactCard.movement ?? 'popup'}
+          style={reenactCard.fromX === undefined ? undefined : {
+            '--reenact-from-x': `${reenactCard.fromX}px`,
+            '--reenact-from-y': `${reenactCard.fromY}px`,
+            '--reenact-to-x': `${reenactCard.toX}px`,
+            '--reenact-to-y': `${reenactCard.toY}px`,
+          } as CSSProperties}
+          aria-hidden="true"
+        >
+          <BattleCardVisual card={reenactCard.demo} detailsDisabled ariaHidden />
         </div>
       )}
       {/* Why: 山札補充 (discard → draw) の弧アーチ演出。fixed overlay で
@@ -2323,15 +4799,7 @@ export function BattleScreen({
                   '--rs-delay': `${e.delay}ms`,
                 } as CSSProperties}
               >
-                <Card
-                  name={demo.name}
-                  cost={demo.cost}
-                  costOrig={demo.costOrig}
-                  type={demo.type}
-                  rarity={demo.rarity}
-                  art={demo.art}
-                  upgraded={demo.upgraded}
-                />
+                <BattleCardVisual card={demo} detailsDisabled ariaHidden />
               </div>
             )
           })}
@@ -2359,15 +4827,7 @@ export function BattleScreen({
                   '--draw-rot': `${e.rot}deg`,
                 } as CSSProperties}
               >
-                <Card
-                  name={demo.name}
-                  cost={demo.cost}
-                  costOrig={demo.costOrig}
-                  type={demo.type}
-                  rarity={demo.rarity}
-                  art={demo.art}
-                  upgraded={demo.upgraded}
-                />
+                <BattleCardVisual card={demo} detailsDisabled ariaHidden />
               </div>
             )
           })}

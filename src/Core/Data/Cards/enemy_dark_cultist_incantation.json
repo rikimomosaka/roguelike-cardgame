@@ -1,0 +1,26 @@
+{
+  "id": "enemy_dark_cultist_incantation",
+  "name": "詠唱",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy dark_cultist unique (from move incantation)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "strength",
+            "amount": 3
+          }
+        ]
+      }
+    }
+  ]
+}

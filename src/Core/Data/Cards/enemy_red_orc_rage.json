@@ -1,0 +1,26 @@
+{
+  "id": "enemy_red_orc_rage",
+  "name": "激昂",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy red_orc unique (from move rage)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "strength",
+            "amount": 2
+          }
+        ]
+      }
+    }
+  ]
+}

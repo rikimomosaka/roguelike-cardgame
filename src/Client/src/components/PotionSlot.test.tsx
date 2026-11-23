@@ -20,6 +20,14 @@ vi.mock('../hooks/useCardCatalog', () => ({
         usableOutsideBattle: false,
         description: 'Deal 20 damage.',
       },
+      limited_potion: {
+        id: 'limited_potion',
+        name: 'Limited Potion',
+        rarity: 1,
+        usableOutsideBattle: false,
+        usesPerTurn: 1,
+        description: 'ターン中1度だけ使用可能(0/1)。\nHeal 1.',
+      },
     },
   }),
 }))
@@ -57,6 +65,21 @@ describe('PotionSlot outside-battle use', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: /fire_potion/ }))
+    expect(screen.getByRole('menu').querySelectorAll('button').length).toBe(2)
+  })
+
+  it('does not offer use after the potion-level turn limit is reached', () => {
+    render(
+      <PotionSlot
+        slotIndex={0}
+        potionId="limited_potion"
+        onDiscard={vi.fn()}
+        onUse={vi.fn()}
+        usesThisTurn={1}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /limited_potion/ }))
     expect(screen.getByRole('menu').querySelectorAll('button').length).toBe(2)
   })
 })

@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using RoguelikeCardGame.Core.Battle.Engine;
 using RoguelikeCardGame.Core.Battle.State;
+using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Random;
 using RoguelikeCardGame.Core.Tests.Battle.Fixtures;
 using Xunit;
@@ -75,6 +76,44 @@ public class TurnEndProcessorTests
         Assert.Empty(next.Hand);
         Assert.Equal(2, next.DiscardPile.Length);
         Assert.Equal(new[] { "c1", "c2" }, next.DiscardPile.Select(c => c.InstanceId).ToArray());
+    }
+
+    [Fact]
+    public void Primary_retains_wait_keyword_cards_by_the_same_rule_as_secondary_participants()
+    {
+        var wait = new CardDefinition(
+            "wait", "Wait", null, CardRarity.Token, CardType.Skill,
+            0, null, [], null, ["wait"]);
+        var card = new BattleCardInstance("wait-instance", wait.Id, false, null);
+        var state = MakeState([card]);
+        var catalog = BattleFixtures.MinimalCatalog(cards: [wait]);
+
+        var (next, _) = TurnEndProcessor.Process(state, MakeRng(), catalog);
+
+        Assert.Equal(card, Assert.Single(next.Hand));
+        Assert.Empty(next.DiscardPile);
+    }
+
+    [Fact]
+    public void Turn_end_resets_the_primary_cpu_safety_count()
+    {
+        var state = BattleParticipantAccess.InitializePrimary(
+            MakeState(ImmutableArray<BattleCardInstance>.Empty),
+            controllerKind: BattleParticipantControllerKind.Cpu);
+        var primary = BattleParticipantAccess.GetPrimary(state);
+        state = BattleParticipantAccess.Replace(
+            state,
+            primary with
+            {
+                CpuCardPlaysThisTurn =
+                    BattleCpuPlanningCoordinator.MaxPlaysPerActor,
+            });
+
+        var (next, _) = TurnEndProcessor.Process(
+            state, MakeRng(), BattleFixtures.MinimalCatalog());
+
+        Assert.Equal(0, BattleParticipantAccess.GetPrimary(next)
+            .CpuCardPlaysThisTurn);
     }
 
     [Fact] public void No_events_emitted_in_phase_10_2_a()

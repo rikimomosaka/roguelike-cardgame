@@ -1,0 +1,16 @@
+{
+  "id": "frenzy_potion",
+  "name": "猛攻ポーション",
+  "rarity": 2,
+  "effects": [
+    {
+      "action": "buff",
+      "scope": "self",
+      "statusChanges": [
+        { "name": "strength", "amount": 2 },
+        { "name": "vigor", "amount": 1 }
+      ],
+      "battleOnly": true
+    }
+  ]
+}

@@ -1,7 +1,9 @@
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using RoguelikeCardGame.Core.Battle.Events;
 using RoguelikeCardGame.Core.Battle.State;
+using RoguelikeCardGame.Core.Battle.Statuses;
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Random;
@@ -23,7 +25,33 @@ internal static class PlayerAttackingResolver
         int ReflectAmountAtImpact);
 
     public static (BattleState, IReadOnlyList<BattleEvent>) Resolve(
-        BattleState state, IRng rng, DataCatalog catalog)
+        BattleState state, IRng rng, DataCatalog catalog) =>
+        ResolveActors(state, actorIds: null, rng, catalog);
+
+    /// <summary>
+    /// Continues a player-attacking phase from the authoritative actor-id
+    /// snapshot captured when an Afterimage choice paused it. Actors summoned
+    /// while that choice is open are intentionally absent from this phase.
+    /// </summary>
+    public static (BattleState, IReadOnlyList<BattleEvent>) ResolveRemaining(
+        BattleState state,
+        IReadOnlyList<string> remainingActorInstanceIds,
+        IRng rng,
+        DataCatalog catalog)
+    {
+        System.ArgumentNullException.ThrowIfNull(remainingActorInstanceIds);
+        return ResolveActors(
+            state with { PendingTurnResolution = null },
+            remainingActorInstanceIds,
+            rng,
+            catalog);
+    }
+
+    private static (BattleState, IReadOnlyList<BattleEvent>) ResolveActors(
+        BattleState state,
+        IReadOnlyList<string>? actorIds,
+        IRng rng,
+        DataCatalog catalog)
     {
         var events = new List<BattleEvent>();
         int order = 0;
@@ -34,24 +62,44 @@ internal static class PlayerAttackingResolver
             .OrderBy(a => a.SlotIndex)
             .Select(a => a.InstanceId)
             .ToList();
+        if (actorIds is not null)
+            allyIds = actorIds.ToList();
 
-        foreach (string allyId in allyIds)
+        for (int allyOrderIndex = 0;
+             allyOrderIndex < allyIds.Count;
+             allyOrderIndex++)
         {
+            string allyId = allyIds[allyOrderIndex];
+            if (ResolutionShouldStop(state)) break;
             var ally = FindAlly(state, allyId);
             if (ally is null || !ally.IsAlive) continue;
 
             int hitIndex = 0;
             bool isSummon = ally.DefinitionId != "hero" && ally.CurrentMoveId is not null;
+            bool hasPlannedAttack = isSummon
+                ? HasSummonAttack(ally, catalog)
+                : ally.AttackSingle.AddCount + ally.AttackRandom.AddCount + ally.AttackAll.AddCount > 0;
+            if (hasPlannedAttack && ally.GetStatus(BattleStatusIds.Pursuit) > 0)
+            {
+                state = ResolvePursuit(
+                    state, ally, events, ref order, ref hitIndex, catalog, rng);
+                if (ResolutionShouldStop(state)) break;
+                ally = FindAlly(state, allyId) ?? ally;
+                if (!ally.IsAlive) continue;
+            }
             if (isSummon)
             {
                 state = ResolveSummonMove(
                     state, ally, events, ref order, ref hitIndex, catalog, rng);
-                continue;
             }
-
-            if (ally.GetStatus("omnistrike") > 0)
+            else if (ally.GetStatus("omnistrike") > 0)
             {
                 state = ResolveOmnistrike(
+                    state, ally, events, ref order, ref hitIndex, catalog, rng);
+            }
+            else if (ally.GetStatus(BattleStatusIds.Disruption) > 0)
+            {
+                state = ResolveDisrupted(
                     state, ally, events, ref order, ref hitIndex, catalog, rng);
             }
             else
@@ -63,10 +111,210 @@ internal static class PlayerAttackingResolver
                 state = ResolveAll(
                     state, ally, events, ref order, ref hitIndex, catalog, rng);
             }
+
+            var afterimage = BattleEngine.ResolveAfterimageAtActorEnd(
+                state,
+                allyId,
+                rng,
+                catalog,
+                order);
+            state = afterimage.State;
+            foreach (var battleEvent in afterimage.Events)
+                events.Add(battleEvent with { Order = order++ });
+            if (afterimage.Paused)
+            {
+                state = state with
+                {
+                    PendingTurnResolution = new PendingTurnResolution(
+                        TurnResolutionContinuationStage.PlayerAttacking)
+                    {
+                        RemainingAllyActorInstanceIds = allyIds
+                            .Skip(allyOrderIndex + 1)
+                            .ToImmutableArray(),
+                    },
+                };
+                return (state, events);
+            }
         }
 
         state = SummonCleanup.Apply(state, events, ref order);
         return (state, events);
+    }
+
+    /// <summary>
+    /// Resolves only attacks appended by an effect-only execution such as
+    /// Afterimage. Existing queued hits remain observational history and are
+    /// never fired twice. Pursuit is deliberately not evaluated here.
+    /// </summary>
+    public static (BattleState State, IReadOnlyList<BattleEvent> Events)
+        ResolveAddedAttacks(
+            BattleState state,
+            string actorInstanceId,
+            int beforeSingleCount,
+            int beforeRandomCount,
+            int beforeAllCount,
+        IRng rng,
+        DataCatalog catalog,
+        int orderStart,
+        int hitIndexStart = 0,
+        bool deferEnemyDeathTriggers = false)
+    {
+        var actor = FindAlly(state, actorInstanceId)
+            ?? throw new System.InvalidOperationException(
+                $"Added-attack actor '{actorInstanceId}' does not exist.");
+        var singleHits = AddedHits(
+            actor.AttackSingle, beforeSingleCount, nameof(beforeSingleCount));
+        var randomHits = AddedHits(
+            actor.AttackRandom, beforeRandomCount, nameof(beforeRandomCount));
+        var allHits = AddedHits(
+            actor.AttackAll, beforeAllCount, nameof(beforeAllCount));
+
+        var events = new List<BattleEvent>();
+        int order = orderStart;
+        int hitIndex = hitIndexStart;
+        var s = state;
+        if (!actor.IsAlive)
+            return (s, events);
+
+        if (actor.GetStatus(BattleStatusIds.Omnistrike) > 0)
+        {
+            foreach (var hit in singleHits.Concat(randomHits).Concat(allHits))
+            {
+                if (ResolutionShouldStop(s)) break;
+                var attacker = FindAlly(s, actorInstanceId);
+                if (attacker is null || !attacker.IsAlive) break;
+                s = ResolveImmediateAllHit(
+                    s, attacker, hit.Amount, "omnistrike",
+                    events, ref order, ref hitIndex, catalog, rng,
+                    hit.Source, hit.CauseChain, deferEnemyDeathTriggers);
+            }
+            return (s, events);
+        }
+
+        if (actor.GetStatus(BattleStatusIds.Disruption) > 0)
+        {
+            foreach (var hit in singleHits.Concat(randomHits).Concat(allHits))
+            {
+                if (ResolutionShouldStop(s)) break;
+                var attacker = FindAlly(s, actorInstanceId);
+                if (attacker is null || !attacker.IsAlive) break;
+                s = ResolveImmediateRandomHit(
+                    s, attacker, hit.Amount, "random", rng,
+                    events, ref order, ref hitIndex, catalog,
+                    hit.Source, hit.CauseChain, deferEnemyDeathTriggers);
+            }
+            return (s, events);
+        }
+
+        // Match the normal resolver's pool ordering. Each appended Single keeps
+        // its committed target, with the same one-time chain-start fallback.
+        var aliveAtChainStart = SnapshotEnemyAliveIds(s);
+        string? fallbackTargetId = GetSelectedEnemyId(
+            s, actorInstanceId, retargetIfUnavailable: true);
+        foreach (var hit in singleHits)
+        {
+            if (ResolutionShouldStop(s)) break;
+            string? targetId = hit.TargetInstanceId;
+            if (targetId is null || !aliveAtChainStart.Contains(targetId))
+                targetId = fallbackTargetId;
+            if (targetId is null) continue;
+            int targetIndex = FindEnemyIndex(s, targetId);
+            if (targetIndex < 0 || !s.Enemies[targetIndex].IsAlive) continue;
+            var attacker = FindAlly(s, actorInstanceId);
+            if (attacker is null || !attacker.IsAlive) break;
+            s = ResolveImmediateSingleHit(
+                s, attacker, targetId, hit.Amount, "single",
+                events, ref order, ref hitIndex, catalog, rng,
+                hit.Source, hit.CauseChain, deferEnemyDeathTriggers);
+        }
+
+        foreach (var hit in randomHits)
+        {
+            if (ResolutionShouldStop(s)) break;
+            var attacker = FindAlly(s, actorInstanceId);
+            if (attacker is null || !attacker.IsAlive) break;
+            s = ResolveImmediateRandomHit(
+                s, attacker, hit.Amount, "random", rng,
+                events, ref order, ref hitIndex, catalog,
+                hit.Source, hit.CauseChain, deferEnemyDeathTriggers);
+        }
+
+        foreach (var hit in allHits)
+        {
+            if (ResolutionShouldStop(s)) break;
+            var attacker = FindAlly(s, actorInstanceId);
+            if (attacker is null || !attacker.IsAlive) break;
+            s = ResolveImmediateAllHit(
+                s, attacker, hit.Amount, "all",
+                events, ref order, ref hitIndex, catalog, rng,
+                hit.Source, hit.CauseChain, deferEnemyDeathTriggers);
+        }
+
+        return (s, events);
+    }
+
+    private static IReadOnlyList<AttackHit> AddedHits(
+        AttackPool pool, int beforeCount, string parameterName)
+    {
+        if (beforeCount < 0 || beforeCount > pool.AddCount)
+            throw new System.ArgumentOutOfRangeException(
+                parameterName,
+                beforeCount,
+                $"Snapshot count must be between 0 and {pool.AddCount}.");
+        return pool.Hits.Skip(beforeCount).ToArray();
+    }
+
+    private static bool HasSummonAttack(CombatActor ally, DataCatalog catalog) =>
+        catalog.TryGetUnit(ally.DefinitionId, out var unit)
+        && unit.Moves.FirstOrDefault(move => move.Id == ally.CurrentMoveId)
+            ?.Effects.Any(effect => effect.Action == "attack") == true;
+
+    private static BattleState ResolvePursuit(
+        BattleState state,
+        CombatActor ally,
+        List<BattleEvent> events,
+        ref int order,
+        ref int hitIndex,
+        DataCatalog catalog,
+        IRng rng)
+    {
+        int amount = ally.GetStatus(BattleStatusIds.Pursuit);
+        if (amount <= 0) return state;
+
+        var consumed = BattleStatusRules.Decrement(ally, BattleStatusIds.Pursuit);
+        int allyIndex = FindAllyIndex(state, ally.InstanceId);
+        if (allyIndex < 0) return state;
+        state = state with { Allies = state.Allies.SetItem(allyIndex, consumed) };
+
+        var effectiveScope = AttackScopeRules.Resolve(consumed, EffectScope.All);
+        string scopeNote = effectiveScope == EffectScope.Random
+            ? "random"
+            : BattleStatusIds.Pursuit;
+        var source = new CombatSource(
+            CombatSourceKind.Status,
+            OwnerSlot: consumed.OwnerPlayerSlot ?? consumed.SlotIndex,
+            OwnerInstanceId: consumed.OwnerActorInstanceId ?? consumed.InstanceId,
+            ActorInstanceId: consumed.InstanceId,
+            DefinitionId: BattleStatusIds.Pursuit,
+            Scope: effectiveScope.ToString().ToLowerInvariant());
+
+        state = effectiveScope == EffectScope.Random
+            ? ResolveImmediateRandomHit(
+                state, consumed, amount, scopeNote, rng,
+                events, ref order, ref hitIndex, catalog, source)
+            : ResolveImmediateAllHit(
+                state, consumed, amount, scopeNote,
+                events, ref order, ref hitIndex, catalog, rng, source);
+
+        if (amount == 1)
+        {
+            events.Add(new BattleEvent(
+                BattleEventKind.RemoveStatus, Order: order++,
+                TargetInstanceId: ally.InstanceId,
+                Note: BattleStatusIds.Pursuit,
+                Source: ally.GetStatusSource(BattleStatusIds.Pursuit)));
+        }
+        return state;
     }
 
     private static BattleState ResolveSummonMove(
@@ -95,6 +343,7 @@ internal static class PlayerAttackingResolver
 
         for (int effectIndex = 0; effectIndex < move.Effects.Count; effectIndex++)
         {
+            if (ResolutionShouldStop(state)) break;
             var effect = move.Effects[effectIndex];
             // An earlier effect may kill an enemy and fire OnEnemyDeath, which can
             // mutate this summon. Always continue from that latest actor snapshot.
@@ -102,6 +351,9 @@ internal static class PlayerAttackingResolver
             if (refreshed is null || !refreshed.IsAlive) break;
             current = refreshed;
 
+            var effectiveScope = effect.Action == "attack"
+                ? AttackScopeRules.Resolve(current, effect.Scope)
+                : effect.Scope;
             var source = new CombatSource(
                 CombatSourceKind.SummonMove,
                 OwnerSlot: ally.OwnerPlayerSlot ?? owner?.SlotIndex,
@@ -111,11 +363,11 @@ internal static class PlayerAttackingResolver
                 InstanceId: current.AssociatedSummonHeldInstanceId,
                 MoveId: move.Id,
                 EffectIndex: effectIndex,
-                Scope: effect.Scope.ToString().ToLowerInvariant());
+                Scope: effectiveScope.ToString().ToLowerInvariant());
 
             if (effect.Action == "attack")
             {
-                state = effect.Scope switch
+                state = effectiveScope switch
                 {
                     EffectScope.Single => ResolveImmediateSingleHit(
                         state, current, singleTargetId, effect.Amount, "single",
@@ -157,6 +409,7 @@ internal static class PlayerAttackingResolver
                         Source = battleEvent.Source ?? source,
                     });
             }
+            if (ResolutionShouldStop(state)) break;
         }
 
         int index = FindAllyIndex(state, current.InstanceId);
@@ -182,11 +435,40 @@ internal static class PlayerAttackingResolver
         var combined = ally.AttackSingle + ally.AttackRandom + ally.AttackAll;
         foreach (var hit in combined.Hits)
         {
+            if (ResolutionShouldStop(state)) break;
             var attacker = FindAlly(state, ally.InstanceId);
             if (attacker is null || !attacker.IsAlive) break;
             state = ResolveImmediateAllHit(
                 state, attacker, hit.Amount, "omnistrike",
                 events, ref order, ref hitIndex, catalog, rng, hit.Source,
+                hit.CauseChain);
+            if (ResolutionShouldStop(state)) break;
+        }
+
+        return state;
+    }
+
+    private static BattleState ResolveDisrupted(
+        BattleState state,
+        CombatActor ally,
+        List<BattleEvent> events,
+        ref int order,
+        ref int hitIndex,
+        DataCatalog catalog,
+        IRng rng)
+    {
+        // Each queued hit performs an independent random draw. Combining the
+        // pools here also converts target-locked Single hits and All hits that
+        // were committed before Disruption was applied.
+        var combined = ally.AttackSingle + ally.AttackRandom + ally.AttackAll;
+        foreach (var hit in combined.Hits)
+        {
+            if (ResolutionShouldStop(state)) break;
+            var attacker = FindAlly(state, ally.InstanceId);
+            if (attacker is null || !attacker.IsAlive) break;
+            state = ResolveImmediateRandomHit(
+                state, attacker, hit.Amount, "random", rng,
+                events, ref order, ref hitIndex, catalog, hit.Source,
                 hit.CauseChain);
         }
 
@@ -202,15 +484,26 @@ internal static class PlayerAttackingResolver
         DataCatalog catalog,
         IRng rng)
     {
-        // 攻撃開始時の最終選択対象へ全Singleヒットを固定する。
-        // 途中で死亡しても再照準せず、残りは不発になる。
-        string? targetId = GetSelectedEnemyId(state);
-        if (targetId is null) return state;
+        // Each hit keeps the selection captured when its card was committed.
+        // Targets unavailable before this actor starts may retarget once;
+        // deaths during this actor's chain make only that target's later hits fizzle.
+        var aliveAtChainStart = SnapshotEnemyAliveIds(state);
+        string? fallbackTargetId = GetSelectedEnemyId(
+            state, ally.InstanceId, retargetIfUnavailable: true);
 
         foreach (var hit in ally.AttackSingle.Hits)
         {
+            if (ResolutionShouldStop(state)) break;
+            string? targetId = hit.TargetInstanceId;
+            if (targetId is null || !aliveAtChainStart.Contains(targetId))
+                targetId = fallbackTargetId;
+            if (targetId is null) continue;
+
             int targetIndex = FindEnemyIndex(state, targetId);
-            if (targetIndex < 0 || !state.Enemies[targetIndex].IsAlive) break;
+            // A target that died after this actor chain began stays dead for
+            // the rest of that locked chain. Continue because a later card
+            // may have committed its hits against a different enemy.
+            if (targetIndex < 0 || !state.Enemies[targetIndex].IsAlive) continue;
 
             var attacker = FindAlly(state, ally.InstanceId);
             if (attacker is null || !attacker.IsAlive) break;
@@ -218,6 +511,7 @@ internal static class PlayerAttackingResolver
                 state, attacker, targetId, hit.Amount, "single",
                 events, ref order, ref hitIndex, catalog, rng, hit.Source,
                 hit.CauseChain);
+            if (ResolutionShouldStop(state)) break;
         }
 
         return state;
@@ -234,12 +528,14 @@ internal static class PlayerAttackingResolver
     {
         foreach (var hit in ally.AttackRandom.Hits)
         {
+            if (ResolutionShouldStop(state)) break;
             var attacker = FindAlly(state, ally.InstanceId);
             if (attacker is null || !attacker.IsAlive) break;
             state = ResolveImmediateRandomHit(
                 state, attacker, hit.Amount, "random", rng,
                 events, ref order, ref hitIndex, catalog, hit.Source,
                 hit.CauseChain);
+            if (ResolutionShouldStop(state)) break;
         }
 
         return state;
@@ -256,12 +552,14 @@ internal static class PlayerAttackingResolver
     {
         foreach (var hit in ally.AttackAll.Hits)
         {
+            if (ResolutionShouldStop(state)) break;
             var attacker = FindAlly(state, ally.InstanceId);
             if (attacker is null || !attacker.IsAlive) break;
             state = ResolveImmediateAllHit(
                 state, attacker, hit.Amount, "all",
                 events, ref order, ref hitIndex, catalog, rng, hit.Source,
                 hit.CauseChain);
+            if (ResolutionShouldStop(state)) break;
         }
 
         return state;
@@ -279,7 +577,8 @@ internal static class PlayerAttackingResolver
         DataCatalog catalog,
         IRng rng,
         CombatSource? source = null,
-        DamageCauseChain? causeChain = null)
+        DamageCauseChain? causeChain = null,
+        bool deferEnemyDeathTriggers = false)
     {
         if (targetId is null) return state;
         int targetIndex = FindEnemyIndex(state, targetId);
@@ -288,7 +587,8 @@ internal static class PlayerAttackingResolver
         int currentHitIndex = hitIndex++;
         state = DealEnemyHit(
             state, attacker, targetId, amount, scopeNote, currentHitIndex,
-            events, ref order, ref hitIndex, catalog, rng, source, causeChain);
+            events, ref order, ref hitIndex, catalog, rng, source, causeChain,
+            deferEnemyDeathTriggers);
         return state;
     }
 
@@ -303,7 +603,8 @@ internal static class PlayerAttackingResolver
         ref int hitIndex,
         DataCatalog catalog,
         CombatSource? source = null,
-        DamageCauseChain? causeChain = null)
+        DamageCauseChain? causeChain = null,
+        bool deferEnemyDeathTriggers = false)
     {
         var candidates = AliveEnemyIds(state);
         if (candidates.Count == 0) return state;
@@ -312,7 +613,8 @@ internal static class PlayerAttackingResolver
         int currentHitIndex = hitIndex++;
         state = DealEnemyHit(
             state, attacker, candidates[selected], amount, scopeNote, currentHitIndex,
-            events, ref order, ref hitIndex, catalog, rng, source, causeChain);
+            events, ref order, ref hitIndex, catalog, rng, source, causeChain,
+            deferEnemyDeathTriggers);
         return state;
     }
 
@@ -327,7 +629,8 @@ internal static class PlayerAttackingResolver
         DataCatalog catalog,
         IRng rng,
         CombatSource? source = null,
-        DamageCauseChain? causeChain = null)
+        DamageCauseChain? causeChain = null,
+        bool deferEnemyDeathTriggers = false)
     {
         var targetIds = AliveEnemyIds(state);
         if (targetIds.Count == 0) return state;
@@ -362,10 +665,13 @@ internal static class PlayerAttackingResolver
                 pending.DamageEvents,
                 pending.ReflectAmountAtImpact,
                 events, ref order, ref hitIndex, catalog, rng);
+            if (ResolutionShouldStop(state)) break;
         }
 
-        return FireOnEnemyDeathForNewlyDead(
-            state, beforeAlive, events, ref order, catalog, rng);
+        return deferEnemyDeathTriggers
+            ? state
+            : FireOnEnemyDeathForNewlyDead(
+                state, beforeAlive, events, ref order, catalog, rng);
     }
 
     private static BattleState DealEnemyHit(
@@ -381,7 +687,8 @@ internal static class PlayerAttackingResolver
         DataCatalog catalog,
         IRng rng,
         CombatSource? source = null,
-        DamageCauseChain? causeChain = null)
+        DamageCauseChain? causeChain = null,
+        bool deferEnemyDeathTriggers = false)
     {
         int targetIndex = FindEnemyIndex(state, targetId);
         if (targetIndex < 0 || !state.Enemies[targetIndex].IsAlive) return state;
@@ -391,8 +698,10 @@ internal static class PlayerAttackingResolver
             state, attacker, targetId, amount, scopeNote, resolvedHitIndex,
             events, ref order, ref nextHitIndex, catalog, rng, source, causeChain);
 
-        return FireOnEnemyDeathForNewlyDead(
-            state, beforeAlive, events, ref order, catalog, rng);
+        return deferEnemyDeathTriggers
+            ? state
+            : FireOnEnemyDeathForNewlyDead(
+                state, beforeAlive, events, ref order, catalog, rng);
     }
 
     private static BattleState ApplyEnemyHit(
@@ -518,28 +827,24 @@ internal static class PlayerAttackingResolver
             frame => frame.Cause == "OnHit");
         if (hitLanded && !isOnHitDerived)
         {
-            var relicCaster = FindOnHitCaster(state);
-            int relicSingleCount = relicCaster?.AttackSingle.AddCount ?? 0;
+            var relicCaster = FindOnHitCaster(state, context.Source);
+            var relicCounts = AttackPoolCounts.From(relicCaster);
             var (afterRelicOnHit, relicOnHitEvents) = RelicTriggerProcessor.FireOnHit(
                 state, targetId, context, catalog, rng, orderStart: order);
             state = afterRelicOnHit;
             foreach (var ev in relicOnHitEvents) events.Add(ev with { Order = order++ });
-            var relicHits = TakeAppendedSingleHits(
-                ref state, relicCaster?.InstanceId, relicSingleCount);
-            state = ResolveTriggeredSingleHits(
-                state, relicCaster?.InstanceId, targetId, relicHits,
+            state = ResolveTriggeredAttacks(
+                state, relicCaster?.InstanceId, relicCounts,
                 events, ref order, ref hitIndex, catalog, rng);
 
-            var powerCaster = FindOnHitCaster(state);
-            int powerSingleCount = powerCaster?.AttackSingle.AddCount ?? 0;
+            var powerCaster = FindOnHitCaster(state, context.Source);
+            var powerCounts = AttackPoolCounts.From(powerCaster);
             var (afterOnHit, onHitEvents) = PowerTriggerProcessor.FireOnHit(
                 state, targetId, context, catalog, rng, orderStart: order);
             state = afterOnHit;
             foreach (var ev in onHitEvents) events.Add(ev with { Order = order++ });
-            var powerHits = TakeAppendedSingleHits(
-                ref state, powerCaster?.InstanceId, powerSingleCount);
-            state = ResolveTriggeredSingleHits(
-                state, powerCaster?.InstanceId, targetId, powerHits,
+            state = ResolveTriggeredAttacks(
+                state, powerCaster?.InstanceId, powerCounts,
                 events, ref order, ref hitIndex, catalog, rng);
         }
 
@@ -547,8 +852,17 @@ internal static class PlayerAttackingResolver
         attacker = FindActor(state, attackerId);
         target = FindActor(state, targetId);
 
-        // Lifesteal heals the owning actor from actual HP removed, never overkill.
-        string ownerId = context.Source.OwnerInstanceId ?? attackerId;
+        // An independently controlled participant owns its own combat
+        // statuses even when it was summoned by another actor. Legacy
+        // fixed-move summons keep their historical owner-attribution fallback.
+        string? sourceActorId = context.Source.ActorInstanceId;
+        bool sourceIsParticipant = sourceActorId is not null
+            && !state.Participants.IsDefaultOrEmpty
+            && BattleParticipantAccess.TryGetByActor(
+                state, sourceActorId, out _);
+        string ownerId = sourceIsParticipant
+            ? sourceActorId!
+            : context.Source.OwnerInstanceId ?? attackerId;
         var ownerAtReaction = FindActor(state, ownerId);
         int lifestealPercent = ownerAtReaction?.GetStatus("lifesteal") ?? 0;
         if (actualHpLoss > 0 && lifestealPercent > 0)
@@ -580,6 +894,8 @@ internal static class PlayerAttackingResolver
             int actual = System.Math.Min(hpBefore, reflectAmount);
             int overkill = System.Math.Max(0, reflectAmount - hpBefore);
             var reflected = attacker with { CurrentHp = System.Math.Max(0, hpBefore - reflectAmount) };
+            bool revived = BattleStatusRules.TryRevive(reflected, out var afterRevive);
+            reflected = afterRevive;
             state = ReplaceActor(state, attackerId, reflected);
             var reflectSource = new CombatSource(
                 CombatSourceKind.Status, OwnerSlot: target?.SlotIndex ?? 0,
@@ -593,7 +909,20 @@ internal static class PlayerAttackingResolver
                 BlockedAmount: 0, DamageType: DamageType.Reflected, Source: reflectSource,
                 CauseChain: reflectContext.CauseChain,
                 ActualHpLoss: actual, Overkill: overkill, HitLanded: true));
-            if (!reflected.IsAlive)
+            if (revived)
+            {
+                events.Add(new BattleEvent(
+                    BattleEventKind.RemoveStatus, Order: order++,
+                    TargetInstanceId: attackerId,
+                    Note: BattleStatusIds.Revive,
+                    Source: attacker.GetStatusSource(BattleStatusIds.Revive)));
+                events.Add(new BattleEvent(
+                    BattleEventKind.Heal, Order: order++,
+                    TargetInstanceId: attackerId,
+                    Amount: reflected.CurrentHp,
+                    Note: BattleStatusIds.Revive));
+            }
+            else if (!reflected.IsAlive)
             {
                 events.Add(new BattleEvent(
                     BattleEventKind.ActorDeath, Order: order++,
@@ -603,10 +932,11 @@ internal static class PlayerAttackingResolver
                     CauseChain: reflectContext.CauseChain,
                     ActualHpLoss: actual, Overkill: overkill, HitLanded: true));
             }
-            else if (reflected.DefinitionId == "hero" && actual > 0)
+            else if (actual > 0)
             {
                 var (afterPower, powerEvents) = PowerTriggerProcessor.FireOnDamageReceived(
-                    state, catalog, rng, orderStart: order);
+                    state, reflected.InstanceId, catalog, rng,
+                    orderStart: order);
                 state = afterPower;
                 foreach (var ev in powerEvents) events.Add(ev with { Order = order++ });
             }
@@ -615,64 +945,111 @@ internal static class PlayerAttackingResolver
         return state;
     }
 
-    private static CombatActor? FindOnHitCaster(BattleState state) =>
-        state.Allies.FirstOrDefault(
-            actor => actor.DefinitionId == "hero" && actor.IsAlive);
-
-    private static IReadOnlyList<AttackHit> TakeAppendedSingleHits(
-        ref BattleState state, string? casterId, int originalCount)
+    private static CombatActor? FindOnHitCaster(
+        BattleState state, CombatSource source)
     {
-        if (casterId is null) return System.Array.Empty<AttackHit>();
+        string? actorInstanceId = source.ActorInstanceId;
+        if (actorInstanceId is null
+            || (!state.Participants.IsDefaultOrEmpty
+                && !BattleParticipantAccess.TryGetByActor(
+                    state, actorInstanceId, out _)))
+            actorInstanceId = source.OwnerInstanceId;
 
-        var caster = FindActor(state, casterId);
-        if (caster is null) return System.Array.Empty<AttackHit>();
-        if (caster.AttackSingle.AddCount < originalCount)
-            throw new System.InvalidOperationException(
-                "An OnHit trigger replaced the existing single-attack pool.");
+        if (!state.Participants.IsDefaultOrEmpty)
+        {
+            if (actorInstanceId is null
+                || !BattleParticipantAccess.TryGetByActor(
+                    state, actorInstanceId, out _))
+                return null;
+            return state.Allies.FirstOrDefault(actor =>
+                actor.IsAlive && actor.InstanceId == actorInstanceId);
+        }
 
-        var appended = caster.AttackSingle.Hits
-            .Skip(originalCount)
-            .ToArray();
-        if (appended.Length == 0) return appended;
-
-        state = ReplaceActor(
-            state, casterId,
-            caster with { AttackSingle = caster.AttackSingle.TakeFirst(originalCount) });
-        return appended;
+        var legacyHero = ProvisionalSoloHeroOwnerResolver.Resolve(state)?.Hero;
+        if (legacyHero is null) return null;
+        if (actorInstanceId is null
+            || actorInstanceId == legacyHero.InstanceId
+            || source.OwnerInstanceId == legacyHero.InstanceId)
+            return legacyHero;
+        return null;
     }
 
-    private static BattleState ResolveTriggeredSingleHits(
+    private static BattleState ResolveTriggeredAttacks(
         BattleState state,
         string? attackerId,
-        string targetId,
-        IReadOnlyList<AttackHit> hits,
+        AttackPoolCounts before,
         List<BattleEvent> events,
         ref int order,
         ref int hitIndex,
         DataCatalog catalog,
         IRng rng)
     {
-        if (attackerId is null || hits.Count == 0) return state;
+        if (attackerId is null) return state;
 
-        foreach (var hit in hits)
+        var attacker = FindAlly(state, attackerId);
+        if (attacker is null) return state;
+        before.ValidateAgainst(attacker);
+        bool hasAddedAttacks = attacker.AttackSingle.AddCount > before.Single
+            || attacker.AttackRandom.AddCount > before.Random
+            || attacker.AttackAll.AddCount > before.All;
+        if (!hasAddedAttacks) return state;
+
+        var resolved = ResolveAddedAttacks(
+            state,
+            attackerId,
+            before.Single,
+            before.Random,
+            before.All,
+            rng,
+            catalog,
+            order,
+            hitIndex,
+            deferEnemyDeathTriggers: true);
+        state = resolved.State;
+        foreach (var battleEvent in resolved.Events)
         {
-            var attacker = FindActor(state, attackerId);
-            int targetIndex = FindEnemyIndex(state, targetId);
-            if (attacker is null || !attacker.IsAlive ||
-                targetIndex < 0 || !state.Enemies[targetIndex].IsAlive)
-                break;
+            events.Add(battleEvent);
+            order = System.Math.Max(order, battleEvent.Order + 1);
+            if (battleEvent.Kind == BattleEventKind.AttackFire
+                && battleEvent.HitIndex is int resolvedHitIndex)
+                hitIndex = System.Math.Max(hitIndex, resolvedHitIndex + 1);
+        }
 
-            int currentHitIndex = hitIndex++;
-            // The enclosing root hit owns the OnEnemyDeath scan. Keeping the
-            // nested hit inside that scan prevents an OnHit kill from firing
-            // OnEnemyDeath twice while preserving normal child-hit reactions.
-            state = ApplyEnemyHit(
-                state, attacker, targetId, hit.Amount, "single", currentHitIndex,
-                events, ref order, ref hitIndex, catalog, rng,
-                hit.Source, hit.CauseChain);
+        var current = FindAlly(state, attackerId);
+        if (current is not null)
+        {
+            before.ValidateAgainst(current);
+            state = ReplaceActor(
+                state,
+                attackerId,
+                current with
+                {
+                    AttackSingle = current.AttackSingle.TakeFirst(before.Single),
+                    AttackRandom = current.AttackRandom.TakeFirst(before.Random),
+                    AttackAll = current.AttackAll.TakeFirst(before.All),
+                });
         }
 
         return state;
+    }
+
+    private readonly record struct AttackPoolCounts(int Single, int Random, int All)
+    {
+        public static AttackPoolCounts From(CombatActor? actor) => actor is null
+            ? default
+            : new AttackPoolCounts(
+                actor.AttackSingle.AddCount,
+                actor.AttackRandom.AddCount,
+                actor.AttackAll.AddCount);
+
+        public void ValidateAgainst(CombatActor actor)
+        {
+            if (actor.AttackSingle.AddCount < Single
+                || actor.AttackRandom.AddCount < Random
+                || actor.AttackAll.AddCount < All)
+                throw new System.InvalidOperationException(
+                    "An OnHit trigger replaced an existing attack pool.");
+        }
     }
 
     private static CombatActor? FindActor(BattleState state, string instanceId)
@@ -702,13 +1079,30 @@ internal static class PlayerAttackingResolver
             .Select(enemy => enemy.InstanceId)
             .ToList();
 
-    private static string? GetSelectedEnemyId(BattleState state)
+    private static string? GetSelectedEnemyId(
+        BattleState state,
+        string? actorInstanceId = null,
+        bool retargetIfUnavailable = false)
     {
-        if (state.TargetEnemyIndex is not { } index ||
-            index < 0 || index >= state.Enemies.Length)
-            return null;
+        int? selectedIndex = state.TargetEnemyIndex;
+        if (actorInstanceId is not null
+            && BattleParticipantAccess.TryGetByActor(
+                state, actorInstanceId, out var participant))
+            selectedIndex = participant.TargetEnemyIndex;
 
-        return state.Enemies[index].InstanceId;
+        if (selectedIndex is { } index
+            && index >= 0
+            && index < state.Enemies.Length
+            && state.Enemies[index].IsAlive)
+            return state.Enemies[index].InstanceId;
+
+        return retargetIfUnavailable
+            ? state.Enemies
+                .Where(enemy => enemy.IsAlive)
+                .OrderBy(enemy => enemy.SlotIndex)
+                .Select(enemy => enemy.InstanceId)
+                .FirstOrDefault()
+            : null;
     }
 
     private static HashSet<string> SnapshotEnemyAliveIds(BattleState state)
@@ -740,10 +1134,20 @@ internal static class PlayerAttackingResolver
             state = afterRelic;
             foreach (var battleEvent in relicEvents)
                 events.Add(battleEvent with { Order = order++ });
+
+            var (afterPower, powerEvents) = PowerTriggerProcessor.FireOnEnemyDeath(
+                state, deadId, catalog, rng, orderStart: order);
+            state = afterPower;
+            foreach (var battleEvent in powerEvents)
+                events.Add(battleEvent with { Order = order++ });
         }
 
         return state;
     }
+
+    private static bool ResolutionShouldStop(BattleState state) =>
+        BattleOutcomeResolver.Evaluate(state)
+            == RoguelikeCardGame.Core.Battle.State.BattleOutcome.Defeat;
 
     private static CombatActor? FindAlly(BattleState state, string instanceId)
     {

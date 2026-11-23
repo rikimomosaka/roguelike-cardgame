@@ -1,26 +1,51 @@
 {
-    "id":  "reward_epic_07",
-    "name":  "神速斬",
-    "displayName":  null,
-    "activeVersion":  "v1",
-    "versions":  [
-                     {
-                         "version":  "v1",
-                         "createdAt":  "2026-05-01T03:54:50Z",
-                         "label":  "original",
-                         "spec":  {
-                                      "rarity":  3,
-                                      "cardType":  "Attack",
-                                      "cost":  1,
-                                      "effects":  [
-                                                      {
-                                                          "action":  "attack",
-                                                          "scope":  "single",
-                                                          "side":  "enemy",
-                                                          "amount":  14
-                                                      }
-                                                  ]
-                                  }
-                     }
-                 ]
+  "id": "guardian_epic_fortress_breaker",
+  "name": "城塞砕き",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Guardian",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 3,
+        "cardType": "Attack",
+        "cost": 3,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 8
+          },
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 0,
+            "amountSource": "selfBlock"
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 12
+          },
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 0,
+            "amountSource": "selfBlock"
+          }
+        ]
+      }
+    }
+  ]
 }

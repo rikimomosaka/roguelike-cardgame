@@ -109,6 +109,7 @@ public static class EventJsonLoader
                 "loseMaxHp" => new EventEffect.LoseMaxHp(GetInt(e, "amount")),
                 "gainRelicRandom" => new EventEffect.GainRelicRandom(ParseRarity(GetInt(e, "rarity"), eventId)),
                 "grantCardReward" => new EventEffect.GrantCardReward(),
+                "gainCard" => new EventEffect.GainCard(GetString(e, "cardId")),
                 _ => throw new EventJsonException($"event \"{eventId}\" の effect.type \"{type}\" は無効。")
             };
             list.Add(effect);

@@ -7,37 +7,46 @@ type Props = {
   meta: DevMeta
   label: string
   onChange: (next: string[] | null) => void
-  /** Why: 「強化前をコピー」ボタン用。upgradedKeywords 編集時のみ渡される。 */
-  onCopyFromNormal?: () => void
 }
 
-export function KeywordSelector({ value, meta, label, onChange, onCopyFromNormal }: Props) {
+export function KeywordSelector({ value, meta, label, onChange }: Props) {
   const set = new Set(value ?? [])
   const toggle = (id: string) => {
     if (set.has(id)) set.delete(id)
     else set.add(id)
     const arr = Array.from(set)
-    // 空配列は null として扱い JSON 出力時に省略する
-    onChange(arr.length === 0 ? null : arr)
+    // [] は「この版にはキーワードなし」を明示する値。null（未設定）とは分ける。
+    onChange(arr)
   }
 
   return (
     <div className="keyword-selector">
       <div className="keyword-selector__header">
         <div className="keyword-selector__label">{label}</div>
-        {onCopyFromNormal && (
+        {value === null ? (
           <button
             type="button"
             className="keyword-selector__copy"
-            onClick={onCopyFromNormal}
-            aria-label={`${label} に強化前をコピー`}
+            onClick={() => onChange([])}
+            aria-label={`${label}を個別設定`}
           >
-            強化前をコピー
+            この版を個別設定
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="keyword-selector__copy"
+            onClick={() => onChange(null)}
+            aria-label={`${label}の設定を削除`}
+          >
+            設定を削除
           </button>
         )}
       </div>
       <div className="keyword-selector__checks">
-        {meta.keywords.length === 0 ? (
+        {value === null ? (
+          <em className="keyword-selector__empty">(未設定。この版ではキーワードなし)</em>
+        ) : meta.keywords.length === 0 ? (
           <em className="keyword-selector__empty">(キーワードが定義されていません)</em>
         ) : (
           meta.keywords.map((k) => (

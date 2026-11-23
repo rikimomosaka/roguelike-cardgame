@@ -28,4 +28,25 @@ public sealed record BattleCardInstanceDto(
     int? OriginalCost,
     int? CurrentCost,
     string? AdjustedDescription = null,
-    string? AdjustedUpgradedDescription = null);
+    string? AdjustedUpgradedDescription = null,
+    bool ComboReductionEligible = false,
+    bool ComboContinues = false,
+    bool ComboRingHighlighted = false,
+    bool WildDisabled = false,
+    bool CardUsageLimitReached = false,
+    bool CardPlayRestricted = false,
+    string? CardPlayRestrictionReason = null,
+    IReadOnlyList<CardCostChangeDto>? CostChanges = null,
+    string? PoolClass = null,
+    bool IsContingencyArmed = false,
+    string? ContingencyTriggerText = null);
+
+/// <summary>
+/// Ordered, authoritative step in the payable-cost calculation.
+/// Fixed steps use Value as the replacement cost; other steps use a signed delta.
+/// </summary>
+public sealed record CardCostChangeDto(
+    string Kind,
+    long Value,
+    string? SourceId,
+    string? SourceName);

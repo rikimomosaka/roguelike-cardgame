@@ -6,56 +6,33 @@
   "act": 1,
   "heightTier": 4,
   "tier": "Weak",
-  "initialMoveId": "chomp",
-  "moves": [
+  "attack": 7,
+  "defense": 5,
+  "initialEnergy": 0,
+  "energyPerTurn": 1,
+  "drawPerTurn": 3,
+  "handLimit": 5,
+  "aiProfileId": "low_cost_combo",
+  "deck": [
     {
-      "id": "chomp",
-      "kind": "Attack",
-      "nextMoveId": "thrash",
-      "effects": [
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 11
-        }
-      ]
+      "cardId": "enemy_jaw_worm_chomp",
+      "count": 2
     },
     {
-      "id": "thrash",
-      "kind": "Multi",
-      "nextMoveId": "bellow",
-      "effects": [
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 7
-        },
-        {
-          "action": "block",
-          "scope": "self",
-          "amount": 5
-        }
-      ]
+      "cardId": "enemy_jaw_worm_thrash",
+      "count": 2
     },
     {
-      "id": "bellow",
-      "kind": "Buff",
-      "nextMoveId": "chomp",
-      "effects": [
-        {
-          "action": "buff",
-          "scope": "self",
-          "name": "strength",
-          "amount": 4
-        },
-        {
-          "action": "block",
-          "scope": "self",
-          "amount": 6
-        }
-      ]
+      "cardId": "enemy_jaw_worm_bellow",
+      "count": 2
+    },
+    {
+      "cardId": "enemy_common_attack",
+      "count": 4
+    },
+    {
+      "cardId": "enemy_common_defend",
+      "count": 2
     }
   ]
 }

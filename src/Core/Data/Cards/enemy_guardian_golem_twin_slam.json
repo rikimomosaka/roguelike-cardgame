@@ -1,0 +1,32 @@
+{
+  "id": "enemy_guardian_golem_twin_slam",
+  "name": "双撃",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy guardian_golem unique (from move twin_slam)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 16
+          },
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 16
+          }
+        ]
+      }
+    }
+  ]
+}

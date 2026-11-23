@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text.Json;
 
 namespace RoguelikeCardGame.Server.Services;
 
@@ -43,7 +45,7 @@ public sealed class DevCardWriter
         var dir = Path.Combine(_overrideRoot, _subDir);
         Directory.CreateDirectory(dir);
         var path = Path.Combine(dir, $"{id}.json");
-        File.WriteAllText(path, json);
+        WriteAtomic(path, json);
     }
 
     /// <summary>override JSON を読む。存在しなければ null。</summary>
@@ -69,24 +71,28 @@ public sealed class DevCardWriter
         if (_baseDir is null)
             throw new InvalidOperationException("baseDir not configured.");
 
-        var basePath = Path.Combine(_baseDir, $"{id}.json");
+        var basePath = ResolveBasePath(id) ?? GetNewBasePath(id);
         if (_backupRoot is not null && File.Exists(basePath))
         {
             var backupDir = Path.Combine(_backupRoot, _subDir);
             Directory.CreateDirectory(backupDir);
             var ts = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff");
-            var backupPath = Path.Combine(backupDir, $"{id}-{ts}.json");
+            var safeBaseName = Path.GetFileNameWithoutExtension(basePath);
+            var backupPath = Path.Combine(
+                backupDir,
+                $"{safeBaseName}-{ts}-{Guid.NewGuid():N}.json");
             File.Copy(basePath, backupPath, overwrite: false);
         }
         Directory.CreateDirectory(_baseDir);
-        File.WriteAllText(basePath, json);
+        WriteAtomic(basePath, json);
     }
 
     /// <summary>base JSON を読む。baseDir 未設定や file 不在なら null。</summary>
     public string? ReadBase(string id)
     {
         if (_baseDir is null) return null;
-        var path = Path.Combine(_baseDir, $"{id}.json");
+        var path = ResolveBasePath(id);
+        if (path is null) return null;
         return File.Exists(path) ? File.ReadAllText(path) : null;
     }
 
@@ -99,18 +105,89 @@ public sealed class DevCardWriter
         if (_baseDir is null)
             throw new InvalidOperationException("baseDir not configured.");
 
-        var basePath = Path.Combine(_baseDir, $"{id}.json");
-        if (!File.Exists(basePath)) return;
+        var basePath = ResolveBasePath(id);
+        if (basePath is null) return;
 
         if (_backupRoot is not null)
         {
             var backupDir = Path.Combine(_backupRoot, _subDir);
             Directory.CreateDirectory(backupDir);
             var ts = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff");
-            var backupPath = Path.Combine(backupDir, $"{id}-deleted-{ts}.json");
+            var safeBaseName = Path.GetFileNameWithoutExtension(basePath);
+            var backupPath = Path.Combine(
+                backupDir,
+                $"{safeBaseName}-deleted-{ts}-{Guid.NewGuid():N}.json");
             File.Copy(basePath, backupPath, overwrite: false);
         }
         File.Delete(basePath);
+    }
+
+    /// <summary>
+    /// base directory 直下の JSON を root id で検索する。
+    /// ファイル名は編集履歴上の連番名などを許容し、同一 id が複数ある場合は
+    /// 曖昧なファイルを更新・削除しないよう例外にする。
+    /// </summary>
+    private string? ResolveBasePath(string id)
+    {
+        EnsureSafeId(id);
+        if (_baseDir is null || !Directory.Exists(_baseDir)) return null;
+
+        var matches = new List<string>();
+        foreach (var path in Directory.EnumerateFiles(_baseDir, "*.json", SearchOption.TopDirectoryOnly))
+        {
+            try
+            {
+                using var stream = File.OpenRead(path);
+                using var document = JsonDocument.Parse(stream);
+                if (document.RootElement.ValueKind == JsonValueKind.Object
+                    && document.RootElement.TryGetProperty("id", out var idElement)
+                    && idElement.ValueKind == JsonValueKind.String
+                    && string.Equals(idElement.GetString(), id, StringComparison.Ordinal))
+                {
+                    matches.Add(path);
+                }
+            }
+            catch (JsonException)
+            {
+                // 対象 id を宣言できない不正 JSON は、この検索では一致しない。
+                // 内容自体の検証とエラー表示は既存の authoring validation が担う。
+            }
+        }
+
+        return matches.Count switch
+        {
+            0 => null,
+            1 => matches[0],
+            _ => throw new InvalidOperationException(
+                $"Multiple base JSON files declare id '{id}': "
+                + string.Join(", ", matches.Select(Path.GetFileName).OrderBy(x => x, StringComparer.Ordinal)))
+        };
+    }
+
+    private string GetNewBasePath(string id)
+    {
+        EnsureSafeId(id);
+        var path = Path.Combine(_baseDir!, $"{id}.json");
+        if (File.Exists(path))
+        {
+            throw new InvalidOperationException(
+                $"Cannot create base id '{id}' because '{Path.GetFileName(path)}' already declares a different id.");
+        }
+
+        return path;
+    }
+
+    private static void EnsureSafeId(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id)
+            || Path.IsPathRooted(id)
+            || id is "." or ".."
+            || id.Contains('/')
+            || id.Contains('\\')
+            || id.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            throw new ArgumentException("id must be a safe file name segment.", nameof(id));
+        }
     }
 
     /// <summary>
@@ -128,6 +205,25 @@ public sealed class DevCardWriter
             ids.Add(Path.GetFileNameWithoutExtension(f));
         }
         return ids;
+    }
+
+    private static void WriteAtomic(string path, string json)
+    {
+        var directory = Path.GetDirectoryName(path)
+            ?? throw new InvalidOperationException("A destination directory is required.");
+        Directory.CreateDirectory(directory);
+        var temporaryPath = Path.Combine(
+            directory,
+            $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
+        try
+        {
+            File.WriteAllText(temporaryPath, json);
+            File.Move(temporaryPath, path, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
+        }
     }
 }
 

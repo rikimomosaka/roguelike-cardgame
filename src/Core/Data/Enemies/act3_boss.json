@@ -6,63 +6,33 @@
   "act": 3,
   "heightTier": 10,
   "tier": "Boss",
-  "initialMoveId": "wrath",
-  "moves": [
+  "attack": 12,
+  "defense": 26,
+  "initialEnergy": 0,
+  "energyPerTurn": 1,
+  "drawPerTurn": 3,
+  "handLimit": 5,
+  "aiProfileId": "low_cost_combo",
+  "deck": [
     {
-      "id": "wrath",
-      "kind": "Attack",
-      "nextMoveId": "storm",
-      "effects": [
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 30
-        }
-      ]
+      "cardId": "enemy_act3_boss_wrath",
+      "count": 2
     },
     {
-      "id": "storm",
-      "kind": "Attack",
-      "nextMoveId": "bulwark",
-      "effects": [
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 12
-        },
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 12
-        },
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 12
-        },
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 12
-        }
-      ]
+      "cardId": "enemy_act3_boss_storm",
+      "count": 2
     },
     {
-      "id": "bulwark",
-      "kind": "Defend",
-      "nextMoveId": "wrath",
-      "effects": [
-        {
-          "action": "block",
-          "scope": "self",
-          "amount": 26
-        }
-      ]
+      "cardId": "enemy_act3_boss_bulwark",
+      "count": 2
+    },
+    {
+      "cardId": "enemy_common_attack",
+      "count": 4
+    },
+    {
+      "cardId": "enemy_common_defend",
+      "count": 2
     }
   ]
 }

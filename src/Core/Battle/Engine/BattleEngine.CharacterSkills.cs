@@ -4,6 +4,8 @@ using System.Collections.Immutable;
 using System.Linq;
 using RoguelikeCardGame.Core.Battle.Events;
 using RoguelikeCardGame.Core.Battle.State;
+using RoguelikeCardGame.Core.Battle.Statuses;
+using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Data;
 
 namespace RoguelikeCardGame.Core.Battle.Engine;
@@ -12,7 +14,7 @@ public static partial class BattleEngine
 {
     public const int MaxComboGauge = 10;
     public const int TacticalSkillGaugeCost = 3;
-    public const int UltimateSkillGaugeCost = 10;
+    public const int UltimateSkillGaugeCost = 6;
     public const string TacticalSkillId = "tactical";
     public const string UltimateSkillId = "ultimate";
 
@@ -23,10 +25,47 @@ public static partial class BattleEngine
     public static (BattleState, IReadOnlyList<BattleEvent>) UseTacticalSkill(
         BattleState state)
     {
+        RejectIfParticipantReady(
+            state, participantId: null, "UseTacticalSkill");
+        var (next, events) = UseTacticalSkillForActor(
+            state, casterActorInstanceId: null);
+        if (!next.Participants.IsDefaultOrEmpty)
+        {
+            next = BattleParticipantAccess.CommitRootToParticipant(
+                next, next.Participants[0].ParticipantId);
+        }
+        (next, events) = ApplyOutcomeAfterPlanningCommand(next, events);
+        return (IncrementActionRevision(next), events);
+    }
+
+    public static (BattleState, IReadOnlyList<BattleEvent>) UseTacticalSkill(
+        BattleState state,
+        string participantId)
+    {
+        if (!BattleParticipantAccess.TryGet(state, participantId, out var participant))
+            throw new InvalidOperationException(
+                $"Battle participant '{participantId}' does not exist.");
+        RejectIfParticipantReady(state, participantId, "UseTacticalSkill");
+        var projected = BattleParticipantAccess.ProjectToRoot(state, participantId);
+        var (processed, events) = UseTacticalSkillForActor(
+            projected, participant.ActorInstanceId);
+        var committed = BattleParticipantAccess.CommitRootToParticipant(
+            processed, participantId);
+        (committed, events) = ApplyOutcomeAfterPlanningCommand(
+            committed, events);
+        return (IncrementActionRevision(committed), events);
+    }
+
+    private static (BattleState, IReadOnlyList<BattleEvent>)
+        UseTacticalSkillForActor(
+        BattleState state,
+        string? casterActorInstanceId)
+    {
         var (hero, heroIndex) = ValidateCharacterSkillUse(
             state, TacticalSkillId, TacticalSkillGaugeCost,
             requireCardsInHand: false,
-            oncePerTurn: TacticalSkillOncePerTurn);
+            oncePerTurn: TacticalSkillOncePerTurn,
+            casterActorInstanceId: casterActorInstanceId);
         var source = CharacterSkillSource(hero, TacticalSkillId);
 
         int currentStrength = hero.GetStatus("strength");
@@ -54,18 +93,27 @@ public static partial class BattleEngine
         if (newOmnistrike != currentOmnistrike)
             statusSources = statusSources.SetItem("omnistrike", source);
 
+        var statusDisplayOrder = BattleStatusRules.NormalizeStatusDisplayOrder(hero);
+        if (currentStrength == 0 && newStrength != 0)
+            statusDisplayOrder = statusDisplayOrder.Remove("strength").Add("strength");
+        if (currentOmnistrike == 0 && newOmnistrike != 0)
+            statusDisplayOrder = statusDisplayOrder.Remove("omnistrike").Add("omnistrike");
+
         var updatedHero = hero with
         {
             Statuses = statuses,
             StatusSources = statusSources,
+            StatusDisplayOrder = statusDisplayOrder,
         };
         int remainingGauge = state.ComboGauge - TacticalSkillGaugeCost;
+        var tacticalUse = MarkCharacterSkillUsed(
+            state, TacticalSkillId, TacticalSkillOncePerTurn ? 1 : 0);
         var next = state with
         {
             Allies = state.Allies.SetItem(heroIndex, updatedHero),
             ComboGauge = remainingGauge,
-            UsedCharacterSkillIdsThisTurn = MarkCharacterSkillUsed(
-                state, TacticalSkillId, TacticalSkillOncePerTurn),
+            UsedCharacterSkillIdsThisTurn = tacticalUse.UsedIds,
+            CharacterSkillUsesThisTurn = tacticalUse.Counts,
         };
 
         var events = CharacterSkillEvents(
@@ -95,6 +143,25 @@ public static partial class BattleEngine
                 Source: source));
         }
 
+        var appliedBuffs = new List<StatusChange>(capacity: 2);
+        if (newStrength > currentStrength)
+            appliedBuffs.Add(new StatusChange(
+                BattleStatusIds.Strength,
+                newStrength - currentStrength));
+        if (newOmnistrike > currentOmnistrike)
+            appliedBuffs.Add(new StatusChange(
+                BattleStatusIds.Omnistrike,
+                newOmnistrike - currentOmnistrike));
+        int order = events.Count;
+        next = PositiveBuffApplicationRules.ApplyResonance(
+            next,
+            hero.InstanceId,
+            hero.GetStatus(BattleStatusIds.Resonance),
+            appliedBuffs,
+            source,
+            events,
+            ref order);
+
         return (next, events);
     }
 
@@ -105,10 +172,49 @@ public static partial class BattleEngine
     public static (BattleState, IReadOnlyList<BattleEvent>) UseUltimateSkill(
         BattleState state, DataCatalog catalog)
     {
+        RejectIfParticipantReady(
+            state, participantId: null, "UseUltimateSkill");
+        var (next, events) = UseUltimateSkillForActor(
+            state, casterActorInstanceId: null, catalog: catalog);
+        if (!next.Participants.IsDefaultOrEmpty)
+        {
+            next = BattleParticipantAccess.CommitRootToParticipant(
+                next, next.Participants[0].ParticipantId);
+        }
+        (next, events) = ApplyOutcomeAfterPlanningCommand(next, events);
+        return (IncrementActionRevision(next), events);
+    }
+
+    public static (BattleState, IReadOnlyList<BattleEvent>) UseUltimateSkill(
+        BattleState state,
+        string participantId,
+        DataCatalog catalog)
+    {
+        if (!BattleParticipantAccess.TryGet(state, participantId, out var participant))
+            throw new InvalidOperationException(
+                $"Battle participant '{participantId}' does not exist.");
+        RejectIfParticipantReady(state, participantId, "UseUltimateSkill");
+        var projected = BattleParticipantAccess.ProjectToRoot(state, participantId);
+        var (processed, events) = UseUltimateSkillForActor(
+            projected, participant.ActorInstanceId, catalog);
+        var committed = BattleParticipantAccess.CommitRootToParticipant(
+            processed, participantId);
+        (committed, events) = ApplyOutcomeAfterPlanningCommand(
+            committed, events);
+        return (IncrementActionRevision(committed), events);
+    }
+
+    private static (BattleState, IReadOnlyList<BattleEvent>)
+        UseUltimateSkillForActor(
+        BattleState state,
+        string? casterActorInstanceId,
+        DataCatalog catalog)
+    {
         var (hero, _) = ValidateCharacterSkillUse(
             state, UltimateSkillId, UltimateSkillGaugeCost,
-            requireCardsInHand: true,
-            oncePerTurn: UltimateSkillOncePerTurn);
+            requireCardsInHand: false,
+            oncePerTurn: UltimateSkillOncePerTurn,
+            casterActorInstanceId: casterActorInstanceId);
         var source = CharacterSkillSource(hero, UltimateSkillId);
         var hand = state.Hand.ToBuilder();
         var modified = new List<(string InstanceId, long Delta)>();
@@ -131,12 +237,14 @@ public static partial class BattleEngine
             modified.Add((card.InstanceId, delta));
         }
         int remainingGauge = state.ComboGauge - UltimateSkillGaugeCost;
+        var ultimateUse = MarkCharacterSkillUsed(
+            state, UltimateSkillId, UltimateSkillOncePerTurn ? 1 : 0);
         var next = state with
         {
             ComboGauge = remainingGauge,
             Hand = hand.ToImmutable(),
-            UsedCharacterSkillIdsThisTurn = MarkCharacterSkillUsed(
-                state, UltimateSkillId, UltimateSkillOncePerTurn),
+            UsedCharacterSkillIdsThisTurn = ultimateUse.UsedIds,
+            CharacterSkillUsesThisTurn = ultimateUse.Counts,
         };
 
         var events = CharacterSkillEvents(
@@ -157,7 +265,8 @@ public static partial class BattleEngine
 
     private static (CombatActor Hero, int Index) ValidateCharacterSkillUse(
         BattleState state, string skillId, int requiredGauge,
-        bool requireCardsInHand, bool oncePerTurn)
+        bool requireCardsInHand, bool oncePerTurn,
+        string? casterActorInstanceId = null)
     {
         ValidateComboTrackingState(state);
         if (state.Outcome != RoguelikeCardGame.Core.Battle.State.BattleOutcome.Pending)
@@ -169,7 +278,7 @@ public static partial class BattleEngine
         if (state.PendingCardPlay is not null)
             throw new InvalidOperationException(
                 "Cannot use character skill while PendingCardPlay is set");
-        if (oncePerTurn && state.UsedCharacterSkillIdsThisTurn.Contains(skillId))
+        if (oncePerTurn && CharacterSkillUseCount(state, skillId) >= 1)
             throw new InvalidOperationException(
                 $"Character skill '{skillId}' can only be used once per turn");
         if (state.ComboGauge < requiredGauge)
@@ -179,18 +288,43 @@ public static partial class BattleEngine
             throw new InvalidOperationException(
                 "Cannot use ultimate skill with an empty hand");
 
-        var owner = ProvisionalSoloHeroOwnerResolver.Resolve(state);
-        return owner is not null
-            ? (owner.Hero, owner.AllyIndex)
-            : throw new InvalidOperationException(
-                "Character skill requires a living hero");
+        int actorIndex;
+        CombatActor actor;
+        if (casterActorInstanceId is null)
+        {
+            var owner = ProvisionalSoloHeroOwnerResolver.Resolve(state)
+                ?? throw new InvalidOperationException(
+                    "Character skill requires a living hero");
+            actor = owner.Hero;
+            actorIndex = owner.AllyIndex;
+        }
+        else
+        {
+            actorIndex = FindLivingParticipantCasterIndex(
+                state, casterActorInstanceId);
+            actor = state.Allies[actorIndex];
+        }
+        if (actor.GetStatus(BattleStatusIds.Seal) > 0)
+            throw new InvalidOperationException(
+                $"Character skill '{skillId}' is sealed");
+        return (actor, actorIndex);
     }
 
-    private static ImmutableHashSet<string> MarkCharacterSkillUsed(
-        BattleState state, string skillId, bool oncePerTurn) =>
-        oncePerTurn
+    private static (ImmutableHashSet<string> UsedIds, ImmutableDictionary<string, int> Counts)
+        MarkCharacterSkillUsed(BattleState state, string skillId, int usesPerTurn)
+    {
+        int count = CharacterSkillUseCount(state, skillId) + 1;
+        var counts = state.CharacterSkillUsesThisTurn.SetItem(skillId, count);
+        var used = usesPerTurn > 0
             ? state.UsedCharacterSkillIdsThisTurn.Add(skillId)
             : state.UsedCharacterSkillIdsThisTurn;
+        return (used, counts);
+    }
+
+    private static int CharacterSkillUseCount(BattleState state, string skillId) =>
+        state.CharacterSkillUsesThisTurn.TryGetValue(skillId, out var count)
+            ? count
+            : state.UsedCharacterSkillIdsThisTurn.Contains(skillId) ? 1 : 0;
 
     private static void ValidateComboTrackingState(BattleState state)
     {

@@ -18,6 +18,9 @@ import { restHeal, restUpgrade } from '../api/rest'
 import { chooseActStartRelic, enterActStart } from '../api/actStart'
 import { applyDebugDamage } from '../api/debug'
 import type { MapNodeDto, RunSnapshotDto, RunResultDto, TileKind } from '../api/types'
+import { useAudio } from '../audio'
+import { BGM_TRACKS, selectSe } from '../audio/audioManifest'
+import { resolveMapBgmScene } from '../audio/audioScene'
 import { useAccount } from '../context/AccountContext'
 import { useRelicCatalog } from '../hooks/useRelicCatalog'
 import { Button } from '../components/Button'
@@ -96,6 +99,7 @@ function nodeTooltipFor(kind: TileKind, resolvedKind: TileKind | null): string {
 
 export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, onRunFinished }: Props) {
   const { accountId } = useAccount()
+  const { playBgm, playSe, setBgmDuck, stopBgm } = useAudio()
   const [snap, setSnap] = useState<RunSnapshotDto>(snapshot)
   const { names: relicNames, catalog: relicCatalog } = useRelicCatalog()
   const relicDescriptions = relicCatalog
@@ -129,6 +133,8 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
   const [zoom, setZoom] = useState(1)
   const [actBanner, setActBanner] = useState<number | null>(null)
   const [actStartRelicDismissed, setActStartRelicDismissed] = useState(false)
+  const [travel, setTravel] = useState<{ fromId: number; toId: number } | null>(null)
+  const [busyLabel, setBusyLabel] = useState<string | null>(null)
   const [pendingFinish, setPendingFinish] = useState<
     | { kind: 'gameover'; result: RunResultDto; cause: 'hp' }
     | { kind: 'abandon'; result: RunResultDto | null }
@@ -145,21 +151,30 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
 
   const toggleMenu = useCallback(() => setMenuOpen(v => !v), [])
 
-  useEffect(() => {
+  const clampPan = useCallback((value: { x: number; y: number }, atZoom = zoom) => {
     const stage = stageRef.current
-    if (!stage) return
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault()
-      setZoom(z => Math.max(0.6, Math.min(2.0, z + (e.deltaY < 0 ? 0.1 : -0.1))))
+    if (!stage || stage.clientWidth <= 0 || stage.clientHeight <= 0) return value
+    // The route is three viewports tall and intentionally allows the first and
+    // last floor to be centred. These bounds keep the map recoverable without
+    // preventing that edge-to-centre travel.
+    const xLimit = 48 + stage.clientWidth * Math.max(0, atZoom - 1) * 0.5
+    const yLimit = stage.clientHeight * 1.55 * atZoom
+    return {
+      x: Math.max(-xLimit, Math.min(xLimit, value.x)),
+      y: Math.max(-yLimit, Math.min(yLimit, value.y)),
     }
-    stage.addEventListener('wheel', onWheel, { passive: false })
-    return () => stage.removeEventListener('wheel', onWheel)
-  }, [])
+  }, [zoom])
+
+  const setZoomClamped = useCallback((next: number) => {
+    const value = Math.max(0.6, Math.min(2, next))
+    setZoom(value)
+    setPan(current => clampPan(current, value))
+  }, [clampPan])
 
   function onStagePointerDown(e: ReactPointerEvent<HTMLDivElement>) {
     if (e.button !== 0) return
     const target = e.target as HTMLElement
-    if (target.closest('.map-screen__node')) return
+    if (target.closest('.map-screen__node, .map-screen__controls')) return
     dragRef.current = {
       startX: e.clientX,
       startY: e.clientY,
@@ -176,7 +191,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
     const dx = e.clientX - d.startX
     const dy = e.clientY - d.startY
     if (!d.moved && Math.hypot(dx, dy) > 3) d.moved = true
-    setPan({ x: d.startPan.x + dx, y: d.startPan.y + dy })
+    setPan(clampPan({ x: d.startPan.x + dx, y: d.startPan.y + dy }))
   }
 
   function onStagePointerUp(e: ReactPointerEvent<HTMLDivElement>) {
@@ -290,6 +305,12 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
     return () => window.clearTimeout(t)
   }, [currentActValue, atStartNode])
 
+  useEffect(() => {
+    const onResize = () => setPan(current => clampPan(current))
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [clampPan])
+
   // GAME OVER intermission: show the end-of-run banner for 2s before the
   // parent transitions to the result screen. Triggered for HP=0 (gameover)
   // and abandon. Cleared (boss kill) bypasses this and goes straight to the
@@ -312,6 +333,24 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
   const activeBattleKey = activeBattle
     ? `${snap.run.currentNodeId}:${activeBattle.encounterId}`
     : null
+
+  // The stage is unmounted while the battle view is open and mounted again
+  // after returning. Rebind the wheel handler to that new DOM node; a []
+  // effect would keep the old (detached) node and zoom would stop working.
+  useEffect(() => {
+    const stage = stageRef.current
+    if (!stage) return
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      setZoom(z => {
+        const next = Math.max(0.6, Math.min(2.0, z + (e.deltaY < 0 ? 0.1 : -0.1)))
+        setPan(current => clampPan(current, next))
+        return next
+      })
+    }
+    stage.addEventListener('wheel', onWheel, { passive: false })
+    return () => stage.removeEventListener('wheel', onWheel)
+  }, [activeBattleKey, peekMap, clampPan])
   const battleTicks = activeBattleKey !== null && battleClock.key === activeBattleKey
     ? battleClock.ticks
     : 0
@@ -336,6 +375,31 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
   const eventVisible = activeEvent !== null && !eventDismissed
   const restVisible = activeRestPending && !restDismissed
   const actStartRelicVisible = activeActStartRelicChoice !== null && !actStartRelicDismissed
+  const resolvedCurrentNodeKind = currentNode.kind === 'Unknown'
+    ? (snap.run.unknownResolutions[currentNode.id] ?? null)
+    : null
+  const bgmScene = resolveMapBgmScene({
+    activeBattle: activeBattle !== null,
+    currentNodeKind: currentNode.kind,
+    resolvedNodeKind: resolvedCurrentNodeKind,
+    merchantVisible,
+  })
+
+  useEffect(() => {
+    if (pendingFinish?.kind === 'gameover') {
+      stopBgm({ fadeMs: 500 })
+      return
+    }
+    playBgm(BGM_TRACKS[bgmScene], {
+      fadeMs: bgmScene.startsWith('battle') ? 600 : 800,
+    })
+  }, [bgmScene, pendingFinish?.kind, playBgm, stopBgm])
+
+  useEffect(() => {
+    setBgmDuck(menuOpen ? 0.6 : 1, 140)
+    return () => setBgmDuck(1, 80)
+  }, [menuOpen, setBgmDuck])
+
   // 選択未完了の間は (popup を一旦閉じていても) 移動を禁止する。
   const choicePending = activeActStartRelicChoice !== null
   // Closing a required-choice popup only hides it; it does not resolve the
@@ -396,6 +460,8 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
       try {
         const next = await enterActStart(accountId)
         setSnap(next)
+      } catch {
+        setShopMessage('開始地点へ入れませんでした。')
       } finally { setBusy(false) }
       return
     }
@@ -409,6 +475,8 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
     }
     if (!isSelectable(n)) return
     setBusy(true)
+    setBusyLabel(`${nodeTooltipFor(n.kind, null)}へ移動中…`)
+    setTravel({ fromId: currentNode.id, toId: n.id })
     try {
       if (activeReward) {
         await proceedReward(accountId, elapsedSeconds())
@@ -424,26 +492,33 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
       setEventDismissed(false)
       setRestDismissed(false)
       setActStartRelicDismissed(false)
+    } catch {
+      setShopMessage('移動できませんでした。もう一度お試しください。')
     } finally {
       setBusy(false)
+      setBusyLabel(null)
+      setTravel(null)
     }
   }
 
   async function handleClaimGold() {
     if (!accountId) return
     await claimGold(accountId)
+    void playSe(selectSe('reward', `gold:${snap.run.currentNodeId}`))
     await refresh()
   }
 
   async function handleClaimPotion() {
     if (!accountId) return
     await claimPotion(accountId)
+    void playSe(selectSe('reward', `potion:${snap.run.currentNodeId}`))
     await refresh()
   }
 
   async function handlePickCard(cardId: string) {
     if (!accountId) return
     await pickCard(accountId, cardId)
+    void playSe(selectSe('reward', cardId))
     await refresh()
   }
 
@@ -480,30 +555,35 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
   async function handleUsePotionOutsideBattle(slotIndex: number) {
     if (!accountId || activeBattle) return
     await consumePotionOutsideBattle(accountId, slotIndex)
+    void playSe(selectSe('potion', slotIndex))
     await refresh()
   }
 
   async function handleClaimRelic() {
     if (!accountId) return
     await claimRelic(accountId)
+    void playSe(selectSe('reward', `relic:${snap.run.currentNodeId}`))
     await refresh()
   }
 
   async function handleRerollCard() {
     if (!accountId) return
     const next = await rerollCardChoices(accountId)
+    void playSe(selectSe('cardShuffle', snap.run.currentNodeId))
     setSnap(next)
   }
 
   async function handleBuy(kind: 'card' | 'relic' | 'potion', id: string) {
     if (!accountId) return
     await buyFromMerchant(accountId, { kind, id })
+    void playSe(selectSe('purchase', `${kind}:${id}`))
     await refresh()
   }
 
   async function handleDiscardAtMerchant(deckIndex: number) {
     if (!accountId) return
     await discardAtMerchant(accountId, deckIndex)
+    void playSe(selectSe('cardDiscard', deckIndex))
     await refresh()
   }
 
@@ -526,12 +606,14 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
   async function handleRestHeal() {
     if (!accountId) return
     await restHeal(accountId)
+    void playSe(selectSe('heal', snap.run.currentNodeId))
     await refresh()
   }
 
   async function handleRestUpgrade(deckIndex: number) {
     if (!accountId) return
     await restUpgrade(accountId, deckIndex)
+    void playSe(selectSe('cardUpgrade', deckIndex))
     await refresh()
   }
 
@@ -646,6 +728,26 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
           onPointerCancel={onStagePointerUp}
           style={{ cursor: dragging ? 'grabbing' : 'grab' }}
         >
+          <div className="map-screen__controls" aria-label="マップ表示操作">
+            <button type="button" onClick={() => setZoomClamped(zoom + 0.2)} aria-label="拡大">＋</button>
+            <output aria-label="ズーム率">{Math.round(zoom * 100)}%</output>
+            <button type="button" onClick={() => setZoomClamped(zoom - 0.2)} aria-label="縮小">－</button>
+            <button
+              type="button"
+              onClick={() => {
+                const stage = stageRef.current
+                if (!stage) return
+                const p = posViewBox(currentNode)
+                setPan(clampPan({
+                  x: (50 - p.x) / 100 * stage.clientWidth * zoom,
+                  y: (50 - (-100 + p.y * 3)) / 100 * stage.clientHeight * zoom,
+                }))
+              }}
+              aria-label="現在地を中央に戻す"
+            >
+              ◎
+            </button>
+          </div>
           <div className="map-screen__act-badge" aria-hidden="true">
             <span className="k">ACT</span>
             <span className="v">{snap.run.currentAct}</span>
@@ -689,6 +791,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
                   // vector-effect="non-scaling-stroke" 化で px 換算したら
                   // 細すぎたため、斜道相当の見た目に合わせて太く。
                   // outer (黒縁) は inner (色) より太く描画して縁取り効果を出す。
+                  const edgeState = visitedEdge ? 'is-traced' : nextEdge ? 'is-next' : 'is-far'
                   return (
                     <g key={`${n.id}-${toId}`}>
                       <line
@@ -700,6 +803,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
                         vectorEffect="non-scaling-stroke"
                       />
                       <line
+                        className={`map-screen__edge ${edgeState}`}
                         x1={a.x} y1={a.y} x2={b.x} y2={b.y}
                         stroke={stroke}
                         strokeOpacity={1}
@@ -711,6 +815,31 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
                   )
                 }),
               )}
+              {travel && (() => {
+                const from = snap.map.nodes.find(node => node.id === travel.fromId)
+                const to = snap.map.nodes.find(node => node.id === travel.toId)
+                if (!from || !to) return null
+                const a = posViewBox(from)
+                const b = posViewBox(to)
+                return (
+                  <circle className="map-screen__travel-dot" r="1.15" cx={a.x} cy={a.y}>
+                    <animate
+                      attributeName="cx"
+                      from={a.x}
+                      to={b.x}
+                      dur="500ms"
+                      fill="freeze"
+                    />
+                    <animate
+                      attributeName="cy"
+                      from={a.y}
+                      to={b.y}
+                      dur="500ms"
+                      fill="freeze"
+                    />
+                  </circle>
+                )
+              })()}
             </svg>
 
             {snap.map.nodes.map((n) => {
@@ -795,6 +924,11 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
             <div className="map-screen__key-row"><span className="map-screen__key-sym"><img src="/icons/tiles/unknown.png" alt="" /></span><span>不明</span></div>
             <div className="map-screen__key-row"><span className="map-screen__key-sym k--boss"><img src="/icons/tiles/boss.png" alt="" /></span><span>ボス</span></div>
           </div>
+          {busyLabel && (
+            <div className="map-screen__travel-status" role="status" aria-live="polite">
+              <span aria-hidden="true">◆</span> {busyLabel}
+            </div>
+          )}
         </div>
 
         {atBoss && !activeBattle && !activeReward && (
@@ -871,6 +1005,7 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
           <RestScreen
             deck={snap.run.deck}
             completed={snap.run.activeRestCompleted}
+            healPreview={snap.run.restHealPreview}
             onHeal={handleRestHeal}
             onUpgrade={handleRestUpgrade}
             onClose={handleCloseRest}

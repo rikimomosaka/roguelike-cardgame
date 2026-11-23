@@ -12,6 +12,9 @@ namespace RoguelikeCardGame.Core.Tests.Rewards;
 public class RewardApplierTests
 {
     private static readonly DataCatalog Cat = EmbeddedDataLoader.LoadCatalog();
+    private const string ChoiceOne = "striker_common_step_in";
+    private const string ChoiceTwo = "striker_common_chain_fang";
+    private const string ChoiceThree = "striker_common_rising_break";
 
     private static DataCatalog BuildCatalogWithFakeRelic(
         string id,
@@ -57,17 +60,17 @@ public class RewardApplierTests
     [Fact]
     public void PickCard_AddsToDeckAndMarksClaimed()
     {
-        var choices = ImmutableArray.Create("reward_common_01", "reward_common_02", "reward_common_03");
+        var choices = ImmutableArray.Create(ChoiceOne, ChoiceTwo, ChoiceThree);
         var s = StateWithReward(new RewardState(0, true, null, true, choices, CardRewardStatus.Pending));
-        var next = RewardApplier.PickCard(s, "reward_common_02", Cat);
-        Assert.Contains(next.Deck, ci => ci.Id == "reward_common_02");
+        var next = RewardApplier.PickCard(s, ChoiceTwo, Cat);
+        Assert.Contains(next.Deck, ci => ci.Id == ChoiceTwo);
         Assert.Equal(CardRewardStatus.Claimed, next.ActiveReward!.CardStatus);
     }
 
     [Fact]
     public void PickCard_UnknownChoice_Throws()
     {
-        var choices = ImmutableArray.Create("reward_common_01");
+        var choices = ImmutableArray.Create(ChoiceOne);
         var s = StateWithReward(new RewardState(0, true, null, true, choices, CardRewardStatus.Pending));
         Assert.Throws<System.ArgumentException>(() => RewardApplier.PickCard(s, "reward_common_99", Cat));
     }
@@ -86,7 +89,7 @@ public class RewardApplierTests
     {
         // Phase 5 UX: Proceed must succeed even when gold/potion/card are unresolved,
         // so the player can always dismiss the reward popup.
-        var choices = ImmutableArray.Create("reward_common_01", "reward_common_02", "reward_common_03");
+        var choices = ImmutableArray.Create(ChoiceOne, ChoiceTwo, ChoiceThree);
         var s = StateWithReward(new RewardState(15, false, "health_potion", false, choices, CardRewardStatus.Pending));
         var next = RewardApplier.Proceed(s);
         Assert.Null(next.ActiveReward);
@@ -96,19 +99,19 @@ public class RewardApplierTests
     public void PickCard_AfterSkip_AllowsClaim()
     {
         // Phase 5 UX: skipping is reversible until the player moves to the next node.
-        var choices = ImmutableArray.Create("reward_common_01", "reward_common_02", "reward_common_03");
+        var choices = ImmutableArray.Create(ChoiceOne, ChoiceTwo, ChoiceThree);
         var s = StateWithReward(new RewardState(0, true, null, true, choices, CardRewardStatus.Skipped));
-        var next = RewardApplier.PickCard(s, "reward_common_02", Cat);
-        Assert.Contains(next.Deck, ci => ci.Id == "reward_common_02");
+        var next = RewardApplier.PickCard(s, ChoiceTwo, Cat);
+        Assert.Contains(next.Deck, ci => ci.Id == ChoiceTwo);
         Assert.Equal(CardRewardStatus.Claimed, next.ActiveReward!.CardStatus);
     }
 
     [Fact]
     public void PickCard_AfterClaim_Throws()
     {
-        var choices = ImmutableArray.Create("reward_common_01", "reward_common_02", "reward_common_03");
+        var choices = ImmutableArray.Create(ChoiceOne, ChoiceTwo, ChoiceThree);
         var s = StateWithReward(new RewardState(0, true, null, true, choices, CardRewardStatus.Claimed));
-        Assert.Throws<System.InvalidOperationException>(() => RewardApplier.PickCard(s, "reward_common_02", Cat));
+        Assert.Throws<System.InvalidOperationException>(() => RewardApplier.PickCard(s, ChoiceTwo, Cat));
     }
 
     [Fact]

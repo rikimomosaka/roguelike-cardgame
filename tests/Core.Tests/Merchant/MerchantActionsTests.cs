@@ -15,6 +15,7 @@ namespace RoguelikeCardGame.Core.Tests.Merchant;
 public class MerchantActionsTests
 {
     private static readonly DataCatalog Catalog = EmbeddedDataLoader.LoadCatalog();
+    private const string ShopCardId = "striker_common_step_in";
 
     private static RunState BaseWithInventory(int gold = 500) =>
         (RunState.NewSoloRun(
@@ -29,7 +30,7 @@ public class MerchantActionsTests
 
     private static MerchantInventory MakeInventory() => new(
         Cards: ImmutableArray.Create(
-            new MerchantOffer("card", "reward_common_01", 50, false)),
+            new MerchantOffer("card", ShopCardId, 50, false)),
         Relics: ImmutableArray.Create(
             new MerchantOffer("relic", "extra_max_hp", 150, false)),
         Potions: ImmutableArray.Create(
@@ -65,9 +66,9 @@ public class MerchantActionsTests
     public void BuyCard_SufficientGold_AddsCardDeductsGoldMarksSold()
     {
         var s0 = BaseWithInventory(500);
-        var s1 = MerchantActions.BuyCard(s0, "reward_common_01", Catalog);
+        var s1 = MerchantActions.BuyCard(s0, ShopCardId, Catalog);
         Assert.Equal(450, s1.Gold);
-        Assert.Contains(s1.Deck, c => c.Id == "reward_common_01");
+        Assert.Contains(s1.Deck, c => c.Id == ShopCardId);
         Assert.True(s1.ActiveMerchant!.Cards[0].Sold);
     }
 
@@ -76,16 +77,16 @@ public class MerchantActionsTests
     {
         var s0 = BaseWithInventory(30);
         Assert.Throws<InvalidOperationException>(() =>
-            MerchantActions.BuyCard(s0, "reward_common_01", Catalog));
+            MerchantActions.BuyCard(s0, ShopCardId, Catalog));
     }
 
     [Fact]
     public void BuyCard_AlreadySold_Throws()
     {
         var s0 = BaseWithInventory(500);
-        var s1 = MerchantActions.BuyCard(s0, "reward_common_01", Catalog);
+        var s1 = MerchantActions.BuyCard(s0, ShopCardId, Catalog);
         Assert.Throws<InvalidOperationException>(() =>
-            MerchantActions.BuyCard(s1, "reward_common_01", Catalog));
+            MerchantActions.BuyCard(s1, ShopCardId, Catalog));
     }
 
     [Fact]
@@ -104,17 +105,17 @@ public class MerchantActionsTests
             id: "card_collector",
             effects: new[] { new CardEffect(
                 "gainGold", EffectScope.Self, null, 3, Trigger: "OnCardAddedToDeck") });
-        var s0 = MakeBuyCardState(fake, cardId: "strike", price: 50) with
+        var s0 = MakeBuyCardState(fake, cardId: "basic_attack", price: 50) with
         {
             Gold = 100,
             Relics = new List<string> { "card_collector" }
         };
 
-        var s1 = MerchantActions.BuyCard(s0, "strike", fake);
+        var s1 = MerchantActions.BuyCard(s0, "basic_attack", fake);
 
         // 100 - 50 (price) + 3 (relic gainGold on OnCardAddedToDeck) = 53
         Assert.Equal(53, s1.Gold);
-        Assert.Contains(s1.Deck, c => c.Id == "strike");
+        Assert.Contains(s1.Deck, c => c.Id == "basic_attack");
     }
 
     [Fact]
@@ -225,7 +226,7 @@ public class MerchantActionsTests
     {
         var s0 = BaseWithInventory(500);
         var s1 = MerchantActions.Leave(s0);
-        var s2 = MerchantActions.BuyCard(s1, "reward_common_01", Catalog);
+        var s2 = MerchantActions.BuyCard(s1, ShopCardId, Catalog);
         Assert.Equal(450, s2.Gold);
         Assert.True(s2.ActiveMerchant!.Cards[0].Sold);
     }

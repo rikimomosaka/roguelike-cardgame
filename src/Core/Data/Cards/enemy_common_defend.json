@@ -1,0 +1,26 @@
+{
+  "id": "enemy_common_defend",
+  "name": "通常防御",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy common action",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 0,
+            "amountSource": "selfDefense"
+          }
+        ]
+      }
+    }
+  ]
+}

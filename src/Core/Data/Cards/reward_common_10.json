@@ -1,25 +1,51 @@
 {
-    "id":  "reward_common_10",
-    "name":  "気合溜め",
-    "displayName":  null,
-    "activeVersion":  "v1",
-    "versions":  [
-                     {
-                         "version":  "v1",
-                         "createdAt":  "2026-05-01T03:54:50Z",
-                         "label":  "original",
-                         "spec":  {
-                                      "rarity":  1,
-                                      "cardType":  "Skill",
-                                      "cost":  1,
-                                      "effects":  [
-                                                      {
-                                                          "action":  "gainEnergy",
-                                                          "scope":  "self",
-                                                          "amount":  1
-                                                      }
-                                                  ]
-                                  }
-                     }
-                 ]
+  "id": "tactician_common_foresight",
+  "name": "先読み",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Tactician",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Skill",
+        "cost": 1,
+        "usesPerTurn": 1,
+        "upgradedUsesPerTurn": 1,
+        "effects": [
+          {
+            "action": "draw",
+            "scope": "self",
+            "amount": 2
+          },
+          {
+            "action": "discard",
+            "scope": "random",
+            "amount": 1,
+            "select": "random"
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "draw",
+            "scope": "self",
+            "amount": 3
+          },
+          {
+            "action": "discard",
+            "scope": "random",
+            "amount": 1,
+            "select": "random"
+          }
+        ]
+      }
+    }
+  ]
 }

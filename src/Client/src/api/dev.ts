@@ -15,6 +15,7 @@ export type DevCardDto = {
   id: string
   name: string
   displayName: string | null
+  poolClass?: import('./catalog').CardPoolClass | null
   activeVersion: string
   versions: DevCardVersionDto[]
 }
@@ -107,6 +108,8 @@ export type DevMeta = {
   cardTypes: string[]
   rarities: { value: number; label: string }[]
   effectActions: string[]
+  cardAbilities: string[]
+  contingencyTriggerTimings: string[]
   effectScopes: string[]
   effectSides: string[]
   piles: string[]
@@ -115,7 +118,7 @@ export type DevMeta = {
   triggers: string[]
   amountSources: string[]
   keywords: { id: string; name: string; description: string }[]
-  statuses: { id: string; jp: string }[]
+  statuses: { id: string; jp: string; kind: string }[]
 }
 
 /** GET /api/dev/meta — Form 用 enum リスト取得。 */

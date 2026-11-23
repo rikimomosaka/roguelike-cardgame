@@ -22,4 +22,9 @@ public sealed record PendingChoiceDto(
 /// Phase 10.5.M2-Choose: POST /battle/resolve-card-choice の request body。
 /// </summary>
 public sealed record ResolveCardChoiceRequestDto(
-    string[] SelectedInstanceIds);
+    string[] SelectedInstanceIds,
+    string? ParticipantId = null,
+    string? ActorInstanceId = null,
+    string? PendingCardInstanceId = null,
+    string? CommandId = null,
+    long? ExpectedRevision = null);

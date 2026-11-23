@@ -1,0 +1,51 @@
+{
+  "id": "enhancer_common_vitality_infusion",
+  "name": "活力注入",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Enhancer",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 4
+          },
+          {
+            "action": "buff",
+            "scope": "single",
+            "side": "ally",
+            "name": "vigor",
+            "amount": 1
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 7
+          },
+          {
+            "action": "buff",
+            "scope": "single",
+            "side": "ally",
+            "name": "vigor",
+            "amount": 2
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,25 +1,57 @@
 {
-    "id":  "reward_epic_05",
-    "name":  "絶対防壁",
-    "displayName":  null,
-    "activeVersion":  "v1",
-    "versions":  [
-                     {
-                         "version":  "v1",
-                         "createdAt":  "2026-05-01T03:54:50Z",
-                         "label":  "original",
-                         "spec":  {
-                                      "rarity":  3,
-                                      "cardType":  "Skill",
-                                      "cost":  1,
-                                      "effects":  [
-                                                      {
-                                                          "action":  "block",
-                                                          "scope":  "self",
-                                                          "amount":  18
-                                                      }
-                                                  ]
-                                  }
-                     }
-                 ]
+  "id": "guardian_epic_guarding_zone",
+  "name": "守護圏",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Guardian",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 3,
+        "cardType": "Skill",
+        "cost": 3,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "all",
+            "side": "ally",
+            "amount": 10
+          },
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "cover",
+            "amount": 2
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "block",
+            "scope": "all",
+            "side": "ally",
+            "amount": 13
+          },
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "cover",
+            "amount": 2
+          }
+        ],
+        "keywords": [
+          "exhaust"
+        ],
+        "upgradedKeywords": [
+          "exhaust"
+        ]
+      }
+    }
+  ]
 }

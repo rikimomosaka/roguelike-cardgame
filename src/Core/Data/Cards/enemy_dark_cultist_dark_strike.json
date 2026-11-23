@@ -1,0 +1,26 @@
+{
+  "id": "enemy_dark_cultist_dark_strike",
+  "name": "闇の一撃",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy dark_cultist unique (from move dark_strike)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 6
+          }
+        ]
+      }
+    }
+  ]
+}

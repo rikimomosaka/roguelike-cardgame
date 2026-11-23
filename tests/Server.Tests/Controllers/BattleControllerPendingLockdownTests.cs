@@ -35,7 +35,7 @@ public class BattleControllerPendingLockdownTests : IClassFixture<TempDataFactor
         var pending = new PendingCardPlay(
             CardInstanceId: "fake_card_inst",
             EffectIndex: 0,
-            SummonSucceededBefore: false,
+            SummonedActorInstanceIdsBefore: ImmutableArray<string>.Empty,
             Choice: new PendingChoice(
                 Action: "exhaustCard",
                 Pile: "hand",

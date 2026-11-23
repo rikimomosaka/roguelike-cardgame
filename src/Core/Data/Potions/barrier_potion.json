@@ -1,0 +1,8 @@
+{
+  "id": "barrier_potion",
+  "name": "バリアポーション",
+  "rarity": 2,
+  "effects": [
+    { "action": "buff", "scope": "self", "name": "barrier", "amount": 1, "battleOnly": true }
+  ]
+}

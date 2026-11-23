@@ -1,0 +1,87 @@
+{
+  "id": "guardian_mireille",
+  "name": "鉄衛騎士ミレイユ",
+  "characterClass": "Guardian",
+  "description": "ブロックを持ち越し、完全防御と護衛で味方を守り、蓄えた防御を反撃へ変える鉄衛騎士。",
+  "traitDescription": "積層装甲：自身のターン開始時、自身に堅持1を付与する。",
+  "maxHp": 96,
+  "startingGold": 99,
+  "potionSlotCount": 3,
+  "heightTier": 5,
+  "energyPerTurn": 3,
+  "drawPerTurn": 5,
+  "trait": {
+    "id": "layered_armor",
+    "name": "積層装甲",
+    "trigger": "OnTurnStart",
+    "description": "自身のターン開始時、自身に堅持1を付与する。",
+    "effects": [
+      {
+        "action": "buff",
+        "scope": "self",
+        "name": "steadfast",
+        "amount": 1
+      }
+    ]
+  },
+  "skills": [
+    {
+      "id": "tactical",
+      "name": "守護配置",
+      "comboGaugeCost": 3,
+      "oncePerTurn": true,
+      "usesPerTurn": 1,
+      "description": "自身に8ブロック、護衛1を付与する。",
+      "effects": [
+        {
+          "action": "block",
+          "scope": "self",
+          "amount": 8
+        },
+        {
+          "action": "buff",
+          "scope": "self",
+          "name": "cover",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "ultimate",
+      "name": "鉄壁反攻",
+      "comboGaugeCost": 6,
+      "oncePerTurn": true,
+      "usesPerTurn": 1,
+      "description": "味方全体に5ブロック。その後、敵単体に現在の自身のブロック分アタック。",
+      "effects": [
+        {
+          "action": "block",
+          "scope": "all",
+          "side": "ally",
+          "amount": 5
+        },
+        {
+          "action": "attack",
+          "scope": "single",
+          "side": "enemy",
+          "amount": 0,
+          "amountSource": "selfBlock"
+        }
+      ]
+    }
+  ],
+  "deck": [
+    "basic_attack",
+    "basic_attack",
+    "basic_defense",
+    "basic_defense",
+    "guardian_basic_foothold",
+    "guardian_basic_foothold",
+    "guardian_basic_defensive_form",
+    "guardian_basic_defensive_form",
+    "guardian_basic_cover_line",
+    "guardian_basic_cover_line"
+  ],
+  "attack": 5,
+  "defense": 6
+}

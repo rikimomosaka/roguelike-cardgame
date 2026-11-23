@@ -6,57 +6,33 @@
   "act": 2,
   "heightTier": 10,
   "tier": "Boss",
-  "initialMoveId": "charge",
-  "moves": [
+  "attack": 8,
+  "defense": 20,
+  "initialEnergy": 0,
+  "energyPerTurn": 1,
+  "drawPerTurn": 3,
+  "handLimit": 5,
+  "aiProfileId": "low_cost_combo",
+  "deck": [
     {
-      "id": "charge",
-      "kind": "Attack",
-      "nextMoveId": "volley",
-      "effects": [
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 22
-        }
-      ]
+      "cardId": "enemy_act2_boss_charge",
+      "count": 2
     },
     {
-      "id": "volley",
-      "kind": "Attack",
-      "nextMoveId": "fortify",
-      "effects": [
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 8
-        },
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 8
-        },
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 8
-        }
-      ]
+      "cardId": "enemy_act2_boss_volley",
+      "count": 2
     },
     {
-      "id": "fortify",
-      "kind": "Defend",
-      "nextMoveId": "charge",
-      "effects": [
-        {
-          "action": "block",
-          "scope": "self",
-          "amount": 20
-        }
-      ]
+      "cardId": "enemy_act2_boss_fortify",
+      "count": 2
+    },
+    {
+      "cardId": "enemy_common_attack",
+      "count": 4
+    },
+    {
+      "cardId": "enemy_common_defend",
+      "count": 2
     }
   ]
 }

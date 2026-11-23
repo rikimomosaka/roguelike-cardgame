@@ -1,0 +1,25 @@
+{
+  "id": "enemy_goblin_b_hide",
+  "name": "隠れる",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy goblin_b unique (from move hide)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 6
+          }
+        ]
+      }
+    }
+  ]
+}

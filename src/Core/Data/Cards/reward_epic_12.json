@@ -1,0 +1,61 @@
+{
+  "id": "tactician_epic_recover_scheme",
+  "name": "計略回収",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Tactician",
+  "eligibleCharacterIds": [
+    "tactician_yuno"
+  ],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 3,
+        "cardType": "Skill",
+        "cost": 3,
+        "usesPerTurn": 1,
+        "upgradedUsesPerTurn": 1,
+        "effects": [
+          {
+            "action": "recoverFromExhaust",
+            "scope": "self",
+            "amount": 1,
+            "pile": "hand",
+            "select": "choose"
+          },
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 5
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "recoverFromExhaust",
+            "scope": "self",
+            "amount": 1,
+            "pile": "hand",
+            "select": "choose"
+          },
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 8
+          }
+        ],
+        "keywords": [
+          "exhaust"
+        ],
+        "upgradedKeywords": [
+          "exhaust"
+        ]
+      }
+    }
+  ]
+}

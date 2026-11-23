@@ -6,32 +6,29 @@
   "act": 3,
   "heightTier": 7,
   "tier": "Strong",
-  "initialMoveId": "crush",
-  "moves": [
+  "attack": 21,
+  "defense": 14,
+  "initialEnergy": 0,
+  "energyPerTurn": 1,
+  "drawPerTurn": 3,
+  "handLimit": 5,
+  "aiProfileId": "low_cost_combo",
+  "deck": [
     {
-      "id": "crush",
-      "kind": "Attack",
-      "nextMoveId": "wall",
-      "effects": [
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 21
-        }
-      ]
+      "cardId": "enemy_act3_brute_crush",
+      "count": 2
     },
     {
-      "id": "wall",
-      "kind": "Defend",
-      "nextMoveId": "crush",
-      "effects": [
-        {
-          "action": "block",
-          "scope": "self",
-          "amount": 14
-        }
-      ]
+      "cardId": "enemy_act3_brute_wall",
+      "count": 2
+    },
+    {
+      "cardId": "enemy_common_attack",
+      "count": 6
+    },
+    {
+      "cardId": "enemy_common_defend",
+      "count": 2
     }
   ]
 }

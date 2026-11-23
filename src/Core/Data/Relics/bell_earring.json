@@ -10,11 +10,16 @@
                          "label":  "original",
                          "spec":  {
                                       "rarity":  1,
-                                      "description":  "[未実装] 揺れるたびに澄んだ音色を響かせる鈴のイヤリング。歩みのリズムが自然と整う。",
+                                      "description":  "揺れるたびに澄んだ音色を響かせる鈴のイヤリング。歩みのリズムが自然と整う。",
                                       "effects":  [
-
+                                                      {
+                                                          "action": "block",
+                                                          "scope": "self",
+                                                          "amount": 4,
+                                                          "trigger": "OnTurnStart"
+                                                      }
                                                   ],
-                                      "implemented":  false
+                                      "implemented":  true
                                   }
                      }
                  ]

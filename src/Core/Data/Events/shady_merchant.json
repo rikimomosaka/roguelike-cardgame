@@ -6,7 +6,7 @@
   "startMessage": "フードを目深にかぶった商人が、レリックを売ると持ちかけてきた。",
   "choices": [
     {
-      "label": "50 ゴールドで買う",
+      "label": "購入する(50ゴールド支払う)",
       "condition": { "type": "minGold", "amount": 50 },
       "effects": [
         { "type": "payGold", "amount": 50 },
@@ -15,7 +15,7 @@
       "resultMessage": "差し出された品物は、粗末な布で包まれていた。開いてみると、そこそこ価値のあるレリックだった。"
     },
     {
-      "label": "200 ゴールドで特上品",
+      "label": "一番いいのを頼む(200ゴールド支払う)",
       "condition": { "type": "minGold", "amount": 200 },
       "effects": [
         { "type": "payGold", "amount": 200 },
@@ -24,7 +24,7 @@
       "resultMessage": "商人はにやりと笑い、奥から豪奢な箱を取り出した。中には一級品のレリックが収まっている。"
     },
     {
-      "label": "断る",
+      "label": "立ち去る",
       "effects": [],
       "resultMessage": "商人は肩をすくめ、フードの奥で舌打ちした。"
     }

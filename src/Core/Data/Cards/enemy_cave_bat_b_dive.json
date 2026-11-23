@@ -1,0 +1,26 @@
+{
+  "id": "enemy_cave_bat_b_dive",
+  "name": "急降下",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy cave_bat_b unique (from move dive)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 6
+          }
+        ]
+      }
+    }
+  ]
+}

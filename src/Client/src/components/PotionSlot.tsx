@@ -5,6 +5,7 @@ import type { CardRarity } from './Card'
 import { rarityCodeFromNumber } from './rarity'
 import { useTooltipTarget } from './Tooltip'
 import type { TooltipContent } from './Tooltip'
+import './PotionSlot.css'
 
 type Props = {
   slotIndex: number
@@ -13,25 +14,31 @@ type Props = {
   /** 戦闘中の使用ハンドラ。指定されたときメニューに「使う」を表示する。 */
   onUse?: () => void
   outsideBattleUseOnly?: boolean
+  usesThisTurn?: number
 }
 
-export function PotionSlot({ slotIndex, potionId, onDiscard, onUse, outsideBattleUseOnly = false }: Props) {
+export function PotionSlot({ slotIndex, potionId, onDiscard, onUse, outsideBattleUseOnly = false, usesThisTurn = 0 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [menuPos, setMenuPos] = useState<{ left: number; top: number } | null>(null)
   const iconRef = useRef<HTMLButtonElement>(null)
   const filled = potionId !== ''
   const { catalog: potionCatalog } = usePotionCatalog()
-  const canUse = onUse !== undefined &&
+  const usageLimit = potionCatalog?.[potionId]?.usesPerTurn ?? 0
+  const usageLimitReached = usageLimit > 0 && usesThisTurn >= usageLimit
+  const canUse = onUse !== undefined && !usageLimitReached &&
     (!outsideBattleUseOnly || potionCatalog?.[potionId]?.usableOutsideBattle === true)
   const tooltipContent = useMemo<TooltipContent | null>(() => {
     if (!filled) return null
     const entry = potionCatalog?.[potionId]
     const name = entry?.name ?? potionId
-    const desc = entry?.description ?? '—'
+    const desc = entry?.description?.replace(
+      `(0/${usageLimit})`,
+      `(${Math.min(Math.max(0, usesThisTurn), usageLimit)}/${usageLimit})`,
+    ) ?? '—'
     const rarity: CardRarity | undefined =
       entry !== undefined ? rarityCodeFromNumber(entry.rarity) : undefined
     return { name, rarity, desc }
-  }, [filled, potionCatalog, potionId])
+  }, [filled, potionCatalog, potionId, usageLimit, usesThisTurn])
   const tip = useTooltipTarget(tooltipContent)
 
   useEffect(() => {

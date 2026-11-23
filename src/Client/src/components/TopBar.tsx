@@ -10,7 +10,7 @@ import './TopBar.css'
 
 // Tween a number from its previous value to the new value over `durationMs`.
 // Used for HP/Gold so changes count up/down visibly instead of snapping.
-function useAnimatedNumber(target: number, durationMs = 450): number {
+function useAnimatedNumber(target: number, durationMs = 450, immediate = false): number {
   const [display, setDisplay] = useState<number>(target)
   const fromRef = useRef<number>(target)
   const toRef = useRef<number>(target)
@@ -18,6 +18,14 @@ function useAnimatedNumber(target: number, durationMs = 450): number {
   const rafRef = useRef<number | null>(null)
 
   useEffect(() => {
+    if (immediate) {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
+      rafRef.current = null
+      fromRef.current = target
+      toRef.current = target
+      setDisplay(target)
+      return
+    }
     if (target === toRef.current) return
     fromRef.current = display
     toRef.current = target
@@ -37,7 +45,7 @@ function useAnimatedNumber(target: number, durationMs = 450): number {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [target, durationMs])
+  }, [target, durationMs, immediate])
 
   return display
 }
@@ -53,6 +61,7 @@ type Props = {
   /** 戦闘中の potion 使用ハンドラ。指定されると menu に「使う」が出る。 */
   onUsePotion?: (slotIndex: number) => void
   outsideBattlePotionUseOnly?: boolean
+  potionUsesThisTurn?: Record<string, number>
   onOpenMenu: () => void
   menuActive?: boolean
   onTogglePeek?: () => void
@@ -60,6 +69,8 @@ type Props = {
   peekDisabled?: boolean
   /** Server-authoritative elapsed seconds for the current run. */
   playSeconds?: number
+  /** Replay hit staging already supplies frame-by-frame HP values. */
+  instantHp?: boolean
 }
 
 function formatElapsed(totalSeconds: number): string {
@@ -104,12 +115,14 @@ export function TopBar({
   onDiscardPotion,
   onUsePotion,
   outsideBattlePotionUseOnly,
+  potionUsesThisTurn,
   onOpenMenu,
   menuActive,
   onTogglePeek,
   peekActive,
   peekDisabled,
   playSeconds,
+  instantHp = false,
 }: Props) {
   const [deckOpen, setDeckOpen] = useState(false)
   // Drag-scroll for the relics row. Long-press (mousedown) then drag horizontally.
@@ -147,7 +160,7 @@ export function TopBar({
   const deckOpenAria: 'true' | 'false' = deckOpen ? 'true' : 'false'
   const peekPressedAria: 'true' | 'false' = peekActive ? 'true' : 'false'
   const menuPressedAria: 'true' | 'false' = menuActive ? 'true' : 'false'
-  const animatedHp = useAnimatedNumber(currentHp)
+  const animatedHp = useAnimatedNumber(currentHp, 450, instantHp)
   const animatedGold = useAnimatedNumber(gold)
   const displayedHp = Math.round(animatedHp)
   const displayedGold = Math.round(animatedGold)
@@ -196,6 +209,7 @@ export function TopBar({
             onDiscard={() => onDiscardPotion(i)}
             onUse={onUsePotion ? () => onUsePotion(i) : undefined}
             outsideBattleUseOnly={outsideBattlePotionUseOnly}
+            usesThisTurn={potionUsesThisTurn?.[id] ?? 0}
           />
         ))}
       </div>
@@ -238,6 +252,7 @@ export function TopBar({
                           cost={disp.cost}
                           type={disp.type}
                           rarity={disp.rarity}
+                          poolClass={disp.poolClass}
                           description={disp.description}
                           upgradedDescription={disp.upgradedDescription}
                           upgraded={card.upgraded}

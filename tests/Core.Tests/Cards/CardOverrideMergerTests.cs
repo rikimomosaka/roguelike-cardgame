@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Text.Json;
 using RoguelikeCardGame.Core.Cards;
+using RoguelikeCardGame.Core.Data;
 using Xunit;
 
 namespace RoguelikeCardGame.Core.Tests.Cards;
@@ -12,6 +13,9 @@ public class CardOverrideMergerTests
       "id": "strike",
       "name": "ストライク",
       "displayName": null,
+      "poolKinds": ["Basic"],
+      "poolClass": "Universal",
+      "eligibleCharacterIds": [],
       "activeVersion": "v1",
       "versions": [
         {
@@ -131,5 +135,64 @@ public class CardOverrideMergerTests
         var merged = CardOverrideMerger.Merge(BaseStrike, overrideJson);
         using var doc = JsonDocument.Parse(merged);
         Assert.Equal("v1", doc.RootElement.GetProperty("activeVersion").GetString());
+    }
+
+    [Fact]
+    public void Merge_version_only_override_preserves_base_pool_metadata()
+    {
+        var overrideJson = """
+        {
+          "id": "strike",
+          "activeVersion": "v2",
+          "versions": [{
+            "version": "v2",
+            "spec": { "rarity": 1, "cardType": "Attack", "cost": 0, "effects": [] }
+          }]
+        }
+        """;
+
+        var definition = CardJsonLoader.Parse(CardOverrideMerger.Merge(BaseStrike, overrideJson));
+
+        Assert.Equal(new[] { CardPoolKind.Basic }, definition.EffectivePoolKinds);
+        Assert.Equal(CardPoolClass.Universal, definition.PoolClass);
+    }
+
+    [Fact]
+    public void Merge_explicit_empty_poolKinds_removes_inherited_pool_metadata()
+    {
+        var overrideJson = """
+        {
+          "id": "strike",
+          "poolKinds": [],
+          "activeVersion": "v1",
+          "versions": []
+        }
+        """;
+
+        var definition = CardJsonLoader.Parse(CardOverrideMerger.Merge(BaseStrike, overrideJson));
+
+        Assert.Empty(definition.EffectivePoolKinds);
+        Assert.Null(definition.PoolClass);
+        Assert.Empty(definition.EffectiveEligibleCharacterIds);
+    }
+
+    [Fact]
+    public void Merge_explicit_poolKinds_uses_only_override_group_members()
+    {
+        var overrideJson = """
+        {
+          "id": "strike",
+          "poolKinds": ["Reward"],
+          "poolClass": "Striker",
+          "activeVersion": "v1",
+          "versions": []
+        }
+        """;
+
+        var definition = CardJsonLoader.Parse(CardOverrideMerger.Merge(BaseStrike, overrideJson));
+
+        Assert.Equal(new[] { CardPoolKind.Reward }, definition.EffectivePoolKinds);
+        Assert.Equal(CardPoolClass.Striker, definition.PoolClass);
+        Assert.Empty(definition.EffectiveEligibleCharacterIds);
     }
 }

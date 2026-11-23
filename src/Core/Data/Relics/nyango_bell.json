@@ -10,11 +10,19 @@
                          "label":  "original",
                          "spec":  {
                                       "rarity":  1,
-                                      "description":  "[未実装] 猫を呼び寄せる小さな鈴。鳴らすと、不思議と幸運がそっと寄り添ってくる。",
+                                      "description":  "猫を呼び寄せる小さな鈴。鳴らすと、不思議と幸運がそっと寄り添ってくる。",
                                       "effects":  [
-
+                                                      {
+                                                          "action": "debuff",
+                                                          "scope": "single",
+                                                          "side": "enemy",
+                                                          "name": "vulnerable",
+                                                          "amount": 1,
+                                                          "trigger": "OnHit",
+                                                          "chancePercent": 20
+                                                      }
                                                   ],
-                                      "implemented":  false
+                                      "implemented":  true
                                   }
                      }
                  ]

@@ -1,0 +1,26 @@
+{
+  "id": "enemy_slime_spike_s_flame_tackle",
+  "name": "火炎体当たり",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy slime_spike_s unique (from move flame_tackle)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 5
+          }
+        ]
+      }
+    }
+  ]
+}

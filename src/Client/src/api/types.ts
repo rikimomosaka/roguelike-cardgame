@@ -43,7 +43,7 @@ export type AudioSettingsDto = {
   master: number
   bgm: number
   se: number
-  ambient: number
+  voice: number
 }
 
 export type TileKind =
@@ -155,6 +155,41 @@ export type RunStateDto = {
   progress: RunProgress
   savedAtUtc: string
   activeActStartRelicChoice: ActStartRelicChoiceDto | null
+  restHealPreview?: RestHealPreviewDto | null
+  hostMemberId?: string
+  partyMembers?: RunPartyMemberStateDto[]
+}
+
+export type RunPartyMemberStateDto = {
+  memberId: string
+  slotIndex: number
+  characterId: string
+  controlMode: 'Human' | 'Cpu'
+  currentHp: number
+  maxHp: number
+  gold: number
+  deck: CardInstanceDto[]
+  potions: string[]
+  potionSlotCount: number
+  relics: string[]
+  activeReward: RewardStateDto | null
+  activeMerchant: MerchantInventoryDto | null
+  activeEvent: EventInstanceDto | null
+  activeRestPending: boolean
+  activeRestCompleted: boolean
+  activeActStartRelicChoice: ActStartRelicChoiceDto | null
+  restHealPreview: RestHealPreviewDto | null
+  discardUsesSoFar: number
+}
+
+export type RestHealPreviewDto = {
+  currentHpBefore: number
+  maxHpBefore: number
+  basePercent: number
+  baseHealAmount: number
+  passiveBonusAmount: number
+  currentHpAfter: number
+  maxHpAfter: number
 }
 
 export type MapNodeDto = {
@@ -186,6 +221,43 @@ export type BestiaryDto = {
   allKnownRelicIds: string[]
   allKnownPotionIds: string[]
   allKnownEnemyIds: string[]
+  playerCharacters: BestiaryCharacterDto[]
+  allyCharacters: BestiaryCharacterDto[]
+}
+
+export type BestiaryCharacterDto = {
+  id: string
+  name: string
+  kind: 'player' | 'ally'
+  maxHp: number
+  imageId: string | null
+  heightTier: number
+  lifetimeTurns: number | null
+  isDiscovered: boolean
+  description: string
+  traitDescription: string
+  actions: BestiaryCharacterActionDto[]
+  summonCards: BestiarySummonCardDto[]
+  characterClass?: import('./catalog').CharacterClass | null
+}
+
+export type BestiaryCharacterActionDto = {
+  category: string
+  name: string
+  description: string
+  energyCost: number
+  comboGaugeCost: number
+}
+
+export type BestiarySummonCardDto = {
+  id: string
+  name: string
+  rarity: number
+  cardType: string
+  cost: number | null
+  description: string
+  upgradedDescription: string | null
+  poolClass?: import('./catalog').CardPoolClass | null
 }
 
 // ===== Phase 10.3-MVP Battle DTOs =====
@@ -205,7 +277,12 @@ export type BattleEventKind =
   | 'UseCharacterSkill' | 'ComboGaugeChanged'
   | 'ModifyCardCost'
   // Phase 10.5.F: engine 新 actions
-  | 'AddCard' | 'RecoverFromDiscard' | 'GainMaxEnergy'
+  | 'AddCard' | 'RecoverFromDiscard' | 'RecoverFromExhaust' | 'GainMaxEnergy'
+  | 'ParticipantReadyChanged' | 'ResolutionStarted'
+  | 'ContingencyArmed' | 'ContingencyTriggered' | 'ContingencyResolved'
+  | 'FinisherResolved' | 'ReenactCardEffects' | 'CoverBlockSpent'
+  | 'CharacterTraitTriggered' | 'Shuffle'
+  | 'GainAttack'
 
 export type IntentDto = {
   /** 通常攻撃 (single) の予定ダメージ。 */
@@ -237,10 +314,16 @@ export type CombatActorDto = {
   currentHp: number
   maxHp: number
   blockDisplay: number
+  /** Number of Block.Add calls still contributing Dexterity retroactively. */
+  blockAddCount?: number
+  /** Raw Block sum before Dexterity; present on current servers. */
+  blockRawSum?: number | null
   attackSingleDisplay: number
   attackRandomDisplay: number
   attackAllDisplay: number
   statuses: Record<string, number>
+  /** Status ids in acquisition order; newly gained statuses are appended. */
+  statusOrder?: string[] | null
   currentMoveId: string | null
   remainingLifetimeTurns: number | null
   associatedSummonHeldInstanceId: string | null
@@ -251,10 +334,30 @@ export type BattleCardInstanceDto = {
   instanceId: string
   cardDefinitionId: string
   isUpgraded: boolean
+  /** Acquisition class used by the canonical card frame; null for mate/token cards. */
+  poolClass?: import('./catalog').CardPoolClass | null
   /** Card definition cost used exclusively for combo chaining. */
   originalCost: number | null
   /** Authoritative cost payable in the DTO's current zone/context. */
   currentCost: number | null
+  /** Core判定: このカードの使用でコンボが継続するか。 */
+  comboReductionEligible?: boolean
+  /** Core判定: このカードを使うとコンボ自体が継続するか。 */
+  comboContinues?: boolean
+  /** 継続バフを消費せずコンボ継続できる時だけカード外周オーラを表示する。 */
+  comboRingHighlighted?: boolean
+  wildDisabled?: boolean
+  /** True when a per-turn effect limit on this card has been exhausted. */
+  cardUsageLimitReached?: boolean
+  /** Core判定: 状態変化によって現在このカードを使用できない。 */
+  cardPlayRestricted?: boolean
+  cardPlayRestrictionReason?: string | null
+  /** Ordered Core-authored explanation of every active cost influence. */
+  costChanges?: CardCostChangeDto[] | null
+  /** True only while this card is armed and waiting in the normal Exhaust pile. */
+  isContingencyArmed?: boolean
+  /** Authoritative Japanese trigger label, for example `3コンボ達成時`. */
+  contingencyTriggerText?: string | null
   /** Compatibility alias: currentCost when it differs from originalCost. */
   costOverride: number | null
   /**
@@ -277,7 +380,9 @@ export type BattleEventDto = {
   amount: number | null
   cardId: string | null
   note: string | null
-  /** DealDamage 時に Block が実際に吸収した量。 */
+  /** Combo count immediately after this card play, before a Finisher resets it. */
+  comboCountAfter?: number | null
+  /** DealDamage の対象自身がBlockで吸収した量。護衛者分はCoverBlockSpent。 */
   blockedAmount: number | null
   /** 同じ論理ヒットを共有するイベントの 0 始まり番号。 */
   hitIndex: number | null
@@ -293,6 +398,16 @@ export type BattleEventDto = {
   overkill?: number | null
   /** ダメージが0でも、対象へヒット自体が成立したか。 */
   hitLanded?: boolean | null
+  /** Exact effect-only card face for Reprise/Afterimage presentation. */
+  card?: BattleReplayCardDto | null
+}
+
+export type CardCostChangeDto = {
+  kind: 'fixed' | 'modifier' | 'status' | 'combo' | 'unknown'
+  /** Replacement cost for fixed; signed delta for every other kind. */
+  value: number
+  sourceId: string | null
+  sourceName: string | null
 }
 
 export type CombatSourceDto = {
@@ -321,7 +436,13 @@ export type DamageCauseFrameDto = {
  * pile=hand なら手札 UI、それ以外 (draw/discard) はリスト UI で選択させる。
  */
 export type PendingChoiceDto = {
-  action: 'discard' | 'exhaustCard' | 'upgrade' | 'recoverFromDiscard' | 'modifyCardCost'
+  action:
+    | 'discard'
+    | 'exhaustCard'
+    | 'upgrade'
+    | 'recoverFromDiscard'
+    | 'recoverFromExhaust'
+    | 'modifyCardCost'
   pile: 'hand' | 'draw' | 'discard' | 'exhaust'
   count: number
   candidateInstanceIds: string[]
@@ -354,13 +475,221 @@ export type BattleStateDto = {
   maxComboThisTurn: number
   comboGauge: number
   usedCharacterSkillIdsThisTurn: string[]
+  characterSkillUsesThisTurn?: Record<string, number>
   lastPlayedOrigCost: number | null
   nextCardComboFreePass: boolean
   ownedRelicIds: string[]
   potions: string[]
+  potionUsesThisTurn?: Record<string, number>
   encounterId: string
   /** Phase 10.5.M2-Choose: choose 中なら non-null。modal を表示。 */
   pendingCardPlay: PendingCardPlayDto | null
+  /** True while 封印 prevents tactical and ultimate skills. */
+  characterSkillsRestricted?: boolean
+  /** Monotonic command revision used by participant-aware battle commands. */
+  actionRevision?: number
+  /** Independent card/resource state for the human and card-controlled allies. */
+  participants?: BattleParticipantDto[]
+  /** カード制御の敵のカード資源の概要（行動再生の入口・開発確認用）。 */
+  enemyParticipants?: EnemyParticipantSummaryDto[]
+  /** Latest Finisher record owned by the primary participant, if one is saved. */
+  finisherRecord?: FinisherRecordDto | null
+  /** The first card after 連環 continues the combo at full cost. */
+  comboCarryoverPending?: boolean
+}
+
+export type FinisherRecordCardDto = {
+  /** Stable ordering/key even if the same physical card was reused in one combo. */
+  playSequence: number
+  card: BattleReplayCardDto
+}
+
+export type FinisherRecordDto = {
+  afterimageStacks: number
+  cards: FinisherRecordCardDto[]
+  /** Attacker-side planned values; target mitigation and random outcomes are excluded. */
+  plannedAfterimageIntent: IntentDto | null
+  /** null when 残光 is inactive; false when Core cannot determine an exact preview. */
+  isPlannedAfterimageIntentAvailable: boolean | null
+}
+
+export type BattleParticipantControllerKind = 'Human' | 'Cpu'
+
+/** Card/resources owned by one independently controlled combat actor. */
+export type EnemyParticipantSummaryDto = {
+  participantId: string
+  actorInstanceId: string
+  energy: number
+  handCount: number
+  drawPileCount: number
+  discardPileCount: number
+  exhaustPileCount: number
+}
+
+export type BattleParticipantDto = {
+  participantId: string
+  actorInstanceId: string
+  controllerKind: BattleParticipantControllerKind
+  ownerPlayerSlot: number | null
+  characterId: string
+  targetAllyIndex: number | null
+  targetEnemyIndex: number | null
+  energy: number
+  energyPerTurn: number
+  drawPerTurn: number
+  drawPile: BattleCardInstanceDto[]
+  hand: BattleCardInstanceDto[]
+  discardPile: BattleCardInstanceDto[]
+  exhaustPile: BattleCardInstanceDto[]
+  summonHeld: BattleCardInstanceDto[]
+  powerCards: BattleCardInstanceDto[]
+  comboCount: number
+  maxComboThisTurn: number
+  comboGauge: number
+  lastPlayedOrigCost: number | null
+  nextCardComboFreePass: boolean
+  wildUsedInCurrentCombo: boolean
+  usedCharacterSkillIdsThisTurn: string[]
+  characterSkillUsesThisTurn: Record<string, number>
+  cardUsesThisTurn: Record<string, number>
+  cardUseLockedThisTurn: boolean
+  ownedRelicIds: string[]
+  potions: string[]
+  potionUsesThisTurn: Record<string, number>
+  pendingCardPlay: PendingCardPlayDto | null
+  characterSkillsRestricted?: boolean
+  /** Debug-only CPU planning counter; production UI does not expose it. */
+  cpuCardPlaysThisTurn: number
+  isReady: boolean
+  finisherRecord?: FinisherRecordDto | null
+  /** The first card after 連環 continues the combo at full cost. */
+  comboCarryoverPending?: boolean
+}
+
+export type BattleReplayDto = {
+  fromSequenceExclusive: number
+  latestSequence: number
+  returnedThroughSequence: number
+  turn: number | null
+  participantId: string | null
+  actorInstanceId: string | null
+  feedState: 'live' | 'ready' | 'complete' | string
+  isReady: boolean
+  isComplete: boolean
+  participantFeeds: BattleReplayParticipantFeedDto[]
+  entries: BattleReplayEntryDto[]
+}
+
+export type BattleReplayParticipantFeedDto = {
+  turn: number
+  participantId: string
+  state: 'live' | 'ready' | 'complete' | string
+  isReady: boolean
+  isComplete: boolean
+  lastSequence: number
+}
+
+export type BattleReplayEntryDto = {
+  sequence: number
+  entryId?: string
+  turn: number
+  commandId: string
+  kind: string
+  viewKind: 'action' | 'externalEffect' | 'resolution' | 'feedState' | string
+  participantId: string | null
+  actorInstanceId: string | null
+  revisionBefore: number
+  revisionAfter: number
+  card: BattleReplayCardDto | null
+  targetActorInstanceIds: string[]
+  effects: BattleReplayEffectDto[]
+  intents: BattleReplayIntentDto[]
+  feedChanges: BattleReplayFeedChangeDto[]
+  isResolution: boolean
+  note: string | null
+  /** Combo count immediately after the replayed card decision. */
+  comboCountAfter?: number | null
+  selectedInstanceIds?: string[]
+  ability?: BattleReplayAbilityDto | null
+  /** Full decision-time battle presentation; optional for older journals. */
+  stateBefore?: BattleStateDto | null
+  stateAfter?: BattleStateDto | null
+  /** Compact origin retained even when the full source card/ability is hidden. */
+  source?: BattleReplaySourceDto | null
+}
+
+export type BattleReplaySourceDto = {
+  actorInstanceId: string | null
+  actorDisplayName: string
+  actionKind: string
+  actionDefinitionId: string | null
+  actionDisplayName: string
+}
+
+export type BattleReplayCardDto = {
+  cardInstanceId: string
+  definitionId: string
+  displayName: string
+  cardType: string
+  rarity: string
+  isUpgraded: boolean
+  originalCost: number
+  currentCost: number
+  paidCost: number
+  description: string
+  costChanges: BattleReplayCardCostChangeDto[]
+  poolClass?: import('./catalog').CardPoolClass | null
+}
+
+export type BattleReplayCardCostChangeDto = {
+  kind: string
+  value: number
+  sourceId: string | null
+  sourceName: string | null
+}
+
+export type BattleReplayAbilityDto = {
+  definitionId: string
+  displayName: string
+  kind: string
+  description: string
+  energyCost: number
+  comboGaugeCost: number
+  usesBefore: number
+  usesPerTurn: number
+}
+
+export type BattleReplayEffectDto = {
+  kind: string
+  sourceActorInstanceId: string | null
+  targetParticipantId: string | null
+  targetActorInstanceId: string | null
+  amount: number | null
+  statusId: string | null
+  description: string | null
+  actualHpLoss?: number | null
+  blockedAmount?: number | null
+  hitIndex?: number | null
+  hitLanded?: boolean | null
+  cardDefinitionId?: string | null
+  cardInstanceId?: string | null
+  /** Decision-time card face captured for ReenactCardEffects. */
+  card?: BattleReplayCardDto | null
+}
+
+export type BattleReplayIntentDto = {
+  kind: string
+  scope: string
+  amount: number
+  hits: number
+  targetParticipantId: string | null
+  targetActorInstanceId: string | null
+}
+
+export type BattleReplayFeedChangeDto = {
+  participantId: string
+  isReady: boolean | null
+  isComplete: boolean | null
 }
 
 export type BattleEventStepDto = {
@@ -380,6 +709,17 @@ export type EnemyCatalogEntryDto = {
   hp: number
   initialMoveId: string
   heightTier: number
+  /** 基礎攻撃力・守備力（筋力・敏捷とは別の能力値） */
+  attack?: number
+  defense?: number
+  initialEnergy?: number
+  energyPerTurn?: number
+  drawPerTurn?: number
+  handLimit?: number
+  /** カード制御の敵の通常行動デッキ（旧 Move 敵は null） */
+  deck?: UnitDeckEntryDto[] | null
+  /** 先制行動（登場時に発動するカード ID、記載順） */
+  openingActions?: string[]
 }
 
 export type UnitCatalogEntryDto = {
@@ -390,6 +730,23 @@ export type UnitCatalogEntryDto = {
   initialMoveId: string
   lifetimeTurns: number | null
   heightTier: number
+  deck?: UnitDeckEntryDto[] | null
+  initialEnergy?: number
+  energyPerTurn?: number
+  drawPerTurn?: number
+  handLimit?: number
+  aiProfileId?: string | null
+  traitDescription?: string | null
+  skills?: CharacterSkillCatalogEntryDto[]
+  ownedRelicIds?: string[]
+  potions?: string[]
+}
+
+export type UnitDeckEntryDto = {
+  cardId: string
+  count: number
+  upgraded: boolean
+  priority: number
 }
 
 export type CharacterCatalogEntryDto = {
@@ -399,4 +756,26 @@ export type CharacterCatalogEntryDto = {
   startingGold: number
   potionSlotCount: number
   heightTier: number
+  skills?: CharacterSkillCatalogEntryDto[]
+  /** Pool-aware servers always return these; optional supports older cached responses. */
+  characterClass?: 'Striker' | 'Guardian' | 'Tactician' | 'Enhancer'
+  deck?: string[]
+  description?: string | null
+  traitDescription?: string | null
+  energyPerTurn?: number
+  drawPerTurn?: number
+  traitName?: string | null
+  /** Marker-bearing passive effect text formatted by the server like a card description. */
+  traitEffects?: string | null
+}
+
+export type CharacterSkillCatalogEntryDto = {
+  id: string
+  name: string
+  energyCost: number
+  comboGaugeCost: number
+  oncePerTurn: boolean
+  usesPerTurn?: number
+  description: string
+  requiresCardsInHand: boolean
 }

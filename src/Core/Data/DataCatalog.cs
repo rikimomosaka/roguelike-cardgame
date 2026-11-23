@@ -112,6 +112,8 @@ public sealed record DataCatalog(
                         $"character \"{def.Id}\" のデッキが参照するカード ID \"{cid}\" が存在しません");
         }
 
+        CardPoolMetadataValidator.Validate(cardMap, chMap);
+
         var eventMap = new Dictionary<string, EventDefinition>();
         if (events is not null)
         {
@@ -122,6 +124,7 @@ public sealed record DataCatalog(
                     throw new DataCatalogException($"event ID が重複: {def.Id}");
             }
         }
+        DataCatalogIntegrityValidator.ValidateEventReferences(eventMap, cardMap);
 
         MerchantPrices? mp = null;
         if (merchantPricesJson is not null)

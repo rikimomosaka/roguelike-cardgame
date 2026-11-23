@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -33,21 +32,24 @@ internal static class TurnEndProcessor
         int order = 0;
 
         // Step 3: OnTurnEnd レリック発動 (10.2.E / 10.5.L1.5: 文字列 trigger に変更)
-        var (afterRelic, evsRelic) = RelicTriggerProcessor.Fire(
+        var (afterRelic, evsRelic) =
+            RelicTriggerProcessor.FireForAllLivingParticipants(
             s, "OnTurnEnd", catalog, rng, orderStart: order);
         s = afterRelic;
         foreach (var ev in evsRelic) { events.Add(ev with { Order = order++ }); }
 
+        var (afterPower, evsPower) =
+            PowerTriggerProcessor.FireForAllLivingParticipants(
+                s, "OnTurnEnd", catalog, rng, orderStart: order);
+        s = afterPower;
+        foreach (var ev in evsPower) { events.Add(ev with { Order = order++ }); }
+
         // Step 4: コンボリセット
-        s = s with
-        {
-            ComboCount = 0,
-            MaxComboThisTurn = 0,
-            LastPlayedOrigCost = null,
-            NextCardComboFreePass = false,
-            WildUsedInCurrentCombo = false,
-            UsedCharacterSkillIdsThisTurn = ImmutableHashSet<string>.Empty,
-        };
+        var primaryActor = !s.Participants.IsDefaultOrEmpty
+            ? s.Allies.FirstOrDefault(actor =>
+                actor.InstanceId == s.Participants[0].ActorInstanceId)
+            : ProvisionalSoloHeroOwnerResolver.Resolve(s)?.Hero;
+        s = ComboTurnBoundaryRules.ResetAtTurnEnd(s, primaryActor);
         s = BattleCardCostModifierLifecycle.Remove(
             s, CardCostModifierDuration.UntilTurnEnd);
 
@@ -61,9 +63,7 @@ internal static class TurnEndProcessor
                 newDiscard.Add(card);
                 continue;
             }
-            var effects = (card.IsUpgraded && def.UpgradedEffects is not null)
-                ? def.UpgradedEffects : def.Effects;
-            if (effects.Any(e => e.Action == "retainSelf"))
+            if (BattleCardRetention.ShouldRetain(card, def))
                 keepInHand.Add(card);
             else
                 newDiscard.Add(card);
@@ -74,15 +74,21 @@ internal static class TurnEndProcessor
             Hand = keepInHand.ToImmutable(),
             DiscardPile = newDiscard.ToImmutable(),
         };
+        s = BattleParticipantTurnLifecycle
+            .ResetCpuPlayCountsForAllParticipants(s);
 
         return (s, events);
     }
 
-    private static CombatActor ResetActor(CombatActor a) => a with
+    private static CombatActor ResetActor(CombatActor a)
     {
-        Block = BlockPool.Empty,
+        var carried = GuardianTurnEndRules.ApplyBlockCarry(a);
+        return carried with
+        {
         AttackSingle = AttackPool.Empty,
         AttackRandom = AttackPool.Empty,
         AttackAll = AttackPool.Empty,
-    };
+        };
+    }
+
 }

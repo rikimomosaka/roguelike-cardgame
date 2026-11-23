@@ -15,21 +15,21 @@ public sealed record AudioSettings(
     int Master,
     int Bgm,
     int Se,
-    int Ambient)
+    int Voice)
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
 
     public static AudioSettings Default =>
-        new(CurrentSchemaVersion, Master: 80, Bgm: 70, Se: 80, Ambient: 60);
+        new(CurrentSchemaVersion, Master: 80, Bgm: 70, Se: 80, Voice: 80);
 
     /// <summary>0–100 の範囲外を拒否する検証付きファクトリ。</summary>
-    public static AudioSettings Create(int master, int bgm, int se, int ambient)
+    public static AudioSettings Create(int master, int bgm, int se, int voice)
     {
         ValidateRange(master, nameof(master));
         ValidateRange(bgm, nameof(bgm));
         ValidateRange(se, nameof(se));
-        ValidateRange(ambient, nameof(ambient));
-        return new AudioSettings(CurrentSchemaVersion, master, bgm, se, ambient);
+        ValidateRange(voice, nameof(voice));
+        return new AudioSettings(CurrentSchemaVersion, master, bgm, se, voice);
     }
 
     private static void ValidateRange(int value, string paramName)

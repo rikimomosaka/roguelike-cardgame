@@ -9,6 +9,8 @@
 - カード種別に関係なく、通常条件に合うか、直前の Wild / SuperWild が予約した「次の 1 枚」の保護中なら、支払いコストを 1 減らす。
 - Wild / SuperWild 自身のキーワード効果だけでコンボを継続する場合は軽減しない。そのカードが「直前の保護」の対象であれば、Wild / SuperWild でも元コストに関係なく軽減する。
 - 通常条件も Wild 系の保護もない場合、そのカードから 1 コンボとして数え直す。
+- カード外周を包む半透明の金色パルスオーラは、継続バフを消費せずにコンボを継続できる場合だけ表示する。
+  継続バフによって実際のコンボが続く場合でも、そのバフが必要ならオーラは表示しない。
 
 ## Wild
 
@@ -56,8 +58,11 @@
 カードを使うたびに `MaxComboThisTurn = max(それまでの MaxComboThisTurn, 更新後の ComboCount)` とする。
 コンボが切れて `ComboCount` が 1 に戻っても、`MaxComboThisTurn` はそのターンの最高値を維持する。
 
-ターン終了時は `ComboCount / MaxComboThisTurn / LastPlayedOrigCost / NextCardComboFreePass / WildUsedInCurrentCombo` を
-`0 / 0 / null / false / false` へリセットする。次ターン開始処理でも `MaxComboThisTurn=0` を保証する。
+通常はターン終了時に `ComboCount / MaxComboThisTurn / LastPlayedOrigCost / NextCardComboFreePass / WildUsedInCurrentCombo` を
+`0 / 0 / null / false / false` へリセットする。連環がある場合だけ`ComboCount`と現在コンボのカード履歴を保持し、
+`LastPlayedOrigCost / NextCardComboFreePass / WildUsedInCurrentCombo`は通常どおりリセットする。次ターン最初のカードは
+専用の連環予約によって元コストを問わずコンボを継続するが、コンボによるコスト軽減を受けない。
+次ターンの`MaxComboThisTurn`は持ち越した`ComboCount`から開始する。
 `OnTurnEnd` の効果はリセット前に処理するため、そのターンの最大コンボを参照できる。
 
 ## 処理例

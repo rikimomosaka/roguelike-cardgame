@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using RoguelikeCardGame.Core.Battle.Statuses;
 
 namespace RoguelikeCardGame.Core.Cards;
 
@@ -37,24 +38,61 @@ public static class CardTextFormatter
     public static string Format(CardDefinition def, bool upgraded, CardActorContext context)
     {
         string? manual = upgraded ? def.UpgradedDescription : def.Description;
-        if (!string.IsNullOrWhiteSpace(manual)) return manual!;
-
         var keywords = def.EffectiveKeywords(upgraded);
-        // Phase 10.5.M3: 複数キーワードは "/" 区切りで 1 行に並べる
-        //   (Client 側 CardDesc が `/` を白文字で描画する)。
-        var keywordLine = keywords is null || keywords.Count == 0
-            ? null
-            : string.Join("/", keywords.Select(k => $"[K:{k}]"));
+        string mainBody;
+        string conditionalBody = string.Empty;
+        if (!string.IsNullOrWhiteSpace(manual))
+        {
+            mainBody = manual!;
+        }
+        else
+        {
+            var effects = upgraded && def.UpgradedEffects is not null
+                ? def.UpgradedEffects
+                : def.Effects;
+            // カード面では、通常効果の後に乗勢等の条件付き効果をまとめる。
+            // FormatEffects 単体は解決順を表す共通 API なので、表示用の整列はここだけで行う。
+            mainBody = FormatEffects(
+                effects.Where(effect => effect.MaxComboMin is null).ToArray(),
+                context);
+            conditionalBody = FormatEffects(
+                effects.Where(effect => effect.MaxComboMin is not null).ToArray(),
+                context);
+        }
 
-        var effects = upgraded && def.UpgradedEffects is not null
-            ? def.UpgradedEffects
-            : def.Effects;
-        var effectText = FormatEffects(effects, context);
+        var body = FormatCardAbilities(
+            mainBody,
+            conditionalBody,
+            keywords,
+            def.EffectiveAbilities(upgraded));
 
-        var lines = new List<string>();
-        if (keywordLine is not null) lines.Add(keywordLine);
-        if (effectText.Length > 0) lines.AddRange(effectText.Split('\n'));
-        return string.Join("\n", lines);
+        var limit = def.EffectiveUsesPerTurn(upgraded);
+        var usageLine = limit > 0
+            ? $"ターン中{limit}度だけ使用可能(0/{limit})。"
+            : null;
+        return usageLine is null
+            ? body
+            : string.IsNullOrEmpty(body) ? usageLine : $"{usageLine}\n{body}";
+    }
+
+    /// <summary>
+    /// Formats a card and replaces its card-level per-turn usage counter with
+    /// the authoritative count for this card instance.
+    /// </summary>
+    public static string FormatWithUsageCount(
+        CardDefinition def,
+        bool upgraded,
+        CardActorContext context,
+        int usageCount)
+    {
+        var text = Format(def, upgraded, context);
+        var limit = def.EffectiveUsesPerTurn(upgraded);
+        if (limit <= 0) return text;
+
+        return text.Replace(
+            $"(0/{limit})",
+            $"({Math.Clamp(usageCount, 0, limit)}/{limit})",
+            System.StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -75,6 +113,43 @@ public static class CardTextFormatter
         var grouped = GroupConsecutive(effects);
         var sentences = grouped.Select(g => DescribeGroup(g.Effect, g.Count, context));
         return string.Join("\n", sentences);
+    }
+
+    /// <summary>
+    /// Shared card/skill text projection. Keyword markers are emitted before
+    /// effect sentences so the Client can render their definitions below the
+    /// dashed separator, exactly like a card tooltip.
+    /// </summary>
+    public static string FormatEffectsWithKeywords(
+        IReadOnlyList<CardEffect> effects,
+        IReadOnlyList<string>? keywords,
+        CardActorContext context)
+    {
+        var lines = new List<string>();
+        if (keywords is { Count: > 0 })
+            lines.Add(string.Join("/", keywords.Select(k => $"[K:{k}]")));
+        var effectText = FormatEffects(effects, context);
+        if (effectText.Length > 0)
+            lines.AddRange(effectText.Split('\n'));
+        return string.Join("\n", lines);
+    }
+
+    /// <summary>
+    /// Shared entity-level usage header followed by the same keyword/effect
+    /// text used for cards, potions, and character skills.
+    /// </summary>
+    public static string FormatUsableEffects(
+        IReadOnlyList<CardEffect> effects,
+        IReadOnlyList<string>? keywords,
+        CardActorContext context,
+        int usesPerTurn,
+        int usesThisTurn = 0)
+    {
+        var body = FormatEffectsWithKeywords(effects, keywords, context);
+        if (usesPerTurn <= 0) return body;
+
+        var usage = $"ターン中{usesPerTurn}度だけ使用可能({Math.Clamp(usesThisTurn, 0, usesPerTurn)}/{usesPerTurn})。";
+        return string.IsNullOrEmpty(body) ? usage : $"{usage}\n{body}";
     }
 
     private record EffectGroup(CardEffect Effect, int Count);
@@ -103,13 +178,31 @@ public static class CardTextFormatter
         && a.Amount == b.Amount
         && a.Name == b.Name
         && a.UnitId == b.UnitId
+        && a.ComboMin == b.ComboMin
+        && a.MaxComboMin == b.MaxComboMin
         && a.CardRefId == b.CardRefId
         && a.Select == b.Select
         && a.AmountSource == b.AmountSource
+        && a.AmountScalePercent == b.AmountScalePercent
         && a.Trigger == b.Trigger
+        && a.ChancePercent == b.ChancePercent
         && a.Pile == b.Pile
         && a.CostDuration == b.CostDuration
-        && a.CardCount == b.CardCount;
+        && a.CardCount == b.CardCount
+        && StatusChangesEqual(a.StatusChanges, b.StatusChanges);
+
+    private static bool StatusChangesEqual(
+        IReadOnlyList<StatusChange>? a,
+        IReadOnlyList<StatusChange>? b)
+    {
+        if (ReferenceEquals(a, b)) return true;
+        if (a is null || b is null || a.Count != b.Count) return false;
+        for (var index = 0; index < a.Count; index++)
+        {
+            if (a[index] != b[index]) return false;
+        }
+        return true;
+    }
 
     private static string DescribeGroup(CardEffect e, int count, CardActorContext context)
     {
@@ -119,19 +212,185 @@ public static class CardTextFormatter
             return DescribePassiveEffect(e);
         }
 
-        var head = DescribeOne(e, context);
-        var triggerPrefix = !string.IsNullOrEmpty(e.Trigger) ? $"[T:{e.Trigger}]の度に" : "";
-        if (count <= 1) return triggerPrefix + head + "。";
+        // 猛毒はコンテンツ制約上「1を複数回」だけを許可しているが、
+        // カード面では倍率表記ではなく最終付与量として読めるよう合算する。
+        // 他の状態異常は耐性で各付与の結果が変わり得るため一般化しない。
+        bool combineVirulentPoison = count > 1
+            && e.Action == "debuff"
+            && e.Name == "virulentPoison"
+            && e.AmountSource is null
+            && e.Amount > 0;
+        var displayedEffect = combineVirulentPoison
+            ? e with
+            {
+                Amount = (int)Math.Min(
+                    int.MaxValue,
+                    (long)e.Amount * count),
+            }
+            : e;
+        var head = DescribeOne(displayedEffect, context);
+        var triggerPrefix = !string.IsNullOrEmpty(e.Trigger) ? $"[T:{e.Trigger}]に" : "";
+        var chancePrefix = e.ChancePercent is int chance
+            ? $"[N:{chance}]%の確率で"
+            : "";
+        var momentumPrefix = e.MaxComboMin is int maxComboMin
+            ? $"[K:momentum][N:{maxComboMin}]："
+            : "";
+        if (count <= 1 || combineVirulentPoison)
+            return triggerPrefix + chancePrefix + momentumPrefix + head + "。";
         // Phase 10.5.M6.4: 数字 marker 周辺のスペース全削除に伴い × も詰める。
-        return triggerPrefix + head + "×[N:" + count + "]。";
+        return triggerPrefix + chancePrefix + momentumPrefix + head + "×[N:" + count + "]。";
     }
+
+    private static string FormatCardAbilities(
+        string mainBody,
+        string conditionalBody,
+        IReadOnlyList<string>? keywords,
+        IReadOnlyList<CardAbilityDefinition> abilities)
+    {
+        var lines = new List<string>();
+
+        // 表示上の優先度は Wild 系 → 終撃 → 喪失。終撃は型付き能力のままとし、
+        // ここで表示マーカーだけを通常キーワードと同じ行に合流させる。
+        var headerKeywordIds = new List<string>();
+        if (keywords is not null)
+        {
+            foreach (var keyword in keywords)
+            {
+                if (!headerKeywordIds.Contains(keyword, System.StringComparer.Ordinal))
+                    headerKeywordIds.Add(keyword);
+            }
+        }
+        if (abilities.Any(ability => ability is FinisherAbilityDefinition) &&
+            !headerKeywordIds.Contains("finisher", System.StringComparer.Ordinal))
+        {
+            headerKeywordIds.Add("finisher");
+        }
+
+        if (headerKeywordIds.Count > 0)
+        {
+            var keywordLine = string.Join("/", headerKeywordIds
+                .Select((id, index) => new { Id = id, Index = index })
+                .OrderBy(entry => CardHeaderKeywordPriority(entry.Id))
+                .ThenBy(entry => entry.Index)
+                .Select(entry => $"[K:{entry.Id}]"));
+            lines.Add(keywordLine);
+        }
+
+        // 伏策条件は優先キーワード行の後、待機中に解決される本文の前に置く。
+        lines.AddRange(abilities
+            .OfType<ContingencyAbilityDefinition>()
+            .Select(DescribeContingency));
+        if (!string.IsNullOrEmpty(mainBody))
+            lines.AddRange(mainBody.Split('\n'));
+
+        // 再演は主効果の一部として、条件付き効果より前に表示する。
+        lines.AddRange(abilities
+            .OfType<RepriseAbilityDefinition>()
+            .Select(DescribeReprise));
+        if (!string.IsNullOrEmpty(conditionalBody))
+            lines.AddRange(conditionalBody.Split('\n'));
+        return string.Join("\n", lines);
+    }
+
+    private static int CardHeaderKeywordPriority(string id) => id switch
+    {
+        "wild" or "superwild" => 0,
+        "finisher" => 1,
+        "exhaust" => 2,
+        _ => 3,
+    };
+
+    private static string DescribeReprise(RepriseAbilityDefinition ability)
+        => $"[K:reprise]：{DescribeRepriseFilter(ability.Filter)}。";
+
+    private static string DescribeRepriseFilter(RepriseCardFilter filter)
+    {
+        string subject = filter.EffectiveCardTypes.Count switch
+        {
+            0 => "カード",
+            1 => CardTypeJp(filter.EffectiveCardTypes[0]),
+            _ => string.Join("・", filter.EffectiveCardTypes.Select(CardTypeJp)),
+        };
+
+        string primary = DescribeCostQualifiedSubject(
+            filter.MinOriginalCost,
+            filter.MaxOriginalCost,
+            subject,
+            useOriginalPrefixForExact: false,
+            prefix: "");
+        var additional = new List<string>();
+        if (filter.MinPaidCost is not null || filter.MaxPaidCost is not null)
+        {
+            additional.Add(DescribeCostQualifiedSubject(
+                filter.MinPaidCost,
+                filter.MaxPaidCost,
+                "カード",
+                useOriginalPrefixForExact: false,
+                prefix: "支払"));
+        }
+        if (filter.EffectiveRequiredKeywords.Count > 0)
+        {
+            additional.Add(
+                $"{string.Join("・", filter.EffectiveRequiredKeywords.Select(id => $"[K:{id}]"))}を持つカード");
+        }
+        return additional.Count == 0
+            ? primary
+            : $"{primary}かつ{string.Join("かつ", additional)}";
+    }
+
+    private static string DescribeCostQualifiedSubject(
+        int? min,
+        int? max,
+        string subject,
+        bool useOriginalPrefixForExact,
+        string prefix = "")
+    {
+        if (min is null && max is null) return subject;
+        var costLabel = prefix.Length == 0 ? "コスト" : $"{prefix}コスト";
+        if (min is int exactMin && max == exactMin)
+        {
+            if (useOriginalPrefixForExact)
+                return $"元コスト[N:{exactMin}]の{subject}";
+            return $"{costLabel}[N:{exactMin}]の{subject}";
+        }
+        if (min is null)
+            return $"{costLabel}[N:{max}]以下の{subject}";
+        if (max is null)
+            return $"{costLabel}[N:{min}]以上の{subject}";
+        return $"{costLabel}[N:{min}]～[N:{max}]の{subject}";
+    }
+
+    private static string DescribeContingency(ContingencyAbilityDefinition ability)
+    {
+        string trigger = ability.Trigger.Timing switch
+        {
+            ContingencyTriggerTiming.TurnStart => "ターン開始時",
+            ContingencyTriggerTiming.BeforeEnemyAttack => "相手のアタック時",
+            ContingencyTriggerTiming.ComboReached =>
+                $"[N:{ability.Trigger.ComboThreshold ?? 0}]コンボ達成時",
+            _ => ability.Trigger.Timing.ToString(),
+        };
+        return $"[K:contingency]：{trigger}。";
+    }
+
+    private static string CardTypeJp(CardType cardType) => cardType switch
+    {
+        CardType.Attack => "アタック",
+        CardType.Skill => "スキル",
+        CardType.Power => "パワー",
+        CardType.Unit => "ユニット",
+        CardType.Status => "状態異常",
+        CardType.Curse => "呪い",
+        _ => cardType.ToString(),
+    };
 
     private static string DescribeOne(CardEffect e, CardActorContext context) => e.Action switch
     {
         "attack" => DescribeAttack(e, context),
         "block" => DescribeBlock(e, context),
-        "draw" => $"{AmountToken(e, context)}枚引く",
-        "drawCards" => $"{AmountToken(e, context)}枚引く",
+        "draw" => DescribeDraw(e, context),
+        "drawCards" => DescribeDraw(e, context),
         "discard" => DescribeDiscard(e, context),
         "buff" => DescribeStatusChange(e, context, isDebuff: false),
         "debuff" => DescribeStatusChange(e, context, isDebuff: true),
@@ -146,19 +405,22 @@ public static class CardTextFormatter
         // retainSelf は Phase 10.5.M2 で「待機」キーワード化された。後方互換のため
         // formatter は文言を残すが、新規カードではキーワードを使うことを推奨。
         "retainSelf" => "[K:wait]",
-        "gainEnergy" => $"エナジー+{AmountToken(e, context)}",
-        "gainMaxEnergy" => $"ターン開始時のエナジー追加量+{AmountToken(e, context)}",
+        "gainEnergy" => $"{ResourceOwnerPrefix(e)}エナジー+{AmountToken(e, context)}",
+        "gainComboGauge" => $"{ResourceOwnerPrefix(e)}コンボゲージ+{AmountToken(e, context)}",
+        "gainMaxEnergy" => $"{ResourceOwnerPrefix(e)}ターン開始時のエナジー回復量+{AmountToken(e, context)}",
         "upgrade" => DescribeExhaustOrUpgrade(e, context, isUpgrade: true),
         "selfDamage" => $"{TargetPrefix(e.Scope, e.Side)}{AmountToken(e, context)}ダメージ",
         "addCard" => DescribeAddCard(e, context),
         "recoverFromDiscard" => DescribeRecoverFromDiscard(e, context),
+        "recoverFromExhaust" => DescribeRecoverFromExhaust(e, context),
         "modifyCardCost" => DescribeModifyCardCost(e),
         // Phase 10.5.L1: relic 固有 action の自動文章化。formatter は battle 用と
         // 共有のため、relic action もここに併記する。
         "gainMaxHp" => $"最大HP+{AmountToken(e, context)}",
         "gainGold" => $"ゴールド+{AmountToken(e, context)}",
+        "healHp" => $"{AmountToken(e, context)}HP回復",
         // Phase 10.6.B: Trigger=="Passive" の場合は DescribePassiveEffect (上で early-return) が
-        // 「休憩所での回復 +N」と書くので、こちらの legacy 文言は非 Passive 経路用。
+        // 「休息時の回復量 +N。」と書くので、こちらの legacy 文言は非 Passive 経路用。
         "restHealBonus" => $"休憩でのHP回復+{AmountToken(e, context)}",
         "healPercent" => $"HPを{AmountToken(e, context)}%回復",
         "extraEnergyOnFirstTurn" => $"戦闘1ターン目のみエナジー+{AmountToken(e, context)}",
@@ -197,6 +459,28 @@ public static class CardTextFormatter
     private static string DescribeBlock(CardEffect e, CardActorContext context)
         => $"{TargetPrefix(e.Scope, e.Side)}{AmountToken(e, context)}ブロック";
 
+    private static string DescribeDraw(CardEffect e, CardActorContext context)
+        => e.Scope == EffectScope.Self
+            ? $"{AmountToken(e, context)}枚引く"
+            : $"{ResourceSubjectPrefix(e)}{AmountToken(e, context)}枚引く";
+
+    private static string ResourceOwnerPrefix(CardEffect e) => (e.Scope, e.Side) switch
+    {
+        (EffectScope.Self, _) => "",
+        (EffectScope.Single, EffectSide.Ally) => "味方単体の",
+        (EffectScope.Random, EffectSide.Ally) => "ランダムな味方の",
+        (EffectScope.All, EffectSide.Ally) => "味方全体の",
+        _ => "対象の",
+    };
+
+    private static string ResourceSubjectPrefix(CardEffect e) => (e.Scope, e.Side) switch
+    {
+        (EffectScope.Single, EffectSide.Ally) => "味方単体が",
+        (EffectScope.Random, EffectSide.Ally) => "ランダムな味方が",
+        (EffectScope.All, EffectSide.Ally) => "味方全体が",
+        _ => "対象が",
+    };
+
     /// <summary>
     /// exhaustCard / upgrade を Select (random/choose/all) + Pile (hand/draw/discard) の
     /// 組合せで翻訳する。共通フォーマット:
@@ -217,10 +501,17 @@ public static class CardTextFormatter
     }
 
     private static string DescribeHeal(CardEffect e, CardActorContext context)
-        => $"{TargetPrefix(e.Scope, e.Side)}HPを{AmountToken(e, context)}回復";
+        => $"{TargetPrefix(e.Scope, e.Side)}{AmountToken(e, context)}HP回復";
 
     private static string DescribeStatusChange(CardEffect e, CardActorContext context, bool isDebuff)
     {
+        if (e.StatusChanges is { Count: > 0 })
+        {
+            var statuses = string.Join("・", e.StatusChanges.Select(change =>
+                $"[S:{change.Name}][N:{change.Amount}]"));
+            return $"{TargetPrefix(e.Scope, e.Side)}{statuses}を付与";
+        }
+
         // Phase 10.5.M2: status 名を [S:id] marker として emit。Client 側で JP 名と
         //  ホバー定義 popup へ展開する (旧: bare JP 文字列、scan 困難だった)。
         var statusToken = string.IsNullOrEmpty(e.Name) ? "ステータス" : $"[S:{e.Name}]";
@@ -254,12 +545,28 @@ public static class CardTextFormatter
     {
         var selectJp = SelectJp(e.Select);
         var dest = ZoneJp(e.Pile);
+        var amount = AmountToken(e, context);
+        if (e.Select == "choose")
+        {
+            var source = $"捨札の選んだ{amount}枚";
+            return e.Pile == "exhaust"
+                ? $"{source}を除外する"
+                : $"{source}を{dest}に戻す";
+        }
+
         // exhaust の場合は「除外する」、それ以外は「<dest>に戻す」
         if (e.Pile == "exhaust")
         {
-            return $"捨札から{selectJp}{AmountToken(e, context)}枚、除外する";
+            return $"捨札から{selectJp}{amount}枚、除外する";
         }
-        return $"捨札から{selectJp}{AmountToken(e, context)}枚、{dest}に戻す";
+        return $"捨札から{selectJp}{amount}枚、{dest}に戻す";
+    }
+
+    private static string DescribeRecoverFromExhaust(CardEffect e, CardActorContext context)
+    {
+        var selectJp = SelectJp(e.Select);
+        var dest = ZoneJp(e.Pile);
+        return $"除外から{selectJp}{AmountToken(e, context)}枚、{dest}に戻す";
     }
 
     private static string DescribeModifyCardCost(CardEffect e)
@@ -269,17 +576,22 @@ public static class CardTextFormatter
         string targets = e.Select switch
         {
             "all" => $"{zone}の全カード",
-            "random" => $"{zone}のカードをランダムに[N:{count}]枚",
-            _ => $"{zone}のカードを[N:{count}]枚選び",
+            "random" => $"{zone}のランダムな[N:{count}]枚",
+            _ => $"{zone}の選んだ[N:{count}]枚",
         };
+        if (string.Equals(e.AmountSource, "currentCost", System.StringComparison.Ordinal))
+        {
+            string zeroDuration = e.CostDuration == "untilTurnEnd"
+                ? "ターン中"
+                : "使用されるまで";
+            return $"{ResourceOwnerPrefix(e)}{targets}のコストを{zeroDuration}0にする";
+        }
         long magnitude = System.Math.Abs((long)e.Amount);
-        string change = e.Amount < 0
-            ? $"コストを[N:{magnitude}]減らす"
-            : $"コストを[N:{magnitude}]増やす";
+        string sign = e.Amount < 0 ? "-" : "+";
         string duration = e.CostDuration == "untilTurnEnd"
-            ? "（このターン終了まで）"
-            : "（使用するまで）";
-        return $"{targets}、{change}{duration}";
+            ? "ターン中"
+            : "使用されるまで";
+        return $"{ResourceOwnerPrefix(e)}{targets}のコストを{duration}{sign}[N:{magnitude}]";
     }
 
     /// <summary>
@@ -291,7 +603,27 @@ public static class CardTextFormatter
     {
         if (!string.IsNullOrEmpty(e.AmountSource))
         {
+            // 能力値参照は使用者の能力値が分かれば具体値（筋力・敏捷等の補正込み）で表示する。
+            int? stat = e.AmountSource switch
+            {
+                "selfAttack" => context.AttackPower,
+                "selfDefense" => context.DefensePower,
+                _ => null,
+            };
+            if (stat is { } statValue)
+            {
+                return AmountToken(
+                    e with
+                    {
+                        Amount = Battle.Engine.AmountSourceEvaluator.Scale(statValue, e.AmountScalePercent),
+                        AmountSource = null,
+                        AmountScalePercent = null,
+                    },
+                    context);
+            }
             var label = AmountSourceJp(e.AmountSource);
+            if (e.AmountScalePercent is { } pct && pct != 100)
+                label += $"の{FormatScale(pct)}倍";
             // 1 個目変数は X (将来 Y/Z 採番予定。本フェーズでは X 固定)
             return $"[V:X|{label}]";
         }
@@ -321,6 +653,9 @@ public static class CardTextFormatter
         return e.Amount;
     }
 
+    private static string FormatScale(int pct) =>
+        (pct / 100m).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+
     private static string AmountSourceJp(string src) => src switch
     {
         "handCount" => "手札の数",
@@ -328,7 +663,15 @@ public static class CardTextFormatter
         "discardPileCount" => "捨札の数",
         "exhaustPileCount" => "除外の数",
         "selfHp" => "自身のHP",
+        "selfHpLost" => "自身の失ったHP",
+        "selfBlock" => "自身のブロック",
         "comboCount" => "現在のコンボ",
+        "maxComboThisTurn" => "このターンの最大コンボ",
+        "energy" => "現在のエナジー",
+        "powerCardCount" => "パワーカード枚数",
+        "selfAttack" => "自身の攻撃力",
+        "selfDefense" => "自身の守備力",
+        "currentCost" => "対象カードの現在コスト",
         _ => src,
     };
 
@@ -351,22 +694,13 @@ public static class CardTextFormatter
         _ => select,
     };
 
-    private static string JpStatusName(string? id) => id switch
+    private static string JpStatusName(string? id)
     {
-        "weak" => "脱力",
-        "vulnerable" => "脆弱",
-        "strength" => "筋力",
-        "dexterity" => "敏捷",
-        "poison" => "毒",
-        "omnistrike" => "拡散",
-        "barrier" => "バリア",
-        "lifesteal" => "吸血",
-        "reflect" => "反射",
-        "handCostReduction" => "手札軽減",
-        "handCostIncrease" => "手札増加",
-        null or "" => "ステータス",
-        _ => id,
-    };
+        if (string.IsNullOrEmpty(id)) return "ステータス";
+        return BattleStatusTextCatalog.All.TryGetValue(id, out var text)
+            ? text.Name
+            : id;
+    }
 
     /// <summary>
     /// Phase 10.6.B: Passive trigger 用の専用文言テーブル。
@@ -382,14 +716,14 @@ public static class CardTextFormatter
 
         return eff.Action switch
         {
-            "energyPerTurnBonus"          => $"ターン開始時のエナジー追加量 {sign}{n}",
+            "energyPerTurnBonus"          => $"ターン開始時のエナジー回復量{sign}{n}。",
             "cardsDrawnPerTurnBonus"      => $"ターン開始時の手札枚数 {sign}{n}",
-            "goldRewardMultiplier"        => $"戦闘ゴールド報酬 {sign}{n}%",
+            "goldRewardMultiplier"        => $"[T:OnBattleEnd]のゴールド報酬 {sign}{n}%。",
             "shopPriceMultiplier"         => $"ショップ価格 {sign}{n}%",
-            "rewardCardChoicesBonus"      => $"カード報酬選択肢 {sign}{n} 枚",
-            "rewardRerollAvailable"       => $"カード報酬を {n} 回リロール可能",
+            "rewardCardChoicesBonus"      => $"カード報酬選択肢{sign}{n}。",
+            "rewardRerollAvailable"       => $"カード報酬のリロール回数{sign}{n}。",
             "unknownTileWeightDelta"      => $"ハテナマスの{UnknownTileLabel(eff.Name)}出現率 {sign}{n}",
-            "restHealBonus"               => $"休憩所での回復 {sign}{n}",
+            "restHealBonus"               => $"[T:OnRest]の回復量 {sign}{n}。",
             _                             => $"(未対応 Passive action: {eff.Action})",
         };
     }

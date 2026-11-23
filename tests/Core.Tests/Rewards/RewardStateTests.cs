@@ -1,4 +1,6 @@
 using System.Collections.Immutable;
+using System.Text.Json;
+using RoguelikeCardGame.Core.Json;
 using RoguelikeCardGame.Core.Rewards;
 using Xunit;
 
@@ -15,5 +17,26 @@ public class RewardStateTests
             CardChoices: ImmutableArray<string>.Empty,
             CardStatus: CardRewardStatus.Skipped);
         Assert.False(r.IsBossReward);
+        Assert.Equal(CardRewardPoolKind.Class, r.CardPoolKind);
+    }
+
+    [Fact]
+    public void Deserialize_LegacyJsonWithoutCardPoolKind_DefaultsToClass()
+    {
+        const string json = """
+        {
+          "gold": 0,
+          "goldClaimed": true,
+          "potionId": null,
+          "potionClaimed": true,
+          "cardChoices": [],
+          "cardStatus": "Pending"
+        }
+        """;
+
+        var reward = JsonSerializer.Deserialize<RewardState>(json, JsonOptions.Default);
+
+        Assert.NotNull(reward);
+        Assert.Equal(CardRewardPoolKind.Class, reward!.CardPoolKind);
     }
 }

@@ -76,6 +76,14 @@
   letter-spacing: 3px;
 }
 
+.main-menu__save-state {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 18px;
+  color: var(--fg-muted);
+}
+
 /* ---------- Center stack ---------- */
 .main-menu__center {
   position: absolute;
@@ -96,6 +104,15 @@
   align-items: center;
   gap: 6px;
 }
+
+.main-menu__title-block,
+.main-menu__divider,
+.main-menu__buttons {
+  animation: main-menu-reveal 360ms steps(6, end) both;
+}
+
+.main-menu__divider { animation-delay: 80ms; }
+.main-menu__buttons { animation-delay: 150ms; }
 
 .main-menu__ornament-top {
   color: var(--gold-deep);
@@ -129,6 +146,45 @@
   width: 420px;
   height: 1px;
   background: linear-gradient(90deg, transparent, #8a5a2a, transparent);
+}
+
+.main-menu__run-card {
+  position: relative;
+  width: 540px;
+  padding: 10px 14px 12px;
+  border: 1px solid var(--border-mid);
+  background: linear-gradient(90deg, rgba(24, 14, 9, 0.96), rgba(10, 6, 4, 0.82));
+  box-shadow: inset 3px 0 0 var(--gold-deep), 0 5px 16px rgba(0, 0, 0, 0.34);
+  text-align: left;
+  animation: main-menu-reveal 260ms steps(5, end) 100ms both;
+}
+
+.main-menu__run-head,
+.main-menu__run-stats {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.main-menu__run-head { color: var(--gold-soft); font-family: var(--font-label); font-size: 11px; letter-spacing: 2px; }
+.main-menu__run-head span:last-child { margin-left: auto; color: var(--fg-dim); }
+.main-menu__run-stats { margin-top: 7px; color: var(--fg); font-size: 12px; letter-spacing: 1px; }
+.main-menu__run-hp { display: block; height: 3px; margin-top: 8px; background: rgba(0, 0, 0, 0.7); }
+.main-menu__run-hp > span { display: block; height: 100%; background: linear-gradient(90deg, #9f2c24, #e26953); }
+
+@keyframes main-menu-reveal {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .main-menu__title-block,
+  .main-menu__divider,
+  .main-menu__buttons,
+  .main-menu__run-card {
+    animation: none;
+    transition: none;
+  }
 }
 
 /* ---------- Buttons ---------- */

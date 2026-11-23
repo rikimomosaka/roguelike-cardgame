@@ -51,6 +51,19 @@ internal static class SideStatusCountdown
                 if (def.TickDirection != StatusTickDirection.Decrement)
                     continue;
 
+                // Afterglow is consumed once at the formal battle turn end.
+                // Until then it suppresses every positive countdown for this
+                // actor, including this legacy side-specific countdown.
+                if (SupportStatusTurnEndRules.ShouldSkipStandardCountdown(actor, def))
+                {
+                    s = s with
+                    {
+                        AfterglowProtectedActorInstanceIds =
+                            s.AfterglowProtectedActorInstanceIds.Add(aid),
+                    };
+                    continue;
+                }
+
                 // 同 actor 内で複数 status を更新するため再 fetch (InstanceId 検索)
                 actor = FindActor(s, aid)!;
                 int newAmount = actor.GetStatus(id) - 1;

@@ -204,9 +204,21 @@ public class BattleControllerTests : IClassFixture<TempDataFactory>
         var (client, _) = await BattleControllerFixtures.SetupRunWithActiveBattleAsync(_factory);
         try
         {
-            await client.PostAsync("/api/v1/runs/current/battle/start", null);
+            var startResponse = await client.PostAsync(
+                "/api/v1/runs/current/battle/start", null);
+            var started = await startResponse.Content
+                .ReadFromJsonAsync<BattleActionResponseDto>();
+            var primary = Assert.Single(
+                started!.State.Participants!,
+                participant => participant.ControllerKind == "Human");
 
-            var resp = await client.PostAsync("/api/v1/runs/current/battle/end-turn", null);
+            var command = new BattleCommandRequestDto(
+                primary.ParticipantId,
+                primary.ActorInstanceId,
+                "legacy-end-turn-resolve",
+                started.State.ActionRevision);
+            var resp = await client.PostAsJsonAsync(
+                "/api/v1/runs/current/battle/end-turn", command);
 
             Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
             var body = await resp.Content.ReadFromJsonAsync<BattleActionResponseDto>();
@@ -214,6 +226,15 @@ public class BattleControllerTests : IClassFixture<TempDataFactory>
             Assert.Contains(body!.Steps, s => s.Event.Kind == "EndTurn");
             // ターン進行: 最終 state は PlayerInput または Resolved
             Assert.True(body.State.Phase == "PlayerInput" || body.State.Phase == "Resolved");
+            var retryResponse = await client.PostAsJsonAsync(
+                "/api/v1/runs/current/battle/end-turn", command);
+            Assert.Equal(HttpStatusCode.OK, retryResponse.StatusCode);
+            var retry = await retryResponse.Content
+                .ReadFromJsonAsync<BattleActionResponseDto>();
+            Assert.NotNull(retry);
+            Assert.Empty(retry!.Steps);
+            Assert.Equal(body.State.Turn, retry.State.Turn);
+            Assert.Equal(body.State.ActionRevision, retry.State.ActionRevision);
         }
         finally
         {

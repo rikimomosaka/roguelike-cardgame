@@ -9,6 +9,8 @@
   top: var(--tip-top, 0);
   z-index: var(--z-tooltip);
   pointer-events: none;
+  box-sizing: border-box;
+  width: min(300px, calc(100vw - 16px));
   max-width: 300px;
   padding: 10px 12px;
   background: rgba(10, 6, 4, 0.96);
@@ -129,3 +131,81 @@
 .tip__ref--card .tip__ref-name { color: #d8b4ff; }
 /* Phase 10.5.M6.7: unit ref ([U:wisp] 等)。cardref と同系統の紫。 */
 .tip__ref--unit .tip__ref-name { color: #d8b4ff; }
+
+.tip__cost-panel {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: -1px;
+  box-sizing: border-box;
+  width: 270px;
+  padding: 10px 12px;
+  background: rgba(10, 6, 4, 0.97);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 12px rgba(201, 152, 90, 0.25);
+  color: var(--fg-muted);
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+/* The normal description is always the cursor-near panel. When the composite
+   flips to the cursor's left, put the calculation farther left instead of
+   leaving it between the cursor and the normal description. */
+.tip[data-cost-side='left'] .tip__cost-panel {
+  right: calc(100% + 8px);
+  left: auto;
+}
+
+.tip__cost-title {
+  margin-bottom: 6px;
+  color: var(--gold-soft);
+  font-size: 15px;
+  letter-spacing: 1px;
+}
+
+.tip__cost-base,
+.tip__cost-result {
+  color: var(--fg-white);
+  font-family: var(--font-digit);
+  font-variant-numeric: tabular-nums;
+}
+
+.tip__cost-line {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 2px;
+  margin: 3px 0;
+}
+
+.tip__cost-arrow,
+.tip__cost-source {
+  color: var(--gold-warm);
+}
+
+.tip__cost-value {
+  margin: 0 2px;
+  color: var(--fg-white);
+  font-family: var(--font-digit);
+  font-variant-numeric: tabular-nums;
+}
+
+.tip__cost-value--reduced { color: var(--gold); }
+.tip__cost-value--increased { color: var(--state-block); }
+
+.tip__cost-result {
+  margin-top: 7px;
+  padding-top: 5px;
+  border-top: 1px dashed rgba(201, 152, 90, 0.4);
+  text-align: right;
+  font-size: 15px;
+}
+
+@media (max-width: 699px) {
+  .tip__cost-panel {
+    right: auto;
+    left: 0;
+    top: calc(100% + 8px);
+    width: min(270px, calc(100vw - 16px));
+  }
+}

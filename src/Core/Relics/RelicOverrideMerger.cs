@@ -60,6 +60,12 @@ public static class RelicOverrideMerger
 
         baseNode["versions"] = merged;
 
+        foreach (var property in overrideNode)
+        {
+            if (property.Key is "id" or "versions" or "activeVersion") continue;
+            baseNode[property.Key] = property.Value?.DeepClone();
+        }
+
         // override.activeVersion が指定されていれば上書き。
         var overrideActive = overrideNode["activeVersion"]?.GetValue<string>();
         if (!string.IsNullOrEmpty(overrideActive))

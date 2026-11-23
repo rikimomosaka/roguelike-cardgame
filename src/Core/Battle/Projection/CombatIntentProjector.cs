@@ -2,6 +2,7 @@ using System.Linq;
 using RoguelikeCardGame.Core.Battle.Definitions;
 using RoguelikeCardGame.Core.Battle.Engine;
 using RoguelikeCardGame.Core.Battle.State;
+using RoguelikeCardGame.Core.Battle.Statuses;
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Data;
 
@@ -18,29 +19,104 @@ public static class CombatIntentProjector
         CombatActor actor,
         DataCatalog catalog)
     {
-        if (actor.DefinitionId == "hero")
-            return ProjectQueuedHeroAttacks(actor);
+        var afterimage = AfterimageIntentProjector.Project(state, actor);
+        if (UsesQueuedCardAttacks(actor, catalog))
+            return Merge(
+                ProjectQueuedCardAttacks(actor),
+                afterimage);
+
+        // カード制御の敵: 予約済み戦場効果を実行順（非攻撃 → 攻撃）で予告する。
+        // ブロック・バフ・デバフは予定として表示するだけで、まだ適用されていない。
+        if (actor.Side == ActorSide.Enemy && !actor.PlannedEffects.IsDefaultOrEmpty)
+        {
+            var ordered = actor.PlannedEffects
+                .Where(planned => planned.Effect.Action != "attack")
+                .Concat(actor.PlannedEffects
+                    .Where(planned => planned.Effect.Action == "attack"))
+                .Select(planned => EffectApplier.ResolveActorStatAtExecution(
+                    planned.Effect, state, actor))
+                .ToArray();
+            var planned = new MoveDefinition(
+                "planned", MoveKind.Unknown, ordered, NextMoveId: "planned");
+            return Merge(ProjectMove(state, actor, planned), afterimage);
+        }
 
         if (actor.CurrentMoveId is null)
-            return null;
+            return afterimage;
 
         var move = FindCurrentMove(actor, catalog);
-        return move is null ? null : ProjectMove(state, actor, move);
+        return move is null
+            ? afterimage
+            : Merge(ProjectMove(state, actor, move), afterimage);
     }
 
-    private static CombatIntentProjection? ProjectQueuedHeroAttacks(CombatActor actor)
+    private static CombatIntentProjection? Merge(
+        CombatIntentProjection? first,
+        CombatIntentProjection? second)
+    {
+        if (first is null) return second;
+        if (second is null) return first;
+
+        return new CombatIntentProjection(
+            AttackSingle: AddNullable(first.AttackSingle, second.AttackSingle),
+            AttackRandom: AddNullable(first.AttackRandom, second.AttackRandom),
+            AttackAll: AddNullable(first.AttackAll, second.AttackAll),
+            AttackHits: AddNullable(first.AttackHits, second.AttackHits),
+            AttackSingleHits: AddNullable(
+                first.AttackSingleHits, second.AttackSingleHits),
+            AttackRandomHits: AddNullable(
+                first.AttackRandomHits, second.AttackRandomHits),
+            AttackAllHits: AddNullable(
+                first.AttackAllHits, second.AttackAllHits),
+            Block: AddNullable(first.Block, second.Block),
+            HasBuff: first.HasBuff || second.HasBuff,
+            HasDebuff: first.HasDebuff || second.HasDebuff,
+            HasHeal: first.HasHeal || second.HasHeal);
+    }
+
+    private static int? AddNullable(int? left, int? right) =>
+        left is null
+            ? right
+            : right is null
+                ? left
+                : unchecked(left.Value + right.Value);
+
+    private static bool UsesQueuedCardAttacks(
+        CombatActor actor,
+        DataCatalog catalog)
+    {
+        if (actor.DefinitionId == "hero")
+            return true;
+
+        return actor.Side == ActorSide.Ally
+            && catalog.TryGetUnit(actor.DefinitionId, out var unit)
+            && unit.IsCardControlled;
+    }
+
+    private static CombatIntentProjection? ProjectQueuedCardAttacks(CombatActor actor)
     {
         int strength = actor.GetStatus("strength");
         int weak = actor.GetStatus("weak");
-        int single = actor.AttackSingle.Display(strength, weak);
-        int random = actor.AttackRandom.Display(strength, weak);
-        int all = actor.AttackAll.Display(strength, weak);
-        int hits = actor.AttackSingle.AddCount
-            + actor.AttackRandom.AddCount
-            + actor.AttackAll.AddCount;
+        int vigor = actor.GetStatus("vigor");
+        int single = Display(actor.AttackSingle, strength, weak, vigor);
+        int random = Display(actor.AttackRandom, strength, weak, vigor);
+        int all = Display(actor.AttackAll, strength, weak, vigor);
+        int singleHits = actor.AttackSingle.AddCount;
+        int randomHits = actor.AttackRandom.AddCount;
+        int allHits = actor.AttackAll.AddCount;
+        int hits = singleHits + randomHits + allHits;
 
         if (hits == 0)
             return null;
+
+        int pursuit = actor.GetStatus("pursuit");
+        if (pursuit > 0)
+        {
+            all = unchecked(all + AttackDamageMath.AdjustForAttacker(
+                pursuit, strength, weak, vigor));
+            allHits++;
+            hits++;
+        }
 
         if (actor.GetStatus("omnistrike") > 0)
         {
@@ -58,20 +134,30 @@ public static class CombatIntentProjector
                 HasHeal: false);
         }
 
+        if (actor.GetStatus(BattleStatusIds.Disruption) > 0)
+        {
+            return new CombatIntentProjection(
+                AttackSingle: null,
+                AttackRandom: unchecked(single + random + all),
+                AttackAll: null,
+                AttackHits: hits,
+                AttackSingleHits: null,
+                AttackRandomHits: hits,
+                AttackAllHits: null,
+                Block: null,
+                HasBuff: false,
+                HasDebuff: false,
+                HasHeal: false);
+        }
+
         return new CombatIntentProjection(
-            AttackSingle: actor.AttackSingle.AddCount > 0 ? single : null,
-            AttackRandom: actor.AttackRandom.AddCount > 0 ? random : null,
-            AttackAll: actor.AttackAll.AddCount > 0 ? all : null,
+            AttackSingle: singleHits > 0 ? single : null,
+            AttackRandom: randomHits > 0 ? random : null,
+            AttackAll: allHits > 0 ? all : null,
             AttackHits: hits,
-            AttackSingleHits: actor.AttackSingle.AddCount > 0
-                ? actor.AttackSingle.AddCount
-                : null,
-            AttackRandomHits: actor.AttackRandom.AddCount > 0
-                ? actor.AttackRandom.AddCount
-                : null,
-            AttackAllHits: actor.AttackAll.AddCount > 0
-                ? actor.AttackAll.AddCount
-                : null,
+            AttackSingleHits: singleHits > 0 ? singleHits : null,
+            AttackRandomHits: randomHits > 0 ? randomHits : null,
+            AttackAllHits: allHits > 0 ? allHits : null,
             Block: null,
             HasBuff: false,
             HasDebuff: false,
@@ -104,6 +190,9 @@ public static class CombatIntentProjector
     {
         int strength = actor.GetStatus("strength");
         int weak = actor.GetStatus("weak");
+        int vigor = actor.GetStatus("vigor");
+        int omnistrike = actor.GetStatus(BattleStatusIds.Omnistrike);
+        int disruption = actor.GetStatus(BattleStatusIds.Disruption);
         int attackSingle = 0;
         int attackRandom = 0;
         int attackAll = 0;
@@ -115,6 +204,25 @@ public static class CombatIntentProjector
         bool hasDebuff = false;
         bool hasHeal = false;
 
+        int pursuit = actor.GetStatus("pursuit");
+        if (pursuit > 0 && move.Effects.Any(effect => effect.Action == "attack"))
+        {
+            int adjustedPursuit = AttackDamageMath.AdjustForAttacker(
+                pursuit, strength, weak, vigor);
+            switch (AttackScopeRules.Resolve(
+                EffectScope.All, omnistrike, disruption))
+            {
+                case EffectScope.Random:
+                    attackRandom = adjustedPursuit;
+                    randomHits = 1;
+                    break;
+                default:
+                    attackAll = adjustedPursuit;
+                    allHits = 1;
+                    break;
+            }
+        }
+
         // Effects resolve in declaration order. A deterministic self status change
         // therefore changes the preview of only the attacks that follow it.
         foreach (var effect in move.Effects)
@@ -123,8 +231,9 @@ public static class CombatIntentProjector
             {
                 case "attack":
                     int adjusted = AttackDamageMath.AdjustForAttacker(
-                        effect.Amount, strength, weak);
-                    switch (effect.Scope)
+                        effect.Amount, strength, weak, vigor);
+                    switch (AttackScopeRules.Resolve(
+                        effect.Scope, omnistrike, disruption))
                     {
                         case EffectScope.Single:
                             attackSingle = unchecked(attackSingle + adjusted);
@@ -148,13 +257,17 @@ public static class CombatIntentProjector
                 case "buff":
                     hasBuff = true;
                     ApplyDeterministicAttackerStatus(
-                        state, actor, effect, ref strength, ref weak);
+                        state, actor, effect,
+                        ref strength, ref weak, ref vigor,
+                        ref omnistrike, ref disruption);
                     break;
 
                 case "debuff":
                     hasDebuff = true;
                     ApplyDeterministicAttackerStatus(
-                        state, actor, effect, ref strength, ref weak);
+                        state, actor, effect,
+                        ref strength, ref weak, ref vigor,
+                        ref omnistrike, ref disruption);
                     break;
 
                 case "heal":
@@ -181,24 +294,54 @@ public static class CombatIntentProjector
             HasHeal: hasHeal);
     }
 
+    private static int Display(AttackPool pool, int strength, int weak, int vigor)
+    {
+        int sum = 0;
+        foreach (int amount in pool.HitAmounts)
+            sum = unchecked(sum + AttackDamageMath.AdjustForAttacker(
+                amount, strength, weak, vigor));
+        return sum;
+    }
+
     private static void ApplyDeterministicAttackerStatus(
         BattleState state,
         CombatActor actor,
         CardEffect effect,
         ref int strength,
-        ref int weak)
+        ref int weak,
+        ref int vigor,
+        ref int omnistrike,
+        ref int disruption)
     {
         if (!DefinitelyTargetsActor(state, actor, effect))
             return;
 
-        if (effect.Name == "strength")
+        foreach (var change in effect.EffectiveStatusChanges())
         {
-            strength = unchecked(strength + effect.Amount);
-        }
-        else if (effect.Name == "weak")
-        {
-            int updated = unchecked(weak + effect.Amount);
-            weak = updated > 0 ? updated : 0;
+            if (change.Name == "strength")
+            {
+                strength = unchecked(strength + change.Amount);
+            }
+            else if (change.Name == "weak")
+            {
+                int updated = unchecked(weak + change.Amount);
+                weak = updated > 0 ? updated : 0;
+            }
+            else if (change.Name == "vigor")
+            {
+                int updated = unchecked(vigor + change.Amount);
+                vigor = updated > 0 ? updated : 0;
+            }
+            else if (change.Name == BattleStatusIds.Omnistrike)
+            {
+                int updated = unchecked(omnistrike + change.Amount);
+                omnistrike = updated > 0 ? updated : 0;
+            }
+            else if (change.Name == BattleStatusIds.Disruption)
+            {
+                int updated = unchecked(disruption + change.Amount);
+                disruption = updated > 0 ? updated : 0;
+            }
         }
     }
 

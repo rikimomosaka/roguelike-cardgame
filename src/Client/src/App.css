@@ -1,392 +1,57 @@
-/* src/Client/src/App.css */
-:root {
-  color-scheme: dark;
-  --bg: #14171a;
-  --fg: #e8ecef;
-  --accent: #7aa2f7;
-  --muted: #6b7280;
-  --danger: #e06c75;
-  font-family: system-ui, sans-serif;
-}
+/* App-only shells. Screen and component styling lives beside its owner so an
+   old global selector cannot silently override a newer visual implementation. */
 
-body {
+.bootstrap,
+.bootstrap-error {
+  position: absolute;
+  inset: 0;
   margin: 0;
-  background: var(--bg);
-  color: var(--fg);
-  min-height: 100vh;
-}
-
-main {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
-}
-
-main.map-screen {
   padding: 0;
-}
-
-.btn {
-  display: inline-block;
-  padding: 0.6rem 1.2rem;
-  border: 1px solid var(--accent);
-  background: transparent;
-  color: var(--fg);
-  border-radius: 0.4rem;
-  cursor: pointer;
-  font-size: 1rem;
-  font-family: inherit;
-  letter-spacing: inherit;
-}
-.btn:hover { background: rgba(122, 162, 247, 0.1); }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn--secondary { border-color: var(--muted); }
-.btn--danger { border-color: var(--danger); color: var(--danger); }
-
-.login-screen h1 { text-align: center; }
-.login-tabs { display: flex; gap: 0.5rem; margin: 1rem 0; }
-.login-tabs button {
-  flex: 1; padding: 0.5rem; background: transparent;
-  color: var(--fg); border: 1px solid var(--muted); border-radius: 0.4rem; cursor: pointer;
-}
-.login-tabs button[aria-selected='true'] { border-color: var(--accent); }
-.login-screen label { display: block; margin: 1rem 0 0.25rem; }
-.login-screen input {
-  width: 100%; padding: 0.5rem; background: #1f2429; color: var(--fg);
-  border: 1px solid var(--muted); border-radius: 0.3rem;
-}
-.login-error { color: var(--danger); margin: 0.5rem 0; }
-
-.main-menu__header { display: flex; justify-content: space-between; margin-bottom: 1.5rem; }
-.main-menu__account { font-weight: bold; }
-.main-menu__buttons { display: grid; grid-template-columns: 1fr; gap: 0.75rem; max-width: 320px; margin: 0 auto; }
-.main-menu__badge { text-align: center; margin-top: 1rem; color: var(--accent); }
-.main-menu__dialog {
-  margin-top: 1.5rem; padding: 1rem; background: #1f2429;
-  border: 1px solid var(--muted); border-radius: 0.4rem;
-}
-
-.settings-screen__sliders { display: grid; gap: 1rem; margin: 1.5rem 0; }
-.slider { display: grid; grid-template-columns: 6rem 1fr 3rem; align-items: center; gap: 1rem; }
-.slider__value { text-align: right; color: var(--accent); }
-
-.settings-screen__footer { display: flex; justify-content: space-between; align-items: center; }
-
-.bootstrap, .bootstrap-error { text-align: center; padding-top: 4rem; }
-
-/* TopBar styles live in TopBar.css */
-
-.potion-slot {
-  position: relative;
-  width: 2.25rem;
-  height: 2.25rem;
-  border: 1px solid var(--muted);
-  border-radius: 50%;
-  background: #14171a;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.potion-slot--empty {
-  opacity: 0.4;
-  border-style: dashed;
-}
-.potion-slot__icon {
-  width: 100%;
-  height: 100%;
-  background: transparent;
-  border: none;
-  color: var(--fg);
-  font-size: 1.1rem;
-  cursor: pointer;
-  border-radius: 50%;
   display: grid;
-  place-items: center;
-  padding: 0;
-}
-.potion-slot__icon img {
-  width: 84%;
-  height: 84%;
-  object-fit: contain;
-  image-rendering: pixelated;
-  -webkit-user-select: none;
-  user-select: none;
-}
-.potion-slot__icon:hover { background: rgba(122, 162, 247, 0.15); }
-.potion-slot__menu {
-  position: fixed;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px;
-  background: rgba(20, 14, 10, 0.98);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  box-shadow: 0 0 18px rgba(0, 0, 0, 0.6), 0 0 12px rgba(201, 152, 90, 0.2);
-  z-index: var(--z-tooltip);
-  min-width: 112px;
-  font-family: var(--font-body);
-}
-.potion-slot__menu button {
-  padding: 6px 10px;
-  background: rgba(10, 6, 4, 0.6);
-  color: var(--fg);
-  border: 1px solid var(--border-mid);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 14px;
-  letter-spacing: 1px;
-  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
-}
-.potion-slot__menu button:hover {
-  border-color: var(--gold-deep);
-  color: var(--gold-soft);
-  background: rgba(201, 152, 90, 0.14);
-}
-
-/* MapScreen layout / toasts: styled in MapScreen.css */
-
-/* ==========================================================
-   BattleOverlay — themed stand-in battle view (full impl pending)
-   ========================================================== */
-.battle-overlay {
-  position: fixed;
-  top: 3.75rem;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 32px;
-  padding: 40px 24px;
+  place-content: center;
+  justify-items: center;
+  gap: 18px;
+  overflow: hidden;
   background:
-    radial-gradient(ellipse at 50% 38%, rgba(217, 97, 74, 0.14) 0%, transparent 62%),
-    linear-gradient(180deg, var(--bg-2) 0%, var(--bg-3) 100%);
+    radial-gradient(ellipse at 50% 42%, rgba(201, 152, 90, 0.16), transparent 58%),
+    linear-gradient(180deg, var(--bg-2), var(--bg-3) 52%, var(--bg-2));
   color: var(--fg);
   font-family: var(--font-body);
-  z-index: 100;
+  letter-spacing: 4px;
+  text-align: center;
 }
-.battle-overlay::before {
+
+.bootstrap::before,
+.bootstrap-error::before {
   content: '';
   position: absolute;
   inset: 16px;
   border: 1px solid var(--border-mid);
-  border-radius: var(--radius-sm);
   pointer-events: none;
 }
-.battle-overlay__title {
-  font-family: var(--font-body);
-  font-size: 18px;
-  letter-spacing: 12px;
-  color: var(--gold);
-  text-shadow: 0 0 12px rgba(255, 213, 79, 0.4), 0 2px 0 #000;
+
+.bootstrap p,
+.bootstrap-error p {
   margin: 0;
-}
-.battle-overlay__enemies {
-  display: flex;
-  gap: 28px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-.battle-enemy {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 18px;
-  background: rgba(10, 6, 4, 0.55);
-  border: 1px solid var(--border-mid);
-  border-radius: var(--radius-sm);
-  min-width: 11rem;
-  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.45);
-}
-.battle-enemy__image {
-  width: 6rem;
-  height: 6rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.55);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-label);
-  font-size: 11px;
-  letter-spacing: 2px;
-  color: var(--fg-muted);
-  text-align: center;
-  padding: 0.25rem;
-}
-.battle-enemy__name {
-  font-family: var(--font-body);
-  font-size: 14px;
-  letter-spacing: 2px;
-  color: var(--fg);
-  text-shadow: 0 1px 0 #000;
-}
-.battle-enemy__hp {
-  font-family: var(--font-label);
-  font-size: 12px;
-  letter-spacing: 2px;
-  color: var(--state-ok, #8fd08f);
-  font-variant-numeric: tabular-nums;
-}
-.battle-overlay__actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-.battle-overlay__victory {
-  background: rgba(201, 152, 90, 0.12);
-  border: 1px solid var(--gold-deep);
-  color: #ffe1b0;
-  padding: 12px 42px;
-  font-family: var(--font-body);
-  font-size: 18px;
-  letter-spacing: 8px;
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  box-shadow: 0 0 18px rgba(201, 152, 90, 0.3), inset 0 0 10px rgba(201, 152, 90, 0.12);
-  transition: border-color 0.12s ease, background 0.12s ease, transform 0.12s ease;
-}
-.battle-overlay__victory:hover:not(:disabled) {
-  border-color: var(--gold-warm);
-  background: rgba(201, 152, 90, 0.18);
-  transform: translateY(-1px);
-}
-.battle-overlay__victory:disabled { opacity: 0.5; cursor: default; }
-
-.battle-peek {
-  position: fixed;
-  top: 3.75rem;
-  left: 0;
-  right: 0;
-  padding: 0.5rem;
-  background: rgba(30, 35, 40, 0.85);
-  text-align: center;
-  cursor: pointer;
-  z-index: 100;
-  color: var(--accent);
-  font-size: 0.9rem;
+  text-shadow: var(--text-shadow-pixel);
 }
 
-/* ==========================================================
-   RewardPopup
-   ========================================================== */
-.reward-popup {
-  position: fixed;
-  top: 3.75rem;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1.25rem;
-  padding: 2rem;
-  background: rgba(8, 10, 12, 0.92);
-  z-index: 110;
-}
-.reward-popup h2 { margin: 0; }
-.reward-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  min-width: 18rem;
-}
-.reward-list li { display: flex; justify-content: center; }
-.reward-list li .btn { width: 100%; text-align: center; }
-.reward-card-choices {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-.reward-popup__potion-slots {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
+.bootstrap p::after {
+  content: '';
+  display: inline-block;
+  width: 18px;
+  height: 3px;
+  margin-left: 8px;
+  background: var(--gold-deep);
+  box-shadow: 6px 0 var(--border-light), 12px 0 var(--border-mid);
+  animation: bootstrap-pulse var(--motion-slow) steps(3, end) infinite;
 }
 
-/* ==========================================================
-   ActStartRelicScreen (層開始レリック選択モーダル)
-   ========================================================== */
-.act-start-relic-screen {
-  position: fixed;
-  top: 3.75rem;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1.25rem;
-  padding: 2rem;
-  background: rgba(8, 10, 12, 0.92);
-  z-index: 110;
+.bootstrap-error p {
+  color: var(--state-danger-soft);
 }
-.act-start-relic-screen h2 { margin: 0; }
-.act-start-relic-screen ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  min-width: 18rem;
-}
-.act-start-relic-screen li { display: flex; justify-content: center; }
-.act-start-relic-screen li .btn { width: 100%; text-align: center; }
 
-/* =============================================================
-   Phase 6: Merchant / Event / Rest overlays (debug styling)
-   ============================================================= */
-.merchant-screen,
-.event-screen,
-.rest-screen {
-  position: fixed;
-  top: 3.75rem;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  padding: 2rem;
-  overflow-y: auto;
-  background: rgba(8, 10, 12, 0.92);
-  z-index: 100;
+@keyframes bootstrap-pulse {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
 }
-.merchant-screen h2,
-.event-screen h2,
-.rest-screen h2 { margin: 0; }
-.merchant-screen section { min-width: 22rem; }
-.merchant-screen ul,
-.event-choices,
-.rest-screen ul {
-  list-style: none;
-  padding: 0;
-  margin: 0.25rem 0 0.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-.merchant-offer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.25rem 0.5rem;
-  border: 1px solid var(--muted);
-  border-radius: 0.3rem;
-}
-.merchant-offer.sold { opacity: 0.5; }
-.event-screen p { max-width: 32rem; text-align: center; }

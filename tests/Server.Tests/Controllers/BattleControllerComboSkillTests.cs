@@ -147,7 +147,7 @@ public sealed class BattleControllerComboSkillTests : IClassFixture<TempDataFact
     }
 
     [Fact]
-    public async Task Use_ultimate_skill_projects_current_hand_cost_modifiers_and_persists_state()
+    public async Task Use_ultimate_skill_applies_vigor_and_afterimage_and_persists_state()
     {
         var (client, accountId) = await BattleControllerFixtures.SetupRunWithActiveBattleAsync(
             _factory, accountId: "combo-skill-ultimate");
@@ -159,6 +159,7 @@ public sealed class BattleControllerComboSkillTests : IClassFixture<TempDataFact
             var store = _factory.Services.GetRequiredService<BattleSessionStore>();
             Assert.True(store.TryGet(accountId, out var session));
             Assert.NotEmpty(session.State.Hand);
+            var handBefore = session.State.Hand.Length;
             var originalRng = session.Rng;
             store.Set(accountId, session with
             {
@@ -175,13 +176,7 @@ public sealed class BattleControllerComboSkillTests : IClassFixture<TempDataFact
             var body = await response.Content.ReadFromJsonAsync<BattleActionResponseDto>();
             Assert.NotNull(body);
             Assert.Equal(0, body!.State.ComboGauge);
-            Assert.NotEmpty(body.State.Hand);
-            Assert.All(body.State.Hand, card =>
-            {
-                Assert.Equal(0, card.CurrentCost);
-                Assert.Equal(0, card.CostOverride);
-                Assert.NotNull(card.OriginalCost);
-            });
+            Assert.Equal(handBefore, body.State.Hand.Count);
             Assert.Contains(body.Steps, step =>
                 step.Event.Kind == "UseCharacterSkill" &&
                 step.Event.Amount == BattleEngine.UltimateSkillGaugeCost &&
@@ -189,15 +184,13 @@ public sealed class BattleControllerComboSkillTests : IClassFixture<TempDataFact
 
             Assert.True(store.TryGet(accountId, out var updatedSession));
             Assert.Same(originalRng, updatedSession.Rng);
-            Assert.All(updatedSession.State.Hand, card => Assert.Contains(
-                card.EffectiveCostModifiers,
-                modifier => modifier.Duration == CardCostModifierDuration.UntilTurnEnd
-                    && modifier.SourceId == BattleEngine.UltimateSkillId
-                    && modifier.Amount < 0));
+            var hero = updatedSession.State.Allies.Single(actor => actor.DefinitionId == "hero");
+            Assert.Equal(1, hero.GetStatus("vigor"));
+            Assert.Equal(1, hero.GetStatus("afterimage"));
 
             var restored = await client.GetFromJsonAsync<BattleStateDto>(
                 "/api/v1/runs/current/battle");
-            Assert.All(restored!.Hand, card => Assert.Equal(0, card.CurrentCost));
+            Assert.Equal(handBefore, restored!.Hand.Count);
         }
         finally
         {
@@ -307,7 +300,7 @@ public sealed class BattleControllerComboSkillTests : IClassFixture<TempDataFact
             var pending = new PendingCardPlay(
                 CardInstanceId: "pending-card",
                 EffectIndex: 0,
-                SummonSucceededBefore: false,
+                SummonedActorInstanceIdsBefore: ImmutableArray<string>.Empty,
                 Choice: new PendingChoice(
                     Action: "exhaustCard",
                     Pile: "hand",

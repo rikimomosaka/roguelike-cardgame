@@ -1,6 +1,6 @@
 namespace RoguelikeCardGame.Core.Battle.Statuses;
 
-/// <summary>ターン開始 tick 時の amount 減衰方向。strength / dexterity は None、それ以外は Decrement。</summary>
+/// <summary>自身のターン終了時に行う汎用的な状態値の減衰方向。個別発動で減る状態は None。</summary>
 public enum StatusTickDirection
 {
     None      = 0,

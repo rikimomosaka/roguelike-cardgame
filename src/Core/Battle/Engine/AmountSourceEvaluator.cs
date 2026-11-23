@@ -27,12 +27,30 @@ internal static class AmountSourceEvaluator
             "selfHpLost"       => caster.MaxHp - caster.CurrentHp,
             "selfBlock"        => GetBlockDisplay(caster),
             "comboCount"       => state.ComboCount,
+            "maxComboThisTurn" => state.MaxComboThisTurn,
             "energy"           => state.Energy,
             "powerCardCount"   => state.PowerCards.Length,
+            // 能力値参照（筋力・敏捷とは別の基礎値）。筋力・敏捷は従来どおり解決時に加算される。
+            "selfAttack"       => caster.AttackPower,
+            "selfDefense"      => caster.DefensePower,
             _ => throw new InvalidOperationException(
                 $"Unknown AmountSource: '{source}'"),
         };
     }
+
+    /// <summary>倍率（%）を掛けて切り捨てる。null は等倍。int 範囲で飽和する。</summary>
+    public static int Scale(int value, int? scalePercent)
+    {
+        if (scalePercent is not { } pct || pct == 100) return value;
+        long scaled = (long)value * pct / 100;
+        return (int)Math.Clamp(scaled, int.MinValue, int.MaxValue);
+    }
+
+    /// <summary>
+    /// 敵の予約では使用時に固定せず、行動実行時の有効値で評価する能力値参照 source。
+    /// </summary>
+    public static bool IsActorStatSource(string? source) =>
+        source is "selfAttack" or "selfDefense";
 
     /// <summary>
     /// 既存 BlockDisplay 計算経路 (Server BattleStateDtoMapper) と同一の式:

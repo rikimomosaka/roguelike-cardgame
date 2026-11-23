@@ -202,6 +202,20 @@ describe('MapScreen', () => {
     expect(screen.queryByTestId('map-node-0')).toBeNull()
   })
 
+  it('ズーム操作と現在地へ戻す操作を常設する', () => {
+    render(
+      <AccountProvider>
+        <MapScreen snapshot={sampleSnapshot()} onExitToMenu={() => {}} onAbandon={() => {}} />
+      </AccountProvider>,
+    )
+    expect(screen.getByLabelText('ズーム率')).toHaveTextContent('100%')
+    fireEvent.click(screen.getByRole('button', { name: '拡大' }))
+    expect(screen.getByLabelText('ズーム率')).toHaveTextContent('120%')
+    fireEvent.click(screen.getByRole('button', { name: '縮小' }))
+    expect(screen.getByLabelText('ズーム率')).toHaveTextContent('100%')
+    expect(screen.getByRole('button', { name: '現在地を中央に戻す' })).toBeInTheDocument()
+  })
+
   it('overlays RewardPopup when run has activeReward', () => {
     render(
       <AccountProvider>
@@ -286,7 +300,8 @@ describe('MapScreen', () => {
         />
       </AccountProvider>,
     )
-    expect(screen.getByText('休息所')).toBeInTheDocument()
+    expect(screen.getByText('焚き火')).toBeInTheDocument()
+    expect(screen.queryByText('休息所')).not.toBeInTheDocument()
   })
 
   it('keeps the next node inactive after an unfinished rest popup is closed', () => {

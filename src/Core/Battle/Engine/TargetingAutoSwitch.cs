@@ -1,4 +1,4 @@
-using System.Linq;
+using System.Collections.Immutable;
 using RoguelikeCardGame.Core.Battle.State;
 
 namespace RoguelikeCardGame.Core.Battle.Engine;
@@ -11,32 +11,61 @@ internal static class TargetingAutoSwitch
 {
     public static BattleState Apply(BattleState state)
     {
-        int? newE = state.TargetEnemyIndex;
-        if (newE is { } ti)
+        if (state.Participants.IsDefaultOrEmpty)
         {
-            if (ti < 0 || ti >= state.Enemies.Length || !state.Enemies[ti].IsAlive)
+            return state with
             {
-                newE = state.Enemies
-                    .Where(e => e.IsAlive)
-                    .OrderBy(e => e.SlotIndex)
-                    .Select(e => (int?)e.SlotIndex)
-                    .FirstOrDefault();
-            }
+                TargetEnemyIndex = NormalizeTargetIndex(
+                    state.Enemies, state.TargetEnemyIndex),
+                TargetAllyIndex = NormalizeTargetIndex(
+                    state.Allies, state.TargetAllyIndex),
+            };
         }
 
-        int? newA = state.TargetAllyIndex;
-        if (newA is { } ai)
+        var participants = ImmutableArray.CreateBuilder<BattleParticipantState>(
+            state.Participants.Length);
+        foreach (var participant in state.Participants)
         {
-            if (ai < 0 || ai >= state.Allies.Length || !state.Allies[ai].IsAlive)
+            participants.Add(participant with
             {
-                newA = state.Allies
-                    .Where(a => a.IsAlive)
-                    .OrderBy(a => a.SlotIndex)
-                    .Select(a => (int?)a.SlotIndex)
-                    .FirstOrDefault();
-            }
+                TargetEnemyIndex = NormalizeTargetIndex(
+                    state.Enemies, participant.TargetEnemyIndex),
+                TargetAllyIndex = NormalizeTargetIndex(
+                    state.Allies, participant.TargetAllyIndex),
+            });
         }
 
-        return state with { TargetEnemyIndex = newE, TargetAllyIndex = newA };
+        var updatedParticipants = participants.MoveToImmutable();
+        var primary = updatedParticipants[0];
+        return state with
+        {
+            Participants = updatedParticipants,
+            // Participant zero is authoritative; the legacy root remains its
+            // compatibility mirror even when secondary targets differ.
+            TargetEnemyIndex = primary.TargetEnemyIndex,
+            TargetAllyIndex = primary.TargetAllyIndex,
+        };
+    }
+
+    private static int? NormalizeTargetIndex(
+        ImmutableArray<CombatActor> actors,
+        int? targetIndex)
+    {
+        if (targetIndex is null)
+            return null;
+
+        int index = targetIndex.Value;
+        if (index >= 0 && index < actors.Length && actors[index].IsAlive)
+            return index;
+
+        // Target indices are DTO array indices. SlotIndex is stable visual
+        // placement metadata and must never be written into this field.
+        for (int candidateIndex = 0; candidateIndex < actors.Length; candidateIndex++)
+        {
+            if (actors[candidateIndex].IsAlive)
+                return candidateIndex;
+        }
+
+        return null;
     }
 }

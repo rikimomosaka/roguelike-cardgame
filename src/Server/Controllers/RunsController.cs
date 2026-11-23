@@ -61,17 +61,50 @@ public sealed class RunsController : ControllerBase
     }
 
     [HttpPost("new")]
-    public async Task<IActionResult> PostNew([FromQuery] bool force, CancellationToken ct)
+    public async Task<IActionResult> PostNew(
+        [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)]
+        NewRunRequestDto? body,
+        [FromQuery] bool force,
+        CancellationToken ct)
     {
         if (!TryGetAccountId(out var accountId, out var err)) return err!;
         if (!await _accounts.ExistsAsync(accountId, ct))
             return Problem(statusCode: StatusCodes.Status404NotFound, title: $"アカウントが見つかりません: {accountId}");
 
+        var characterIds = body?.CharacterIds is null
+            ? new[] { "default" }
+            : body.CharacterIds.ToArray();
+        if (characterIds.Length is < 1 or > 4)
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "CharacterIds must contain between 1 and 4 entries.");
+        if (characterIds.Any(string.IsNullOrWhiteSpace))
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "CharacterIds must not contain empty values.");
+        if (characterIds.Distinct(StringComparer.Ordinal).Count() != characterIds.Length)
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "The same character cannot be selected more than once.");
+        var unknownCharacterId = characterIds.FirstOrDefault(id => !_data.Characters.ContainsKey(id));
+        if (unknownCharacterId is not null)
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: $"Character '{unknownCharacterId}' was not found.");
+
+        // The persistent party shell supports four picks, but the current battle
+        // runtime still creates one playable participant. Never silently discard
+        // additional selections while that integration remains incomplete.
+        if (characterIds.Length > 1)
+            return Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: "Multiple playable characters are not connected to battle yet.");
+
         var existing = await _saves.TryLoadAsync(accountId, ct);
         if (!force && existing is not null && existing.Progress == RunProgress.InProgress)
             return Problem(statusCode: StatusCodes.Status409Conflict, title: "進行中のランがあります。force=true で上書き可能。");
 
-        var (state, map) = await _runStart.StartAsync(accountId, ct);
+        var (state, map) = await _runStart.StartAsync(accountId, characterIds[0], ct);
         // 新規ランの保存成功後にだけ、旧ランに属する戦闘 session を破棄する。
         _sessions.Remove(accountId);
         return Ok(RunSnapshotDtoMapper.From(state, map, _data));

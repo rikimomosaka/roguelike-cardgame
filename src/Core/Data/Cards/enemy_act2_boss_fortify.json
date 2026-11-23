@@ -1,0 +1,25 @@
+{
+  "id": "enemy_act2_boss_fortify",
+  "name": "要塞化",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy act2_boss unique (from move fortify)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 20
+          }
+        ]
+      }
+    }
+  ]
+}

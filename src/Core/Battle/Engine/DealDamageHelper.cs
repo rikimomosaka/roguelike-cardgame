@@ -1,12 +1,18 @@
 using System.Collections.Generic;
 using RoguelikeCardGame.Core.Battle.Events;
 using RoguelikeCardGame.Core.Battle.State;
+using RoguelikeCardGame.Core.Battle.Statuses;
 
 namespace RoguelikeCardGame.Core.Battle.Engine;
 
 /// <summary>Resolves one attack hit against one target.</summary>
 internal static class DealDamageHelper
 {
+    internal readonly record struct AttackBlockResolution(
+        CombatActor UpdatedActor,
+        int Absorbed,
+        int RemainingAttack);
+
     public static (CombatActor updatedTarget, IReadOnlyList<BattleEvent> events, bool diedNow) Apply(
         CombatActor attacker, CombatActor target,
         int baseAmount,
@@ -16,14 +22,73 @@ internal static class DealDamageHelper
     {
         context ??= HitContext.Attack(CombatSource.Unattributed, hitIndex);
 
-        int totalAttack = AttackDamageMath.AdjustForAttacker(
+        int totalAttack = CalculateTotalAttack(attacker, baseAmount);
+        var block = ApplyBlock(target, totalAttack);
+        return ApplyAfterBlock(
+            attacker,
+            block.UpdatedActor,
+            totalAttack,
+            block.RemainingAttack,
+            block.Absorbed,
+            scopeNote,
+            orderBase,
+            hitIndex,
+            context);
+    }
+
+    /// <summary>
+    /// Applies attacker-side modifiers once.  Guardian mitigation uses the same
+    /// adjusted amount before distributing it across the target and Cover actors.
+    /// </summary>
+    internal static int CalculateTotalAttack(CombatActor attacker, int baseAmount) =>
+        AttackDamageMath.AdjustForAttacker(
             baseAmount,
             attacker.GetStatus("strength"),
-            attacker.GetStatus("weak"));
+            attacker.GetStatus("weak"),
+            attacker.GetStatus("vigor"));
 
-        // Barrier is checked before Block. A positive attack consumes exactly one
-        // stack, still counts as a landed hit, and leaves Block untouched.
-        bool barrierConsumed = totalAttack > 0 && target.GetStatus("barrier") > 0;
+    /// <summary>Consumes ordinary Block before Vulnerable and Barrier.</summary>
+    internal static AttackBlockResolution ApplyBlock(
+        CombatActor actor, int incomingAttack)
+    {
+        int clampedAttack = System.Math.Max(0, incomingAttack);
+        int dexterity = actor.GetStatus(BattleStatusIds.Dexterity);
+        int available = actor.Block.Display(dexterity);
+        int absorbed = System.Math.Min(clampedAttack, available);
+        return new AttackBlockResolution(
+            actor with { Block = actor.Block.Consume(clampedAttack, dexterity) },
+            absorbed,
+            clampedAttack - absorbed);
+    }
+
+    /// <summary>
+    /// Finishes one hit after all Block providers have paid.  This boundary is
+    /// shared by ordinary hits and Guardian Cover so Vulnerable, Barrier, revive,
+    /// event attribution and death handling cannot drift between the two paths.
+    /// blockedAmount is the target's own Block payment; Cover providers emit
+    /// separate CoverBlockSpent events.
+    /// </summary>
+    internal static (CombatActor updatedTarget, IReadOnlyList<BattleEvent> events, bool diedNow)
+        ApplyAfterBlock(
+            CombatActor attacker,
+            CombatActor targetAfterBlock,
+            int totalAttack,
+            int remainingAttack,
+            int blockedAmount,
+            string scopeNote,
+            int orderBase,
+            int? hitIndex,
+            HitContext context)
+    {
+        var target = targetAfterBlock;
+        int vulnerable = target.GetStatus("vulnerable");
+        int rawDamage = System.Math.Max(0, remainingAttack);
+        int damage = vulnerable > 0 ? (rawDamage * 3) / 2 : rawDamage;
+        int hpBefore = System.Math.Max(0, target.CurrentHp);
+        bool barrierConsumed = totalAttack > 0
+            && target.GetStatus("barrier") > 0
+            && damage > 0
+            && hpBefore > 0;
         var statuses = target.Statuses;
         var statusSources = target.StatusSources;
         if (barrierConsumed)
@@ -36,26 +101,20 @@ internal static class DealDamageHelper
                 statusSources = statusSources.Remove("barrier");
         }
 
-        int dex = target.GetStatus("dexterity");
-        int preBlock = target.Block.Display(dex);
-        int absorbed = barrierConsumed ? 0 : System.Math.Min(totalAttack, preBlock);
-        int rawDamage = barrierConsumed ? 0 : totalAttack - absorbed;
-        var newBlock = barrierConsumed ? target.Block : target.Block.Consume(totalAttack, dex);
-
-        int vulnerable = target.GetStatus("vulnerable");
-        int damage = vulnerable > 0 ? (rawDamage * 3) / 2 : rawDamage;
+        if (barrierConsumed)
+            damage = 0;
 
         bool wasAlive = target.IsAlive;
-        int hpBefore = System.Math.Max(0, target.CurrentHp);
         int actualHpLoss = System.Math.Min(hpBefore, damage);
         int overkill = System.Math.Max(0, damage - hpBefore);
         var updated = target with
         {
-            Block = newBlock,
             CurrentHp = System.Math.Max(0, target.CurrentHp - damage),
             Statuses = statuses,
             StatusSources = statusSources,
         };
+        bool revived = BattleStatusRules.TryRevive(updated, out var afterRevive);
+        updated = afterRevive;
         bool diedNow = wasAlive && !updated.IsAlive;
         bool hitLanded = totalAttack > 0;
 
@@ -69,11 +128,24 @@ internal static class DealDamageHelper
             new(BattleEventKind.DealDamage, Order: orderBase + 1,
                 CasterInstanceId: attacker.InstanceId, TargetInstanceId: target.InstanceId,
                 Amount: damage, Note: barrierConsumed ? $"{scopeNote};barrier" : scopeNote,
-                BlockedAmount: absorbed, HitIndex: hitIndex,
+                BlockedAmount: System.Math.Max(0, blockedAmount), HitIndex: hitIndex,
                 DamageType: context.DamageType, Source: context.Source,
                 CauseChain: context.CauseChain,
                 ActualHpLoss: actualHpLoss, Overkill: overkill, HitLanded: hitLanded),
         };
+        if (revived)
+        {
+            events.Add(new BattleEvent(
+                BattleEventKind.RemoveStatus, Order: orderBase + 2,
+                TargetInstanceId: target.InstanceId,
+                Note: BattleStatusIds.Revive,
+                Source: target.GetStatusSource(BattleStatusIds.Revive)));
+            events.Add(new BattleEvent(
+                BattleEventKind.Heal, Order: orderBase + 3,
+                TargetInstanceId: target.InstanceId,
+                Amount: updated.CurrentHp,
+                Note: BattleStatusIds.Revive));
+        }
         if (diedNow)
         {
             events.Add(new BattleEvent(

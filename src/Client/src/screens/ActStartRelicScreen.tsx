@@ -97,8 +97,12 @@ type ChoiceProps = {
 
 function RelicChoice({ id, name, desc, flavor, disabled, isSelected, onClick }: ChoiceProps) {
   const tooltipContent = useMemo<TooltipContent | null>(() => {
-    if (!desc) return null
-    return flavor ? { name, desc, flavor } : { name, desc }
+    if (!desc && !flavor) return null
+    return {
+      name,
+      desc: desc || '—',
+      flavor: flavor || undefined,
+    }
   }, [name, desc, flavor])
   const tip = useTooltipTarget(tooltipContent)
 

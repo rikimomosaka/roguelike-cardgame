@@ -1,25 +1,53 @@
 {
-    "id":  "reward_common_04",
-    "name":  "観察",
-    "displayName":  null,
-    "activeVersion":  "v1",
-    "versions":  [
-                     {
-                         "version":  "v1",
-                         "createdAt":  "2026-05-01T03:54:50Z",
-                         "label":  "original",
-                         "spec":  {
-                                      "rarity":  1,
-                                      "cardType":  "Skill",
-                                      "cost":  0,
-                                      "effects":  [
-                                                      {
-                                                          "action":  "drawCards",
-                                                          "scope":  "self",
-                                                          "amount":  2
-                                                      }
-                                                  ]
-                                  }
-                     }
-                 ]
+  "id": "striker_common_offensive_breath",
+  "name": "攻めの呼吸",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Striker",
+  "eligibleCharacterIds": [
+    "default"
+  ],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Skill",
+        "cost": 1,
+        "usesPerTurn": 1,
+        "upgradedUsesPerTurn": 1,
+        "effects": [
+          {
+            "action": "draw",
+            "scope": "self",
+            "amount": 1
+          },
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "vigor",
+            "amount": 1
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "draw",
+            "scope": "self",
+            "amount": 2
+          },
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "vigor",
+            "amount": 1
+          }
+        ]
+      }
+    }
+  ]
 }

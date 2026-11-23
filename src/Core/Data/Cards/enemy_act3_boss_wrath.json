@@ -1,0 +1,26 @@
+{
+  "id": "enemy_act3_boss_wrath",
+  "name": "憤怒",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy act3_boss unique (from move wrath)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 30
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -77,6 +77,25 @@ public class EffectApplierSummonInstanceIdTests
     }
 
     [Fact]
+    public void Repeated_rng_value_still_produces_unique_deterministic_actor_ids()
+    {
+        var state = MakeStateWithHero();
+        var catalog = BattleFixtures.MinimalCatalog();
+        var effect = new CardEffect(
+            "summon", EffectScope.Self, null, 0, UnitId: "minion");
+        var rng = new FakeRng(
+            new[] { 0x1111, 0x1111 }, System.Array.Empty<double>());
+
+        var (afterFirst, _) = EffectApplier.Apply(
+            state, state.Allies[0], effect, rng, catalog);
+        var (afterSecond, _) = EffectApplier.Apply(
+            afterFirst, afterFirst.Allies[0], effect, rng, catalog);
+
+        Assert.Equal("summon_inst_1_1111", afterFirst.Allies[1].InstanceId);
+        Assert.Equal("summon_inst_1_1111_1", afterSecond.Allies[2].InstanceId);
+    }
+
+    [Fact]
     public void Summon_InstanceId_is_deterministic_for_same_seed()
     {
         // 2 つの同内容 FakeRng で同状態 + 同 effect → 同 InstanceId

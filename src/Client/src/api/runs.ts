@@ -11,9 +11,16 @@ export async function getCurrentRun(accountId: string): Promise<RunSnapshotDto |
   }
 }
 
-export async function startNewRun(accountId: string, force = false): Promise<RunSnapshotDto> {
+export async function startNewRun(
+  accountId: string,
+  force = false,
+  characterIds?: readonly string[],
+): Promise<RunSnapshotDto> {
   const path = force ? '/runs/new?force=true' : '/runs/new'
-  return await apiRequest<RunSnapshotDto>('POST', path, { accountId })
+  return await apiRequest<RunSnapshotDto>('POST', path, {
+    accountId,
+    body: characterIds === undefined ? undefined : { characterIds },
+  })
 }
 
 export async function moveToNode(accountId: string, nodeId: number, elapsedSeconds: number): Promise<void> {

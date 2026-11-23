@@ -1,0 +1,27 @@
+{
+  "id": "enemy_common_attack",
+  "name": "通常攻撃",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy common action",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 0,
+            "amountSource": "selfAttack"
+          }
+        ]
+      }
+    }
+  ]
+}

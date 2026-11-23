@@ -3,6 +3,27 @@ import { describe, expect, it, vi } from 'vitest'
 import type { MerchantInventoryDto } from '../api/types'
 import { MerchantScreen } from './MerchantScreen'
 
+vi.mock('../hooks/useCardCatalog', () => ({
+  useCardCatalog: () => ({
+    names: { strike: 'strike' },
+    catalog: {
+      strike: {
+        id: 'strike',
+        name: 'strike',
+        displayName: 'strike',
+        rarity: 1,
+        cardType: 'attack',
+        cost: 1,
+        upgradedCost: 1,
+        upgradable: true,
+        description: '通常版テキスト。',
+        upgradedDescription: '強化版テキスト。',
+      },
+    },
+  }),
+  usePotionCatalog: () => ({ names: {}, catalog: null }),
+}))
+
 const baseInventory: MerchantInventoryDto = {
   cards: [{ kind: 'card', id: 'strike', price: 50, sold: false }],
   relics: [{ kind: 'relic', id: 'coin_purse', price: 150, sold: false }],
@@ -36,7 +57,7 @@ describe('MerchantScreen', () => {
     expect(screen.getAllByText((_, el) => /50\s*ゴールド/.test(el?.textContent ?? '')).length).toBeGreaterThanOrEqual(1)
   })
 
-  it('gold 不足時は購入ボタンが disabled', () => {
+  it('gold 不足時もプレビュー操作を残しつつ購入だけ無効にする', () => {
     render(
       <MerchantScreen
         gold={30}
@@ -45,8 +66,19 @@ describe('MerchantScreen', () => {
         {...baseHandlers()}
       />,
     )
-    const btn = screen.getByRole('button', { name: /buy strike/i }) as HTMLButtonElement
-    expect(btn.disabled).toBe(true)
+    const btn = screen.getByRole('button', { name: /select strike/i }) as HTMLButtonElement
+    expect(btn.disabled).toBe(false)
+    expect(btn).toHaveAttribute('aria-pressed', 'false')
+    const card = btn.querySelector('.card')!
+    expect(card).toHaveTextContent('通常版テキスト。')
+    fireEvent.mouseDown(card, { button: 2 })
+    expect(card).toHaveTextContent('強化版テキスト。')
+    fireEvent.mouseUp(window, { button: 2 })
+    expect(card).toHaveTextContent('通常版テキスト。')
+    fireEvent.click(btn)
+    expect(screen.getByRole('status')).toHaveTextContent('こちらをお買い上げになりますか？')
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /buy strike/i })).toBeDisabled()
   })
 
   it('onBuy は正しい引数で呼ばれる', async () => {
@@ -59,8 +91,31 @@ describe('MerchantScreen', () => {
         {...handlers}
       />,
     )
+    expect(screen.getByRole('status')).toHaveTextContent('いらっしゃいませ。')
+    fireEvent.click(screen.getByRole('button', { name: /select strike/i }))
+    expect(screen.getByRole('status')).toHaveTextContent('こちらをお買い上げになりますか？')
+    expect(screen.getByLabelText('価格 50ゴールド')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /buy strike/i }))
     await waitFor(() => expect(handlers.onBuy).toHaveBeenCalledWith('card', 'strike'))
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('ありがとうございます。'))
+    expect(screen.queryByText('お買い上げありがとうございます。')).not.toBeInTheDocument()
+    expect(screen.queryByText('取引が完了しました。')).not.toBeInTheDocument()
+  })
+
+  it('詳細トレイの購入処理中は二重送信を防ぐ', async () => {
+    let finish!: () => void
+    const handlers = baseHandlers()
+    handlers.onBuy.mockImplementation(() => new Promise<void>(resolve => { finish = resolve }))
+    render(<MerchantScreen gold={500} deck={[]} inventory={baseInventory} {...handlers} />)
+    fireEvent.click(screen.getByRole('button', { name: /select strike/i }))
+    const buy = screen.getByRole('button', { name: /buy strike/i })
+    fireEvent.click(buy)
+    fireEvent.click(buy)
+    expect(handlers.onBuy).toHaveBeenCalledTimes(1)
+    expect(buy).toBeDisabled()
+    finish()
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('ありがとうございます。'))
+    expect(screen.queryByText('取引が完了しました。')).not.toBeInTheDocument()
   })
 
   it('discardSlotUsed=true のとき除去ボタンは disabled', () => {
@@ -119,6 +174,28 @@ describe('MerchantScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: /discard strike at index 0/i }))
     fireEvent.click(screen.getByRole('button', { name: /confirm discard/i }))
     await waitFor(() => expect(handlers.onDiscard).toHaveBeenCalledWith(0))
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('ありがとうございます。'))
+    expect(screen.queryByText('お買い上げありがとうございます。')).not.toBeInTheDocument()
+  })
+
+  it('カード除去に失敗した場合は確認ダイアログ内ですぐ通知する', async () => {
+    const handlers = baseHandlers()
+    handlers.onDiscard.mockRejectedValueOnce(new Error('discard failed'))
+    render(
+      <MerchantScreen
+        gold={500}
+        deck={[{ id: 'strike', upgraded: false }]}
+        inventory={baseInventory}
+        {...handlers}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /open discard view/i }))
+    fireEvent.click(screen.getByRole('button', { name: /discard strike at index 0/i }))
+    fireEvent.click(screen.getByRole('button', { name: /confirm discard/i }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('カードを削除できませんでした。')
+    expect(screen.getByRole('dialog', { name: '削除しますか?' })).toBeInTheDocument()
   })
 
   it('立ち去るボタンで onLeave が呼ばれる', async () => {

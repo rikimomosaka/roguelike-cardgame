@@ -1,0 +1,8 @@
+{
+  "id": "resistance_potion",
+  "name": "耐性ポーション",
+  "rarity": 1,
+  "effects": [
+    { "action": "buff", "scope": "self", "name": "resistance", "amount": 2, "battleOnly": true }
+  ]
+}

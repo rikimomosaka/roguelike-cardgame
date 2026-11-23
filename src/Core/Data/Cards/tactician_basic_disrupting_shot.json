@@ -1,0 +1,55 @@
+{
+  "id": "tactician_basic_disrupting_shot",
+  "name": "攪乱射撃",
+  "displayName": null,
+  "poolKinds": [
+    "Basic"
+  ],
+  "poolClass": "Tactician",
+  "eligibleCharacterIds": [
+    "tactician_yuno"
+  ],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Attack",
+        "cost": 0,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 3
+          },
+          {
+            "action": "debuff",
+            "scope": "single",
+            "side": "enemy",
+            "name": "disruption",
+            "amount": 1
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "attack",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 6
+          },
+          {
+            "action": "debuff",
+            "scope": "single",
+            "side": "enemy",
+            "name": "disruption",
+            "amount": 1
+          }
+        ]
+      }
+    }
+  ]
+}

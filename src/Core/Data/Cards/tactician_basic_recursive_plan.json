@@ -1,0 +1,83 @@
+{
+  "id": "tactician_basic_recursive_plan",
+  "name": "反復計画",
+  "displayName": null,
+  "poolKinds": [
+    "Basic"
+  ],
+  "poolClass": "Tactician",
+  "eligibleCharacterIds": [
+    "tactician_yuno"
+  ],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Skill",
+        "cost": 3,
+        "usesPerTurn": 1,
+        "upgradedUsesPerTurn": 1,
+        "effects": [
+          {
+            "action": "buff",
+            "scope": "self",
+            "statusChanges": [
+              {
+                "name": "insight",
+                "amount": 1
+              },
+              {
+                "name": "comboCarryover",
+                "amount": 1
+              }
+            ]
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "buff",
+            "scope": "self",
+            "statusChanges": [
+              {
+                "name": "insight",
+                "amount": 2
+              },
+              {
+                "name": "comboCarryover",
+                "amount": 1
+              }
+            ]
+          }
+        ],
+        "abilities": [
+          {
+            "type": "reprise",
+            "filter": {
+              "cardTypes": [
+                "Attack",
+                "Skill"
+              ],
+              "maxOriginalCost": 2
+            }
+          }
+        ],
+        "upgradedAbilities": [
+          {
+            "type": "reprise",
+            "filter": {
+              "cardTypes": [
+                "Attack",
+                "Skill"
+              ],
+              "maxOriginalCost": 2
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

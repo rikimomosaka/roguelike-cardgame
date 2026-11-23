@@ -109,6 +109,74 @@ public class EventResolverTests
     }
 
     [Fact]
+    public void ApplyChoice_GrantCardReward_UsesOnlyUniversalPoolAndPreservesRewardRngState()
+    {
+        var cards = new[]
+        {
+            PoolCard("universal_1", CardPoolClass.Universal),
+            PoolCard("universal_2", CardPoolClass.Universal),
+            PoolCard("universal_3", CardPoolClass.Universal),
+            PoolCard("class_1", CardPoolClass.Striker),
+        };
+        var catalog = Catalog with
+        {
+            Cards = cards.ToDictionary(card => card.Id, StringComparer.Ordinal),
+            Potions = Catalog.Potions
+                .Where(_ => false)
+                .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal),
+        };
+        var inst = MakeInstance(new EventChoice("card",
+            null, ImmutableArray.Create<EventEffect>(new EventEffect.GrantCardReward())));
+        var expectedRngState = new RewardRngState(PotionChancePercent: 100, RareChanceBonusPercent: 19);
+        var s0 = Base() with { ActiveEvent = inst, RewardRngState = expectedRngState };
+
+        var s1 = EventResolver.ApplyChoice(s0, 0, catalog, new SequentialRng(31UL));
+
+        Assert.Equal(expectedRngState, s1.RewardRngState);
+        Assert.Equal(3, s1.ActiveReward!.CardChoices.Length);
+        Assert.Equal(CardRewardPoolKind.Universal, s1.ActiveReward.CardPoolKind);
+        Assert.All(s1.ActiveReward.CardChoices, id =>
+            Assert.Equal(CardPoolClass.Universal, catalog.Cards[id].PoolClass));
+    }
+
+    [Fact]
+    public void ApplyChoice_GrantCardReward_WhenUniversalPoolIsEmpty_MarksCardsClaimed()
+    {
+        var catalog = Catalog with
+        {
+            Cards = new[]
+            {
+                PoolCard("class_1", CardPoolClass.Striker),
+                PoolCard("class_2", CardPoolClass.Striker),
+                PoolCard("class_3", CardPoolClass.Striker),
+            }.ToDictionary(card => card.Id, StringComparer.Ordinal),
+        };
+        var inst = MakeInstance(new EventChoice("card",
+            null, ImmutableArray.Create<EventEffect>(new EventEffect.GrantCardReward())));
+        var s0 = Base() with { ActiveEvent = inst };
+
+        var s1 = EventResolver.ApplyChoice(s0, 0, catalog, new SequentialRng(32UL));
+
+        Assert.Empty(s1.ActiveReward!.CardChoices);
+        Assert.Equal(CardRewardStatus.Claimed, s1.ActiveReward.CardStatus);
+    }
+
+    [Fact]
+    public void ApplyChoice_GainCard_AddsSpecifiedCardToDeckAndBestiary()
+    {
+        const string cardId = "universal_common_precise_strike";
+        var inst = MakeInstance(new EventChoice("card",
+            null, ImmutableArray.Create<EventEffect>(new EventEffect.GainCard(cardId))));
+        var s0 = Base() with { ActiveEvent = inst };
+
+        var s1 = EventResolver.ApplyChoice(s0, 0, Catalog, new SequentialRng(33UL));
+
+        Assert.Equal(s0.Deck.Length + 1, s1.Deck.Length);
+        Assert.Equal(cardId, s1.Deck[^1].Id);
+        Assert.Contains(cardId, s1.SeenCardBaseIds);
+    }
+
+    [Fact]
     public void ApplyChoice_GrantCardReward_UsesCurrentActRewardTable()
     {
         var tables = Catalog.RewardTables.ToDictionary(kv => kv.Key, kv => kv.Value);
@@ -233,6 +301,21 @@ public class EventResolverTests
         IReadOnlyList<CardEffect> effects,
         bool implemented = true) =>
         RelicCatalogTestHelpers.BuildCatalogWithFakeRelic(Catalog, id, effects, implemented);
+
+    private static CardDefinition PoolCard(string id, CardPoolClass poolClass) =>
+        new(
+            Id: id,
+            Name: id,
+            DisplayName: null,
+            Rarity: CardRarity.Common,
+            CardType: CardType.Skill,
+            Cost: 1,
+            UpgradedCost: null,
+            Effects: Array.Empty<CardEffect>(),
+            UpgradedEffects: null,
+            Keywords: null,
+            PoolClass: poolClass,
+            PoolKinds: new[] { CardPoolKind.Reward });
 
     private static RewardTable WithWeakCardRarity(
         RewardTable table, int common, int rare, int epic)

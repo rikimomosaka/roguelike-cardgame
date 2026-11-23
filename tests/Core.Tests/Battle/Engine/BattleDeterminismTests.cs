@@ -69,6 +69,10 @@ public class BattleDeterminismTests
             s.ComboGauge,
             UsedCharacterSkillIdsThisTurn = s.UsedCharacterSkillIdsThisTurn
                 .OrderBy(id => id).ToArray(),
+            CardUsesThisTurn = s.CardUsesThisTurn
+                .OrderBy(pair => pair.Key).ToArray(),
+            PotionUsesThisTurn = s.PotionUsesThisTurn
+                .OrderBy(pair => pair.Key).ToArray(),
             Allies = s.Allies.Select(a => new {
                 a.InstanceId, a.DefinitionId, Side = a.Side.ToString(),
                 a.SlotIndex, a.CurrentHp, a.MaxHp,
@@ -77,6 +81,7 @@ public class BattleDeterminismTests
                 AttackRandom = a.AttackRandom.HitAmounts.ToArray(),
                 AttackAll = a.AttackAll.HitAmounts.ToArray(),
                 a.CurrentMoveId,
+                StatusDisplayOrder = a.StatusDisplayOrder.ToArray(),
                 Statuses = a.Statuses.OrderBy(kv => kv.Key).Select(kv => new { kv.Key, kv.Value }) }),
             Enemies = s.Enemies.Select(e => new {
                 e.InstanceId, e.DefinitionId, Side = e.Side.ToString(),
@@ -86,6 +91,7 @@ public class BattleDeterminismTests
                 AttackRandom = e.AttackRandom.HitAmounts.ToArray(),
                 AttackAll = e.AttackAll.HitAmounts.ToArray(),
                 e.CurrentMoveId,
+                StatusDisplayOrder = e.StatusDisplayOrder.ToArray(),
                 Statuses = e.Statuses.OrderBy(kv => kv.Key).Select(kv => new { kv.Key, kv.Value }) }),
             DrawPile = ProjectCards(s.DrawPile),
             Hand = ProjectCards(s.Hand),

@@ -1,33 +1,49 @@
 {
-    "id":  "reward_rare_10",
-    "name":  "城壁",
-    "displayName":  null,
-    "activeVersion":  "v1",
-    "versions":  [
-                     {
-                         "version":  "v1",
-                         "createdAt":  "2026-05-01T03:54:50Z",
-                         "label":  "original",
-                         "spec":  {
-                                      "rarity":  2,
-                                      "cardType":  "Skill",
-                                      "cost":  2,
-                                      "effects":  [
-                                                      {
-                                                          "action":  "block",
-                                                          "scope":  "self",
-                                                          "amount":  20
-                                                      },
-                                                      {
-                                                          "action":  "modifyCardCost",
-                                                          "scope":  "self",
-                                                          "amount":  -1,
-                                                          "pile":  "hand",
-                                                          "select":  "all",
-                                                          "costDuration":  "untilPlayed"
-                                                      }
-                                                  ]
-                                  }
-                     }
-                 ]
+  "id": "tactician_rare_chain_plan",
+  "name": "連環の計",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Tactician",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 2,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 6
+          },
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "comboCarryover",
+            "amount": 1
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 9
+          },
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "comboCarryover",
+            "amount": 1
+          }
+        ]
+      }
+    }
+  ]
 }

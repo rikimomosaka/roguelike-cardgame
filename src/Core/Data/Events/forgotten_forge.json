@@ -1,0 +1,29 @@
+{
+  "id": "forgotten_forge",
+  "name": "忘れられた鍛冶場",
+  "tiers": [1, 2],
+  "rarity": "common",
+  "startMessage": "崩れかけた鍛冶場の奥で、消えたはずの炉がまだ赤く脈打っている。",
+  "choices": [
+    {
+      "label": "炉に技を捧げる（最大HP -4、カード報酬）",
+      "effects": [
+        { "type": "loseMaxHp", "amount": 4 },
+        { "type": "grantCardReward" }
+      ],
+      "resultMessage": "熱に耐えて武器を振るううち、新しい戦い方が体に刻み込まれた。"
+    },
+    {
+      "label": "残された道具を売る（80ゴールド獲得）",
+      "effects": [
+        { "type": "gainGold", "amount": 80 }
+      ],
+      "resultMessage": "まだ使えそうな道具を拾い集め、次の商人に渡せるよう荷造りした。"
+    },
+    {
+      "label": "炉を消して立ち去る",
+      "effects": [],
+      "resultMessage": "熾火に灰をかぶせると、鍛冶場は長い眠りへ戻った。"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "id": "scholar_lens",
+  "name": "賢者のレンズ",
+  "displayName": null,
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-17T00:00:00Z",
+      "label": "initial",
+      "spec": {
+        "rarity": 1,
+        "description": "未知の技ほど鮮明に映る、使い込まれた真鍮のレンズ。",
+        "effects": [
+          { "action": "rewardCardChoicesBonus", "scope": "self", "amount": 1, "trigger": "Passive" }
+        ],
+        "implemented": true
+      }
+    }
+  ]
+}

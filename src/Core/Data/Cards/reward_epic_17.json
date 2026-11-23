@@ -1,0 +1,43 @@
+{
+  "id": "universal_epic_free_link",
+  "name": "自由連結",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Universal",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 3,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 6
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 10
+          }
+        ],
+        "keywords": [
+          "superwild"
+        ],
+        "upgradedKeywords": [
+          "superwild"
+        ]
+      }
+    }
+  ]
+}

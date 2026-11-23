@@ -1,0 +1,25 @@
+{
+  "id": "enemy_iron_golem_a_plating",
+  "name": "装甲",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy iron_golem_a unique (from move plating)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 12
+          }
+        ]
+      }
+    }
+  ]
+}

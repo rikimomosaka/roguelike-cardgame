@@ -52,7 +52,7 @@ public class CombatAttributionAndReactionTests
     }
 
     [Fact]
-    public void Barrier_consumes_one_stack_before_block_but_hit_and_OnHit_still_fire()
+    public void Fully_blocked_hit_does_not_consume_barrier_but_still_fires_OnHit()
     {
         var onHitPower = OnHitPower("on_hit", chance: 100, amount: 2);
         var hero = BattleFixtures.Hero() with { AttackSingle = AttackPool.Empty.Add(5) };
@@ -70,8 +70,8 @@ public class CombatAttributionAndReactionTests
             BattleFixtures.MinimalCatalog(cards: new[] { onHitPower }));
 
         Assert.Equal(20, next.Enemies[0].CurrentHp);
-        Assert.Equal(1, next.Enemies[0].GetStatus("barrier"));
-        Assert.Equal(9, next.Enemies[0].Block.Sum);
+        Assert.Equal(2, next.Enemies[0].GetStatus("barrier"));
+        Assert.Equal(4, next.Enemies[0].Block.Sum);
         Assert.Equal(2, next.Enemies[0].GetStatus("weak"));
         var damage = Assert.Single(events, e => e.Kind == BattleEventKind.DealDamage);
         Assert.Equal(0, damage.ActualHpLoss);
@@ -143,6 +143,68 @@ public class CombatAttributionAndReactionTests
     }
 
     [Fact]
+    public void Participant_controlled_summon_uses_its_own_lifesteal_not_its_summoners()
+    {
+        var hero = BattleFixtures.WithStatus(
+            BattleFixtures.Hero(currentHp: 40, maxHp: 70),
+            "lifesteal", 100);
+        var source = new CombatSource(
+            CombatSourceKind.CardEffect,
+            OwnerSlot: hero.SlotIndex,
+            OwnerInstanceId: hero.InstanceId,
+            ActorInstanceId: "wisp-participant",
+            DefinitionId: "wisp-card");
+        var wisp = BattleFixtures.WithStatus(
+            BattleFixtures.SummonActor(
+                "wisp-participant", "wisp", slotIndex: 1,
+                hp: 30) with
+            {
+                CurrentHp = 20,
+                OwnerPlayerSlot = 0,
+                OwnerActorInstanceId = hero.InstanceId,
+                AttackSingle = AttackPool.Empty.Add(10, source),
+            },
+            "lifesteal", 50);
+        var state = BattleFixtures.MinimalState(
+            allies: [hero, wisp],
+            enemies: [BattleFixtures.Goblin(hp: 20)]) with
+        {
+            Phase = BattlePhase.PlayerAttacking,
+        };
+        state = BattleParticipantAccess.InitializePrimary(state);
+        var primary = BattleParticipantAccess.GetPrimary(state);
+        state = BattleParticipantAccess.Add(state, primary with
+        {
+            ParticipantId = "cpu:wisp-participant",
+            ActorInstanceId = wisp.InstanceId,
+            ControllerKind = BattleParticipantControllerKind.Cpu,
+            CharacterId = wisp.DefinitionId,
+            TargetAllyIndex = 1,
+            DrawPile = [],
+            Hand = [],
+            DiscardPile = [],
+            ExhaustPile = [],
+            SummonHeld = [],
+            PowerCards = [],
+            OwnedRelicIds = [],
+            Potions = [],
+        });
+
+        var (next, events) = PlayerAttackingResolver.Resolve(
+            state, new FakeRng([], []), BattleFixtures.MinimalCatalog());
+
+        Assert.Equal(40, next.Allies.Single(actor =>
+            actor.InstanceId == hero.InstanceId).CurrentHp);
+        Assert.Equal(25, next.Allies.Single(actor =>
+            actor.InstanceId == wisp.InstanceId).CurrentHp);
+        var heal = Assert.Single(events, battleEvent =>
+            battleEvent.Kind == BattleEventKind.Heal
+            && battleEvent.Note == "lifesteal");
+        Assert.Equal(wisp.InstanceId, heal.TargetInstanceId);
+        Assert.Equal(5, heal.Amount);
+    }
+
+    [Fact]
     public void Reflect_is_direct_ignores_block_and_does_not_reflect_again()
     {
         var hero = BattleFixtures.WithStatus(BattleFixtures.Hero(), "reflect", 99) with
@@ -163,6 +225,29 @@ public class CombatAttributionAndReactionTests
         Assert.Equal(4, reflected.ActualHpLoss);
         Assert.Equal(2, reflected.CauseChain?.Length);
         Assert.Equal("reflect", reflected.CauseChain?[1].Cause);
+    }
+
+    [Fact]
+    public void Reflect_triggers_once_per_hit_even_when_block_absorbs_all_damage()
+    {
+        var hero = BattleFixtures.Hero() with
+        {
+            AttackSingle = AttackPool.Empty.Add(2).Add(2),
+        };
+        var enemy = BattleFixtures.WithStatus(BattleFixtures.Goblin(hp: 20), "reflect", 4) with
+        {
+            Block = BlockPool.Empty.Add(99),
+        };
+
+        var (next, events) = PlayerAttackingResolver.Resolve(
+            PlayerAttackState(hero, enemy), new FakeRng([], []), BattleFixtures.MinimalCatalog());
+
+        Assert.Equal(20, next.Enemies[0].CurrentHp);
+        Assert.Equal(62, next.Allies[0].CurrentHp);
+        Assert.Equal(2, events.Count(e =>
+            e.Kind == BattleEventKind.DealDamage
+            && e.DamageType == DamageType.Reflected
+            && e.Amount == 4));
     }
 
     [Fact]
@@ -475,7 +560,7 @@ public class CombatAttributionAndReactionTests
             state, new FakeRng([], []),
             BattleFixtures.MinimalCatalog(units: new[] { unit }));
 
-        Assert.False(next.Allies.Single(a => a.InstanceId == summon.InstanceId).IsAlive);
+        Assert.DoesNotContain(next.Allies, a => a.InstanceId == summon.InstanceId);
         var damage = Assert.Single(events, e => e.Kind == BattleEventKind.DealDamage);
         var death = Assert.Single(events, e => e.Kind == BattleEventKind.ActorDeath);
         foreach (var battleEvent in new[] { damage, death })
@@ -510,8 +595,8 @@ public class CombatAttributionAndReactionTests
             state, new FakeRng([], []), BattleFixtures.MinimalCatalog());
 
         Assert.Equal(70, next.Allies[0].CurrentHp);
-        Assert.Equal(0, next.Allies[0].GetStatus("barrier"));
-        Assert.Equal(7, next.Allies[0].Block.Sum);
+        Assert.Equal(1, next.Allies[0].GetStatus("barrier"));
+        Assert.Equal(2, next.Allies[0].Block.Sum);
         Assert.Equal(17, next.Enemies[0].CurrentHp);
         Assert.Equal(2, events.Count(e => e.Kind == BattleEventKind.DealDamage));
         Assert.Single(events, e => e.Kind == BattleEventKind.DealDamage

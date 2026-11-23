@@ -21,7 +21,7 @@
       "label": "chance on-hit reference relic",
       "spec": {
         "rarity": 1,
-        "description": "攻撃が当たるたび、対象へ25%の確率で脱力1を与える。バリアやブロックでダメージが0でも判定する。",
+        "description": "鋭い爪をかたどった銀のイヤリング。光を受けると危うい影が揺れる。",
         "effects": [
           {
             "action": "debuff",

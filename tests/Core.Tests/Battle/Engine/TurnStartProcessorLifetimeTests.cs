@@ -60,9 +60,7 @@ public class TurnStartProcessorLifetimeTests
         var summon = BattleFixtures.SummonActor("s1", "minion", 1, hp: 10, lifetime: 1);
         var s = MakeState(hero, summon);
         var (next, evs) = TurnStartProcessor.Process(s, Rng(), BattleFixtures.MinimalCatalog());
-        var summonNext = next.Allies.Single(a => a.InstanceId == "s1");
-        Assert.Equal(0, summonNext.CurrentHp);
-        Assert.False(summonNext.IsAlive);
+        Assert.DoesNotContain(next.Allies, a => a.InstanceId == "s1");
         Assert.Contains(evs, e => e.Kind == BattleEventKind.ActorDeath
             && e.TargetInstanceId == "s1"
             && e.Note == "lifetime");

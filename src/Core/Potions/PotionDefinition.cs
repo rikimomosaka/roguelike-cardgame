@@ -9,7 +9,8 @@ public sealed record PotionDefinition(
     string Id,
     string Name,
     CardRarity Rarity,
-    IReadOnlyList<CardEffect> Effects)
+    IReadOnlyList<CardEffect> Effects,
+    int UsesPerTurn = 0)
 {
     /// <summary>
     /// 戦闘外で使用可能か。effects のいずれかが BattleOnly=false なら true。

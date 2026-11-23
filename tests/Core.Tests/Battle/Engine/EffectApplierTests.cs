@@ -36,14 +36,30 @@ public class EffectApplierTests
 
     private static IRng Rng() => new FakeRng(new int[10], new double[0]);
 
-    [Fact] public void Attack_single_adds_to_caster_AttackSingle()
+    [Theory]
+    [InlineData(EffectScope.Single, "single")]
+    [InlineData(EffectScope.Random, "random")]
+    [InlineData(EffectScope.All, "all")]
+    public void Attack_adds_to_matching_pool_and_emits_gain_feedback(
+        EffectScope scope, string expectedScopeNote)
     {
         var s = BasicState();
         var caster = s.Allies[0];
-        var eff = new CardEffect("attack", EffectScope.Single, EffectSide.Enemy, 6);
-        var (next, _) = EffectApplier.Apply(s, caster, eff, Rng(), BattleFixtures.MinimalCatalog());
-        Assert.Equal(6, next.Allies[0].AttackSingle.Sum);
-        Assert.Equal(1, next.Allies[0].AttackSingle.AddCount);
+        var eff = new CardEffect("attack", scope, EffectSide.Enemy, 6);
+
+        var (next, events) = EffectApplier.Apply(
+            s, caster, eff, Rng(), BattleFixtures.MinimalCatalog());
+
+        var updated = next.Allies[0];
+        Assert.Equal(scope == EffectScope.Single ? 6 : 0, updated.AttackSingle.Sum);
+        Assert.Equal(scope == EffectScope.Random ? 6 : 0, updated.AttackRandom.Sum);
+        Assert.Equal(scope == EffectScope.All ? 6 : 0, updated.AttackAll.Sum);
+        var gain = Assert.Single(events);
+        Assert.Equal(BattleEventKind.GainAttack, gain.Kind);
+        Assert.Equal(caster.InstanceId, gain.CasterInstanceId);
+        Assert.Equal(caster.InstanceId, gain.TargetInstanceId);
+        Assert.Equal(6, gain.Amount);
+        Assert.Equal(expectedScopeNote, gain.Note);
     }
 
     [Fact] public void Attack_random_adds_to_caster_AttackRandom()

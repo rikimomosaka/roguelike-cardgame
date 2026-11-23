@@ -23,6 +23,22 @@ export const KEYWORD_DEFS: Record<string, { name: string; desc: string }> = {
     name: '喪失',
     desc: 'このカードを除外する。',
   },
+  contingency: {
+    name: '伏策',
+    desc: '使用時は効果が実行されず、発動待ちとして除外する。伏策条件を満たした時に効果を実行し、捨札へ移動する。',
+  },
+  momentum: {
+    name: '乗勢',
+    desc: '効果の実行時、自身のこのターンの最大コンボがX以上であれば適用される。',
+  },
+  finisher: {
+    name: '終撃',
+    desc: '効果の適用後、このカードを含むこのコンボ中の全てのアタックカードを残光としてこのターン中保存し、現在コンボを0にする。',
+  },
+  reprise: {
+    name: '再演',
+    desc: '再演条件を満たし、この戦闘中に最後に効果の解決を完了した自身のカード1枚の効果を再実行する。',
+  },
   // M6.7: summon action から keyword 化。色は status と同じオレンジ系 (CSS 上書き)。
   summon: {
     name: '召喚',
@@ -34,23 +50,56 @@ export const KEYWORD_DEFS: Record<string, { name: string; desc: string }> = {
 //   Core 側 (CardTextFormatter.JpStatusName / Server meta endpoint) と同期。
 // eslint-disable-next-line react-refresh/only-export-components
 export const STATUS_DEFS: Record<string, { name: string; desc: string }> = {
-  strength: { name: '筋力', desc: '与えるダメージが X 増加する。' },
-  dexterity: { name: '敏捷', desc: '得るブロックが X 増加する。' },
-  weak: { name: '脱力', desc: '与えるダメージが 0.75 倍になる (端数切捨)。X ターン残存。' },
-  vulnerable: { name: '脆弱', desc: '受けるダメージが 1.5 倍になる。X ターン残存。' },
-  poison: { name: '毒', desc: 'ターン開始時に X ダメージを受け、X が 1 減る。' },
-  omnistrike: { name: '拡散', desc: '全ての攻撃を全体攻撃に変更する。X ターン残存。' },
-  barrier: { name: 'バリア', desc: '正の攻撃をXヒット無効化する。ブロックは消費しない。' },
-  lifesteal: { name: '吸血', desc: '攻撃で実際に減らしたHPのX%を回復する。' },
-  reflect: { name: '反射', desc: '攻撃を受けるたび、攻撃者へXの固定ダメージを返す。' },
+  strength: { name: '筋力', desc: 'アタックで与えるダメージが[N:X]増加する。' },
+  dexterity: { name: '敏捷', desc: '得るブロックが[N:X]増加する。' },
+  weak: { name: '脱力', desc: 'アタックで与えるダメージが0.75倍になる。ターン終了時に[S:weak]が1減少する。' },
+  vulnerable: { name: '脆弱', desc: 'アタックで受けるダメージが1.5倍になる。ターン終了時に[S:vulnerable]が1減少する。' },
+  poison: { name: '毒', desc: 'ターン開始時に[N:X]ダメージを受け、[S:poison]が1減少する。' },
+  omnistrike: { name: '拡散', desc: '全ての攻撃を全体攻撃に変更する。ターン終了時に[S:omnistrike]が1減少する。' },
+  barrier: { name: 'バリア', desc: 'アタックによってHPが1以上減る場合、そのダメージを無効化し、[S:barrier]が1減少する。' },
+  lifesteal: { name: '吸血', desc: 'アタックによって減らしたHPの[N:X]%を回復する。' },
+  reflect: {
+    name: '反射',
+    desc: 'アタックを受けた時、攻撃元にアタックの回数分だけ[N:X]ダメージを返す(この際ブロックを無視する)。',
+  },
   handCostReduction: {
-    name: '手札軽減',
-    desc: '手札にあるカードの現在コストをX減らす。手札を離れると適用されない。',
+    name: '節制',
+    desc: '手札のカードの使用コストを[N:X]軽減する。カードの使用時に[S:handCostReduction]が1減少する。',
   },
   handCostIncrease: {
-    name: '手札増加',
-    desc: '手札にあるカードの現在コストをX増やす。手札を離れると適用されない。',
+    name: '浪費',
+    desc: '手札のカードの使用コストを[N:X]増加する。カードの使用時に[S:handCostIncrease]が1減少する。',
   },
+  vigor: { name: '元気', desc: 'アタックで与えるダメージが1.5倍になる。ターン終了時に[S:vigor]が1減少する。' },
+  pursuit: { name: '追撃', desc: '攻撃直前に、「敵全体に[N:X]アタック。」を得て、[S:pursuit]が1減少する。' },
+  regeneration: { name: '再生', desc: 'ターン開始時にHPを[N:X]回復し、[S:regeneration]が1減少する。' },
+  fortify: { name: '堅牢', desc: 'ブロックを最大[N:X]まで次のターンに持ち越す。' },
+  resistance: { name: '耐性', desc: 'デバフを無効化し、[S:resistance]が1減少する。' },
+  revive: { name: '復活', desc: '死亡時に1度だけHPを[N:X]回復し、[S:revive]が消滅する。' },
+  growth: { name: '成長', desc: 'ターン開始時に[S:strength][N:X]を得る。' },
+  insight: { name: '洞察', desc: 'ターン開始時に[N:X]枚追加で引き、[S:insight]が消滅する。' },
+  haste: { name: '加速', desc: 'ターン開始時のエナジー回復量を+[N:X]し、[S:haste]が消滅する。' },
+  continuity: { name: '継続', desc: 'コンボ条件を満たさないカードを使った時、コンボを継続し、[S:continuity]が1減少する。' },
+  mastery: { name: '熟練', desc: 'ターン開始時にコンボゲージを[N:X]得て、[S:mastery]が1減少する。' },
+  virulentPoison: { name: '猛毒', desc: '[S:poison]によって受けるダメージが[N:X]倍になる。' },
+  stagnation: { name: '停滞', desc: 'コンボゲージが増えなくなる。ターン終了時に[S:stagnation]が1減少する。' },
+  burn: { name: '火傷', desc: 'ターン開始時に現在HPの[N:X]%のダメージを受け、[S:burn]が消滅する。' },
+  scorch: { name: '灼痕', desc: '[S:burn]が消滅する時、代わりに[S:scorch]が1減少する。' },
+  confusion: { name: '混乱', desc: 'カードが手札へ入った時、その使用コストを0～3のランダムな数値に変更する。ターン終了時に[S:confusion]が1減少する。' },
+  curse: { name: '呪縛', desc: 'カードを使用した時に[S:curse]が1減少する。[S:curse]が消滅したターンはカードを使用できなくなる。' },
+  bind: { name: '束縛', desc: 'アタックカードを使用できない。ターン終了時に[S:bind]が1減少する。' },
+  silence: { name: '沈黙', desc: 'アタック以外のカードを使用できない。ターン終了時に[S:silence]が1減少する。' },
+  seal: { name: '封印', desc: '戦技・奥義を使用できない。ターン終了時に[S:seal]が1減少する。' },
+  exhaustion: { name: '消耗', desc: 'ターン開始時にエナジーを[N:X]失い、[S:exhaustion]が1減少する。' },
+  distress: { name: '動揺', desc: 'カードを使用することでコンボが途切れた時、エナジーとコンボゲージを0にする。ターン終了時に[S:distress]が1減少する。' },
+  afterimage: { name: '残光', desc: '自身の攻撃終了時、[K:finisher]によって保存された全ての効果を使用順に[N:X]回再実行し、[S:afterimage]が消滅する。' },
+  steadfast: { name: '堅持', desc: 'ターン終了時に消滅するブロックの[N:50]%を次のターンに持ち越す。ターン終了時に[S:steadfast]が1減少する。' },
+  cover: { name: '護衛', desc: 'アタックによって味方が受けるダメージを、自身のブロックで可能な限り防ぐ。ターン終了時に[S:cover]が1減少する。' },
+  defensiveStance: { name: '守勢', desc: '自身のブロックを使って敵のアタックを完全に防いだ時、コンボゲージを[N:1]得る。ターン終了時に[S:defensiveStance]が1減少する。' },
+  comboCarryover: { name: '連環', desc: 'ターン終了時、現在コンボを次のターンへ持ち越し、[S:comboCarryover]が1減少する。次のターンに最初に使用するカードは条件を問わずコンボを継続するが、コンボによるコスト軽減を受けない。' },
+  afterglow: { name: '余韻', desc: 'ターン終了時に減少または消滅する自身の他のバフが[N:1]つ以上ある時、それらを全て維持し、[S:afterglow]が消滅する。' },
+  resonance: { name: '共鳴', desc: '自身のみに[S:resonance]以外のバフが付与された時、付与された全てのバフを他の全ての味方に付与し、[S:resonance]が1減少する。' },
+  disruption: { name: '攪乱', desc: '自身の全てのアタックをランダム攻撃に変更する。ターン終了時に[S:disruption]が1減少する。' },
 }
 
 // Why: relic / power カード共通の発火タイミング ID → 日本語表示。
@@ -71,7 +120,7 @@ const TRIGGER_JP: Record<string, string> = {
   OnCardExhausted: 'カード除外時',
   OnEnterShop: 'ショップ訪問時',
   OnEnterRestSite: '休憩所訪問時',
-  OnRest: '休憩時',
+  OnRest: '休息時',
   OnRewardGenerated: '報酬生成時',
   OnCardAddedToDeck: 'デッキ追加時',
   Passive: '常時',
@@ -90,6 +139,8 @@ export type CardDescRef =
   | { kind: 'keyword'; id: string; name: string; desc: string }
   | { kind: 'status'; id: string; name: string; desc: string }
   | { kind: 'card'; id: string; name: string }
+
+export type CardDescTerm = Extract<CardDescRef, { kind: 'keyword' | 'status' }>
 
 // Pure parser used by Tooltip; it has no Fast Refresh state of its own.
 // eslint-disable-next-line react-refresh/only-export-components
@@ -125,6 +176,10 @@ type Props = {
   cardNames?: Record<string, string>
   /** [U:unitId] のユニット id → 表示名マップ。unit catalog から渡す。 */
   unitNames?: Record<string, string>
+  /** Keyword ids whose visible label is disabled for this card instance. */
+  disabledKeywords?: readonly string[]
+  /** Optional renderer used by authoring previews to make known terms independently focusable. */
+  renderTerm?: (term: CardDescTerm, rendered: ReactNode, key: number) => ReactNode
   /**
    * 自動文字幅圧縮の有効/無効。default true。
    * Why: カード本体は固定狭幅枠で 1 行に収めるため圧縮が必要だが、tooltip / dev preview
@@ -144,7 +199,14 @@ const MARKER_RE = /\[(N|K|S|T|V|C|U):([^\]|]+)(?:\|([^\]]+))?\]/g
  * spec: docs/superpowers/specs/2026-05-01-phase10-5-design.md §1-3 Q9
  * 関連 plan: docs/superpowers/plans/2026-05-01-phase10-5B-formatter-v2.md
  */
-export function CardDesc({ text, cardNames = {}, unitNames = {}, compress = true }: Props) {
+export function CardDesc({
+  text,
+  cardNames = {},
+  unitNames = {},
+  disabledKeywords = [],
+  renderTerm,
+  compress = true,
+}: Props) {
   // Why: テスト固定値や JSON 由来の "\n" (2 文字 escape) も実改行として扱う。
   const normalized = text.replace(/\\n/g, '\n')
   const lines = normalized.split('\n')
@@ -153,8 +215,11 @@ export function CardDesc({ text, cardNames = {}, unitNames = {}, compress = true
     return (
       <span className="card-desc card-desc--no-compress">
         {lines.map((line, lineIdx) => (
-          <span key={lineIdx} className="card-desc-line-plain">
-            {renderLine(line, cardNames, unitNames)}
+          <span
+            key={lineIdx}
+            className={`card-desc-line-plain${isUsageLimitReachedLine(line) ? ' card-desc-line--usage-limit-reached' : ''}`}
+          >
+            {renderLine(line, cardNames, unitNames, disabledKeywords, renderTerm)}
             {lineIdx < lines.length - 1 ? '\n' : null}
           </span>
         ))}
@@ -162,9 +227,20 @@ export function CardDesc({ text, cardNames = {}, unitNames = {}, compress = true
     )
   }
   return (
-    <span className="card-desc">
+    <span
+      className="card-desc"
+      data-lines={Math.min(lines.length, 5)}
+      data-line-overflow={lines.length > 5 ? 'true' : undefined}
+    >
       {lines.map((line, lineIdx) => (
-        <CardDescLine key={lineIdx} line={line} cardNames={cardNames} unitNames={unitNames} />
+        <CardDescLine
+          key={lineIdx}
+          line={line}
+          cardNames={cardNames}
+          unitNames={unitNames}
+          disabledKeywords={disabledKeywords}
+          renderTerm={renderTerm}
+        />
       ))}
     </span>
   )
@@ -174,22 +250,26 @@ export function CardDesc({ text, cardNames = {}, unitNames = {}, compress = true
  * 1 行分の描画 + 自動文字幅圧縮。
  * Phase 10.5.M3 / M4:
  *   - white-space: nowrap で 1 文に保つ
- *   - 自然幅 > 親幅 のとき transform: scaleX(ratio * SAFETY) で横方向に圧縮
- *     (SAFETY = 0.96 で右端余白を確保し、はみ出しを防ぐ)
- *   - 自然幅 > 親幅 × 1.3 のときは wrap モードに切替えて 2-3 行表示
+ *   - 短文の 9px 表示は変更せず、長文だけ字間を軽く詰めてから scaleX する
+ *   - font-size と formatter が決めた改行は変更しない
  *   - ResizeObserver で wrapper サイズ変更時に再計算
  */
 function CardDescLine({
   line,
   cardNames,
   unitNames,
+  disabledKeywords,
+  renderTerm,
 }: {
   line: string
   cardNames: Record<string, string>
   unitNames: Record<string, string>
+  disabledKeywords: readonly string[]
+  renderTerm?: (term: CardDescTerm, rendered: ReactNode, key: number) => ReactNode
 }) {
   const wrapperRef = useRef<HTMLSpanElement>(null)
   const innerRef = useRef<HTMLSpanElement>(null)
+  const fitDependency = JSON.stringify([line, cardNames, unitNames, disabledKeywords])
 
   useLayoutEffect(() => {
     const wrapper = wrapperRef.current
@@ -198,67 +278,56 @@ function CardDescLine({
 
     const recompute = () => {
       // リセットして自然幅を取り直す
-      wrapper.classList.remove('card-desc-line--wrap')
+      wrapper.classList.remove('card-desc-line--scaled')
       inner.style.transform = ''
-      inner.style.fontSize = ''
+      inner.style.left = ''
       inner.style.letterSpacing = ''
+      delete inner.dataset.fit
 
       const containerWidth = wrapper.clientWidth
       if (containerWidth <= 0) return  // 未レイアウト
-      const initialNatural = inner.scrollWidth
-      if (initialNatural <= containerWidth) return  // 余裕で収まる
-
-      // Phase 10.5.M6.9: 多段階の geometric 圧縮 (letter-spacing → font-size 縮小 → wrap)。
-      //  旧 scaleX 最終手段は visual のみ縮み、wrapper の overflow:hidden が
-      //  geometric size 基準のため両端が切れるバグの原因 → 廃止。
-      //  各段で `void inner.offsetHeight` で reflow を強制 → scrollWidth が
-      //  letter-spacing/font-size 変更を確実に反映するようにする。
-      //  letter-spacing と font-size を細かく刻み、最終的に 6px font まで
-      //  攻めることで 14-18 字程度の long card text も 1 行で収める。
-
+      // The glyph box itself needs two pixels at each side: one for the crisp
+      // black text-shadow and one clear pixel before the illustrated rule.
+      // DOM width APIs do not include text-shadow's painted area.
+      // CSS computed width keeps sub-pixel precision and, unlike a visual
+      // bounding rect, is not multiplied by transforms on ancestor cards.
+      const paintSafeInset = 2
+      const safeWidth = Math.max(1, containerWidth - paintSafeInset * 2)
       const measure = (): number => {
-        // Force reflow: 一部ブラウザは style 変更直後の scrollWidth を
-        //  キャッシュ値で返すことがあるため、offsetHeight 読み出しで強制再計算。
         void inner.offsetHeight
-        return inner.scrollWidth
+        const computedWidth = Number.parseFloat(getComputedStyle(inner).width)
+        return Number.isFinite(computedWidth) ? computedWidth : inner.scrollWidth
       }
 
-      // Stage 1a-c: letter-spacing のみで 1 行に収める試み (-0.4 / -0.6 / -0.8 / -1.0px)
-      const lsSteps = [-0.4, -0.6, -0.8, -1.0]
+      const initialNatural = measure()
+      if (initialNatural <= safeWidth) return  // 黒フチを含めて収まる
+
+      // Preserve the normal short-line rhythm. Only an overflowing line gets
+      // progressively tighter tracking, and the glyph height never changes.
+      const lsSteps = [-0.2, -0.4, -0.6]
       for (const ls of lsSteps) {
         inner.style.letterSpacing = `${ls}px`
-        if (measure() <= containerWidth) return
+        if (measure() <= safeWidth) {
+          inner.dataset.fit = 'tracking'
+          return
+        }
       }
 
-      // Stage 2: font-size を 8.5 → 6px へ段階的に縮小、各段で letter-spacing も調整。
-      //   長文で letter-spacing 限界に達したら font-size を縮める方が読みやすい。
-      const fontSteps: Array<[string, string]> = [
-        ['8.5px', '-0.5px'],
-        ['8px', '-0.6px'],
-        ['7.5px', '-0.5px'],
-        ['7px', '-0.4px'],
-        ['6.5px', '-0.4px'],
-        ['6px', '-0.3px'],
-      ]
-      for (const [fs, ls] of fontSteps) {
-        inner.style.fontSize = fs
-        inner.style.letterSpacing = ls
-        if (measure() <= containerWidth) return
-      }
-
-      // Stage 3: 最小設定でも収まらない → wrap モード (2-3 行に折返し)
-      //  wrap モードでは font-size / letter-spacing をリセット (親 .card__desc
-      //  のデフォルト 9px に戻して読みやすさを優先)。
-      inner.style.fontSize = ''
-      inner.style.letterSpacing = ''
-      wrapper.classList.add('card-desc-line--wrap')
+      // Keep the paint-safe left inset and scale the final tracked width into
+      // the remaining safe area. transform-origin is the inner span's left edge.
+      const naturalWidth = measure()
+      const ratio = Math.min(1, safeWidth / naturalWidth)
+      wrapper.classList.add('card-desc-line--scaled')
+      inner.style.left = `${paintSafeInset}px`
+      inner.style.transform = `scaleX(${ratio})`
+      inner.dataset.fit = 'scaled'
     }
 
     recompute()
 
     // wrapper サイズ変動 (initial layout 確定後 / 親リサイズ等) でも再計算。
-    //  inner は観察しない: recompute が font-size を変えると inner サイズも
-    //  変わるため observe(inner) は循環 loop の原因になる (M6.10 反省)。
+    //  inner は観察しない: recompute が字間を変えると inner サイズも
+    //  変わるため observe(inner) は循環 loop の原因になる。
     //  catalog 後ロードで marker → JP 名置換され文字数が変わるケースは
     //  effect の dep (line / cardNames / unitNames) の変化で検出する。
     if (typeof ResizeObserver !== 'undefined') {
@@ -267,23 +336,32 @@ function CardDescLine({
       return () => ro.disconnect()
     }
     return undefined
-    // line / cardNames / unitNames が変わったら再計算 (catalog 後ロード対応)。
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [line, JSON.stringify(cardNames), JSON.stringify(unitNames)])
+    // 表示文、catalog 解決名、無効化表示のいずれが変わっても再計算する。
+  }, [fitDependency])
 
   return (
-    <span ref={wrapperRef} className="card-desc-line">
+    <span
+      ref={wrapperRef}
+      className={`card-desc-line${isUsageLimitReachedLine(line) ? ' card-desc-line--usage-limit-reached' : ''}`}
+    >
       <span ref={innerRef} className="card-desc-line-inner">
-        {renderLine(line, cardNames, unitNames)}
+        {renderLine(line, cardNames, unitNames, disabledKeywords, renderTerm)}
       </span>
     </span>
   )
+}
+
+function isUsageLimitReachedLine(line: string): boolean {
+  const match = line.match(/^ターン中\d+度だけ使用可能\((\d+)\/(\d+)\)。$/)
+  return match !== null && match[1] === match[2]
 }
 
 function renderLine(
   line: string,
   cardNames: Record<string, string>,
   unitNames: Record<string, string>,
+  disabledKeywords: readonly string[],
+  renderTerm?: (term: CardDescTerm, rendered: ReactNode, key: number) => ReactNode,
 ): ReactNode[] {
   const parts: ReactNode[] = []
   let lastIndex = 0
@@ -293,7 +371,7 @@ function renderLine(
     const idx = m.index ?? 0
     if (idx > lastIndex) parts.push(line.slice(lastIndex, idx))
     const [, kind, value, extra] = m
-    parts.push(renderMarker(kind, value, extra, cardNames, unitNames, key++))
+    parts.push(renderMarker(kind, value, extra, cardNames, unitNames, disabledKeywords, key++, renderTerm))
     lastIndex = idx + m[0].length
   }
   if (lastIndex < line.length) parts.push(line.slice(lastIndex))
@@ -306,7 +384,9 @@ function renderMarker(
   extra: string | undefined,
   cardNames: Record<string, string>,
   unitNames: Record<string, string>,
+  disabledKeywords: readonly string[],
   key: number,
+  renderTerm?: (term: CardDescTerm, rendered: ReactNode, key: number) => ReactNode,
 ): ReactNode {
   switch (kind) {
     case 'N': {
@@ -323,20 +403,34 @@ function renderMarker(
       )
     }
     case 'K': {
-      const jp = KEYWORD_DEFS[value]?.name ?? value
-      return (
-        <span key={key} className="card-desc-keyword" data-keyword={value}>
-          {jp}
+      const definition = KEYWORD_DEFS[value]
+      const jp = definition?.name ?? value
+      const disabled = disabledKeywords.includes(value)
+      const rendered = (
+        <span
+          key={key}
+          className={`card-desc-keyword${disabled ? ' card-desc-keyword--disabled' : ''}`}
+          data-keyword={value}
+        >
+          <span className="card-desc-keyword__label">{jp}</span>
+          {disabled ? <span className="card-desc-keyword__disabled"> (無効)</span> : null}
         </span>
       )
+      return definition && renderTerm
+        ? renderTerm({ kind: 'keyword', id: value, name: definition.name, desc: definition.desc }, rendered, key)
+        : rendered
     }
     case 'S': {
-      const jp = STATUS_DEFS[value]?.name ?? value
-      return (
+      const definition = STATUS_DEFS[value]
+      const jp = definition?.name ?? value
+      const rendered = (
         <span key={key} className="card-desc-status" data-status={value}>
           {jp}
         </span>
       )
+      return definition && renderTerm
+        ? renderTerm({ kind: 'status', id: value, name: definition.name, desc: definition.desc }, rendered, key)
+        : rendered
     }
     case 'T': {
       const jp = TRIGGER_JP[value] ?? value

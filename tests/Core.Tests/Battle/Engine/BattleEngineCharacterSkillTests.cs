@@ -4,6 +4,7 @@ using System.Linq;
 using RoguelikeCardGame.Core.Battle.Engine;
 using RoguelikeCardGame.Core.Battle.Events;
 using RoguelikeCardGame.Core.Battle.State;
+using RoguelikeCardGame.Core.Battle.Statuses;
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Data;
 using RoguelikeCardGame.Core.Random;
@@ -52,6 +53,78 @@ public class BattleEngineCharacterSkillTests
 
     private static DataCatalog Catalog(params CardDefinition[] cards) =>
         BattleFixtures.MinimalCatalog(cards: cards);
+
+    [Fact]
+    public void UseCharacterSkill_reads_character_definition_and_applies_card_effects()
+    {
+        var def = Card("c1");
+        var character = new CharacterDefinition(
+            "default", "default", 50, 0, 0, new[] { def.Id },
+            Skills: new[]
+            {
+                new CharacterSkillDefinition(
+                    "custom", "Custom", new ResourceCost(Energy: 2, ComboGauge: 2),
+                    OncePerTurn: true,
+                    Effects: new[]
+                    {
+                        new CardEffect("buff", EffectScope.Self, null, 2, Name: "strength"),
+                    }),
+            });
+        var catalog = Catalog(def) with
+        {
+            Characters = new System.Collections.Generic.Dictionary<string, CharacterDefinition>
+            {
+                [character.Id] = character,
+            },
+        };
+        var state = State(ImmutableArray.Create(new BattleCardInstance("card-1", def.Id, false, null)),
+            gauge: 3, energy: 5) with { CharacterId = character.Id };
+
+        var (next, events) = BattleEngine.UseCharacterSkill(
+            state, "custom", catalog, Rng());
+
+        Assert.Equal(3, next.Energy);
+        Assert.Equal(1, next.ComboGauge);
+        Assert.Equal(2, next.Allies[0].GetStatus("strength"));
+        Assert.Contains("custom", next.UsedCharacterSkillIdsThisTurn);
+        Assert.Contains(events, e => e.Kind == BattleEventKind.ApplyStatus && e.Note == "strength");
+    }
+
+    [Fact]
+    public void Data_driven_skill_uses_configured_number_of_times_per_turn()
+    {
+        var def = Card("c1");
+        var character = new CharacterDefinition(
+            "default", "default", 50, 0, 0, new[] { def.Id },
+            Skills: new[]
+            {
+                new CharacterSkillDefinition(
+                    "technique", "Technique", new ResourceCost(ComboGauge: 1),
+                    OncePerTurn: false,
+                    Effects: new[]
+                    {
+                        new CardEffect("buff", EffectScope.Self, null, 1, Name: "strength"),
+                    },
+                    UsesPerTurn: 2),
+            });
+        var catalog = Catalog(def) with
+        {
+            Characters = new System.Collections.Generic.Dictionary<string, CharacterDefinition>
+            {
+                [character.Id] = character,
+            },
+        };
+        var state = State(ImmutableArray.Create(new BattleCardInstance("card-1", def.Id, false, null)),
+            gauge: 3) with { CharacterId = character.Id };
+
+        var (afterFirst, _) = BattleEngine.UseCharacterSkill(state, "technique", catalog, Rng());
+        var (afterSecond, _) = BattleEngine.UseCharacterSkill(afterFirst, "technique", catalog, Rng());
+
+        Assert.Equal(1, afterSecond.ComboGauge);
+        Assert.Equal(2, afterSecond.CharacterSkillUsesThisTurn["technique"]);
+        Assert.Throws<InvalidOperationException>(() =>
+            BattleEngine.UseCharacterSkill(afterSecond, "technique", catalog, Rng()));
+    }
 
     private static (BattleState, IReadOnlyList<BattleEvent>) UseUltimate(
         BattleState state, DataCatalog? catalog = null)
@@ -269,6 +342,37 @@ public class BattleEngineCharacterSkillTests
     }
 
     [Fact]
+    public void Tactical_skill_resonates_its_grouped_buffs_to_other_allies()
+    {
+        var hero = BattleFixtures.Hero() with
+        {
+            Statuses = ImmutableDictionary<string, int>.Empty
+                .Add(BattleStatusIds.Resonance, 1),
+        };
+        var ally = BattleFixtures.SummonActor("ally-1", "ally", 1);
+        var state = State(
+            ImmutableArray<BattleCardInstance>.Empty,
+            gauge: BattleEngine.TacticalSkillGaugeCost) with
+        {
+            Allies = [hero, ally],
+        };
+
+        var (next, events) = BattleEngine.UseTacticalSkill(state);
+
+        Assert.Equal(1, next.Allies[0].GetStatus(BattleStatusIds.Strength));
+        Assert.Equal(1, next.Allies[0].GetStatus(BattleStatusIds.Omnistrike));
+        Assert.Equal(0, next.Allies[0].GetStatus(BattleStatusIds.Resonance));
+        Assert.Equal(1, next.Allies[1].GetStatus(BattleStatusIds.Strength));
+        Assert.Equal(1, next.Allies[1].GetStatus(BattleStatusIds.Omnistrike));
+        Assert.Equal(2, events.Count(battleEvent =>
+            battleEvent.Kind == BattleEventKind.ApplyStatus
+            && battleEvent.TargetInstanceId == ally.InstanceId));
+        Assert.Single(events, battleEvent =>
+            battleEvent.Note == BattleStatusIds.Resonance
+            && battleEvent.Amount == -1);
+    }
+
+    [Fact]
     public void Tactical_skill_rejects_second_use_in_same_turn()
     {
         var state = State(ImmutableArray<BattleCardInstance>.Empty, gauge: 6);
@@ -445,12 +549,12 @@ public class BattleEngineCharacterSkillTests
     }
 
     [Fact]
-    public void Ultimate_spends_ten_and_snapshots_only_current_hand_instances()
+    public void Ultimate_spends_six_and_snapshots_only_current_hand_instances()
     {
         var c1 = new BattleCardInstance("hand-1", "expensive", false, null);
         var c2 = new BattleCardInstance("hand-2", "expensive", false, null);
         var draw = new BattleCardInstance("draw-1", "expensive", false, null);
-        var state = State(ImmutableArray.Create(c1, c2), gauge: 10) with
+        var state = State(ImmutableArray.Create(c1, c2), gauge: 6) with
         {
             DrawPile = ImmutableArray.Create(draw),
         };
@@ -470,13 +574,13 @@ public class BattleEngineCharacterSkillTests
             e =>
             {
                 Assert.Equal(BattleEventKind.UseCharacterSkill, e.Kind);
-                Assert.Equal(10, e.Amount);
+                Assert.Equal(6, e.Amount);
                 Assert.Equal("ultimate", e.Note);
             },
             e =>
             {
                 Assert.Equal(BattleEventKind.ComboGaugeChanged, e.Kind);
-                Assert.Equal(-10, e.Amount);
+                Assert.Equal(-6, e.Amount);
                 Assert.Equal("remaining=0", e.Note);
             },
             e =>
@@ -565,7 +669,7 @@ public class BattleEngineCharacterSkillTests
 
     [Theory]
     [InlineData("tactical", 2)]
-    [InlineData("ultimate", 9)]
+    [InlineData("ultimate", 5)]
     public void Character_skill_rejects_insufficient_gauge(string skill, int gauge)
     {
         var state = State(
@@ -604,12 +708,13 @@ public class BattleEngineCharacterSkillTests
     }
 
     [Fact]
-    public void Ultimate_rejects_empty_hand()
+    public void Ultimate_allows_empty_hand_as_an_empty_effect_resolution()
     {
-        var state = State(ImmutableArray<BattleCardInstance>.Empty, gauge: 10);
+        var state = State(ImmutableArray<BattleCardInstance>.Empty, gauge: 6);
 
-        Assert.Throws<InvalidOperationException>(() =>
-            UseUltimate(state));
+        var (next, events) = UseUltimate(state);
+        Assert.Equal(0, next.ComboGauge);
+        Assert.Contains(events, e => e.Kind == BattleEventKind.UseCharacterSkill);
     }
 
     [Theory]
@@ -634,6 +739,8 @@ public class BattleEngineCharacterSkillTests
         {
             UsedCharacterSkillIdsThisTurn =
                 ImmutableHashSet.Create(StringComparer.Ordinal, "tactical"),
+            CardUsesThisTurn = ImmutableDictionary<string, int>.Empty.Add("card", 1),
+            PotionUsesThisTurn = ImmutableDictionary<string, int>.Empty.Add("potion", 1),
         };
 
         var (afterEnd, _) = TurnEndProcessor.Process(
@@ -641,6 +748,8 @@ public class BattleEngineCharacterSkillTests
         Assert.Equal(7, afterEnd.ComboGauge);
         Assert.All(AllCards(afterEnd), card => Assert.Empty(card.EffectiveCostModifiers));
         Assert.Empty(afterEnd.UsedCharacterSkillIdsThisTurn);
+        Assert.Empty(afterEnd.CardUsesThisTurn);
+        Assert.Empty(afterEnd.PotionUsesThisTurn);
 
         var directStart = state with { Turn = 2 };
         var (afterStart, _) = TurnStartProcessor.Process(
@@ -648,6 +757,8 @@ public class BattleEngineCharacterSkillTests
         Assert.Equal(7, afterStart.ComboGauge);
         Assert.All(AllCards(afterStart), card => Assert.Empty(card.EffectiveCostModifiers));
         Assert.Empty(afterStart.UsedCharacterSkillIdsThisTurn);
+        Assert.Empty(afterStart.CardUsesThisTurn);
+        Assert.Empty(afterStart.PotionUsesThisTurn);
 
         var (afterNormalTurn, _) = BattleEngine.EndTurn(
             state, Rng(), BattleFixtures.MinimalCatalog());
@@ -655,6 +766,8 @@ public class BattleEngineCharacterSkillTests
         Assert.Equal(7, afterNormalTurn.ComboGauge);
         Assert.All(AllCards(afterNormalTurn), card => Assert.Empty(card.EffectiveCostModifiers));
         Assert.Empty(afterNormalTurn.UsedCharacterSkillIdsThisTurn);
+        Assert.Empty(afterNormalTurn.CardUsesThisTurn);
+        Assert.Empty(afterNormalTurn.PotionUsesThisTurn);
     }
 
     [Fact]

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using RoguelikeCardGame.Core.Cards;
+using RoguelikeCardGame.Core.Data;
 
 namespace RoguelikeCardGame.Core.Battle.State;
 
@@ -22,11 +24,28 @@ public sealed record BattleCardInstance(
     int? CostOverride,
     ImmutableArray<CardCostModifier>? CostModifiers = null)
 {
+    /// <summary>
+    /// Battle-only affiliation captured for a dynamically generated card.
+    /// Null means the ordinary catalog definition remains authoritative.
+    /// </summary>
+    public CardPoolClass? PoolClassOverride { get; init; }
+
     /// <summary>旧state/fixtureの null を安全に空配列として扱う。</summary>
     public ImmutableArray<CardCostModifier> EffectiveCostModifiers =>
         CostModifiers is { } modifiers && !modifiers.IsDefault
             ? modifiers
             : ImmutableArray<CardCostModifier>.Empty;
+
+    /// <summary>
+    /// The visual/content pool carried by this concrete battle card. Cards
+    /// created by another card keep the creating card's pool through this
+    /// override; ordinary cards fall back to their catalog definition. Legacy
+    /// or unknown definitions are deliberately presented as Universal.
+    /// </summary>
+    public CardPoolClass EffectivePoolClass(CardDefinition? definition) =>
+        PoolClassOverride
+        ?? definition?.PoolClass
+        ?? CardPoolClass.Universal;
 
     public BattleCardInstance AddCostModifier(CardCostModifier modifier)
     {
@@ -59,6 +78,7 @@ public sealed record BattleCardInstance(
         && CardDefinitionId == other.CardDefinitionId
         && IsUpgraded == other.IsUpgraded
         && CostOverride == other.CostOverride
+        && PoolClassOverride == other.PoolClassOverride
         && EffectiveCostModifiers.SequenceEqual(other.EffectiveCostModifiers);
 
     public override int GetHashCode()
@@ -68,6 +88,7 @@ public sealed record BattleCardInstance(
         hash.Add(CardDefinitionId, StringComparer.Ordinal);
         hash.Add(IsUpgraded);
         hash.Add(CostOverride);
+        hash.Add(PoolClassOverride);
         foreach (var modifier in EffectiveCostModifiers)
             hash.Add(modifier);
         return hash.ToHashCode();

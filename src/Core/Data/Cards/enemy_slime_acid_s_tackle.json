@@ -1,0 +1,26 @@
+{
+  "id": "enemy_slime_acid_s_tackle",
+  "name": "体当たり",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy slime_acid_s unique (from move tackle)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 3
+          }
+        ]
+      }
+    }
+  ]
+}

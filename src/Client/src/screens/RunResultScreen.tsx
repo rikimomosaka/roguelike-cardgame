@@ -8,6 +8,7 @@ import type { TooltipContent } from '../components/Tooltip'
 import { useCardCatalog, usePotionCatalog } from '../hooks/useCardCatalog'
 import { useRelicCatalog } from '../hooks/useRelicCatalog'
 import type { CardCatalog, PotionCatalog, RelicCatalog } from '../api/catalog'
+import { getRelicTooltipContent } from '../components/relicTooltip'
 import { rarityToItemClass } from './runResultRarity'
 import './RunResultScreen.css'
 
@@ -113,12 +114,12 @@ export function RunResultScreen({ result, snapshot, onReturnToMenu }: Props) {
   }, [result.journeyLog])
 
   return (
-    <main className="rr" role="dialog" aria-modal="true" aria-label="Run Result">
+    <main className="rr" data-outcome={result.outcome.toLowerCase()} role="dialog" aria-modal="true" aria-label="Run Result">
       <div className="rr__pattern" aria-hidden="true" />
       <div className="rr__content">
 
         {/* ---- Header ---- */}
-        <header className="rr__header">
+        <header className="rr__header rr__reveal rr__reveal--outcome">
           <h1 className={`rr__outcome ${outcomeClass(result.outcome)}`}>
             {result.outcome}
           </h1>
@@ -126,7 +127,7 @@ export function RunResultScreen({ result, snapshot, onReturnToMenu }: Props) {
         </header>
 
         {/* ---- Statistics panel ---- */}
-        <section className="rr__panel rr__stats-panel" aria-label="Statistics">
+        <section className="rr__panel rr__stats-panel rr__reveal rr__reveal--stats" aria-label="Statistics">
           <div className="rr__panel-title-row">
             <div className="rr__panel-title">▸ STATISTICS</div>
           </div>
@@ -177,6 +178,7 @@ export function RunResultScreen({ result, snapshot, onReturnToMenu }: Props) {
                             <div
                               key={`${act}-${e.nodeId}-${i}`}
                               className={`rr__journey-node ${cls}`}
+                              style={{ animationDelay: `${420 + i * 35}ms` }}
                               title={tip}
                               aria-label={tip}
                             >
@@ -204,6 +206,7 @@ export function RunResultScreen({ result, snapshot, onReturnToMenu }: Props) {
                           <div
                             key={`${nid}-${i}`}
                             className={`rr__journey-node ${cls}`}
+                            style={{ animationDelay: `${420 + i * 35}ms` }}
                             title={tip}
                             aria-label={tip}
                           >
@@ -247,7 +250,7 @@ export function RunResultScreen({ result, snapshot, onReturnToMenu }: Props) {
         </section>
 
         {/* ---- Inventory grid (Relics / Potions / Deck) ---- */}
-        <div className="rr__grid">
+        <div className="rr__grid rr__reveal rr__reveal--inventory">
 
           <section className="rr__panel" aria-label="Relics">
             <div className="rr__panel-title-row">
@@ -319,7 +322,7 @@ export function RunResultScreen({ result, snapshot, onReturnToMenu }: Props) {
         </div>
 
         {/* ---- Footer ---- */}
-        <div className="rr__footer">
+        <div className="rr__footer rr__reveal rr__reveal--footer">
           <button
             type="button"
             className="rr__btn"
@@ -346,11 +349,10 @@ function RelicRow({
   const entry = relicCatalog?.[id]
   const name = relicNames[id] ?? id
   const rarity = rarityCodeFromName(entry?.rarity)
-  const description = entry?.description ?? null
-  const tooltipContent = useMemo<TooltipContent | null>(() => {
-    if (!description) return null
-    return { name, rarity, desc: description }
-  }, [name, rarity, description])
+  const tooltipContent = useMemo(
+    () => getRelicTooltipContent(id, relicCatalog, relicNames),
+    [id, relicCatalog, relicNames],
+  )
   const tip = useTooltipTarget(tooltipContent)
   return (
     <li

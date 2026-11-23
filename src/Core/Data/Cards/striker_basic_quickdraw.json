@@ -1,0 +1,47 @@
+{
+  "id": "striker_basic_quickdraw",
+  "name": "抜き打ち",
+  "displayName": null,
+  "poolKinds": [
+    "Basic"
+  ],
+  "poolClass": "Striker",
+  "eligibleCharacterIds": [
+    "default"
+  ],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Attack",
+        "cost": 0,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 4
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "attack",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 6
+          }
+        ],
+        "keywords": [
+          "wild"
+        ],
+        "upgradedKeywords": [
+          "superwild"
+        ]
+      }
+    }
+  ]
+}

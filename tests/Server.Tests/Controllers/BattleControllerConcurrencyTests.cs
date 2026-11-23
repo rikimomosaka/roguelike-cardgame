@@ -75,7 +75,7 @@ public sealed class BattleControllerConcurrencyTests : IClassFixture<TempDataFac
 
             Assert.True(store.TryGet(accountId, out var finalSession));
             Assert.Same(session.Rng, finalSession.Rng);
-            Assert.Equal(9, finalSession.State.Energy);
+            Assert.Equal(10, finalSession.State.Energy);
             Assert.Equal(1, finalSession.State.ComboGauge);
             Assert.DoesNotContain(
                 finalSession.State.Hand, item => item.InstanceId == card.InstanceId);
@@ -83,7 +83,7 @@ public sealed class BattleControllerConcurrencyTests : IClassFixture<TempDataFac
                 finalSession.State.DiscardPile, item => item.InstanceId == card.InstanceId);
             var hero = Assert.Single(
                 finalSession.State.Allies, actor => actor.DefinitionId == "hero");
-            Assert.Equal(1, hero.GetStatus("strength"));
+            Assert.Equal(0, hero.GetStatus("strength"));
             Assert.Equal(1, hero.GetStatus("omnistrike"));
             Assert.True(hero.Block.Sum > 0);
         }

@@ -1,0 +1,57 @@
+{
+  "id": "tactician_common_hidden_blade",
+  "name": "伏刃",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Tactician",
+  "eligibleCharacterIds": [
+    "tactician_yuno"
+  ],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Skill",
+        "cost": 2,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "random",
+            "side": "enemy",
+            "amount": 10
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "attack",
+            "scope": "random",
+            "side": "enemy",
+            "amount": 14
+          }
+        ],
+        "abilities": [
+          {
+            "type": "contingency",
+            "trigger": {
+              "timing": "BeforeEnemyAttack"
+            }
+          }
+        ],
+        "upgradedAbilities": [
+          {
+            "type": "contingency",
+            "trigger": {
+              "timing": "BeforeEnemyAttack"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

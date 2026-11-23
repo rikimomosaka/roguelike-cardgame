@@ -1,0 +1,28 @@
+{
+  "id": "enemy_common_heavy_attack",
+  "name": "強攻撃",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy common action (2 cost, 1.5x attack)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 2,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 0,
+            "amountSource": "selfAttack",
+            "amountScalePercent": 150
+          }
+        ]
+      }
+    }
+  ]
+}

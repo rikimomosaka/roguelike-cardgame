@@ -6,45 +6,33 @@
   "act": 1,
   "heightTier": 4,
   "tier": "Strong",
-  "initialMoveId": "mug",
-  "moves": [
+  "attack": 9,
+  "defense": 7,
+  "initialEnergy": 0,
+  "energyPerTurn": 1,
+  "drawPerTurn": 3,
+  "handLimit": 5,
+  "aiProfileId": "low_cost_combo",
+  "deck": [
     {
-      "id": "mug",
-      "kind": "Attack",
-      "nextMoveId": "dodge",
-      "effects": [
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 9
-        }
-      ]
+      "cardId": "enemy_bandit_mug",
+      "count": 2
     },
     {
-      "id": "dodge",
-      "kind": "Defend",
-      "nextMoveId": "backstab",
-      "effects": [
-        {
-          "action": "block",
-          "scope": "self",
-          "amount": 7
-        }
-      ]
+      "cardId": "enemy_bandit_dodge",
+      "count": 2
     },
     {
-      "id": "backstab",
-      "kind": "Attack",
-      "nextMoveId": "mug",
-      "effects": [
-        {
-          "action": "attack",
-          "scope": "all",
-          "side": "enemy",
-          "amount": 12
-        }
-      ]
+      "cardId": "enemy_bandit_backstab",
+      "count": 2
+    },
+    {
+      "cardId": "enemy_common_attack",
+      "count": 4
+    },
+    {
+      "cardId": "enemy_common_defend",
+      "count": 2
     }
   ]
 }

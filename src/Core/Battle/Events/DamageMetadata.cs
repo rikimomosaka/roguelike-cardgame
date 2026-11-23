@@ -25,6 +25,7 @@ public enum CombatSourceKind
     PotionEffect = 6,
     Status = 7,
     CharacterSkill = 8,
+    CharacterTrait = 9,
 }
 
 /// <summary>

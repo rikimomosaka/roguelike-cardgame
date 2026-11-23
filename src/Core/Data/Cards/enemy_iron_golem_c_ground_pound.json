@@ -1,0 +1,26 @@
+{
+  "id": "enemy_iron_golem_c_ground_pound",
+  "name": "地鳴らし",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy iron_golem_c unique (from move ground_pound)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 17
+          }
+        ]
+      }
+    }
+  ]
+}

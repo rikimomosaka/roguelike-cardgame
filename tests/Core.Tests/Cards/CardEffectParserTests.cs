@@ -57,6 +57,25 @@ public class CardEffectParserTests
     }
 
     [Fact]
+    public void Parse_effect_with_maxComboMin_uses_distinct_momentum_condition()
+    {
+        var e = Parse("""{"action":"attack","scope":"single","side":"enemy","amount":11,"maxComboMin":3}""");
+
+        Assert.Equal(3, e.MaxComboMin);
+        Assert.Null(e.ComboMin);
+    }
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("-1")]
+    [InlineData("\"3\"")]
+    public void Invalid_maxComboMin_is_rejected(string value)
+    {
+        Assert.Throws<Exception>(() => Parse(
+            $$"""{"action":"attack","scope":"single","side":"enemy","amount":11,"maxComboMin":{{value}}}"""));
+    }
+
+    [Fact]
     public void Parse_exhaustCard_with_pile()
     {
         var e = Parse("""{"action":"exhaustCard","scope":"random","pile":"hand","amount":1}""");
@@ -150,6 +169,7 @@ public class CardEffectParserTests
         Assert.Null(e.Trigger);
         Assert.Null(e.CostDuration);
         Assert.Null(e.CardCount);
+        Assert.Null(e.MaxComboMin);
     }
 
     [Fact]

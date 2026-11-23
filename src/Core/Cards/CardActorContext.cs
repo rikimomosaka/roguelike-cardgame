@@ -22,4 +22,10 @@ public sealed record CardActorContext(
     /// base と同値を返し、結果として無修飾 [N:N] のみが emit される。
     /// </summary>
     public static readonly CardActorContext Empty = new(0, 0, 0);
+
+    /// <summary>使用者の攻撃力（分かる場合）。"selfAttack" 参照の効果量を具体値で表示する。</summary>
+    public int? AttackPower { get; init; }
+
+    /// <summary>使用者の守備力（分かる場合）。"selfDefense" 参照の効果量を具体値で表示する。</summary>
+    public int? DefensePower { get; init; }
 }

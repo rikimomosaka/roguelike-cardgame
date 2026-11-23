@@ -1,0 +1,26 @@
+{
+  "id": "enemy_bandit_backstab",
+  "name": "背刺し",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy bandit unique (from move backstab)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 12
+          }
+        ]
+      }
+    }
+  ]
+}

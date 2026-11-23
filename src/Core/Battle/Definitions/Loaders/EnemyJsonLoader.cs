@@ -36,21 +36,75 @@ public static class EnemyJsonLoader
 
                 var tier = ParseTier(GetRequiredString(root, "tier", id), id);
 
-                var initialMoveId = GetRequiredString(root, "initialMoveId", id);
-                var moves = ParseMoves(root, "moves", id);
-                if (moves.Count == 0)
-                    throw new EnemyJsonException($"moves が空です (enemy id={id})。");
-
-                bool found = false;
-                foreach (var m in moves) if (m.Id == initialMoveId) { found = true; break; }
-                if (!found)
+                // deck を持つ敵はカード制御（moves と同時指定不可）。
+                bool hasDeck = root.TryGetProperty("deck", out _);
+                bool hasMoves = root.TryGetProperty("moves", out _)
+                    || root.TryGetProperty("initialMoveId", out _);
+                if (hasDeck && hasMoves)
                     throw new EnemyJsonException(
-                        $"initialMoveId \"{initialMoveId}\" が moves に存在しません (enemy id={id})。");
+                        $"deck と moves/initialMoveId は同時に設定できません (enemy id={id})。");
+
+                string initialMoveId;
+                IReadOnlyList<MoveDefinition> moves;
+                IReadOnlyList<UnitDeckEntry>? deck = null;
+                if (hasDeck)
+                {
+                    try { deck = UnitJsonLoader.ParseDeck(root, id); }
+                    catch (UnitJsonException ex)
+                    {
+                        throw new EnemyJsonException(
+                            ex.Message.Replace("unit id=", "enemy id="), ex);
+                    }
+                    initialMoveId = string.Empty;
+                    moves = Array.Empty<MoveDefinition>();
+                }
+                else
+                {
+                    initialMoveId = GetRequiredString(root, "initialMoveId", id);
+                    moves = ParseMoves(root, "moves", id);
+                    if (moves.Count == 0)
+                        throw new EnemyJsonException($"moves が空です (enemy id={id})。");
+
+                    bool found = false;
+                    foreach (var m in moves) if (m.Id == initialMoveId) { found = true; break; }
+                    if (!found)
+                        throw new EnemyJsonException(
+                            $"initialMoveId \"{initialMoveId}\" が moves に存在しません (enemy id={id})。");
+                }
 
                 var heightTier = ParseOptionalIntInRange(root, "heightTier", 5, 1, 10, id);
+                var initialEnergy = ParseOptionalIntInRange(
+                    root, "initialEnergy", 0, 0, int.MaxValue, id);
+                var energyPerTurn = ParseOptionalIntInRange(
+                    root, "energyPerTurn", 1, 0, int.MaxValue, id);
+                var drawPerTurn = ParseOptionalIntInRange(
+                    root, "drawPerTurn", 3, 0, int.MaxValue, id);
+                var handLimit = ParseOptionalIntInRange(
+                    root, "handLimit", 5, 1, int.MaxValue, id);
+                string? aiProfileId = null;
+                if (root.TryGetProperty("aiProfileId", out var aiEl))
+                {
+                    if (aiEl.ValueKind != JsonValueKind.String
+                        || string.IsNullOrWhiteSpace(aiEl.GetString()))
+                        throw new EnemyJsonException(
+                            $"\"aiProfileId\" は空でない文字列である必要があります。 (enemy id={id})");
+                    aiProfileId = aiEl.GetString();
+                }
+                if (hasDeck && aiProfileId is null)
+                    throw new EnemyJsonException(
+                        $"deck を持つ敵には aiProfileId が必要です (enemy id={id})。");
 
                 return new EnemyDefinition(id, name, imageId, hp,
-                    new EnemyPool(act, tier), initialMoveId, moves, heightTier);
+                    new EnemyPool(act, tier), initialMoveId, moves, heightTier,
+                    Deck: deck,
+                    InitialEnergy: initialEnergy,
+                    EnergyPerTurn: energyPerTurn,
+                    DrawPerTurn: drawPerTurn,
+                    HandLimit: handLimit,
+                    AiProfileId: aiProfileId,
+                    Attack: ParseOptionalIntInRange(root, "attack", 0, 0, int.MaxValue, id),
+                    Defense: ParseOptionalIntInRange(root, "defense", 0, 0, int.MaxValue, id),
+                    OpeningActions: ParseOpeningActions(root, id));
             }
             catch (EnemyJsonException) { throw; }
             catch (Exception ex)
@@ -59,6 +113,25 @@ public static class EnemyJsonLoader
                 throw new EnemyJsonException($"敵 JSON のパースに失敗しました {where}: {ex.Message}", ex);
             }
         }
+    }
+
+    /// <summary>先制行動: "openingActions": ["cardId", ...]（記載順に実行）。</summary>
+    private static IReadOnlyList<string>? ParseOpeningActions(JsonElement root, string? id)
+    {
+        if (!root.TryGetProperty("openingActions", out var arr)
+            || arr.ValueKind == JsonValueKind.Null)
+            return null;
+        if (arr.ValueKind != JsonValueKind.Array)
+            throw new EnemyJsonException($"openingActions は配列である必要があります (enemy id={id})。");
+        var list = new List<string>();
+        foreach (var el in arr.EnumerateArray())
+        {
+            if (el.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(el.GetString()))
+                throw new EnemyJsonException(
+                    $"openingActions の要素は空でないカード ID 文字列である必要があります (enemy id={id})。");
+            list.Add(el.GetString()!);
+        }
+        return list;
     }
 
     private static EnemyTier ParseTier(string s, string? id) => s switch

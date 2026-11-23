@@ -1,0 +1,26 @@
+{
+  "id": "enemy_big_slime_body_slam",
+  "name": "のしかかり",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy big_slime unique (from move body_slam)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 12
+          }
+        ]
+      }
+    }
+  ]
+}

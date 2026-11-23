@@ -91,7 +91,7 @@ public class EffectApplierSummonTests
         Assert.Equal(1, newMinion.SlotIndex);  // 空き最小 = 1
     }
 
-    [Fact] public void Summon_with_lifetime_sets_remaining_turns()
+    [Fact] public void Legacy_unit_lifetime_is_ignored_for_new_summons()
     {
         var s = MakeState();
         var hero = s.Allies[0];
@@ -99,7 +99,7 @@ public class EffectApplierSummonTests
         var unitDef = BattleFixtures.MinionDef(id: "ephemeral", lifetime: 3);
         var cat = BattleFixtures.MinimalCatalog(units: new[] { unitDef });
         var (next, _) = EffectApplier.Apply(s, hero, eff, Rng(), cat);
-        Assert.Equal(3, next.Allies[1].RemainingLifetimeTurns);
+        Assert.Null(next.Allies[1].RemainingLifetimeTurns);
     }
 
     [Fact] public void Summon_associated_id_is_null_initially()

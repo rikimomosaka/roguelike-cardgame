@@ -4,21 +4,33 @@
   "imageId": "wisp",
   "hp": 30,
   "heightTier": 3,
-  "initialMoveId": "wisp_strike",
-  "lifetimeTurns": 3,
-  "moves": [
+  "initialEnergy": 1,
+  "energyPerTurn": 1,
+  "drawPerTurn": 3,
+  "handLimit": 5,
+  "aiProfileId": "low_cost_combo",
+  "traitDescription": null,
+  "skills": [],
+  "ownedRelicIds": [],
+  "potions": [],
+  "deck": [
     {
-      "id": "wisp_strike",
-      "kind": "Attack",
-      "nextMoveId": "wisp_strike",
-      "effects": [
-        {
-          "action": "attack",
-          "scope": "single",
-          "side": "enemy",
-          "amount": 4
-        }
-      ]
+      "cardId": "wisp_will_o_wisp",
+      "count": 2
+    },
+    {
+      "cardId": "wisp_spark",
+      "count": 2
+    },
+    {
+      "cardId": "wisp_aegis",
+      "count": 1
+    },
+    {
+      "cardId": "wisp_scatterflame",
+      "count": 1
     }
-  ]
+  ],
+  "attack": 3,
+  "defense": 3
 }

@@ -1,0 +1,8 @@
+{
+  "id": "insight_potion",
+  "name": "洞察ポーション",
+  "rarity": 1,
+  "effects": [
+    { "action": "buff", "scope": "self", "name": "insight", "amount": 2, "battleOnly": true }
+  ]
+}

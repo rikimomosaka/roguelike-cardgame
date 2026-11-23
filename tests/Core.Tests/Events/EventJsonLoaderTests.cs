@@ -117,6 +117,28 @@ public class EventJsonLoaderTests
     }
 
     [Fact]
+    public void Parse_GainCard_ReadsCardId()
+    {
+        const string json = """
+        {
+          "id": "gain_card", "name": "n", "tiers": [1], "rarity": "common", "startMessage": "s",
+          "choices": [
+            {
+              "label": "a",
+              "effects": [ { "type": "gainCard", "cardId": "reward_common_01" } ],
+              "resultMessage": "r"
+            }
+          ]
+        }
+        """;
+
+        var definition = EventJsonLoader.Parse(json);
+
+        var effect = Assert.IsType<EventEffect.GainCard>(definition.Choices[0].Effects[0]);
+        Assert.Equal("reward_common_01", effect.CardId);
+    }
+
+    [Fact]
     public void Parse_MissingTiers_Throws()
     {
         const string bad = """

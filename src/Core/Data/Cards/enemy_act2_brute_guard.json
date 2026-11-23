@@ -1,0 +1,25 @@
+{
+  "id": "enemy_act2_brute_guard",
+  "name": "防御態勢",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy act2_brute unique (from move guard)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 10
+          }
+        ]
+      }
+    }
+  ]
+}

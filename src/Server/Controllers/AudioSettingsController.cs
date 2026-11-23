@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -23,7 +24,13 @@ public sealed class AudioSettingsController : ControllerBase
         _settings = settings;
     }
 
-    public sealed record AudioSettingsDto(int SchemaVersion, int Master, int Bgm, int Se, int Ambient);
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed record AudioSettingsDto(
+        [property: JsonRequired] int SchemaVersion,
+        [property: JsonRequired] int Master,
+        [property: JsonRequired] int Bgm,
+        [property: JsonRequired] int Se,
+        [property: JsonRequired] int Voice);
 
     [HttpGet]
     public async Task<IActionResult> Get(CancellationToken ct)
@@ -33,7 +40,7 @@ public sealed class AudioSettingsController : ControllerBase
             return Problem(statusCode: StatusCodes.Status404NotFound, title: $"アカウントが見つかりません: {accountId}");
 
         var s = await _settings.GetOrDefaultAsync(accountId, ct);
-        return Ok(new AudioSettingsDto(s.SchemaVersion, s.Master, s.Bgm, s.Se, s.Ambient));
+        return Ok(new AudioSettingsDto(s.SchemaVersion, s.Master, s.Bgm, s.Se, s.Voice));
     }
 
     [HttpPut]
@@ -44,10 +51,15 @@ public sealed class AudioSettingsController : ControllerBase
         if (!await _accounts.ExistsAsync(accountId, ct))
             return Problem(statusCode: StatusCodes.Status404NotFound, title: $"アカウントが見つかりません: {accountId}");
 
+        if (dto.SchemaVersion != AudioSettings.CurrentSchemaVersion)
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: $"Unsupported schemaVersion: {dto.SchemaVersion} (current: {AudioSettings.CurrentSchemaVersion})");
+
         AudioSettings settings;
         try
         {
-            settings = AudioSettings.Create(dto.Master, dto.Bgm, dto.Se, dto.Ambient);
+            settings = AudioSettings.Create(dto.Master, dto.Bgm, dto.Se, dto.Voice);
         }
         catch (ArgumentOutOfRangeException ex)
         {

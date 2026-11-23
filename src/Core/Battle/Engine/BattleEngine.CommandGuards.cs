@@ -17,4 +17,35 @@ public static partial class BattleEngine
                 $"{commandName} cannot run while PendingCardPlay is set; " +
                 "resolve via ResolveCardChoice first");
     }
+
+    /// <summary>
+    /// Ready is a reversible planning lock. A participant must explicitly
+    /// unready before issuing another planning command; enforcing this in Core
+    /// also protects stale clients and non-HTTP callers.
+    /// </summary>
+    private static void RejectIfParticipantReady(
+        BattleState state,
+        string? participantId,
+        string commandName)
+    {
+        if (state.Participants.IsDefaultOrEmpty)
+            return;
+
+        BattleParticipantState participant;
+        if (string.IsNullOrWhiteSpace(participantId))
+        {
+            participant = BattleParticipantAccess.GetPrimary(state);
+        }
+        else if (!BattleParticipantAccess.TryGet(
+                     state, participantId, out participant!))
+        {
+            throw new InvalidOperationException(
+                $"Battle participant '{participantId}' does not exist.");
+        }
+
+        if (participant.IsReady)
+            throw new InvalidOperationException(
+                $"{commandName} cannot run while participant " +
+                $"'{participant.ParticipantId}' is Ready; unready first");
+    }
 }

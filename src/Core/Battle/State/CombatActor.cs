@@ -42,6 +42,30 @@ public sealed record CombatActor(
     public ImmutableDictionary<string, CombatSource> StatusSources { get; init; } =
         ImmutableDictionary<string, CombatSource>.Empty;
 
+    /// <summary>
+    /// Status icon display order. A status is appended when it is first applied,
+    /// so newly gained statuses are rendered to the right of existing ones.
+    /// Legacy snapshots may omit this field; projections append any missing ids.
+    /// </summary>
+    public ImmutableArray<string> StatusDisplayOrder { get; init; } =
+        ImmutableArray<string>.Empty;
+
+    /// <summary>
+    /// カード制御の敵が今ターン予約した戦場効果（使用順）。行動予告はここから投影し、
+    /// 敵の行動実行時に適用して空にする。味方・旧 Move 敵は常に空。
+    /// </summary>
+    public ImmutableArray<PlannedCardEffect> PlannedEffects { get; init; } =
+        ImmutableArray<PlannedCardEffect>.Empty;
+
+    /// <summary>
+    /// 基礎攻撃力（定義の初期値。永続補正は今後加算）。筋力とは別の能力値で、
+    /// AmountSource "selfAttack" が参照する。筋力・脱力等は従来どおりヒット解決時に加わる。
+    /// </summary>
+    public int AttackPower { get; init; }
+
+    /// <summary>基礎守備力。AmountSource "selfDefense" が参照する。敏捷は従来どおり加わる。</summary>
+    public int DefensePower { get; init; }
+
     public bool IsAlive => CurrentHp > 0;
 
     /// <summary>未保持なら 0 を返す。Statuses は 0 以下の amount を持たない不変条件。</summary>

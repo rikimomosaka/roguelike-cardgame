@@ -42,4 +42,28 @@ public enum BattleEventKind
     ComboGaugeChanged  = 24,
     /// <summary>カード個体へコスト増減modifierを付与した。</summary>
     ModifyCardCost     = 25,
+    /// <summary>An independently controlled participant toggled Ready.</summary>
+    ParticipantReadyChanged = 26,
+    /// <summary>Every active participant is Ready and queued combat begins resolving.</summary>
+    ResolutionStarted = 27,
+    /// <summary>A Contingency card entered its armed state in the exhaust pile.</summary>
+    ContingencyArmed = 28,
+    /// <summary>An armed Contingency began resolving its effect list.</summary>
+    ContingencyTriggered = 29,
+    /// <summary>A Finisher saved its connected Attack cards and reset the current combo.</summary>
+    FinisherResolved = 30,
+    /// <summary>A card effect list is executed again without replaying the card itself.</summary>
+    ReenactCardEffects = 31,
+    /// <summary>Cards moved from the exhaust pile back to an ordinary playable pile.</summary>
+    RecoverFromExhaust = 32,
+    /// <summary>Block spent by a Cover provider for another ally during an enemy Attack hit.</summary>
+    CoverBlockSpent = 33,
+    /// <summary>A character's passive trait began resolving.</summary>
+    CharacterTraitTriggered = 34,
+    /// <summary>A triggered Contingency finished resolving and reached its final pile.</summary>
+    ContingencyResolved = 35,
+    /// <summary>The discard pile was shuffled to rebuild a depleted draw pile.</summary>
+    Shuffle = 36,
+    /// <summary>An actor gained an Attack in its Single, Random, or All attack pool.</summary>
+    GainAttack = 37,
 }

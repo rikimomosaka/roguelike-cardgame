@@ -87,7 +87,7 @@ public class BattleControllerResolveChoiceTests : IClassFixture<TempDataFactory>
         var pending = new PendingCardPlay(
             CardInstanceId: chooseCardInstanceId,
             EffectIndex: 0,
-            SummonSucceededBefore: false,
+            SummonedActorInstanceIdsBefore: ImmutableArray<string>.Empty,
             Choice: new PendingChoice(
                 Action: "exhaustCard",
                 Pile: "hand",
@@ -206,6 +206,12 @@ public class BattleControllerResolveChoiceTests : IClassFixture<TempDataFactory>
             Assert.NotNull(body);
             // resolve 後は pending クリア
             Assert.Null(body!.State.PendingCardPlay);
+
+            var replay = await client.GetFromJsonAsync<BattleReplayDto>(
+                "/api/v1/runs/current/battle/replay");
+            var choiceEntry = Assert.Single(replay!.Entries, entry =>
+                entry.Kind == "resolveCardChoice");
+            Assert.Equal([candidates[0]], choiceEntry.SelectedInstanceIds);
         }
         finally
         {

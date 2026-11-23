@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -13,6 +14,8 @@ namespace RoguelikeCardGame.Server.Services.FileBacked;
 public sealed class FileAudioSettingsRepository : IAudioSettingsRepository
 {
     private readonly string _dir;
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _accountWriteLocks =
+        new(StringComparer.Ordinal);
 
     public FileAudioSettingsRepository(IOptions<DataStorageOptions> options)
     {
@@ -48,13 +51,71 @@ public sealed class FileAudioSettingsRepository : IAudioSettingsRepository
         if (settings is null) throw new ArgumentNullException(nameof(settings));
 
         // 値域検証は Create 経由で強制（呼び出し側が不正値を渡した場合のガード）。
-        var validated = AudioSettings.Create(settings.Master, settings.Bgm, settings.Se, settings.Ambient);
+        var validated = AudioSettings.Create(settings.Master, settings.Bgm, settings.Se, settings.Voice);
         var json = AudioSettingsSerializer.Serialize(validated);
 
-        var final = PathFor(accountId);
-        var tmp = final + ".tmp";
-        await File.WriteAllTextAsync(tmp, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), ct);
-        File.Move(tmp, final, overwrite: true);
+        var gate = _accountWriteLocks.GetOrAdd(accountId, static _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(ct);
+        string? tmp = null;
+        try
+        {
+            var final = PathFor(accountId);
+            tmp = final + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            await File.WriteAllTextAsync(
+                tmp,
+                json,
+                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+                ct);
+            await MoveIntoPlaceAsync(tmp, final, ct);
+            tmp = null;
+        }
+        finally
+        {
+            if (tmp is not null)
+            {
+                try
+                {
+                    File.Delete(tmp);
+                }
+                catch (IOException)
+                {
+                    // Best-effort cleanup must not hide the original write failure.
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    // Same as above; the next write uses a different unique name.
+                }
+            }
+            gate.Release();
+        }
+    }
+
+    private static async Task MoveIntoPlaceAsync(
+        string temporaryPath,
+        string finalPath,
+        CancellationToken ct)
+    {
+        const int maxAttempts = 6;
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                File.Move(temporaryPath, finalPath, overwrite: true);
+                return;
+            }
+            catch (IOException) when (attempt < maxAttempts - 1)
+            {
+                // Virus scanners and indexers can briefly hold the prior file
+                // on Windows even though repository writers are serialized.
+            }
+            catch (UnauthorizedAccessException) when (attempt < maxAttempts - 1)
+            {
+                // The same transient sharing violation is surfaced as either
+                // IOException or UnauthorizedAccessException by Windows.
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(5 * (1 << attempt)), ct);
+        }
     }
 
     private string PathFor(string accountId) => Path.Combine(_dir, accountId + ".json");

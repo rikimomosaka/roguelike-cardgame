@@ -1,26 +1,57 @@
 {
-    "id":  "reward_common_09",
-    "name":  "軽撃",
-    "displayName":  null,
-    "activeVersion":  "v1",
-    "versions":  [
-                     {
-                         "version":  "v1",
-                         "createdAt":  "2026-05-01T03:54:50Z",
-                         "label":  "original",
-                         "spec":  {
-                                      "rarity":  1,
-                                      "cardType":  "Attack",
-                                      "cost":  0,
-                                      "effects":  [
-                                                      {
-                                                          "action":  "attack",
-                                                          "scope":  "single",
-                                                          "side":  "enemy",
-                                                          "amount":  4
-                                                      }
-                                                  ]
-                                  }
-                     }
-                 ]
+  "id": "tactician_common_smokescreen",
+  "name": "煙幕",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Tactician",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "debuff",
+            "scope": "single",
+            "side": "enemy",
+            "statusChanges": [
+              {
+                "name": "weak",
+                "amount": 1
+              },
+              {
+                "name": "disruption",
+                "amount": 1
+              }
+            ]
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "debuff",
+            "scope": "single",
+            "side": "enemy",
+            "statusChanges": [
+              {
+                "name": "weak",
+                "amount": 2
+              },
+              {
+                "name": "disruption",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
 }

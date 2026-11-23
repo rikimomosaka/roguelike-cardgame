@@ -1,0 +1,43 @@
+{
+  "id": "universal_common_immediate_response",
+  "name": "即応",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Universal",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Skill",
+        "cost": 0,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 3
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 5
+          }
+        ],
+        "keywords": [
+          "wild"
+        ],
+        "upgradedKeywords": [
+          "wild"
+        ]
+      }
+    }
+  ]
+}

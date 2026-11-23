@@ -1,0 +1,27 @@
+{
+  "id": "enemy_mushroom_a_spore_cloud",
+  "name": "胞子雲",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy mushroom_a unique (from move spore_cloud)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "debuff",
+            "scope": "all",
+            "side": "enemy",
+            "name": "vulnerable",
+            "amount": 2
+          }
+        ]
+      }
+    }
+  ]
+}

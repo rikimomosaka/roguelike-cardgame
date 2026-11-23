@@ -7,6 +7,8 @@ import { Popup } from '../components/Popup'
 import { PotionSlot } from '../components/PotionSlot'
 import { getRelicTooltipContent } from '../components/relicTooltip'
 import { useTooltipTarget } from '../components/Tooltip'
+import { rarityCodeFromNumber } from '../components/rarity'
+import type { TooltipContent } from '../components/Tooltip'
 import { useCardCatalog, usePotionCatalog } from '../hooks/useCardCatalog'
 import { useRelicCatalog } from '../hooks/useRelicCatalog'
 import './RewardPopup.css'
@@ -27,10 +29,13 @@ type Props = {
 
 export function RewardPopup(p: Props) {
   const [cardView, setCardView] = useState(false)
+  const [pending, setPending] = useState<string | null>(null)
+  const [justClaimed, setJustClaimed] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
   const r = p.reward
   const cardResolved = r.cardStatus === 'Claimed'
   const { names: cardNames, catalog: cardCatalog } = useCardCatalog()
-  const { names: potionNames } = usePotionCatalog()
+  const { names: potionNames, catalog: potionCatalog } = usePotionCatalog()
   const { names: relicNames, catalog: relicCatalog } = useRelicCatalog()
   const cardLabel = (id: string) => cardNames[id] ?? id
   const potionLabel = (id: string) => potionNames[id] ?? id
@@ -41,6 +46,36 @@ export function RewardPopup(p: Props) {
     [r.relicId, relicCatalog, relicNames],
   )
   const relicTip = useTooltipTarget(relicTooltipContent)
+  const potionTooltipContent = useMemo<TooltipContent | null>(
+    () => {
+      if (!r.potionId) return null
+      const entry = potionCatalog?.[r.potionId]
+      return {
+        name: entry?.name ?? r.potionId,
+        rarity: entry !== undefined ? rarityCodeFromNumber(entry.rarity) : undefined,
+        desc: entry?.description ?? 'ポーションの効果情報はありません。',
+      }
+    },
+    [r.potionId, potionCatalog],
+  )
+  const potionTip = useTooltipTarget(potionTooltipContent)
+
+  async function runAction(key: string, action: () => void | Promise<void>): Promise<boolean> {
+    if (pending !== null) return false
+    setActionError(null)
+    setJustClaimed(null)
+    setPending(key)
+    try {
+      await action()
+      setJustClaimed(key)
+      return true
+    } catch {
+      setActionError('報酬を受け取れませんでした。もう一度お試しください。')
+      return false
+    } finally {
+      setPending(null)
+    }
+  }
 
   // Reroll は Pending 限定 (server も同条件で 400)。cardResolved (Claimed) のチェックでは
   // soft-skip 後の Skipped 状態を捉えられないため、cardStatus を直接見る。
@@ -61,20 +96,23 @@ export function RewardPopup(p: Props) {
               <Button
                 variant="secondary"
                 onClick={async () => {
-                  await p.onRerollCard!()
+                  await runAction('reroll', p.onRerollCard!)
                 }}
                 aria-label="リロール"
+                disabled={pending !== null}
               >
-                リロール
+                {pending === 'reroll' ? '再抽選中…' : 'リロール'}
               </Button>
             )}
             <Button
               variant="secondary"
               onClick={async () => {
-                if (r.cardStatus === 'Pending') await p.onSkipCard()
-                setCardView(false)
+                const succeeded = r.cardStatus !== 'Pending'
+                  || await runAction('skip-card', p.onSkipCard)
+                if (succeeded) setCardView(false)
               }}
               aria-label="閉じる"
+              disabled={pending !== null}
             >
               閉じる
             </Button>
@@ -90,16 +128,18 @@ export function RewardPopup(p: Props) {
                 type="button"
                 className="rw-picker__card"
                 onClick={async () => {
-                  await p.onPickCard(cid)
-                  setCardView(false)
+                  const succeeded = await runAction(`card:${cid}`, () => p.onPickCard(cid))
+                  if (succeeded) setCardView(false)
                 }}
                 aria-label={cardLabel(cid)}
+                disabled={pending !== null}
               >
                 <Card
                   name={disp.name}
                   cost={disp.cost}
                   type={disp.type}
                   rarity={disp.rarity}
+                  poolClass={disp.poolClass}
                   description={disp.description}
                   upgradedDescription={disp.upgradedDescription}
                 />
@@ -119,19 +159,27 @@ export function RewardPopup(p: Props) {
       width={620}
       footerAlign="center"
       footer={
-        <Button onClick={() => p.onProceed()}>
+        <Button
+          onClick={() => void runAction('proceed', p.onProceed)}
+          disabled={pending !== null}
+        >
           {r.isBossReward ? '次の層へ' : '閉じる'}
         </Button>
       }
     >
-      <ul className="rw-list">
+      <div className="rw-feedback" aria-live="polite" aria-atomic="true">
+        {pending && <span role="status">報酬を受け取っています…</span>}
+        {!pending && justClaimed && <span>受け取りました</span>}
+      </div>
+      {actionError && <p className="rw-error" role="alert">{actionError}</p>}
+      <ul className="rw-list" aria-busy={pending !== null}>
         {r.gold > 0 && (
-          <li className="rw-row rw-row--gold">
+          <li className={`rw-row rw-row--gold${justClaimed === 'gold' ? ' is-claimed-now' : ''}`}>
             <button
               type="button"
               className="rw-tile"
-              disabled={r.goldClaimed}
-              onClick={() => p.onClaimGold()}
+              disabled={r.goldClaimed || pending !== null}
+              onClick={() => void runAction('gold', p.onClaimGold)}
             >
               <span className="rw-tile__icon" aria-hidden="true">
                 {r.goldClaimed ? '✓' : <img src="/icons/ui/gold.png" alt="" draggable={false} />}
@@ -141,12 +189,12 @@ export function RewardPopup(p: Props) {
           </li>
         )}
         {r.potionId && (
-          <li className="rw-row rw-row--potion">
+          <li className={`rw-row rw-row--potion${justClaimed === 'potion' ? ' is-claimed-now' : ''}`} {...potionTip}>
             <button
               type="button"
               className="rw-tile"
-              disabled={r.potionClaimed}
-              onClick={() => p.onClaimPotion()}
+              disabled={r.potionClaimed || pending !== null}
+              onClick={() => void runAction('potion', p.onClaimPotion)}
             >
               <span className="rw-tile__icon" aria-hidden="true">
                 {r.potionClaimed ? '✓' : <img src={`/icons/potions/${r.potionId}.png`} alt="" draggable={false} />}
@@ -160,7 +208,7 @@ export function RewardPopup(p: Props) {
             <button
               type="button"
               className="rw-tile"
-              disabled={cardResolved}
+              disabled={cardResolved || pending !== null}
               onClick={() => setCardView(true)}
             >
               <span className="rw-tile__icon" aria-hidden="true">
@@ -171,12 +219,12 @@ export function RewardPopup(p: Props) {
           </li>
         )}
         {r.relicId && (
-          <li className="rw-row rw-row--relic">
+          <li className={`rw-row rw-row--relic${justClaimed === 'relic' ? ' is-claimed-now' : ''}`}>
             <button
               type="button"
               className="rw-tile"
-              disabled={r.relicClaimed}
-              onClick={() => p.onClaimRelic()}
+              disabled={r.relicClaimed || pending !== null}
+              onClick={() => void runAction('relic', p.onClaimRelic)}
               {...relicTip}
             >
               <span className="rw-tile__icon" aria-hidden="true">

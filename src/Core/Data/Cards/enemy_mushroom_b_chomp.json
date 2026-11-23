@@ -1,0 +1,26 @@
+{
+  "id": "enemy_mushroom_b_chomp",
+  "name": "かみ砕き",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy mushroom_b unique (from move chomp)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 9
+          }
+        ]
+      }
+    }
+  ]
+}

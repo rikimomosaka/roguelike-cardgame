@@ -6,11 +6,13 @@ import { useEffect, useState } from 'react'
 import { previewDescription } from '../../api/dev'
 import type { DevMeta } from '../../api/dev'
 import type { CardSpec } from './DevSpecTypes'
+import type { CardPoolClass } from '../../api/catalog'
 import { specToJsonObject } from './DevSpecTypes'
 import { EffectListEditor } from './EffectListEditor'
 import { KeywordSelector } from './KeywordSelector'
 import { FormatterPreview } from './FormatterPreview'
 import { CardVisualPreview } from './CardVisualPreview'
+import { CardAbilityEditor } from './CardAbilityEditor'
 import './CardSpecForm.css'
 
 type Props = {
@@ -20,6 +22,7 @@ type Props = {
   cardNames: Record<string, string>
   cardName: string
   displayName: string | null
+  poolClass?: CardPoolClass | null
   onChange: (next: CardSpec) => void
 }
 
@@ -30,6 +33,7 @@ export function CardSpecForm({
   cardNames,
   cardName,
   displayName,
+  poolClass = null,
   onChange,
 }: Props) {
   const set = (patch: Partial<CardSpec>) => onChange({ ...spec, ...patch })
@@ -71,8 +75,12 @@ export function CardSpecForm({
   const hasUpgraded =
     (spec.upgradedEffects !== null && spec.upgradedEffects.length > 0) ||
     spec.upgradedCost !== null ||
-    (spec.upgradedKeywords !== null && spec.upgradedKeywords.length > 0) ||
-    spec.upgradedDescription !== null
+    spec.upgradedKeywords !== null ||
+    spec.upgradedAbilities !== null ||
+    spec.upgradedDescription !== null ||
+    spec.upgradedUsesPerTurn !== null
+  const hasTypedAbilities = (spec.abilities?.length ?? 0) > 0
+    || (spec.upgradedAbilities?.length ?? 0) > 0
 
   return (
     <div className="card-spec-form">
@@ -99,7 +107,11 @@ export function CardSpecForm({
             aria-label="card type"
           >
             {meta.cardTypes.map((t) => (
-              <option key={t} value={t}>
+              <option
+                key={t}
+                value={t}
+                disabled={hasTypedAbilities && t !== 'Attack' && t !== 'Skill'}
+              >
                 {t}
               </option>
             ))}
@@ -131,12 +143,57 @@ export function CardSpecForm({
             aria-label="card upgraded cost"
           />
         </label>
+        <label className="card-spec-form__label">
+          コンボゲージコスト
+          <input
+            type="number"
+            min={0}
+            value={spec.comboGaugeCost ?? ''}
+            placeholder="0"
+            onChange={(e) => set({
+              comboGaugeCost: e.target.value === ''
+                ? null
+                : Math.max(0, parseInt(e.target.value, 10) || 0),
+            })}
+            aria-label="card combo gauge cost"
+          />
+        </label>
+        <label className="card-spec-form__label">
+          通常版の1ターン使用回数
+          <input
+            type="number"
+            min={1}
+            value={spec.usesPerTurn ?? ''}
+            placeholder="制限なし"
+            onChange={(e) => set({
+              usesPerTurn: e.target.value === ''
+                ? null
+                : Math.max(1, parseInt(e.target.value, 10) || 1),
+            })}
+            aria-label="card uses per turn"
+          />
+        </label>
+        <label className="card-spec-form__label">
+          強化版の1ターン使用回数
+          <input
+            type="number"
+            min={1}
+            value={spec.upgradedUsesPerTurn ?? ''}
+            placeholder="制限なし（通常版から継承しない）"
+            onChange={(e) => set({
+              upgradedUsesPerTurn: e.target.value === ''
+                ? null
+                : Math.max(1, parseInt(e.target.value, 10) || 1),
+            })}
+            aria-label="upgraded card uses per turn"
+          />
+        </label>
       </div>
 
       <KeywordSelector
         value={spec.keywords}
         meta={meta}
-        label="キーワード"
+        label="通常版キーワード"
         onChange={(v) => set({ keywords: v })}
       />
       <KeywordSelector
@@ -144,9 +201,21 @@ export function CardSpecForm({
         meta={meta}
         label="強化後キーワード"
         onChange={(v) => set({ upgradedKeywords: v })}
-        onCopyFromNormal={() =>
-          set({ upgradedKeywords: spec.keywords ? [...spec.keywords] : null })
-        }
+      />
+
+      <CardAbilityEditor
+        label="通常版の固有能力"
+        value={spec.abilities}
+        cardType={spec.cardType}
+        meta={meta}
+        onChange={abilities => set({ abilities })}
+      />
+      <CardAbilityEditor
+        label="強化版の固有能力"
+        value={spec.upgradedAbilities}
+        cardType={spec.cardType}
+        meta={meta}
+        onChange={upgradedAbilities => set({ upgradedAbilities })}
       />
 
       <EffectListEditor
@@ -192,6 +261,7 @@ export function CardSpecForm({
         <CardVisualPreview
           cardName={cardName}
           displayName={displayName}
+          poolClass={poolClass}
           spec={spec}
           normalAutoText={normalAuto}
           upgradedAutoText={upgradedAuto}

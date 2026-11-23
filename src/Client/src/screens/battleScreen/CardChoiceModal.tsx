@@ -106,9 +106,12 @@ export function CardChoiceModal({
     return (
       <Popup
         open
-        variant="modal"
+        variant="picker"
+        panelClassName="card-choice-popup card-choice-popup--hand"
+        popupClassName="card-choice-popup-shell"
+        draggable
         title={title}
-        width={1200}
+        width={640}
         closeOnEsc={false}
         closeOnBackdrop={false}
         footerAlign="center"
@@ -143,9 +146,21 @@ export function CardChoiceModal({
                   name={cardNames[c.cardDefinitionId] ?? c.cardDefinitionId}
                   cost={c.currentCost ?? 'X'}
                   costOrig={c.currentCost !== c.originalCost ? c.originalCost : null}
+                  costOriginal={c.originalCost}
+                  costChanges={c.costChanges}
+                  comboReductionEligible={c.comboReductionEligible ?? false}
+                  comboContinues={c.comboContinues ?? c.comboReductionEligible ?? false}
+                  comboRingHighlighted={c.comboRingHighlighted ?? false}
+                  wildDisabled={c.wildDisabled ?? false}
+                  costUnavailable={(c.cardUsageLimitReached ?? false) || (c.cardPlayRestricted ?? false)}
                   type={cardTypeOf(c.cardDefinitionId)}
                   rarity={cardRarityOf(c.cardDefinitionId)}
+                  poolClass={c.poolClass ?? null}
                   upgraded={c.isUpgraded}
+                  description={c.adjustedDescription ?? undefined}
+                  upgradedDescription={c.adjustedUpgradedDescription}
+                  contingencyArmed={c.isContingencyArmed}
+                  contingencyTriggerText={c.contingencyTriggerText}
                 />
               </div>
             )
@@ -159,9 +174,12 @@ export function CardChoiceModal({
   return (
     <Popup
       open
-      variant="modal"
+      variant="picker"
+      panelClassName="card-choice-popup"
+      popupClassName="card-choice-popup-shell"
+      draggable
       title={title}
-      width={720}
+      width={640}
       closeOnEsc={false}
       closeOnBackdrop={false}
       footerAlign="center"
@@ -175,7 +193,7 @@ export function CardChoiceModal({
       }
     >
       {errorMessage ? <div className="ccm-error">{errorMessage}</div> : null}
-      <div className="ccm-list">
+      <div className="ccm-list ccm-card-grid">
         {visibleSource.map((c) => {
           const cand = isCandidate(c.instanceId)
           const sel = isSelected(c.instanceId)
@@ -192,10 +210,26 @@ export function CardChoiceModal({
               className={cls}
               onClick={cand && !busy ? () => toggle(c.instanceId) : undefined}
             >
-              <span className="ccm-list__name">
-                {cardNames[c.cardDefinitionId] ?? c.cardDefinitionId}
-                {c.isUpgraded ? '+' : ''}
-              </span>
+              <Card
+                name={cardNames[c.cardDefinitionId] ?? c.cardDefinitionId}
+                cost={c.currentCost ?? 'X'}
+                costOrig={c.currentCost !== c.originalCost ? c.originalCost : null}
+                costOriginal={c.originalCost}
+                costChanges={c.costChanges}
+                comboReductionEligible={c.comboReductionEligible ?? false}
+                comboContinues={c.comboContinues ?? c.comboReductionEligible ?? false}
+                comboRingHighlighted={c.comboRingHighlighted ?? false}
+                wildDisabled={c.wildDisabled ?? false}
+                costUnavailable={(c.cardUsageLimitReached ?? false) || (c.cardPlayRestricted ?? false)}
+                type={cardTypeOf(c.cardDefinitionId)}
+                rarity={cardRarityOf(c.cardDefinitionId)}
+                poolClass={c.poolClass ?? null}
+                upgraded={c.isUpgraded}
+                description={c.adjustedDescription ?? undefined}
+                upgradedDescription={c.adjustedUpgradedDescription}
+                contingencyArmed={c.isContingencyArmed}
+                contingencyTriggerText={c.contingencyTriggerText}
+              />
             </div>
           )
         })}
@@ -214,6 +248,8 @@ function actionTitle(action: string): string {
       return 'カードを強化する'
     case 'recoverFromDiscard':
       return 'カードを手札に戻す'
+    case 'recoverFromExhaust':
+      return '除外から戻すカードを選ぶ'
     case 'modifyCardCost':
       return 'コストを変更するカードを選ぶ'
     default:

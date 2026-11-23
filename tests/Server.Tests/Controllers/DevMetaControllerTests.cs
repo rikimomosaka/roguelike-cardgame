@@ -32,6 +32,8 @@ public class DevMetaControllerTests : IClassFixture<DevWebApplicationFactory>
         Assert.Equal(JsonValueKind.Array, rarEl.ValueKind);
         Assert.True(body.TryGetProperty("effectActions", out var actEl));
         Assert.Equal(JsonValueKind.Array, actEl.ValueKind);
+        Assert.True(body.TryGetProperty("cardAbilities", out _));
+        Assert.True(body.TryGetProperty("contingencyTriggerTimings", out _));
         Assert.True(body.TryGetProperty("effectScopes", out _));
         Assert.True(body.TryGetProperty("effectSides", out _));
         Assert.True(body.TryGetProperty("piles", out _));
@@ -48,7 +50,16 @@ public class DevMetaControllerTests : IClassFixture<DevWebApplicationFactory>
         var json = body.GetRawText();
         Assert.Contains("attack", json);
         Assert.Contains("addCard", json);
+        Assert.Contains("recoverFromExhaust", json);
         Assert.Contains("modifyCardCost", json);
+        Assert.Contains("gainComboGauge", json);
+        Assert.Contains("currentCost", json);
+        Assert.Contains("afterimage", json);
+        Assert.Contains("残光", json);
+        Assert.Contains("disruption", json);
+        Assert.Contains("攪乱", json);
+        Assert.Contains("reprise", json);
+        Assert.Contains("ComboReached", json);
         Assert.Contains("handCostReduction", json);
         Assert.Contains("handCostIncrease", json);
         Assert.Contains("wild", json);

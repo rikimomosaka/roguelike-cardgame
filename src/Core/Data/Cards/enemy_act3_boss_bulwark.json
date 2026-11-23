@@ -1,0 +1,25 @@
+{
+  "id": "enemy_act3_boss_bulwark",
+  "name": "防壁",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy act3_boss unique (from move bulwark)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 26
+          }
+        ]
+      }
+    }
+  ]
+}

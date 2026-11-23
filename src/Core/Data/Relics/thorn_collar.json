@@ -23,7 +23,7 @@
                          "label":  "reflect reference relic",
                          "spec":  {
                                       "rarity":  1,
-                                      "description":  "戦闘開始時に反射3を得る。攻撃を受けるたび攻撃者へ固定3ダメージを返す。",
+                                      "description":  "棘付きの首輪。痛みと引き換えに、敵への鋭い牽制を授けてくれる。",
                                       "effects":  [
                                                       {
                                                           "action":  "buff",

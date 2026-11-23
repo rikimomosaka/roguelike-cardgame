@@ -1,6 +1,7 @@
 // src/Client/src/screens/SettingsScreen.tsx
 import { useAccount } from '../context/AccountContext'
-import { useAudioSettings } from '../hooks/useAudioSettings'
+import { useAudio } from '../audio'
+import { usePresentationSettings, type MotionLevel, type UiScale } from '../presentation'
 import './SettingsScreen.css'
 
 type Props = {
@@ -44,6 +45,49 @@ function SliderRow({ label, value, onChange }: SliderRowProps) {
   )
 }
 
+type ChoiceOption<T extends string | number> = {
+  value: T
+  label: string
+}
+
+type ChoiceRowProps<T extends string | number> = {
+  label: string
+  ariaLabel: string
+  value: T
+  options: readonly ChoiceOption<T>[]
+  onChange: (value: T) => void
+}
+
+function ChoiceRow<T extends string | number>({
+  label,
+  ariaLabel,
+  value,
+  options,
+  onChange,
+}: ChoiceRowProps<T>) {
+  return (
+    <div className="settings-screen__select-row">
+      <div className="settings-screen__slider-label">
+        <span className="settings-screen__slider-label-mark" aria-hidden="true">◆</span>
+        {label}
+      </div>
+      <div className="settings-screen__select-choices" role="group" aria-label={ariaLabel}>
+        {options.map(option => (
+          <button
+            key={option.value}
+            type="button"
+            className={`settings-screen__choice${option.value === value ? ' is-on' : ''}`}
+            aria-pressed={option.value === value}
+            onClick={() => onChange(option.value)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export function SettingsScreen({ onBack, embedded }: Props) {
   const { accountId } = useAccount()
 
@@ -65,17 +109,33 @@ export function SettingsScreen({ onBack, embedded }: Props) {
     )
   }
 
-  return <SettingsScreenInner onBack={onBack} accountId={accountId} embedded={embedded} />
+  return <SettingsScreenInner onBack={onBack} embedded={embedded} />
 }
 
 type InnerProps = {
   onBack: () => void
-  accountId: string
   embedded?: boolean
 }
 
-function SettingsScreenInner({ onBack, accountId, embedded }: InnerProps) {
-  const { settings, update, saveStatus } = useAudioSettings(accountId)
+function SettingsScreenInner({ onBack, embedded }: InnerProps) {
+  const {
+    settings,
+    settingsLoaded,
+    updateSettings,
+    flushSettings,
+    saveStatus,
+  } = useAudio()
+  const {
+    settings: presentation,
+    systemReducedMotion,
+    effectiveMotionLevel,
+    updatePresentationSettings,
+    resetPresentationSettings,
+  } = usePresentationSettings()
+  const handleBack = () => {
+    void flushSettings()
+    onBack()
+  }
 
   const statusClass =
     saveStatus === 'error'
@@ -115,32 +175,93 @@ function SettingsScreenInner({ onBack, accountId, embedded }: InnerProps) {
               <span>▸ AUDIO</span>
               <span className="settings-screen__section-title-sub">音量設定</span>
             </div>
-            {settings === null ? (
+            {!settingsLoaded ? (
               <p className="settings-screen__placeholder-inline">読み込み中…</p>
             ) : (
               <>
                 <SliderRow
                   label="MASTER"
                   value={settings.master}
-                  onChange={(v) => update({ master: v })}
+                  onChange={(v) => updateSettings({ master: v })}
                 />
                 <SliderRow
                   label="BGM"
                   value={settings.bgm}
-                  onChange={(v) => update({ bgm: v })}
+                  onChange={(v) => updateSettings({ bgm: v })}
                 />
                 <SliderRow
                   label="SE"
                   value={settings.se}
-                  onChange={(v) => update({ se: v })}
+                  onChange={(v) => updateSettings({ se: v })}
                 />
                 <SliderRow
-                  label="AMBIENT"
-                  value={settings.ambient}
-                  onChange={(v) => update({ ambient: v })}
+                  label="VOICE"
+                  value={settings.voice}
+                  onChange={(v) => updateSettings({ voice: v })}
                 />
               </>
             )}
+          </section>
+
+          <section className="settings-screen__section" aria-label="演出設定">
+            <div className="settings-screen__section-title">
+              <span>▸ PRESENTATION</span>
+              <span className="settings-screen__section-title-sub">表示・演出設定</span>
+            </div>
+            <ChoiceRow<MotionLevel>
+              label="MOTION"
+              ariaLabel="モーション量"
+              value={presentation.motionLevel}
+              options={[
+                { value: 'full', label: '標準' },
+                { value: 'reduced', label: '軽減' },
+                { value: 'off', label: '停止' },
+              ]}
+              onChange={motionLevel => updatePresentationSettings({ motionLevel })}
+            />
+            <ChoiceRow<number>
+              label="SHAKE"
+              ariaLabel="画面揺れ"
+              value={presentation.screenShake ? 1 : 0}
+              options={[
+                { value: 1, label: 'ON' },
+                { value: 0, label: 'OFF' },
+              ]}
+              onChange={value => updatePresentationSettings({ screenShake: value === 1 })}
+            />
+            <ChoiceRow<number>
+              label="FLASH"
+              ariaLabel="閃光表現"
+              value={presentation.flashes ? 1 : 0}
+              options={[
+                { value: 1, label: 'ON' },
+                { value: 0, label: 'OFF' },
+              ]}
+              onChange={value => updatePresentationSettings({ flashes: value === 1 })}
+            />
+            <ChoiceRow<UiScale>
+              label="UI SCALE"
+              ariaLabel="UIサイズ"
+              value={presentation.uiScale}
+              options={[
+                { value: 90, label: '90%' },
+                { value: 100, label: '100%' },
+                { value: 110, label: '110%' },
+              ]}
+              onChange={uiScale => updatePresentationSettings({ uiScale })}
+            />
+            <div className="settings-screen__presentation-note" aria-live="polite">
+              {systemReducedMotion
+                ? `OSの「視差効果を減らす」を優先中（現在：${effectiveMotionLevel === 'off' ? '停止' : '軽減'}）`
+                : '演出設定はこの端末に自動保存されます。'}
+              <button
+                type="button"
+                className="settings-screen__reset"
+                onClick={resetPresentationSettings}
+              >
+                初期値に戻す
+              </button>
+            </div>
           </section>
 
         </div>
@@ -150,7 +271,7 @@ function SettingsScreenInner({ onBack, accountId, embedded }: InnerProps) {
             <span className="settings-screen__status-dot" aria-hidden="true">●</span>
             {statusText}
           </span>
-          <button type="button" className="settings-screen__back" onClick={onBack}>
+          <button type="button" className="settings-screen__back" onClick={handleBack}>
             <span className="settings-screen__back-mark" aria-hidden="true">◂</span>
             メニューへ戻る
           </button>

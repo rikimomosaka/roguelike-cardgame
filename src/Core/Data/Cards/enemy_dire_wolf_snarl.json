@@ -1,0 +1,27 @@
+{
+  "id": "enemy_dire_wolf_snarl",
+  "name": "唸り声",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy dire_wolf unique (from move snarl)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "debuff",
+            "scope": "all",
+            "side": "enemy",
+            "name": "weak",
+            "amount": 1
+          }
+        ]
+      }
+    }
+  ]
+}

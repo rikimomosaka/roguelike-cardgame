@@ -1,0 +1,32 @@
+{
+  "id": "enemy_six_ghost_tackle",
+  "name": "体当たり",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy six_ghost unique (from move tackle)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 5
+          },
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 5
+          }
+        ]
+      }
+    }
+  ]
+}

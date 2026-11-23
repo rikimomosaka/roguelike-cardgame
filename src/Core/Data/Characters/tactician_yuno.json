@@ -1,0 +1,86 @@
+{
+  "id": "tactician_yuno",
+  "name": "作戦参謀ユノ",
+  "characterClass": "Tactician",
+  "description": "伏策と再演で敵の行動へ割り込み、連環で育てた最大コンボを毒へ変える作戦参謀。",
+  "traitDescription": "策応：自身の除外状態の伏策が発動した時、エナジー+1、コンボゲージ+1。",
+  "maxHp": 72,
+  "startingGold": 99,
+  "potionSlotCount": 3,
+  "heightTier": 5,
+  "energyPerTurn": 3,
+  "drawPerTurn": 5,
+  "trait": {
+    "id": "strategic_response",
+    "name": "策応",
+    "trigger": "OnContingencyTriggered",
+    "description": "自身の除外状態の伏策が発動した時、エナジー+1、コンボゲージ+1。",
+    "effects": [
+      {
+        "action": "gainEnergy",
+        "scope": "self",
+        "amount": 1
+      },
+      {
+        "action": "gainComboGauge",
+        "scope": "self",
+        "amount": 1
+      }
+    ]
+  },
+  "skills": [
+    {
+      "id": "tactical",
+      "name": "継戦指揮",
+      "comboGaugeCost": 3,
+      "oncePerTurn": true,
+      "usesPerTurn": 1,
+      "description": "2枚引く。自身に連環1を付与する。",
+      "effects": [
+        {
+          "action": "draw",
+          "scope": "self",
+          "amount": 2
+        },
+        {
+          "action": "buff",
+          "scope": "self",
+          "name": "comboCarryover",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "ultimate",
+      "name": "連環毒計",
+      "comboGaugeCost": 9,
+      "oncePerTurn": true,
+      "usesPerTurn": 1,
+      "description": "敵単体に自身の最大コンボと同じ毒を付与する。",
+      "effects": [
+        {
+          "action": "debuff",
+          "scope": "single",
+          "side": "enemy",
+          "name": "poison",
+          "amount": 0,
+          "amountSource": "maxComboThisTurn"
+        }
+      ]
+    }
+  ],
+  "deck": [
+    "basic_attack",
+    "basic_attack",
+    "basic_defense",
+    "basic_defense",
+    "tactician_basic_disrupting_shot",
+    "tactician_basic_disrupting_shot",
+    "tactician_basic_counterplan",
+    "tactician_basic_counterplan",
+    "tactician_basic_recursive_plan",
+    "tactician_basic_recursive_plan"
+  ],
+  "attack": 5,
+  "defense": 5
+}

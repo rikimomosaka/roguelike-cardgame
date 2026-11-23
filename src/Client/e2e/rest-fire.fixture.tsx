@@ -11,6 +11,15 @@ export async function mountRestFireFixture() {
     <RestScreen
       deck={[]}
       completed={false}
+      healPreview={{
+        currentHpBefore: 30,
+        maxHpBefore: 80,
+        basePercent: 30,
+        baseHealAmount: 24,
+        passiveBonusAmount: 5,
+        currentHpAfter: 59,
+        maxHpAfter: 80,
+      }}
       onHeal={() => undefined}
       onUpgrade={() => undefined}
       onClose={() => undefined}

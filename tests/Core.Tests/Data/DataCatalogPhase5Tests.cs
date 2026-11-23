@@ -55,19 +55,26 @@ public class DataCatalogPhase5Tests
     public void RewardCards_Exist_ForAllThreeRarities()
     {
         var cat = Load();
-        int common = cat.Cards.Values.Count(c => c.Id.StartsWith("reward_common_"));
-        int rare = cat.Cards.Values.Count(c => c.Id.StartsWith("reward_rare_"));
-        int epic = cat.Cards.Values.Count(c => c.Id.StartsWith("reward_epic_"));
-        Assert.Equal(10, common);
-        Assert.Equal(10, rare);
-        Assert.Equal(10, epic);
+        int common = cat.Cards.Values.Count(c =>
+            CardPoolRules.IsReward(c) && c.Rarity == RoguelikeCardGame.Core.Cards.CardRarity.Common);
+        int rare = cat.Cards.Values.Count(c =>
+            CardPoolRules.IsReward(c) && c.Rarity == RoguelikeCardGame.Core.Cards.CardRarity.Rare);
+        int epic = cat.Cards.Values.Count(c =>
+            CardPoolRules.IsReward(c) && c.Rarity == RoguelikeCardGame.Core.Cards.CardRarity.Epic);
+        Assert.Equal(20, common);
+        Assert.Equal(20, rare);
+        Assert.Equal(20, epic);
     }
 
     [Fact]
-    public void EnemyDefinitions_HaveInitialMoveInMoves()
+    public void EnemyDefinitions_AreCardControlledWithStats()
     {
         var cat = Load();
         foreach (var e in cat.Enemies.Values)
-            Assert.Contains(e.Moves, m => m.Id == e.InitialMoveId);
+        {
+            Assert.True(e.IsCardControlled, e.Id);
+            Assert.True(e.Attack > 0, e.Id);
+            Assert.InRange(e.EffectiveDeck.Sum(entry => entry.Count), 10, 20);
+        }
     }
 }

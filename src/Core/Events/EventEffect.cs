@@ -13,6 +13,7 @@ namespace RoguelikeCardGame.Core.Events;
 [JsonDerivedType(typeof(LoseMaxHp), typeDiscriminator: "loseMaxHp")]
 [JsonDerivedType(typeof(GainRelicRandom), typeDiscriminator: "gainRelicRandom")]
 [JsonDerivedType(typeof(GrantCardReward), typeDiscriminator: "grantCardReward")]
+[JsonDerivedType(typeof(GainCard), typeDiscriminator: "gainCard")]
 public abstract record EventEffect
 {
     public sealed record GainGold(int Amount) : EventEffect;
@@ -23,4 +24,5 @@ public abstract record EventEffect
     public sealed record LoseMaxHp(int Amount) : EventEffect;
     public sealed record GainRelicRandom(CardRarity Rarity) : EventEffect;
     public sealed record GrantCardReward() : EventEffect;
+    public sealed record GainCard(string CardId) : EventEffect;
 }

@@ -1,0 +1,26 @@
+{
+  "id": "enemy_six_ghost_embolden",
+  "name": "鼓舞",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy six_ghost unique (from move embolden)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "strength",
+            "amount": 1
+          }
+        ]
+      }
+    }
+  ]
+}

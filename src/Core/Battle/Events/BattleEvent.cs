@@ -1,3 +1,5 @@
+using RoguelikeCardGame.Core.Battle.State;
+
 namespace RoguelikeCardGame.Core.Battle.Events;
 
 /// <summary>
@@ -21,4 +23,11 @@ public sealed record BattleEvent(
     DamageCauseChain? CauseChain = null,
     int? ActualHpLoss = null,
     int? Overkill = null,
-    bool? HitLanded = null);
+    bool? HitLanded = null,
+    PlayedCardEffectSnapshot? ReenactedCard = null,
+    /// <summary>
+    /// The authoritative combo count immediately after an actual card play
+    /// joins (or restarts) the combo. This is captured before a Finisher can
+    /// reset the state back to zero and is null on non-card events.
+    /// </summary>
+    int? ComboCountAfter = null);

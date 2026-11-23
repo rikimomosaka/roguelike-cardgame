@@ -3,6 +3,7 @@ using System.Linq;
 using RoguelikeCardGame.Core.Battle.Engine;
 using RoguelikeCardGame.Core.Battle.Events;
 using RoguelikeCardGame.Core.Battle.State;
+using RoguelikeCardGame.Core.Battle.Statuses;
 using RoguelikeCardGame.Core.Cards;
 using RoguelikeCardGame.Core.Random;
 using RoguelikeCardGame.Core.Tests.Battle.Fixtures;
@@ -194,11 +195,147 @@ public class OnHitAttackResolutionTests
             e.Kind == BattleEventKind.DealDamage && e.DamageType == DamageType.Reflected));
     }
 
-    private static CardDefinition OnHitAttackPower(string id, int amount) => new(
+    [Fact]
+    public void Disruption_randomizes_an_OnHit_single_attack_instead_of_forcing_the_root_target()
+    {
+        var power = OnHitAttackPower("disrupted_echo", 3);
+        var hero = BattleFixtures.WithStatus(
+            BattleFixtures.Hero() with
+            {
+                AttackSingle = AttackPool.Empty.Add(2),
+            },
+            BattleStatusIds.Disruption,
+            1);
+        var enemyA = BattleFixtures.Goblin(slotIndex: 0, hp: 20);
+        var enemyB = BattleFixtures.Goblin(slotIndex: 1, hp: 20);
+        var state = BattleFixtures.MinimalState(
+            allies: ImmutableArray.Create(hero),
+            enemies: ImmutableArray.Create(enemyA, enemyB)) with
+        {
+            Phase = BattlePhase.PlayerAttacking,
+            PowerCards = ImmutableArray.Create(
+                BattleFixtures.MakeBattleCard(power.Id, "disrupted-echo-p0")),
+        };
+
+        var (next, events) = PlayerAttackingResolver.Resolve(
+            state,
+            new FakeRng([0, 1], []),
+            BattleFixtures.MinimalCatalog(cards: new[] { power }));
+
+        Assert.Equal(18, next.Enemies[0].CurrentHp);
+        Assert.Equal(17, next.Enemies[1].CurrentHp);
+        Assert.Equal(
+            new[] { enemyA.InstanceId, enemyB.InstanceId },
+            events.Where(e => e.Kind == BattleEventKind.AttackFire)
+                .Select(e => e.TargetInstanceId));
+        Assert.Equal(1, next.Allies[0].AttackSingle.AddCount);
+    }
+
+    [Fact]
+    public void Omnistrike_takes_priority_over_disruption_for_an_OnHit_attack()
+    {
+        var power = OnHitAttackPower("wide_echo", 3);
+        var hero = BattleFixtures.WithStatus(
+            BattleFixtures.WithStatus(
+                BattleFixtures.Hero() with
+                {
+                    AttackSingle = AttackPool.Empty.Add(2),
+                },
+                BattleStatusIds.Disruption,
+                1),
+            BattleStatusIds.Omnistrike,
+            1);
+        var state = BattleFixtures.MinimalState(
+            allies: ImmutableArray.Create(hero),
+            enemies: ImmutableArray.Create(
+                BattleFixtures.Goblin(slotIndex: 0, hp: 20),
+                BattleFixtures.Goblin(slotIndex: 1, hp: 20))) with
+        {
+            Phase = BattlePhase.PlayerAttacking,
+            PowerCards = ImmutableArray.Create(
+                BattleFixtures.MakeBattleCard(power.Id, "wide-echo-p0")),
+        };
+
+        var (next, events) = PlayerAttackingResolver.Resolve(
+            state,
+            new FakeRng([], []),
+            BattleFixtures.MinimalCatalog(cards: new[] { power }));
+
+        Assert.All(next.Enemies, enemy => Assert.Equal(12, enemy.CurrentHp));
+        Assert.Equal(6, events.Count(e => e.Kind == BattleEventKind.AttackFire));
+    }
+
+    [Fact]
+    public void OnHit_random_attack_resolves_immediately_and_does_not_remain_queued()
+    {
+        var power = OnHitAttackPower("random_echo", 3, EffectScope.Random);
+        var hero = BattleFixtures.Hero() with
+        {
+            AttackSingle = AttackPool.Empty.Add(2),
+        };
+        var enemyA = BattleFixtures.Goblin(slotIndex: 0, hp: 20);
+        var enemyB = BattleFixtures.Goblin(slotIndex: 1, hp: 20);
+        var state = BattleFixtures.MinimalState(
+            allies: ImmutableArray.Create(hero),
+            enemies: ImmutableArray.Create(enemyA, enemyB)) with
+        {
+            Phase = BattlePhase.PlayerAttacking,
+            PowerCards = ImmutableArray.Create(
+                BattleFixtures.MakeBattleCard(power.Id, "random-echo-p0")),
+        };
+
+        var (next, events) = PlayerAttackingResolver.Resolve(
+            state,
+            new FakeRng([1], []),
+            BattleFixtures.MinimalCatalog(cards: new[] { power }));
+
+        Assert.Equal(18, next.Enemies[0].CurrentHp);
+        Assert.Equal(17, next.Enemies[1].CurrentHp);
+        Assert.Equal(0, next.Allies[0].AttackRandom.AddCount);
+        Assert.Contains(events, e => e.Kind == BattleEventKind.AttackFire
+            && e.TargetInstanceId == enemyB.InstanceId
+            && e.HitIndex == 1);
+    }
+
+    [Fact]
+    public void OnHit_all_attack_resolves_immediately_and_does_not_remain_queued()
+    {
+        var power = OnHitAttackPower("all_targets_echo", 3, EffectScope.All);
+        var hero = BattleFixtures.Hero() with
+        {
+            AttackSingle = AttackPool.Empty.Add(2),
+        };
+        var state = BattleFixtures.MinimalState(
+            allies: ImmutableArray.Create(hero),
+            enemies: ImmutableArray.Create(
+                BattleFixtures.Goblin(slotIndex: 0, hp: 20),
+                BattleFixtures.Goblin(slotIndex: 1, hp: 20))) with
+        {
+            Phase = BattlePhase.PlayerAttacking,
+            PowerCards = ImmutableArray.Create(
+                BattleFixtures.MakeBattleCard(power.Id, "all-targets-echo-p0")),
+        };
+
+        var (next, events) = PlayerAttackingResolver.Resolve(
+            state,
+            new FakeRng([], []),
+            BattleFixtures.MinimalCatalog(cards: new[] { power }));
+
+        Assert.Equal(15, next.Enemies[0].CurrentHp);
+        Assert.Equal(17, next.Enemies[1].CurrentHp);
+        Assert.Equal(0, next.Allies[0].AttackAll.AddCount);
+        Assert.Equal(2, events.Count(e => e.Kind == BattleEventKind.AttackFire
+            && e.HitIndex == 1));
+    }
+
+    private static CardDefinition OnHitAttackPower(
+        string id,
+        int amount,
+        EffectScope scope = EffectScope.Single) => new(
         id, id, null, CardRarity.Common, CardType.Power, 1, null,
         new[]
         {
-            new CardEffect("attack", EffectScope.Single, EffectSide.Enemy, amount,
+            new CardEffect("attack", scope, EffectSide.Enemy, amount,
                 Trigger: "OnHit", ChancePercent: 100),
         },
         null, null);

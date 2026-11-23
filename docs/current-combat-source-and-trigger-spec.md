@@ -64,10 +64,11 @@
 
 ## 5. Barrier
 
-- `barrier`の値は無効化できる正のAttackヒット数を表す。
-- 1ヒットを完全に0ダメージにして1減る。
-- Barrierで無効化したヒットはBlockを消費しない。
-- 元の攻撃値が0以下ならBarrierを消費しない。
+- `barrier`の値は、攻撃でHPが減少するヒットを無効化できる回数を表す。
+- 攻撃がBlockを貫通してHPを1以上減らす場合、HPを減らさずに1減る。
+- Barrierを消費したヒットはBlockを消費しない。
+- 攻撃が完全にBlockされてHPが減らない場合、Barrierは消費しない（その場合は通常どおりBlockを消費する）。
+- 元の攻撃値が0以下、または対象のHPが0の場合はBarrierを消費しない。
 - 命中とOnHitは成立するが、OnDamageReceived・吸血は発生しない。
 
 ## 6. Lifesteal

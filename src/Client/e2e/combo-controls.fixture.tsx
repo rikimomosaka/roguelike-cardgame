@@ -6,6 +6,7 @@ type ComboControlsFixtureOptions = {
   comboGauge?: number
   tacticalDisabled?: boolean
   ultimateDisabled?: boolean
+  withFinisherRecord?: boolean
 }
 
 /** Mounts the controls in the same 1200x675 logical stage used at 1280x720. */
@@ -42,6 +43,28 @@ export async function mountComboControlsFixture(options: ComboControlsFixtureOpt
           ultimateDisabled={options.ultimateDisabled ?? true}
           onUseTactical={() => {}}
           onUseUltimate={() => {}}
+          finisherRecord={options.withFinisherRecord ? {
+            afterimageStacks: 1,
+            cards: [{
+              playSequence: 1,
+              card: {
+                cardInstanceId: 'saved-card-1',
+                definitionId: 'basic_attack',
+                displayName: '攻撃の基本',
+                cardType: 'Attack',
+                rarity: 'Basic',
+                isUpgraded: false,
+                originalCost: 1,
+                currentCost: 1,
+                paidCost: 1,
+                description: '敵単体に6アタック。',
+                costChanges: [],
+              },
+            }],
+            plannedAfterimageIntent: null,
+            isPlannedAfterimageIntentAvailable: false,
+          } : null}
+          onOpenFinisherRecord={() => {}}
         />
         <div className="hand-wrap" data-layout-obstacle="hand" />
         <button type="button" className="end-turn" data-layout-obstacle="end-turn">

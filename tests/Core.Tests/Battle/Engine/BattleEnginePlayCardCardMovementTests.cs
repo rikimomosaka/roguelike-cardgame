@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using RoguelikeCardGame.Core.Battle.Engine;
@@ -135,6 +136,80 @@ public class BattleEnginePlayCardCardMovementTests
         var summonActor = next.Allies[1];
         Assert.Equal("minion", summonActor.DefinitionId);
         Assert.Equal("c1", summonActor.AssociatedSummonHeldInstanceId);
+    }
+
+    [Fact]
+    public void Unit_with_multiple_direct_summons_holds_one_card_until_the_last_actor_dies()
+    {
+        var unitCard = new CardDefinition(
+            "summon_pair", "Summon Pair", null,
+            CardRarity.Common, CardType.Unit,
+            Cost: 1, UpgradedCost: null,
+            Effects:
+            [
+                new CardEffect(
+                    "summon", EffectScope.Self, null, 0,
+                    UnitId: "minion"),
+                new CardEffect(
+                    "summon", EffectScope.Self, null, 0,
+                    UnitId: "minion"),
+            ],
+            UpgradedEffects: null, Keywords: null);
+        var card = BattleFixtures.MakeBattleCard(unitCard.Id, "pair-card-1");
+        var state = MakeState([card]);
+        var catalog = BattleFixtures.MinimalCatalog(cards: [unitCard]);
+        var rng = new FakeRng(
+            [0x1111, 0x2222], System.Array.Empty<double>());
+
+        var (summoned, _) = BattleEngine.PlayCard(
+            state, handIndex: 0, targetEnemyIndex: 0,
+            targetAllyIndex: 0, rng, catalog);
+
+        var group = summoned.Allies
+            .Where(actor => actor.DefinitionId == "minion")
+            .ToArray();
+        Assert.Equal(2, group.Length);
+        Assert.All(group, actor =>
+            Assert.Equal("pair-card-1", actor.AssociatedSummonHeldInstanceId));
+        Assert.Equal("pair-card-1", Assert.Single(summoned.SummonHeld).InstanceId);
+
+        var firstDead = summoned with
+        {
+            Allies = summoned.Allies
+                .Select(actor => actor.InstanceId == group[0].InstanceId
+                    ? actor with { CurrentHp = 0 }
+                    : actor)
+                .ToImmutableArray(),
+        };
+        var events = new List<BattleEvent>();
+        int order = 0;
+        var afterFirstDeath = SummonCleanup.Apply(firstDead, events, ref order);
+
+        Assert.DoesNotContain(
+            afterFirstDeath.Allies,
+            actor => actor.InstanceId == group[0].InstanceId);
+        Assert.Contains(
+            afterFirstDeath.Allies,
+            actor => actor.InstanceId == group[1].InstanceId);
+        Assert.Equal(
+            "pair-card-1",
+            Assert.Single(afterFirstDeath.SummonHeld).InstanceId);
+        Assert.Empty(afterFirstDeath.DiscardPile);
+
+        var lastDead = afterFirstDeath with
+        {
+            Allies = afterFirstDeath.Allies
+                .Select(actor => actor.InstanceId == group[1].InstanceId
+                    ? actor with { CurrentHp = 0 }
+                    : actor)
+                .ToImmutableArray(),
+        };
+        var afterLastDeath = SummonCleanup.Apply(lastDead, events, ref order);
+
+        Assert.Empty(afterLastDeath.SummonHeld);
+        Assert.Equal(
+            "pair-card-1",
+            Assert.Single(afterLastDeath.DiscardPile).InstanceId);
     }
 
     [Fact] public void Unit_with_summon_failure_routes_to_discard()

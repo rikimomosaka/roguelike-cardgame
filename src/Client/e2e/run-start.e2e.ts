@@ -9,10 +9,16 @@ test('account creation unlocks the first route after choosing an act-start relic
   await expect(page.getByRole('button', { name: 'はじめから' })).toBeVisible()
   await page.getByRole('button', { name: 'はじめから' }).click()
 
+  await expect(page.getByRole('heading', { name: 'キャラクター選択' })).toBeVisible()
+  await page.locator('.character-pick__select').filter({ hasText: '見習い冒険者' }).click()
+  await page.getByRole('button', { name: 'このキャラクターで開始' }).click()
+
   const startNode = page.locator('[data-start-entry="true"]')
   await expect(startNode).toHaveCount(1)
   await expect(page.locator('[data-selectable="true"]')).toHaveCount(0)
-  await startNode.click()
+  // The current-location marker intentionally pulses, so the node never
+  // becomes geometrically stable even though it is the intended entry action.
+  await startNode.click({ force: true })
 
   const relicDialog = page.getByRole('dialog', { name: 'レリックを選ぶ' })
   await expect(relicDialog).toBeVisible()
@@ -51,7 +57,7 @@ test('account creation unlocks the first route after choosing an act-start relic
     }),
   ])
 
-  expect(currentVisual.animationName).toBe('none')
+  expect(currentVisual.animationName).toContain('map-current-arrive')
   expect(currentVisual.markerAboveNode).toBe(true)
   expect(nextVisual.animationName).toContain('map-next-pulse')
   expect(nextVisual.hasCurrentMarker).toBe(false)

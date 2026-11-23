@@ -8,7 +8,7 @@ public class StatusDefinitionTests
 {
     [Fact] public void All_contains_supported_statuses()
     {
-        Assert.Equal(11, StatusDefinition.All.Count);
+        Assert.Equal(41, StatusDefinition.All.Count);
         var ids = StatusDefinition.All.Select(s => s.Id).ToHashSet();
         Assert.Contains("strength",   ids);
         Assert.Contains("dexterity",  ids);
@@ -21,6 +21,69 @@ public class StatusDefinitionTests
         Assert.Contains("reflect",    ids);
         Assert.Contains("handCostReduction", ids);
         Assert.Contains("handCostIncrease", ids);
+        Assert.Contains(BattleStatusIds.Vigor, ids);
+        Assert.Contains(BattleStatusIds.Pursuit, ids);
+        Assert.Contains(BattleStatusIds.Regeneration, ids);
+        Assert.Contains(BattleStatusIds.Fortify, ids);
+        Assert.Contains(BattleStatusIds.Resistance, ids);
+        Assert.Contains(BattleStatusIds.Revive, ids);
+        Assert.Contains(BattleStatusIds.Growth, ids);
+        Assert.Contains(BattleStatusIds.Insight, ids);
+        Assert.Contains(BattleStatusIds.Haste, ids);
+        Assert.Contains(BattleStatusIds.Continuity, ids);
+        Assert.Contains(BattleStatusIds.Mastery, ids);
+        Assert.Contains(BattleStatusIds.Afterimage, ids);
+        Assert.Contains(BattleStatusIds.Steadfast, ids);
+        Assert.Contains(BattleStatusIds.Cover, ids);
+        Assert.Contains(BattleStatusIds.DefensiveStance, ids);
+        Assert.Contains(BattleStatusIds.ComboCarryover, ids);
+        Assert.Contains(BattleStatusIds.Afterglow, ids);
+        Assert.Contains(BattleStatusIds.Resonance, ids);
+        Assert.Contains(BattleStatusIds.VirulentPoison, ids);
+        Assert.Contains(BattleStatusIds.Stagnation, ids);
+        Assert.Contains(BattleStatusIds.Burn, ids);
+        Assert.Contains(BattleStatusIds.Confusion, ids);
+        Assert.Contains(BattleStatusIds.Curse, ids);
+        Assert.Contains(BattleStatusIds.Bind, ids);
+        Assert.Contains(BattleStatusIds.Silence, ids);
+        Assert.Contains(BattleStatusIds.Seal, ids);
+        Assert.Contains(BattleStatusIds.Exhaustion, ids);
+        Assert.Contains(BattleStatusIds.Distress, ids);
+        Assert.Contains(BattleStatusIds.Scorch, ids);
+        Assert.Contains(BattleStatusIds.Disruption, ids);
+        Assert.True(ids.SetEquals(BattleStatusTextCatalog.All.Keys));
+        Assert.All(BattleStatusTextCatalog.All.Values, text =>
+        {
+            Assert.False(string.IsNullOrWhiteSpace(text.Name));
+            Assert.False(string.IsNullOrWhiteSpace(text.Description));
+        });
+    }
+
+    [Theory]
+    [InlineData(BattleStatusIds.Afterimage)]
+    [InlineData(BattleStatusIds.Steadfast)]
+    [InlineData(BattleStatusIds.Cover)]
+    [InlineData(BattleStatusIds.DefensiveStance)]
+    [InlineData(BattleStatusIds.ComboCarryover)]
+    [InlineData(BattleStatusIds.Afterglow)]
+    [InlineData(BattleStatusIds.Resonance)]
+    public void New_class_buffs_use_explicit_lifecycle_hooks(string id)
+    {
+        var status = StatusDefinition.Get(id);
+
+        Assert.Equal(StatusKind.Buff, status.Kind);
+        Assert.False(status.IsPermanent);
+        Assert.Equal(StatusTickDirection.None, status.TickDirection);
+    }
+
+    [Fact]
+    public void Disruption_is_a_decrementing_debuff()
+    {
+        var status = StatusDefinition.Get(BattleStatusIds.Disruption);
+
+        Assert.Equal(StatusKind.Debuff, status.Kind);
+        Assert.False(status.IsPermanent);
+        Assert.Equal(StatusTickDirection.Decrement, status.TickDirection);
     }
 
     [Fact] public void Strength_is_permanent_buff()

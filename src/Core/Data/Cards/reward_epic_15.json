@@ -1,0 +1,53 @@
+{
+  "id": "enhancer_epic_resonance_chamber",
+  "name": "共鳴槽",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Enhancer",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 3,
+        "cardType": "Power",
+        "cost": 3,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 4,
+            "trigger": "OnTurnStart"
+          },
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "resonance",
+            "amount": 1,
+            "trigger": "OnTurnStart"
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 7,
+            "trigger": "OnTurnStart"
+          },
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "resonance",
+            "amount": 1,
+            "trigger": "OnTurnStart"
+          }
+        ]
+      }
+    }
+  ]
+}

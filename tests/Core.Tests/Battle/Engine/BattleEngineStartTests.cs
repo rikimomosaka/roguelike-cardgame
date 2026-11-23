@@ -105,6 +105,36 @@ public class BattleEngineStartTests
         Assert.Equal(3, s.EnergyMax);
     }
 
+    [Fact]
+    public void Start_uses_character_turn_energy_and_draw_before_relic_modifiers()
+    {
+        var run = MakeRun(
+            "strike", "strike", "strike", "strike", "strike", "strike");
+        var character = new RoguelikeCardGame.Core.Data.CharacterDefinition(
+            "default", "Resource Tester", 70, 0, 0,
+            new[] { "strike" },
+            EnergyPerTurn: 4,
+            DrawPerTurn: 2);
+        var catalog = BattleFixtures.MinimalCatalog() with
+        {
+            Characters = new System.Collections.Generic.Dictionary<string,
+                RoguelikeCardGame.Core.Data.CharacterDefinition>
+            {
+                [character.Id] = character,
+            },
+        };
+
+        var (state, _) = BattleEngine.Start(run, "enc_test", Rng(), catalog);
+
+        Assert.Equal(4, state.Energy);
+        Assert.Equal(4, state.EnergyMax);
+        Assert.Equal(2, state.DrawPerTurn);
+        Assert.Equal(2, state.Hand.Length);
+        var participant = Assert.Single(state.Participants);
+        Assert.Equal(4, participant.EnergyPerTurn);
+        Assert.Equal(2, participant.DrawPerTurn);
+    }
+
     [Fact] public void EncounterId_set_correctly()
     {
         var run = MakeRun("strike");
@@ -134,6 +164,32 @@ public class BattleEngineStartTests
         var (s, _) = BattleEngine.Start(run, "enc_test", Rng(), cat);
         Assert.Empty(s.SummonHeld);
         Assert.Empty(s.PowerCards);
+    }
+
+    [Fact]
+    public void Start_initializes_primary_human_participant_after_opening_draw()
+    {
+        var run = MakeRun(
+            "strike", "strike", "strike", "strike", "strike", "defend");
+        var catalog = BattleFixtures.MinimalCatalog();
+
+        var (state, _) = BattleEngine.Start(run, "enc_test", Rng(), catalog);
+
+        var participant = Assert.Single(state.Participants);
+        Assert.Equal(BattleParticipantAccess.DefaultPrimaryParticipantId, participant.ParticipantId);
+        Assert.Equal("hero_inst", participant.ActorInstanceId);
+        Assert.Equal(BattleParticipantControllerKind.Human, participant.ControllerKind);
+        Assert.Equal(0, participant.OwnerPlayerSlot);
+        Assert.Equal(state.CharacterId, participant.CharacterId);
+        Assert.Equal(5, participant.Hand.Length);
+        Assert.Equal(state.Hand, participant.Hand);
+        Assert.Equal(state.DrawPile, participant.DrawPile);
+        Assert.Equal(state.Energy, participant.Energy);
+        Assert.Equal(state.ComboCount, participant.ComboCount);
+        Assert.Equal(state.OwnedRelicIds, participant.OwnedRelicIds);
+        Assert.Equal(state.Potions, participant.Potions);
+        Assert.False(participant.IsReady);
+        Assert.Equal(0, state.ActionRevision);
     }
 
     [Fact]

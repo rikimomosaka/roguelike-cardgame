@@ -95,7 +95,7 @@ export function RelicSpecForm({
         // Phase 10.5.L1.5: relic は per-effect Trigger に統一。
         //   effect レベルの trigger を表示する (excludeFields から除去)。
         //   comboMin はカードの combo 文脈でしか機能しないため引き続き非表示。
-        excludeFields={['comboMin']}
+        excludeFields={['comboMin', 'maxComboMin']}
       />
 
       <label className="card-spec-form__label card-spec-form__label--block">

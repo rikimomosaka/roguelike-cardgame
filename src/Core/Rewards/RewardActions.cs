@@ -55,6 +55,8 @@ public static class RewardActions
 
         var r = s.ActiveReward
             ?? throw new InvalidOperationException("No ActiveReward to reroll");
+        if (r.CardPoolKind != CardRewardPoolKind.Class)
+            throw new InvalidOperationException("Only class card rewards can be rerolled");
         if (r.CardStatus != CardRewardStatus.Pending)
             throw new InvalidOperationException("Card already resolved, cannot reroll");
         if (r.RerollUsed)
@@ -71,6 +73,9 @@ public static class RewardActions
             ActiveReward = r with
             {
                 CardChoices = newPicks,
+                CardStatus = newPicks.IsEmpty
+                    ? CardRewardStatus.Claimed
+                    : CardRewardStatus.Pending,
                 RerollUsed = true,
             }
         };

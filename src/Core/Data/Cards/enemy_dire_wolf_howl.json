@@ -1,0 +1,26 @@
+{
+  "id": "enemy_dire_wolf_howl",
+  "name": "遠吠え",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy dire_wolf unique (from move howl)",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "strength",
+            "amount": 2
+          }
+        ]
+      }
+    }
+  ]
+}

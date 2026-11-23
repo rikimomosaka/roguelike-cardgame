@@ -15,7 +15,9 @@ public sealed record BattleEventDto(
     IReadOnlyList<DamageCauseFrameDto> CauseChain,
     int? ActualHpLoss,
     int? Overkill,
-    bool? HitLanded);
+    bool? HitLanded,
+    BattleReplayCardDto? Card = null,
+    int? ComboCountAfter = null);
 
 public sealed record CombatSourceDto(
     string Kind,

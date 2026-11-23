@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
@@ -37,7 +38,7 @@ public class FileAudioSettingsRepositoryTests : IDisposable
     [Fact]
     public async Task Upsert_ThenGet_ReturnsPersistedValue()
     {
-        var custom = AudioSettings.Create(master: 10, bgm: 20, se: 30, ambient: 40);
+        var custom = AudioSettings.Create(master: 10, bgm: 20, se: 30, voice: 40);
         await _repo.UpsertAsync("alice", custom, CancellationToken.None);
         var got = await _repo.GetOrDefaultAsync("alice", CancellationToken.None);
         Assert.Equal(custom, got);
@@ -61,6 +62,26 @@ public class FileAudioSettingsRepositoryTests : IDisposable
         var b = await _repo.GetOrDefaultAsync("b", CancellationToken.None);
         Assert.Equal(10, a.Master);
         Assert.Equal(90, b.Master);
+    }
+
+    [Fact]
+    public async Task ConcurrentUpsertsForSameAccount_AreAtomicAndLeaveNoTempFiles()
+    {
+        var candidates = Enumerable.Range(1, 40)
+            .Select(value => AudioSettings.Create(value, value, value, value))
+            .ToArray();
+
+        await Task.WhenAll(candidates.Select(settings =>
+            _repo.UpsertAsync("concurrent-player", settings, CancellationToken.None)));
+
+        var got = await _repo.GetOrDefaultAsync("concurrent-player", CancellationToken.None);
+        Assert.Contains(got.Master, candidates.Select(settings => settings.Master));
+        Assert.Equal(got.Master, got.Bgm);
+        Assert.Equal(got.Master, got.Se);
+        Assert.Equal(got.Master, got.Voice);
+
+        var directory = Path.Combine(_tempRoot, "audio_settings");
+        Assert.Empty(Directory.EnumerateFiles(directory, "*.tmp"));
     }
 
     [Fact]
@@ -94,5 +115,23 @@ public class FileAudioSettingsRepositoryTests : IDisposable
         // Phase 2 では破損時も Default を返して運用継続する (ユーザ体験優先)。
         var got = await _repo.GetOrDefaultAsync("corrupt", CancellationToken.None);
         Assert.Equal(AudioSettings.Default, got);
+    }
+
+    [Fact]
+    public async Task GetOrDefault_V1File_MigratesToVoiceDefault()
+    {
+        var subdir = Path.Combine(_tempRoot, "audio_settings");
+        Directory.CreateDirectory(subdir);
+        await File.WriteAllTextAsync(
+            Path.Combine(subdir, "legacy.json"),
+            "{\"schemaVersion\":1,\"master\":12,\"bgm\":34,\"se\":56,\"ambient\":78}");
+
+        var got = await _repo.GetOrDefaultAsync("legacy", CancellationToken.None);
+
+        Assert.Equal(2, got.SchemaVersion);
+        Assert.Equal(12, got.Master);
+        Assert.Equal(34, got.Bgm);
+        Assert.Equal(56, got.Se);
+        Assert.Equal(80, got.Voice);
     }
 }

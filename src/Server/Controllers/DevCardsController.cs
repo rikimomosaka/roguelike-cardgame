@@ -586,13 +586,18 @@ public sealed class DevCardsController : ControllerBase
             && dnEl.ValueKind == JsonValueKind.String
             ? dnEl.GetString()
             : null;
+        string? poolClass = root.TryGetProperty("poolClass", out var pcEl)
+            && pcEl.ValueKind == JsonValueKind.String
+            ? pcEl.GetString()
+            : null;
 
         return new DevCardDto(
             idEl.GetString() ?? string.Empty,
             nameEl.GetString() ?? string.Empty,
             displayName,
             avEl.GetString() ?? string.Empty,
-            versions);
+            versions,
+            poolClass);
     }
 
     /// <summary>base カード JSON を embedded resource (manifest) から読む。</summary>

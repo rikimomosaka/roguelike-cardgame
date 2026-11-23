@@ -526,6 +526,7 @@ function DevCardDetail({
           cardNames={cardNames}
           cardName={card.name}
           displayName={card.displayName}
+          poolClass={card.poolClass}
           onChange={setDraft}
         />
       </section>

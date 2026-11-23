@@ -253,6 +253,24 @@
   flex-wrap: wrap;
 }
 
+.effect-editor__status-group {
+  flex: 1 0 100%;
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid color-mix(in srgb, #d8c66e 45%, transparent);
+}
+
+.effect-editor__status-group-title {
+  color: #d8c66e;
+}
+
+.effect-editor__status-change {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) 90px auto;
+  gap: 6px;
+}
+
 /* ---- keyword selector ---- */
 
 .keyword-selector {
@@ -284,6 +302,76 @@
 .keyword-selector__empty {
   font-size: 12px;
   color: #666;
+}
+
+/* ---- typed card abilities (終撃 / 再演 / 伏策) ---- */
+
+.card-ability-editor {
+  margin: 10px 0;
+  padding: 10px;
+  border: 1px solid #3b3b48;
+  background: #1a1a20;
+}
+
+.card-ability-editor__header,
+.card-ability-editor__item-header,
+.card-ability-editor__add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.card-ability-editor__header {
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.card-ability-editor__header h4 {
+  margin: 0;
+}
+
+.card-ability-editor__unset {
+  color: #777;
+  font-size: 12px;
+}
+
+.card-ability-editor__notice {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.card-ability-editor__item {
+  margin: 8px 0;
+  padding: 8px;
+  border-left: 3px solid #9d7bd8;
+  background: #22222b;
+}
+
+.card-ability-editor__item-header {
+  justify-content: space-between;
+}
+
+.card-ability-editor__fields {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.card-ability-editor__fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: #bbb;
+  font-size: 12px;
+}
+
+.card-ability-editor__fields select[multiple] {
+  min-width: 150px;
+  min-height: 58px;
 }
 
 /* ---- formatter preview ---- */

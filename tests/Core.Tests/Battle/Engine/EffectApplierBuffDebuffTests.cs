@@ -296,4 +296,95 @@ public class EffectApplierBuffDebuffTests
         Assert.Equal(0, next.Allies[0].GetStatus("weak"));
         Assert.False(next.Allies[0].Statuses.ContainsKey("weak"));
     }
+
+    [Fact]
+    public void Grouped_debuff_applies_every_status_in_declared_order()
+    {
+        var hero = BattleFixtures.Hero();
+        var state = State(hero, BattleFixtures.Goblin());
+        var effect = new CardEffect(
+            "debuff", EffectScope.Self, null, 0,
+            StatusChanges: new[]
+            {
+                new StatusChange("silence", 1),
+                new StatusChange("handCostIncrease", 2),
+                new StatusChange("exhaustion", 2),
+                new StatusChange("distress", 2),
+            });
+
+        var (next, events) = EffectApplier.Apply(
+            state, hero, effect, Rng(), BattleFixtures.MinimalCatalog());
+
+        Assert.Equal(1, next.Allies[0].GetStatus("silence"));
+        Assert.Equal(2, next.Allies[0].GetStatus("handCostIncrease"));
+        Assert.Equal(2, next.Allies[0].GetStatus("exhaustion"));
+        Assert.Equal(2, next.Allies[0].GetStatus("distress"));
+        Assert.Equal(
+            new[] { "silence", "handCostIncrease", "exhaustion", "distress" },
+            events.Select(e => e.Note));
+    }
+
+    [Fact]
+    public void Resistance_blocks_one_complete_grouped_debuff_application()
+    {
+        var hero = BattleFixtures.Hero() with
+        {
+            Statuses = ImmutableDictionary<string, int>.Empty.Add("resistance", 1),
+        };
+        var state = State(hero, BattleFixtures.Goblin());
+        var effect = new CardEffect(
+            "debuff", EffectScope.Self, null, 0,
+            StatusChanges: new[]
+            {
+                new StatusChange("silence", 1),
+                new StatusChange("handCostIncrease", 2),
+            });
+
+        var (next, events) = EffectApplier.Apply(
+            state, hero, effect, Rng(), BattleFixtures.MinimalCatalog());
+
+        Assert.Equal(0, next.Allies[0].GetStatus("resistance"));
+        Assert.Equal(0, next.Allies[0].GetStatus("silence"));
+        Assert.Equal(0, next.Allies[0].GetStatus("handCostIncrease"));
+        var resisted = Assert.Single(events);
+        Assert.Equal(BattleEventKind.RemoveStatus, resisted.Kind);
+        Assert.Equal("resistance", resisted.Note);
+    }
+
+    [Fact]
+    public void Newly_applied_statuses_append_right_and_reapplied_status_keeps_its_place()
+    {
+        var hero = BattleFixtures.Hero() with
+        {
+            Statuses = ImmutableDictionary<string, int>.Empty.Add("weak", 1),
+            StatusDisplayOrder = ImmutableArray.Create("weak"),
+        };
+        var state = State(hero, BattleFixtures.Goblin());
+        var addStrength = new CardEffect(
+            "buff", EffectScope.Self, null, 1, Name: "strength");
+        var addWeak = new CardEffect(
+            "debuff", EffectScope.Self, null, 1, Name: "weak");
+        var removeWeak = new CardEffect(
+            "debuff", EffectScope.Self, null, -2, Name: "weak");
+
+        var (afterStrength, _) = EffectApplier.Apply(
+            state, hero, addStrength, Rng(), BattleFixtures.MinimalCatalog());
+        Assert.Equal(new[] { "weak", "strength" },
+            afterStrength.Allies[0].StatusDisplayOrder);
+
+        var (afterWeakStack, _) = EffectApplier.Apply(
+            afterStrength, afterStrength.Allies[0], addWeak,
+            Rng(), BattleFixtures.MinimalCatalog());
+        Assert.Equal(new[] { "weak", "strength" },
+            afterWeakStack.Allies[0].StatusDisplayOrder);
+
+        var (afterWeakRemoval, _) = EffectApplier.Apply(
+            afterWeakStack, afterWeakStack.Allies[0], removeWeak,
+            Rng(), BattleFixtures.MinimalCatalog());
+        var (afterWeakReapply, _) = EffectApplier.Apply(
+            afterWeakRemoval, afterWeakRemoval.Allies[0], addWeak,
+            Rng(), BattleFixtures.MinimalCatalog());
+        Assert.Equal(new[] { "strength", "weak" },
+            afterWeakReapply.Allies[0].StatusDisplayOrder);
+    }
 }

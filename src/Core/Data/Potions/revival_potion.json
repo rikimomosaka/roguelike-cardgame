@@ -1,0 +1,8 @@
+{
+  "id": "revival_potion",
+  "name": "復活ポーション",
+  "rarity": 3,
+  "effects": [
+    { "action": "buff", "scope": "self", "name": "revive", "amount": 25, "battleOnly": true }
+  ]
+}

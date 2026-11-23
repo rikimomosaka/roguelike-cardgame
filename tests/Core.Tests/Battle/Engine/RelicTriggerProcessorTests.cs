@@ -68,7 +68,12 @@ public class RelicTriggerProcessorTests
         var (queued, triggerEvents) = RelicTriggerProcessor.Fire(
             state, "OnTurnStart", catalog, MakeRng(), orderStart: 0);
 
-        Assert.Empty(triggerEvents);
+        var gain = Assert.Single(triggerEvents);
+        Assert.Equal(BattleEventKind.GainAttack, gain.Kind);
+        Assert.Equal(hero.InstanceId, gain.TargetInstanceId);
+        Assert.Equal(4, gain.Amount);
+        Assert.StartsWith("single", gain.Note);
+        Assert.Equal(CombatSourceKind.RelicEffect, gain.Source?.Kind);
         var hit = Assert.Single(queued.Allies[0].AttackSingle.Hits);
         Assert.Equal(CombatSourceKind.RelicEffect, hit.Source.Kind);
         Assert.Equal(3, hit.Source.OwnerSlot);

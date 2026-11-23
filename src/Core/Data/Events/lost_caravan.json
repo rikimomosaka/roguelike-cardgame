@@ -1,0 +1,39 @@
+{
+  "id": "lost_caravan",
+  "name": "迷子の隊商",
+  "tiers": [1, 2],
+  "rarity": "uncommon",
+  "startMessage": "人気のない街道に壊れた隊商車が残され、荷箱だけが雨露をしのいでいる。",
+  "choices": [
+    {
+      "label": "車輪を直して謝礼を探す（45ゴールド獲得）",
+      "effects": [
+        { "type": "gainGold", "amount": 45 }
+      ],
+      "resultMessage": "車輪を元に戻すと、座席の下から持ち主が残した謝礼袋を見つけた。"
+    },
+    {
+      "label": "散らばった荷を調べる（6ダメージ、カード報酬）",
+      "condition": { "type": "minHp", "amount": 7 },
+      "effects": [
+        { "type": "takeDamage", "amount": 6 },
+        { "type": "grantCardReward" }
+      ],
+      "resultMessage": "割れた木箱で手を切ったが、中から貴重な戦術書を拾い上げた。"
+    },
+    {
+      "label": "封印箱の代金を置く（75ゴールド支払う）",
+      "condition": { "type": "minGold", "amount": 75 },
+      "effects": [
+        { "type": "payGold", "amount": 75 },
+        { "type": "gainRelicRandom", "rarity": 1 }
+      ],
+      "resultMessage": "代金を荷台に残し、封印箱から旅に役立つレリックを受け取った。"
+    },
+    {
+      "label": "持ち主を待たず立ち去る",
+      "effects": [],
+      "resultMessage": "灯りの消えた隊商車を後にし、森の街道へ戻った。"
+    }
+  ]
+}

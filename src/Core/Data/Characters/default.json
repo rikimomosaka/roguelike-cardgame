@@ -1,14 +1,95 @@
 {
   "id": "default",
   "name": "見習い冒険者",
+  "characterClass": "Striker",
+  "description": "0、1、2、3コストの攻撃列を組み、終撃と残光で火力を増幅する駆け出しの冒険者。",
+  "traitDescription": "連閃：自身の最大コンボが4以上になった時、自身に残光1を付与する。1ターン1回。",
   "maxHp": 80,
   "startingGold": 99,
   "potionSlotCount": 3,
   "heightTier": 5,
+  "energyPerTurn": 3,
+  "drawPerTurn": 5,
+  "trait": {
+    "id": "chain_flash",
+    "name": "連閃",
+    "trigger": "OnComboReached",
+    "threshold": 4,
+    "usesPerTurn": 1,
+    "description": "自身の最大コンボが4以上になった時、自身に残光1を付与する。1ターン1回。",
+    "effects": [
+      {
+        "action": "buff",
+        "scope": "self",
+        "name": "afterimage",
+        "amount": 1
+      }
+    ]
+  },
+  "skills": [
+    {
+      "id": "tactical",
+      "name": "刃風展開",
+      "comboGaugeCost": 3,
+      "oncePerTurn": true,
+      "usesPerTurn": 1,
+      "description": "1枚引く。エナジー+1。自身に拡散1を付与する。",
+      "effects": [
+        {
+          "action": "draw",
+          "scope": "self",
+          "amount": 1
+        },
+        {
+          "action": "gainEnergy",
+          "scope": "self",
+          "amount": 1
+        },
+        {
+          "action": "buff",
+          "scope": "self",
+          "name": "omnistrike",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "ultimate",
+      "name": "一気呵成",
+      "comboGaugeCost": 6,
+      "oncePerTurn": true,
+      "usesPerTurn": 1,
+      "description": "自身に元気1、残光1を付与する。",
+      "effects": [
+        {
+          "action": "buff",
+          "scope": "self",
+          "statusChanges": [
+            {
+              "name": "vigor",
+              "amount": 1
+            },
+            {
+              "name": "afterimage",
+              "amount": 1
+            }
+          ]
+        }
+      ]
+    }
+  ],
   "deck": [
-    "starter_block_0","starter_block_0",
-    "strike","strike","defend","defend",
-    "starter_strike_2","starter_strike_2",
-    "starter_summon_3","starter_summon_3"
-  ]
+    "basic_attack",
+    "basic_attack",
+    "basic_defense",
+    "basic_defense",
+    "striker_basic_quickdraw",
+    "striker_basic_quickdraw",
+    "striker_basic_step",
+    "striker_basic_step",
+    "striker_basic_finishing_slash",
+    "striker_basic_finishing_slash"
+  ],
+  "attack": 6,
+  "defense": 5
 }

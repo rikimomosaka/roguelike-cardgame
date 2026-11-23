@@ -1,0 +1,49 @@
+{
+  "id": "enhancer_common_afterglow_guard",
+  "name": "余韻の護り",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Enhancer",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 5
+          },
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "afterglow",
+            "amount": 1
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 8
+          },
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "afterglow",
+            "amount": 1
+          }
+        ]
+      }
+    }
+  ]
+}

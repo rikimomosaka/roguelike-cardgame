@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 
 namespace RoguelikeCardGame.Core.Cards;
@@ -17,7 +18,18 @@ public static class CardEffectParser
     {
         var action = GetRequiredString(el, "action", makeException);
         var scope = ParseScope(GetRequiredString(el, "scope", makeException), makeException);
-        var amount = GetRequiredInt(el, "amount", makeException);
+
+        var statusChanges = ParseStatusChanges(el, action, makeException);
+        bool hasGroupedStatuses = statusChanges is not null;
+        if (hasGroupedStatuses &&
+            (el.TryGetProperty("name", out _) ||
+             el.TryGetProperty("amount", out _) ||
+             el.TryGetProperty("amountSource", out _)))
+        {
+            throw makeException(
+                "statusChanges cannot be combined with top-level name, amount, or amountSource.");
+        }
+        var amount = hasGroupedStatuses ? 0 : GetRequiredInt(el, "amount", makeException);
 
         EffectSide? side = null;
         if (el.TryGetProperty("side", out var sideEl) && sideEl.ValueKind == JsonValueKind.String)
@@ -26,6 +38,18 @@ public static class CardEffectParser
         string? name = GetOptionalString(el, "name");
         string? unitId = GetOptionalString(el, "unitId");
         int? comboMin = GetOptionalInt(el, "comboMin");
+        int? maxComboMin = null;
+        if (el.TryGetProperty("maxComboMin", out var maxComboMinEl))
+        {
+            if (maxComboMinEl.ValueKind != JsonValueKind.Number ||
+                !maxComboMinEl.TryGetInt32(out var parsedMaxComboMin))
+            {
+                throw makeException("maxComboMin must be an integer when specified.");
+            }
+            if (parsedMaxComboMin <= 0)
+                throw makeException($"maxComboMin must be positive when specified, got {parsedMaxComboMin}.");
+            maxComboMin = parsedMaxComboMin;
+        }
         string? pile = GetOptionalString(el, "pile");
         bool battleOnly = el.TryGetProperty("battleOnly", out var boEl)
                           && boEl.ValueKind == JsonValueKind.True;
@@ -42,14 +66,51 @@ public static class CardEffectParser
             throw makeException($"chancePercent must be between 0 and 100, got {chancePercent}");
         string? costDuration = GetOptionalString(el, "costDuration");
         int? cardCount = GetOptionalInt(el, "cardCount");
+        int? amountScalePercent = GetOptionalInt(el, "amountScalePercent");
+        if (amountScalePercent is <= 0)
+            throw makeException($"amountScalePercent must be positive when specified, got {amountScalePercent}");
+        if (amountScalePercent is not null && string.IsNullOrEmpty(amountSource))
+            throw makeException("amountScalePercent requires amountSource.");
         if (cardCount is <= 0)
             throw makeException($"cardCount must be positive when specified, got {cardCount}");
+        if (el.TryGetProperty("usesPerTurn", out _))
+            throw makeException(
+                "usesPerTurn は個々のeffectではなく、カード・ポーション・キャラクタースキル本体に設定してください。");
 
         var raw = new CardEffect(action, scope, side, amount,
             Name: name, UnitId: unitId, ComboMin: comboMin, Pile: pile, BattleOnly: battleOnly,
             CardRefId: cardRefId, Select: select, AmountSource: amountSource, Trigger: trigger,
-            ChancePercent: chancePercent, CostDuration: costDuration, CardCount: cardCount);
+            ChancePercent: chancePercent, CostDuration: costDuration, CardCount: cardCount,
+            StatusChanges: statusChanges, MaxComboMin: maxComboMin,
+            AmountScalePercent: amountScalePercent);
         return raw.Normalize();
+    }
+
+    private static IReadOnlyList<StatusChange>? ParseStatusChanges(
+        JsonElement el,
+        string action,
+        Func<string, Exception> makeException)
+    {
+        if (!el.TryGetProperty("statusChanges", out var changesEl))
+            return null;
+        if (action is not ("buff" or "debuff"))
+            throw makeException("statusChanges is supported only by buff/debuff effects.");
+        if (changesEl.ValueKind != JsonValueKind.Array || changesEl.GetArrayLength() == 0)
+            throw makeException("statusChanges must be a non-empty array.");
+
+        var changes = new List<StatusChange>();
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var changeEl in changesEl.EnumerateArray())
+        {
+            if (changeEl.ValueKind != JsonValueKind.Object)
+                throw makeException("each statusChanges entry must be an object.");
+            string name = GetRequiredString(changeEl, "name", makeException);
+            int amount = GetRequiredInt(changeEl, "amount", makeException);
+            if (!names.Add(name))
+                throw makeException($"statusChanges contains duplicate status '{name}'.");
+            changes.Add(new StatusChange(name, amount));
+        }
+        return changes;
     }
 
     private static EffectScope ParseScope(string s, Func<string, Exception> makeException) => s switch

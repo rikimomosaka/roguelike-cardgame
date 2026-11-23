@@ -306,8 +306,19 @@
   top: calc(100% + 6px);
   right: 0;
   width: min(640px, 90vw);
-  max-height: 60vh;
-  overflow-y: auto;
+  /* Keep the popup wholly inside the viewport. The topbar already consumes
+     part of the viewport, so a fixed 80vh popup could push its bottom rows
+     below the browser edge on shorter or scaled viewports. */
+  box-sizing: border-box;
+  /* The game is rendered in the fixed 1280x720 app-stage and then scaled.
+     Use that design-space height rather than the browser viewport height;
+     vh/dvh made the popup taller than the map when the stage was scaled. */
+  height: calc(var(--app-stage-height, 720px) - 110px);
+  max-height: calc(var(--app-stage-height, 720px) - 110px);
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   padding: 10px 12px;
   background: rgba(20, 14, 10, 0.98);
   border: 1px solid var(--border-light);
@@ -318,9 +329,9 @@
 }
 
 .topbar__deck-menu-header {
-  position: sticky;
-  top: 0;
-  z-index: 1;
+  position: relative;
+  z-index: 20;
+  flex: 0 0 auto;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -339,7 +350,14 @@
 .topbar__deck-list {
   list-style: none;
   margin: 0;
-  padding: 0;
+  /* The first card's enlarged cost plate projects 6px to the left and 2px
+     above the card box; reserve scroll-edge space instead of clipping it. */
+  padding: 4px 0 12px 8px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  position: relative;
+  z-index: 0;
   display: grid;
   grid-template-columns: repeat(5, var(--card-width));
   gap: 6px;

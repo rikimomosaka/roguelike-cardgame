@@ -1,0 +1,55 @@
+{
+  "id": "universal_epic_total_defense",
+  "name": "総力防御",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Universal",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 3,
+        "cardType": "Skill",
+        "cost": 3,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 18
+          },
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "resistance",
+            "amount": 1
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 24
+          },
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "resistance",
+            "amount": 1
+          }
+        ],
+        "keywords": [
+          "exhaust"
+        ],
+        "upgradedKeywords": [
+          "exhaust"
+        ]
+      }
+    }
+  ]
+}

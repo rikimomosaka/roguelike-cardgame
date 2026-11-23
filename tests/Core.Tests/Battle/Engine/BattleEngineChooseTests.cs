@@ -141,7 +141,7 @@ public class BattleEngineChooseTests
             hand: ImmutableArray.Create(BattleFixtures.MakeBattleCard("strike", "s1"))) with
         {
             PendingCardPlay = new PendingCardPlay(
-                "card_inst_x", 0, false,
+                "card_inst_x", 0, ImmutableArray<string>.Empty,
                 new PendingChoice("exhaustCard", "hand", 1, ImmutableArray<string>.Empty)),
         };
         var catalog = BattleFixtures.MinimalCatalog();
@@ -156,7 +156,7 @@ public class BattleEngineChooseTests
             hand: ImmutableArray.Create(BattleFixtures.MakeBattleCard("strike", "s1"))) with
         {
             PendingCardPlay = new PendingCardPlay(
-                "s1", 0, false,
+                "s1", 0, ImmutableArray<string>.Empty,
                 new PendingChoice("exhaustCard", "hand", 1,
                     ImmutableArray.Create("candidate"))),
         };
@@ -326,6 +326,35 @@ public class BattleEngineChooseTests
     }
 
     [Fact]
+    public void ResolveCardChoice_Allows_keyword_only_upgrade_candidates()
+    {
+        var keywordOnly = new CardDefinition(
+            "keyword_only", "keyword_only", null,
+            CardRarity.Common, CardType.Skill,
+            Cost: 1, UpgradedCost: null,
+            Effects: System.Array.Empty<CardEffect>(),
+            UpgradedEffects: null,
+            Keywords: new[] { "wild" },
+            UpgradedKeywords: System.Array.Empty<string>());
+        var chooseDef = UpgradeChooseCard(amount: 1);
+        var hand = ImmutableArray.Create(
+            BattleFixtures.MakeBattleCard(keywordOnly.Id, "keyword-1"),
+            BattleFixtures.MakeBattleCard(keywordOnly.Id, "keyword-2"),
+            BattleFixtures.MakeBattleCard(chooseDef.Id, "choose"));
+        var state = BattleFixtures.MinimalState(hand: hand);
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { keywordOnly, chooseDef });
+
+        var (paused, _) = BattleEngine.PlayCard(
+            state, handIndex: 2, null, null, Rng(), catalog);
+        Assert.Contains("keyword-1", paused.PendingCardPlay!.Choice.CandidateInstanceIds);
+
+        var (final, _) = BattleEngine.ResolveCardChoice(
+            paused, ImmutableArray.Create("keyword-1"), Rng(), catalog);
+
+        Assert.True(final.Hand.Single(card => card.InstanceId == "keyword-1").IsUpgraded);
+    }
+
+    [Fact]
     public void ResolveCardChoice_RecoverFromDiscardChosen_MovesSelectedToHand()
     {
         var chooseDef = RecoverChooseCard(amount: 1, destPile: "hand");
@@ -394,5 +423,81 @@ public class BattleEngineChooseTests
         Assert.Contains(final.ExhaustPile, c => c.InstanceId == "s1");
         Assert.Contains(final.ExhaustPile, c => c.InstanceId == "ds1");
         Assert.Contains(final.DiscardPile, c => c.InstanceId == "dc1");
+    }
+
+    [Fact]
+    public void Unit_summons_before_and_after_choice_keep_exact_actor_ids_through_resume()
+    {
+        var unitCard = new CardDefinition(
+            "choose_unit", "Choose Unit", null,
+            CardRarity.Common, CardType.Unit,
+            Cost: 0, UpgradedCost: null,
+            Effects:
+            [
+                new CardEffect(
+                    "summon", EffectScope.Self, null, 0,
+                    UnitId: "direct_minion"),
+                new CardEffect(
+                    "exhaustCard", EffectScope.Self, null, 1,
+                    Pile: "hand", Select: "choose"),
+                new CardEffect(
+                    "summon", EffectScope.Self, null, 0,
+                    UnitId: "direct_minion"),
+            ],
+            UpgradedEffects: null,
+            Keywords: null);
+        var relic = BattleFixtures.Relic(
+            "choose_summon_relic", "OnPlayCard", true,
+            new CardEffect(
+                "summon", EffectScope.Self, null, 0,
+                UnitId: "relic_minion"));
+        var hand = ImmutableArray.Create(
+            BattleFixtures.MakeBattleCard("strike", "candidate-1"),
+            BattleFixtures.MakeBattleCard("defend", "candidate-2"),
+            BattleFixtures.MakeBattleCard(unitCard.Id, "choose-unit-1"));
+        var state = BattleFixtures.MinimalState(
+            hand: hand,
+            ownedRelicIds: ImmutableArray.Create(relic.Id));
+        var catalog = BattleFixtures.MinimalCatalog(
+            cards: [BattleFixtures.Strike(), BattleFixtures.Defend(), unitCard],
+            units:
+            [
+                BattleFixtures.MinionDef("direct_minion"),
+                BattleFixtures.MinionDef("relic_minion"),
+            ],
+            relics: [relic]);
+
+        var (paused, _) = BattleEngine.PlayCard(
+            state, handIndex: 2, targetEnemyIndex: 0,
+            targetAllyIndex: 0,
+            new FakeRng([0x1111], System.Array.Empty<double>()),
+            catalog);
+
+        var firstDirect = Assert.Single(
+            paused.Allies, actor => actor.DefinitionId == "direct_minion");
+        Assert.Equal(
+            new[] { firstDirect.InstanceId },
+            paused.PendingCardPlay!.SummonedActorInstanceIdsBefore.ToArray());
+
+        var (final, _) = BattleEngine.ResolveCardChoice(
+            paused,
+            ImmutableArray.Create("candidate-1"),
+            new FakeRng([0x2222, 0x3333], System.Array.Empty<double>()),
+            catalog);
+
+        Assert.Null(final.PendingCardPlay);
+        Assert.Equal("choose-unit-1", Assert.Single(final.SummonHeld).InstanceId);
+        var directSummons = final.Allies
+            .Where(actor => actor.DefinitionId == "direct_minion")
+            .ToArray();
+        Assert.Equal(2, directSummons.Length);
+        Assert.All(directSummons, actor =>
+            Assert.Equal(
+                "choose-unit-1",
+                actor.AssociatedSummonHeldInstanceId));
+        Assert.Null(Assert.Single(
+            final.Allies,
+            actor => actor.DefinitionId == "relic_minion")
+            .AssociatedSummonHeldInstanceId);
     }
 }

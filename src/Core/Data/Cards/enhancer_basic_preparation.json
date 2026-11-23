@@ -1,0 +1,51 @@
+{
+  "id": "enhancer_basic_preparation",
+  "name": "予備調律",
+  "displayName": null,
+  "poolKinds": [
+    "Basic"
+  ],
+  "poolClass": "Enhancer",
+  "eligibleCharacterIds": [
+    "enhancer_lyra"
+  ],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Skill",
+        "cost": 0,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 2
+          },
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "insight",
+            "amount": 1
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 4
+          },
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "insight",
+            "amount": 1
+          }
+        ]
+      }
+    }
+  ]
+}

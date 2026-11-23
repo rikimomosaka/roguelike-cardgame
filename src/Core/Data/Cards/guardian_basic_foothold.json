@@ -1,0 +1,39 @@
+{
+  "id": "guardian_basic_foothold",
+  "name": "足固め",
+  "displayName": null,
+  "poolKinds": [
+    "Basic"
+  ],
+  "poolClass": "Guardian",
+  "eligibleCharacterIds": [
+    "guardian_mireille"
+  ],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Skill",
+        "cost": 0,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 3
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 5
+          }
+        ]
+      }
+    }
+  ]
+}

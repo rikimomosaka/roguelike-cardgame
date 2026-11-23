@@ -29,6 +29,12 @@ async function inspectPng(image: Locator) {
       { length: Math.max(1, Math.floor(canvas.width / frameWidth)) },
       () => 0,
     )
+    const frameBounds = frameVisible.map(() => ({
+      minX: frameWidth,
+      maxX: -1,
+      minY: canvas.height,
+      maxY: -1,
+    }))
     const frameHashes = frameVisible.map(() => 2166136261)
     let minX = canvas.width
     let minY = canvas.height
@@ -49,6 +55,11 @@ async function inspectPng(image: Locator) {
       if (alpha === 0) continue
       visible++
       frameVisible[frameIndex]++
+      const localX = x - frameIndex * frameWidth
+      frameBounds[frameIndex].minX = Math.min(frameBounds[frameIndex].minX, localX)
+      frameBounds[frameIndex].maxX = Math.max(frameBounds[frameIndex].maxX, localX)
+      frameBounds[frameIndex].minY = Math.min(frameBounds[frameIndex].minY, y)
+      frameBounds[frameIndex].maxY = Math.max(frameBounds[frameIndex].maxY, y)
       minX = Math.min(minX, x)
       minY = Math.min(minY, y)
       maxX = Math.max(maxX, x)
@@ -63,6 +74,7 @@ async function inspectPng(image: Locator) {
       greenLike,
       magentaLike,
       frameVisible,
+      frameBounds,
       frameHashes,
       bounds: { minX, minY, maxX, maxY },
     }
@@ -72,6 +84,7 @@ async function inspectPng(image: Locator) {
 test('rest fire layers a six-frame flame sprite in front of static logs', async ({ page }) => {
   await mountFixture(page)
   const fire = page.locator('.rs-fire')
+  const stage = page.locator('.rs-stage')
   const flameViewport = fire.locator('.rs-fire__flame-viewport')
   const flame = fire.locator('.rs-fire__flame')
   const logs = fire.locator('.rs-fire__logs')
@@ -81,10 +94,23 @@ test('rest fire layers a six-frame flame sprite in front of static logs', async 
   await expect(logs).toBeVisible()
   await expect(flame).toHaveAttribute('src', '/icons/ui/rest_flame.png?v=2')
   await expect(logs).toHaveAttribute('src', '/icons/ui/rest_logs.png')
+  await expect(page.locator('.popup__title')).toHaveText('焚き火')
+  await expect(page.getByText('最大HPの30％を回復する(HP30→59)。')).toBeVisible()
+  await expect(page.getByText('HP+5')).toBeVisible()
+  const titleIsNotClipped = await page.locator('.popup__title').evaluate(element =>
+    element.scrollHeight <= element.clientHeight,
+  )
+  expect(titleIsNotClipped).toBe(true)
 
   const fireRect = await fire.boundingBox()
+  const stageRect = await stage.boundingBox()
+  expect(page.viewportSize()).toEqual({ width: 1280, height: 720 })
   expect(fireRect?.width).toBeCloseTo(180, 2)
   expect(fireRect?.height).toBeCloseTo(180, 2)
+  expect(fireRect!.x + fireRect!.width / 2).toBeCloseTo(
+    stageRect!.x + stageRect!.width / 2,
+    1,
+  )
 
   const flamePng = await inspectPng(flame)
   const logsPng = await inspectPng(logs)
@@ -93,6 +119,14 @@ test('rest fire layers a six-frame flame sprite in front of static logs', async 
   expect(flamePng.frameVisible).toHaveLength(6)
   for (const visiblePixels of flamePng.frameVisible) {
     expect(visiblePixels).toBeGreaterThan(0)
+  }
+  for (const bounds of flamePng.frameBounds) {
+    // The source itself consists of six 180px cells.  Every flame has a
+    // transparent gutter and its visible bounds are centred in its own cell,
+    // so CSS frame stepping cannot expose or borrow a neighbouring frame.
+    expect(bounds.minX).toBeGreaterThan(0)
+    expect(bounds.maxX).toBeLessThan(179)
+    expect(Math.abs((bounds.minX + bounds.maxX) / 2 - 89.5)).toBeLessThanOrEqual(0.5)
   }
   expect(new Set(flamePng.frameHashes).size).toBe(6)
   expect(logsPng.naturalWidth).toBe(180)
@@ -133,6 +167,14 @@ test('rest fire layers a six-frame flame sprite in front of static logs', async 
   expect(viewportRect!.y - fireRect!.y).toBeCloseTo(-12, 2)
   expect(logsRect!.y - fireRect!.y).toBeCloseTo(18, 2)
   expect(logsRect!.y - viewportRect!.y).toBeCloseTo(30, 2)
+  expect(viewportRect!.x + viewportRect!.width / 2).toBeCloseTo(
+    fireRect!.x + fireRect!.width / 2,
+    1,
+  )
+  expect(logsRect!.x + logsRect!.width / 2).toBeCloseTo(
+    fireRect!.x + fireRect!.width / 2,
+    1,
+  )
 
   const flameVisibleTop = -12 + flamePng.bounds.minY
   const flameVisibleBottom = -12 + flamePng.bounds.maxY
@@ -151,10 +193,18 @@ test('rest fire layers a six-frame flame sprite in front of static logs', async 
     await animation.ready
     animation.pause()
     const positions: number[] = []
+    const frameCenterOffsets: number[] = []
     for (const time of [60, 180, 300, 420, 540, 660]) {
       animation.currentTime = time
       await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
       positions.push(new DOMMatrix(getComputedStyle(element).transform).m41)
+      const frameIndex = frameCenterOffsets.length
+      const sheetRect = element.getBoundingClientRect()
+      const viewportRect = element.parentElement!.getBoundingClientRect()
+      frameCenterOffsets.push(
+        sheetRect.left + frameIndex * 180 + 90
+          - (viewportRect.left + viewportRect.width / 2),
+      )
     }
     animation.play()
     return {
@@ -162,6 +212,7 @@ test('rest fire layers a six-frame flame sprite in front of static logs', async 
       duration: getComputedStyle(element).animationDuration,
       timing: getComputedStyle(element).animationTimingFunction,
       positions,
+      frameCenterOffsets,
     }
   })
   expect(flameMotion.name).toBe('rs-flame-sprite')
@@ -169,6 +220,9 @@ test('rest fire layers a six-frame flame sprite in front of static logs', async 
   expect(flameMotion.timing).toContain('steps(6')
   for (const [index, position] of flameMotion.positions.entries()) {
     expect(position).toBeCloseTo(index * -180, 0)
+  }
+  for (const offset of flameMotion.frameCenterOffsets) {
+    expect(offset).toBeCloseTo(0, 1)
   }
   expect(await logs.evaluate(element => element.getAnimations().length)).toBe(0)
 })
@@ -178,6 +232,7 @@ test('rest fire keeps a slower frame animation when reduced motion is requested'
   await mountFixture(page)
 
   const fire = page.locator('.rs-fire')
+  const stage = page.locator('.rs-stage')
   const flame = fire.locator('.rs-fire__flame')
   await expect(flame).toBeVisible()
 
@@ -187,19 +242,39 @@ test('rest fire keeps a slower frame animation when reduced motion is requested'
     await animation.ready
     animation.pause()
     const positions: number[] = []
+    const frameCenterOffsets: number[] = []
     for (const time of [120, 360]) {
       animation.currentTime = time
       await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
       positions.push(new DOMMatrix(getComputedStyle(element).transform).m41)
+      const frameIndex = frameCenterOffsets.length
+      const sheetRect = element.getBoundingClientRect()
+      const viewportRect = element.parentElement!.getBoundingClientRect()
+      frameCenterOffsets.push(
+        sheetRect.left + frameIndex * 180 + 90
+          - (viewportRect.left + viewportRect.width / 2),
+      )
     }
     return {
       name: getComputedStyle(element).animationName,
       duration: getComputedStyle(element).animationDuration,
       positions,
+      frameCenterOffsets,
     }
   })
   expect(reducedMotion.name).toBe('rs-flame-sprite')
   expect(reducedMotion.duration).toBe('1.44s')
   expect(reducedMotion.positions).toEqual([0, -180])
+  for (const offset of reducedMotion.frameCenterOffsets) {
+    expect(offset).toBeCloseTo(0, 1)
+  }
+  const [reducedFireRect, reducedStageRect] = await Promise.all([
+    fire.boundingBox(),
+    stage.boundingBox(),
+  ])
+  expect(reducedFireRect!.x + reducedFireRect!.width / 2).toBeCloseTo(
+    reducedStageRect!.x + reducedStageRect!.width / 2,
+    1,
+  )
   expect(await fire.evaluate(element => getComputedStyle(element, '::before').animationName)).toBe('none')
 })

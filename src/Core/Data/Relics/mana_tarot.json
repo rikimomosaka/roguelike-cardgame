@@ -10,11 +10,16 @@
                          "label":  "original",
                          "spec":  {
                                       "rarity":  2,
-                                      "description":  "[未実装] 神秘的な絵柄が踊るタロットカード。一枚引けば、魔力の流れが見えてくる気がする。",
+                                      "description":  "神秘的な絵柄が踊るタロットカード。一枚引けば、魔力の流れが見えてくる気がする。",
                                       "effects":  [
-
+                                                      {
+                                                          "action": "energyPerTurnBonus",
+                                                          "scope": "self",
+                                                          "amount": 1,
+                                                          "trigger": "Passive"
+                                                      }
                                                   ],
-                                      "implemented":  false
+                                      "implemented":  true
                                   }
                      }
                  ]
