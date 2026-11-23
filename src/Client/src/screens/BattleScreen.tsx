@@ -3861,6 +3861,15 @@ export function BattleScreen({
     }
   }
 
+  /** 行動再生を閉じて戦闘操作へ戻る（「戻る」ボタンと右上の × で共通）。 */
+  function closeReplay() {
+    if (replayStartTimerRef.current !== null) {
+      window.clearTimeout(replayStartTimerRef.current)
+      replayStartTimerRef.current = null
+    }
+    setReplayView(null)
+  }
+
   async function handleEndTurn() {
     const participant = state ? findPrimaryParticipant(state) : null
     const requestingReady = !!participant && !participant.isReady
@@ -4374,6 +4383,18 @@ export function BattleScreen({
           <EnergyOrb cur={displayedState.energy} recoveryPerTurn={displayedState.energyPerTurn} />
 
           {/* Piles (clickable to open modal) */}
+          {replayView ? (
+            // 行動再生を閉じる（「戻る」と同じ）。捨札・除外と同じ右端の列、画面右上に置く。
+            <button
+              type="button"
+              className="battle-replay-close"
+              onClick={closeReplay}
+              aria-label="行動再生を閉じる"
+              title="閉じる"
+            >
+              ×
+            </button>
+          ) : null}
           <button
             ref={drawPileRef}
             type="button"
@@ -4431,13 +4452,7 @@ export function BattleScreen({
               playing={replayView.playing}
               loading={replayView.loading}
               speed={replayView.speed}
-              onBack={() => {
-                if (replayStartTimerRef.current !== null) {
-                  window.clearTimeout(replayStartTimerRef.current)
-                  replayStartTimerRef.current = null
-                }
-                setReplayView(null)
-              }}
+              onBack={closeReplay}
               onRestart={() => {
                 if (replayStartTimerRef.current !== null) {
                   window.clearTimeout(replayStartTimerRef.current)

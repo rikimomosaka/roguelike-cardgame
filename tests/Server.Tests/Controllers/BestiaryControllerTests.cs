@@ -78,6 +78,8 @@ public class BestiaryControllerTests : IClassFixture<TempDataFactory>
         Assert.Equal(5, player.Defense);
         Assert.Equal("連閃", player.TraitName);
         Assert.Contains("[S:afterimage]", player.TraitEffects);
+        Assert.Equal(10, player.Deck!.Count);
+        Assert.Contains("basic_attack", player.Deck);
         Assert.Contains(player.Actions, action => action.Category == "戦技");
         Assert.Contains(player.Actions, action => action.Category == "奥義");
         Assert.False(string.IsNullOrWhiteSpace(player.Description));

@@ -242,6 +242,8 @@ export type BestiaryCharacterDto = {
   /** 特性名と書式付き効果文（[K:..]/[S:..] マーカー入り）。 */
   traitName?: string | null
   traitEffects?: string | null
+  /** 操作キャラの初期デッキ（カード ID。重複あり）。 */
+  deck?: string[] | null
   /** 行動力（エナジー回復量）。 */
   energyPerTurn?: number
   /** 知力（ドロー枚数）。 */

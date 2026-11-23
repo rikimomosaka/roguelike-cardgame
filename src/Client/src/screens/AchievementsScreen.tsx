@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { getBestiary } from '../api/bestiary'
 import { getHistory } from '../api/history'
 import type { BestiaryCharacterDto, BestiaryDto, RunResultDto } from '../api/types'
@@ -77,13 +77,25 @@ function groupByRarity<T>(
   return groups
 }
 
-function BackButton({ onBack }: { onBack: () => void }) {
+function BackButton({ onBack, compact = false }: { onBack: () => void; compact?: boolean }) {
   return (
-    <button type="button" className="achievements__back" onClick={onBack}>
+    <button
+      type="button"
+      className={`achievements__back${compact ? ' achievements__back--compact' : ''}`}
+      onClick={onBack}
+    >
       <span className="achievements__back-mark" aria-hidden="true">◂</span>
       メニューへ戻る
     </button>
   )
+}
+
+/** 各図鑑の絞り込み行に「メニューへ戻る」を置くための受け渡し。 */
+const ArchiveBackContext = createContext<(() => void) | null>(null)
+
+function ArchiveBackButton() {
+  const onBack = useContext(ArchiveBackContext)
+  return onBack ? <BackButton onBack={onBack} compact /> : null
 }
 
 type Tab = 'characters' | 'cards' | 'relics' | 'potions' | 'enemies' | 'history'
@@ -164,6 +176,7 @@ export function AchievementsScreen({ accountId, onBack }: Props) {
             active={tab === 'history'} onClick={() => setTab('history')} />
         </div>
 
+        <ArchiveBackContext.Provider value={onBack}>
         <section className="achievements__content">
           {tab === 'characters' && (
             <CharactersTab
@@ -198,10 +211,7 @@ export function AchievementsScreen({ accountId, onBack }: Props) {
           )}
           {tab === 'history' && <HistoryList history={history} />}
         </section>
-
-        <footer className="achievements__footer">
-          <BackButton onBack={onBack} />
-        </footer>
+        </ArchiveBackContext.Provider>
       </div>
     </main>
   )
@@ -351,6 +361,7 @@ function CharactersTab({ players, allies }: {
   const [classFilter, setClassFilter] = useState<CharacterClassFilter>('all')
   const [query, setQuery] = useState('')
   const [discoveryFilter, setDiscoveryFilter] = useState<DiscoveryFilter>('all')
+  const { names: cardNames } = useCardCatalog()
   const sourceCharacters = filter === 'player' ? players : allies
   const classFiltered = filter === 'player' && classFilter !== 'all'
     ? sourceCharacters.filter(character => character.characterClass === classFilter)
@@ -421,7 +432,7 @@ function CharactersTab({ players, allies }: {
         {characters.length === 0 && <p className="achievements__empty">該当するキャラクターはいません。</p>}
         <div className="achievements__character-grid">
           {characters.map(character => (
-            <CharacterTile key={character.id} character={character} />
+            <CharacterTile key={character.id} character={character} cardNames={cardNames} />
           ))}
         </div>
       </div>
@@ -429,7 +440,11 @@ function CharactersTab({ players, allies }: {
   )
 }
 
-function CharacterTile({ character }: { character: BestiaryCharacterDto }) {
+function CharacterTile({ character, cardNames }: {
+  character: BestiaryCharacterDto
+  cardNames: Record<string, string>
+}) {
+  const deck = aggregateDeck(character.deck ?? [], cardNames)
   const characterClass = character.characterClass ?? null
   const image = character.kind === 'player'
     ? resolveCharacterPortrait(character.id)
@@ -523,6 +538,18 @@ function CharacterTile({ character }: { character: BestiaryCharacterDto }) {
           <CharacterTextSection label="キャラクター説明">
             <p>{character.description}</p>
           </CharacterTextSection>
+          <section className="achievements__character-section achievements__character-deck">
+            <h3>初期デッキ {character.deck?.length ?? 0}枚</h3>
+            {deck.length > 0 ? (
+              <ul>
+                {deck.map(entry => (
+                  <li key={entry.id}>
+                    <span>{entry.name}</span><strong>×{entry.count}</strong>
+                  </li>
+                ))}
+              </ul>
+            ) : <p>初期デッキは空です。</p>}
+          </section>
         </div>
       )}
       {character.isDiscovered && character.kind === 'ally' && (
@@ -555,6 +582,12 @@ function CharacterTile({ character }: { character: BestiaryCharacterDto }) {
       )}
     </div>
   )
+}
+
+function aggregateDeck(ids: readonly string[], cardNames: Record<string, string>) {
+  const counts = new Map<string, number>()
+  for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1)
+  return [...counts].map(([id, count]) => ({ id, count, name: cardNames[id] ?? id }))
 }
 
 function CharacterTextSection({ label, children }: {
@@ -834,6 +867,7 @@ function ArchiveTools({ label, query, onQuery, discovery, onDiscovery }: {
           aria-label={`${label}を検索`}
         />
       </label>
+      <div className="achievements__tools-end">
       <div className="achievements__discovery-filter" role="group" aria-label="発見状態で絞り込み">
         {([
           ['all', 'すべて'],
@@ -849,6 +883,8 @@ function ArchiveTools({ label, query, onQuery, discovery, onDiscovery }: {
             {text}
           </button>
         ))}
+      </div>
+      <ArchiveBackButton />
       </div>
     </div>
   )
@@ -866,6 +902,7 @@ function HistoryList({ history }: { history: RunResultDto[] }) {
           <div className="achievements__panel-title">▸ RUN HISTORY</div>
           <p className="achievements__count">0 件</p>
         </div>
+        <div className="achievements__tools achievements__tools--back-only"><ArchiveBackButton /></div>
         <p className="achievements__history-empty">履歴なし</p>
       </div>
     )
@@ -876,6 +913,7 @@ function HistoryList({ history }: { history: RunResultDto[] }) {
         <div className="achievements__panel-title">▸ RUN HISTORY</div>
         <p className="achievements__count">{history.length} 件</p>
       </div>
+      <div className="achievements__tools achievements__tools--back-only"><ArchiveBackButton /></div>
       <div className="achievements__scroll">
         <ul className="achievements__history">
           {history.map(run => {
