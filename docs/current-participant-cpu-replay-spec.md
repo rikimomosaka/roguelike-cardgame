@@ -82,6 +82,7 @@
 
 ## 4. CPU判断
 
+- 詳細（使用条件・優先順位・対象選び・敵の事情）は [current-cpu-card-play-policy.md](current-cpu-card-play-policy.md)。
 - CPUはカードを1枚使うたびに合法候補を再計算する。
 - 候補比較順:
   1. コンボ軽減を受けてコンボが継続する。

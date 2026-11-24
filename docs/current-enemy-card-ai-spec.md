@@ -57,6 +57,8 @@
 
 ## 4. 行動計画
 
+カードの選び方（優先順位）は味方CPUと共通: [current-cpu-card-play-policy.md](current-cpu-card-play-policy.md)。
+
 - 次の 1 枚は味方 CPU と同じ `CpuCardPlayPolicy` の比較規則で選ぶ
   （コンボ軽減継続 → 継続 → 途切れ → 実支払コスト → deck の priority → 手札左）。
   使用可能なカードがなくなるまで続け、1 体 1 ターン 30 枚を安全上限とする。
