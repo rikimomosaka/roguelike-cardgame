@@ -52,6 +52,18 @@
 | down（ダウン） | 6 | 720ms | しない | 最終コマで静止（倒れた姿勢のまま） |
 
 - シートは横 1 列・等間隔。ファイル名＝種類名（`idle.png` 等）。
+
+#### idle（待機）の必須要素（8 コマ・1 コマ 150ms）
+
+| 要素 | 規格 |
+|---|---|
+| 呼吸 | 上半身（頭・胴）だけ 1 ドット上下。例: コマ 1〜2＝0、3〜6＝-1、7〜8＝0。**足元は動かさない** |
+| まばたき | 1 ループに 1 回、目を閉じたコマを 1 コマ（例: コマ 6）。閉じ目は 1〜2 ドット幅の線 |
+| 髪・服の揺れ | 1〜2 ドットの揺れ。呼吸より 1 コマ遅れて動く（体に引っ張られる感じ） |
+| ループ | コマ 8 → コマ 1 がつながる（コマ 1 と同じ姿勢には戻さず、1 つ手前で止める） |
+
+- 呼吸とまばたきは「基準スプライト ＋ 閉じ目差分」から**スクリプトで機械的に作れる**（AI 不要・確実に 1 ドット）。
+- 髪・服の揺れは AI（ドット特化 AI の「小さな動き」系）か手直しで作り、呼吸と合成する。
 - 敵は最低限 idle / attack_a / hurt / down の 4 種。attack_b・skill は任意（無ければ attack_a で代用）。
 - attack_a / attack_b の使い分けは別途ルール化が必要（例: 単体＝a、全体＝b。§8）。
 
@@ -126,7 +138,19 @@ AI のドット風画像は格子がずれ、色が多く、縁がにじむ。�
 - ポイント: 「汎用 AI で毎コマ描かせる」は一貫性もコストも悪い。**汎用 AI はデザイン 1 枚、コマはドット特化 AI**に分ける。
 - 失敗作を減らすため、プロンプト・参照画像・設定はキャラごとに保存して再利用する（§6）。
 
-### 4.4 必要枚数の目安
+### 4.4 サービスの選び方（コスパ）
+
+| | PixelLab | Retro Diffusion |
+|---|---|---|
+| 課金 | 月額プラン（$12/$24/$50）または API 従量（コマ数・サイズで変動、例: 32×32・4 コマ 約 $0.022） | API 従量。アニメ 1 回 $0.10〜0.25（小さな動き・独自動作は $0.25） |
+| 強み | 参照画像から同じキャラを保ったまま作る機能（キャラ作成・骨格アニメ） | 4〜16 コマのループ・透過・シート出力が標準。MCP サーバーあり |
+| 弱み | 骨格アニメは 128×128 まで。推定骨格は手直しが要ることがある | 1 回あたりは高め |
+
+- 想定量（約 40 体 × 4〜5 種 × やり直し 3 回 ≒ 600 回）で、Retro Diffusion は概算 $85〜150、PixelLab 従量はそれ以下の見込み（いずれも公式で要確認）。
+- **推奨**: ①待機の呼吸・まばたきはスクリプトで作る（無料）②攻撃・スキル・被弾・ダウンだけを AI で作る
+  ③最初に 1 体分（数ドル程度）を両サービスで試し、品質と一貫性で決める。
+
+### 4.5 必要枚数の目安
 
 - 対象: プレイヤー 4・味方ユニット 1・敵 34 ＝ 39 体。
 - プレイヤー／ユニット: 静止画 2 ＋ アニメ 6 種（38 コマ）。敵: 静止画 2 ＋ アニメ 4 種（24 コマ）。
@@ -134,6 +158,19 @@ AI のドット風画像は格子がずれ、色が多く、縁がにじむ。�
 - 料金（2026 年の第三者まとめ。採用前に各公式で要確認）: PixelLab は月額 $12 / $24 / $50 のプラン、
   API は骨格アニメ 1 回 約 $0.005・キャラ作成 約 $0.04。Retro Diffusion は 1 枚 約 $0.015〜0.03 の従量課金。
   → アニメ量産はドット特化 AI の月額プラン 1〜2 か月分で収まる規模と見込む（要検証）。
+
+### 4.6 Claude による自動化の範囲
+
+| 工程 | 自動化 | 必要なもの |
+|---|---|---|
+| プロンプト作成 | できる | キャラ設定（説明文・クラス） |
+| 画像生成（他 AI） | API／MCP 経由ならできる | API キー（環境変数に置き、リポジトリには入れない）、ネットワーク実行の許可、1 回の上限予算 |
+| ドット変換・規格合わせ | できる | 変換スクリプト（このリポジトリに作る） |
+| 見た目の判断 | 一部 | 規格（サイズ・色数・半透明・コマ数）は機械チェック。デザインの良し悪しは**人の確認ポイント**を置く |
+| 実装・差し替え | できる | — |
+
+- Web 画面しかないサービスは自動化に向かない（API／MCP があるものを選ぶ）。
+- 人の確認ポイント: ①デザイン案の採用 ②キャラ 1 体分の完成確認。それ以外は一括で進める。
 
 ## 5. 実装に必要な変更（概要）
 
@@ -170,4 +207,5 @@ AI のドット風画像は格子がずれ、色が多く、縁がにじむ。�
 
 - 透過出力: [GPT-Image-2 の透過出力](https://alphasignal.ai/news/openai-s-gpt-image-2-now-generates-transparent-backgrounds-in-a-single-api-call) / [各 AI の透過対応比較](https://transparify.app/blog/ai-image-generators-transparent-background) / [Gemini 等の透過事情](https://ai-engine.net/blog/transparent-png-ai-generated-images) / [ChatGPT の透過の現状](https://www.little6llc.com/2026/09/14/chatgpt-can-now-do-transparent-backgrounds-sort-of-whats-changed-in-2026/)
 - ドット変換: [Pixel Snapper](https://github.com/Hugo-Dz/spritefusion-pixel-snapper)（[解説](https://www.spritefusion.com/pixel-snapper/how-to-fix-ai-pixel-art)）/ [perfectPixel](https://github.com/theamusing/perfectPixel) / [PixelRefiner](https://github.com/HappyOnigiri/PixelRefiner) / [Pixel-Perfect](https://vpetkov.net/2026/09/15/pixel-perfect-turning-ai-pixel-art-into-real-pixel-art/)
+- 料金・API: [Retro Diffusion API・MCP](https://retrodiffusion.ai/app/guide/api) / [Retro Diffusion vs PixelLab](https://gamedevaihub.com/retro-diffusion-vs-pixellab/)
 - ドット特化 AI: [PixelLab API](https://www.pixellab.ai/pixellab-api) / [骨格アニメ](https://www.pixellab.ai/docs/tools/animate-with-skeleton) / [Retro Diffusion](https://retrodiffusion.ai/) / [PixelLab と Retro Diffusion の比較](https://starterloot.com/guides/pixellab-vs-retro-diffusion/) / [料金・商用利用のまとめ](https://gamedevaihub.com/best-ai-pixel-art-generators-for-2d-indie-games/)
