@@ -162,6 +162,12 @@ import {
   hasShufflePresentationTrigger,
 } from './battleScreen/drawPresentation'
 import {
+  hasInlineDrawEvent,
+  planInlineDraws,
+  type DrawPileState,
+  type InlineDrawAction,
+} from './battleScreen/inlineDrawPlan'
+import {
   resolveFeedbackStatusId,
   statusFeedbackText,
 } from './battleScreen/statusFeedback'
@@ -2647,6 +2653,93 @@ export function BattleScreen({
         casterInstanceId && baselineActor(casterInstanceId)?.side === 'Enemy'
           ? ENEMY_SUPPORT_EFFECT_MS
           : STEP_DELAY_MS
+      // 効果の途中のドロー・山札再構築は、そのイベントの位置で演出する（ターン開始時の
+      // ドローは従来どおり最後にまとめて演出）。手札・山札・捨札以外は行動前の表示のまま。
+      const inlineDrawActorId = !presentationOnly && state
+        ? findPrimaryParticipant(state)?.actorInstanceId
+          ?? state.allies.find(actor => actor.definitionId === 'hero')?.instanceId
+        : undefined
+      const inlineDraw = (() => {
+        if (presentationOnly || !state) return null
+        if (steps.some(candidate => candidate.event.kind === 'TurnStart')) return null
+        if (!hasInlineDrawEvent(steps, inlineDrawActorId)) return null
+        const previousHandIds = new Set(state.hand.map(card => card.instanceId))
+        const drawn = resp.state.hand.filter(card => !previousHandIds.has(card.instanceId))
+        const drawnIds = new Set(drawn.map(card => card.instanceId))
+        const previousDrawIds = new Set(state.drawPile.map(card => card.instanceId))
+        const afterReshuffle = drawn.filter(card => !previousDrawIds.has(card.instanceId))
+        const reshuffled = hasShufflePresentationTrigger(steps, inlineDrawActorId)
+          && state.discardPile.length > 0
+          && afterReshuffle.length + resp.state.drawPile.length > 0
+        const reshuffleCards = reshuffled ? [...resp.state.drawPile, ...afterReshuffle] : null
+        const survivingHand = resp.state.hand.filter(card => !drawnIds.has(card.instanceId))
+        return {
+          plan: planInlineDraws({
+            steps,
+            actorInstanceId: inlineDrawActorId,
+            newlyDrawn: drawn,
+            survivingHand,
+            preDrawPile: state.drawPile,
+            preDiscardPile: state.discardPile,
+            reshuffleCards,
+          }),
+          initial: {
+            hand: survivingHand,
+            drawPile: state.drawPile,
+            discardPile: reshuffleCards ?? state.discardPile,
+          } satisfies DrawPileState,
+        }
+      })()
+      let inlineDrawStarted = false
+      const commitInlinePiles = (piles: DrawPileState) => {
+        const base = state
+        if (!base) return
+        setState({
+          ...base,
+          hand: piles.hand,
+          drawPile: piles.drawPile,
+          discardPile: piles.discardPile,
+          participants: base.participants?.map(participant =>
+            participant.actorInstanceId === inlineDrawActorId
+              ? {
+                  ...participant,
+                  hand: piles.hand,
+                  drawPile: piles.drawPile,
+                  discardPile: piles.discardPile,
+                }
+              : participant),
+        })
+      }
+      const runInlineDrawAction = async (action: InlineDrawAction) => {
+        if (!inlineDraw) return
+        if (!inlineDrawStarted) {
+          inlineDrawStarted = true
+          commitInlinePiles(inlineDraw.initial)
+          await sleep(60)
+        }
+        if (action.kind === 'reshuffle') {
+          await sleep(220)
+          triggerReshuffleAnim(action.cards)
+          await sleep(action.cards.length * 110 + 700)
+          commitInlinePiles(action.stateAfter)
+          return
+        }
+        await new Promise<void>(resolveAll => {
+          let remaining = action.cards.length
+          action.cards.forEach((card, index) => {
+            window.setTimeout(() => {
+              const after = action.states[index]
+              triggerDrawAnim(card, after.hand.length - 1, after.hand.length)
+              window.setTimeout(() => {
+                commitInlinePiles(after)
+                remaining -= 1
+                if (remaining === 0) resolveAll()
+              }, DRAW_FLIGHT_MS)
+            }, index * 90)
+          })
+        })
+      }
+
       // Why: 「敵のターン」 banner は 1 turn につき 1 回 (味方攻撃終了 → 初の
       // 敵 caster AttackFire の前) で出す。表示済フラグでガードする。
       let shownEnemyTurnBanner = false
@@ -2709,6 +2802,19 @@ export function BattleScreen({
             }
           }
         }
+        const inlineActions = inlineDraw?.plan.actionsByStepIndex.get(i)
+        if (inlineActions) {
+          for (const action of inlineActions) {
+            await runInlineDrawAction(action)
+            if (isCancelled()) {
+              clearTransientPresentation()
+              return
+            }
+          }
+          i++
+          continue
+        }
+
         if (ev.kind === 'PlayCard') {
           // Current responses carry the exact reset-before-Finisher value.
           // Legacy responses still receive the required first-tier sound.
@@ -3263,7 +3369,10 @@ export function BattleScreen({
       //  staging 中は resp.state を baseline にするので HP/energy/status は
       //  最終値で表示される。damageOverlay 等の累積を二重適用しないよう、
       //  staging 開始前にオーバレイをクリアする。
-      if (!presentationOnly && state) {
+      if (inlineDraw) {
+        for (const action of inlineDraw.plan.trailing) await runInlineDrawAction(action)
+      }
+      if (!presentationOnly && state && !inlineDraw) {
         const drawActorId = findPrimaryParticipant(state)?.actorInstanceId
           ?? state.allies.find(actor => actor.definitionId === 'hero')?.instanceId
         const hasDrawTrigger = hasDrawPresentationTrigger(steps, drawActorId)
