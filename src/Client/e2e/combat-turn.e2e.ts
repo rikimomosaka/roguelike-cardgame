@@ -66,7 +66,7 @@ type CharacterPick = {
 
 const DEFAULT_CHARACTER: CharacterPick = {
   className: 'ストライカー',
-  characterName: '見習い冒険者',
+  characterName: '残光剣士セラ',
 }
 
 async function createRunAndEnterFirstBattle(

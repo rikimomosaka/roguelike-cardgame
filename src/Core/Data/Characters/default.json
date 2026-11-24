@@ -1,8 +1,8 @@
 {
   "id": "default",
-  "name": "見習い冒険者",
+  "name": "残光剣士セラ",
   "characterClass": "Striker",
-  "description": "0、1、2、3コストの攻撃列を組み、終撃と残光で火力を増幅する駆け出しの冒険者。",
+  "description": "0、1、2、3コストの攻撃列を組み、終撃で連撃を締め、残光でその軌跡をもう一度なぞる剣士。",
   "traitDescription": "連閃：自身の最大コンボが4以上になった時、自身に残光1を付与する。1ターン1回。",
   "maxHp": 80,
   "startingGold": 99,

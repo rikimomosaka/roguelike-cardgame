@@ -44,3 +44,6 @@ playwright-report/
 
 # Phase 10.5.H: 開発者ローカル card override (machine-local)
 /data-local/dev-overrides/
+
+# 素材制作の作業フォルダ（生成した下書き・ログ。採用分だけ public へ移す）
+/art-work/

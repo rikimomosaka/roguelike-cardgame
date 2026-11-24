@@ -10,7 +10,7 @@ test('account creation unlocks the first route after choosing an act-start relic
   await page.getByRole('button', { name: 'はじめから' }).click()
 
   await expect(page.getByRole('heading', { name: 'キャラクター選択' })).toBeVisible()
-  await page.locator('.character-pick__select').filter({ hasText: '見習い冒険者' }).click()
+  await page.locator('.character-pick__select').filter({ hasText: '残光剣士セラ' }).click()
   await page.getByRole('button', { name: 'このキャラクターで開始' }).click()
 
   const startNode = page.locator('[data-start-entry="true"]')
