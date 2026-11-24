@@ -33,7 +33,11 @@ for (let f = 0; f < N; f++) {
   for (let y = CUT + 1; y < H; y++) for (let x = 0; x < W; x++) if (!inSway(x, y)) put(x, y, at(src, x, y))
   const dy = breath[f]
   for (let y = 0; y <= CUT; y++) for (let x = 0; x < W; x++) if (!inSway(x, y)) put(x, y + dy, at(src, x, y))
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (inSway(x, y)) put(x + swayDx[f], y + (y <= CUT ? dy : 0), at(src, x, y))
+  // 揺れ部分は、まず動かさない位置に敷いてから、ずらした絵を重ねる。
+  // 敷かないと、矩形の境目で空いた 1 列が縦の切れ目（透明の線）になる。
+  for (const dx of swayDx[f] ? [0, swayDx[f]] : [0]) {
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (inSway(x, y)) put(x + dx, y + (y <= CUT ? dy : 0), at(src, x, y))
+  }
   frames.push(out)
 }
 

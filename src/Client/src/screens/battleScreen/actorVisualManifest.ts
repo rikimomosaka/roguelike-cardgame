@@ -28,8 +28,23 @@ function isHeroId(value: string | undefined): value is HeroId {
   return !!value && (HERO_IDS as readonly string[]).includes(value)
 }
 
+type SheetTiming = Pick<SpriteSheetDemo, 'frameCount' | 'durationMs'>
+
+/**
+ * 新規格（docs/proposed-graphics-asset-pipeline.md）で作り直したキャラのフレーム数と時間。
+ * ここにないキャラは旧素材の値を使う。
+ */
+const HERO_SHEET_TIMING: Partial<Record<HeroId, Partial<Record<CharacterMotion, SheetTiming>>>> = {
+  default: {
+    idle: { frameCount: 8, durationMs: 1200 },
+    attack: { frameCount: 6, durationMs: 600 },
+    hurt: { frameCount: 4, durationMs: 400 },
+  },
+}
+
 function heroVisual(id: HeroId): ActorVisual {
   const root = `/characters/${id}`
+  const timing = HERO_SHEET_TIMING[id] ?? {}
   return {
     image: `${root}_stand.png`,
     portrait: resolveCharacterPortrait(id),
@@ -41,6 +56,7 @@ function heroVisual(id: HeroId): ActorVisual {
         frameCount: 8,
         durationMs: 1600,
         loop: true,
+        ...timing.idle,
       },
       attack: {
         src: `${root}_attack.png`,
@@ -50,6 +66,7 @@ function heroVisual(id: HeroId): ActorVisual {
         frameCount: 4,
         durationMs: 480,
         loop: false,
+        ...timing.attack,
       },
       hurt: {
         src: `${root}_hurt.png`,
@@ -58,6 +75,7 @@ function heroVisual(id: HeroId): ActorVisual {
         frameCount: 4,
         durationMs: 440,
         loop: false,
+        ...timing.hurt,
       },
     },
   }

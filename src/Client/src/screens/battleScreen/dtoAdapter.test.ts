@@ -93,15 +93,15 @@ describe('toCharacterDemo', () => {
         frameWidth: 192,
         frameHeight: 256,
         frameCount: 8,
-        durationMs: 1600,
+        durationMs: 1200,
         loop: true,
       },
       attack: {
         src: '/characters/default_attack.png',
         frameWidth: 384,
         frameHeight: 256,
-        frameCount: 4,
-        durationMs: 480,
+        frameCount: 6,
+        durationMs: 600,
         loop: false,
       },
       hurt: {
@@ -109,7 +109,7 @@ describe('toCharacterDemo', () => {
         frameWidth: 192,
         frameHeight: 256,
         frameCount: 4,
-        durationMs: 440,
+        durationMs: 400,
         loop: false,
       },
     })

@@ -18,13 +18,15 @@ describe('actorVisualManifest', () => {
 
     expect(visual?.image).toBe(`/characters/${id}_stand.png`)
     expect(visual?.portrait).toBe(`/characters/portraits/${id}.png`)
+    // セラ（default）は新規格で作り直したモーション。他のキャラは旧素材の値。
+    const remade = id === 'default'
     expect(visual?.animations?.idle?.frameCount).toBe(8)
-    expect(visual?.animations?.idle?.durationMs).toBe(1600)
-    expect(visual?.animations?.attack?.frameCount).toBe(4)
+    expect(visual?.animations?.idle?.durationMs).toBe(remade ? 1200 : 1600)
+    expect(visual?.animations?.attack?.frameCount).toBe(remade ? 6 : 4)
     expect(visual?.animations?.attack?.frameWidth).toBe(384)
-    expect(visual?.animations?.attack?.durationMs).toBe(480)
+    expect(visual?.animations?.attack?.durationMs).toBe(remade ? 600 : 480)
     expect(visual?.animations?.hurt?.frameCount).toBe(4)
-    expect(visual?.animations?.hurt?.durationMs).toBe(440)
+    expect(visual?.animations?.hurt?.durationMs).toBe(remade ? 400 : 440)
   })
 
   it('routes enemy and summon art to separate asset namespaces', () => {

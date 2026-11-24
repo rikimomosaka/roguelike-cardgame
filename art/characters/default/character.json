@@ -1,0 +1,16 @@
+{
+  "id": "default",
+  "name": "残光剣士セラ",
+  "brief": "docs/art/characters/striker_sera.md",
+  "note": "原寸の素材。各モーションは横並びの等幅フレーム。footRow は足元の行、anchorX は体の横中心（原寸 px）。",
+  "base": { "file": "base.png", "blink": "blink.png", "width": 80, "height": 80, "footRow": 77, "anchorX": 39.5, "colors": 24 },
+  "motions": {
+    "idle":     { "file": "idle.png",     "frameWidth": 80,  "frameHeight": 80, "frames": 8, "durationMs": 1200, "loop": true },
+    "attack_a": { "file": "attack_a.png", "frameWidth": 128, "frameHeight": 96, "frames": 6, "durationMs": 600, "loop": false, "hitFrame": 3 },
+    "attack_b": { "file": "attack_b.png", "frameWidth": 128, "frameHeight": 96, "frames": 6, "durationMs": 600, "loop": false, "hitFrame": 3 },
+    "skill":    { "file": "skill.png",    "frameWidth": 128, "frameHeight": 96, "frames": 8, "durationMs": 800, "loop": false, "releaseFrame": 5 },
+    "hurt":     { "file": "hurt.png",     "frameWidth": 128, "frameHeight": 96, "frames": 4, "durationMs": 400, "loop": false },
+    "down":     { "file": "down.png",     "frameWidth": 128, "frameHeight": 96, "frames": 6, "durationMs": 720, "loop": false, "holdLastFrame": true }
+  },
+  "motionCanvas": { "footRow": 93, "anchorX": 63.5 }
+}
