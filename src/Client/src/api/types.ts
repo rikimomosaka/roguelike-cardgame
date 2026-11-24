@@ -507,6 +507,8 @@ export type BattleStateDto = {
   finisherRecord?: FinisherRecordDto | null
   /** The first card after 連環 continues the combo at full cost. */
   comboCarryoverPending?: boolean
+  /** このターンに使用したカード（使用順）。プレイ履歴表示用。 */
+  playHistoryThisTurn?: FinisherRecordCardDto[]
 }
 
 export type FinisherRecordCardDto = {
@@ -575,6 +577,8 @@ export type BattleParticipantDto = {
   finisherRecord?: FinisherRecordDto | null
   /** The first card after 連環 continues the combo at full cost. */
   comboCarryoverPending?: boolean
+  /** このターンに使用したカード（使用順）。プレイ履歴表示用。 */
+  playHistoryThisTurn?: FinisherRecordCardDto[]
 }
 
 export type BattleReplayDto = {

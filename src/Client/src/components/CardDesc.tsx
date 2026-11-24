@@ -33,7 +33,7 @@ export const KEYWORD_DEFS: Record<string, { name: string; desc: string }> = {
   },
   finisher: {
     name: '終撃',
-    desc: '効果の適用後、このカードを含むこのコンボ中の全てのアタックカードを残光としてこのターン中保存し、現在コンボを0にする。',
+    desc: '効果の適用後、このカードを含むこのコンボ中の全てのアタックカードを保存し、現在コンボを0にする。',
   },
   reprise: {
     name: '再演',
@@ -92,7 +92,7 @@ export const STATUS_DEFS: Record<string, { name: string; desc: string }> = {
   seal: { name: '封印', desc: '戦技・奥義を使用できない。ターン終了時に[S:seal]が1減少する。' },
   exhaustion: { name: '消耗', desc: 'ターン開始時にエナジーを[N:X]失い、[S:exhaustion]が1減少する。' },
   distress: { name: '動揺', desc: 'カードを使用することでコンボが途切れた時、エナジーとコンボゲージを0にする。ターン終了時に[S:distress]が1減少する。' },
-  afterimage: { name: '残光', desc: '自身の攻撃終了時、[K:finisher]によって保存された全ての効果を使用順に[N:X]回再実行し、[S:afterimage]が消滅する。' },
+  afterimage: { name: '残光', desc: '自身の攻撃終了時、このターン最後の攻撃を[N:X]回実行し、[S:afterimage]が消滅する。' },
   steadfast: { name: '堅持', desc: 'ターン終了時に消滅するブロックの[N:50]%を次のターンに持ち越す。ターン終了時に[S:steadfast]が1減少する。' },
   cover: { name: '護衛', desc: 'アタックによって味方が受けるダメージを、自身のブロックで可能な限り防ぐ。ターン終了時に[S:cover]が1減少する。' },
   defensiveStance: { name: '守勢', desc: '自身のブロックを使って敵のアタックを完全に防いだ時、コンボゲージを[N:1]得る。ターン終了時に[S:defensiveStance]が1減少する。' },

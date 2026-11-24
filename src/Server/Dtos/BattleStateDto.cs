@@ -35,7 +35,9 @@ public sealed record BattleStateDto(
     IReadOnlyList<BattleParticipantDto>? Participants = null,
     FinisherRecordDto? FinisherRecord = null,
     bool ComboCarryoverPending = false,
-    IReadOnlyList<EnemyParticipantSummaryDto>? EnemyParticipants = null);
+    IReadOnlyList<EnemyParticipantSummaryDto>? EnemyParticipants = null,
+    /// <summary>主参加者がこのターンに使用したカード（使用順）。プレイ履歴表示用。</summary>
+    IReadOnlyList<FinisherRecordCardDto>? PlayHistoryThisTurn = null);
 
 /// <summary>
 /// カード制御の敵のカード資源の概要（行動再生の入口・開発確認用）。

@@ -90,6 +90,71 @@ public sealed class BattleEngineCardAbilityRuntimeTests
     }
 
     [Fact]
+    public void Every_resolved_attack_is_saved_for_afterimage_without_finisher()
+    {
+        // 全クラス共通: 最後に解決したアタックカードを残光用に保存する。
+        // スキルは保存を上書きしない。
+        var first = Card(
+            "first-attack", CardType.Attack, 0,
+            new CardEffect("attack", EffectScope.Single, EffectSide.Enemy, 3));
+        var second = Card(
+            "second-attack", CardType.Attack, 0,
+            new CardEffect("attack", EffectScope.Single, EffectSide.Enemy, 4));
+        var guard = Card(
+            "guard", CardType.Skill, 0,
+            new CardEffect("block", EffectScope.Self, null, 2));
+        var state = BattleFixtures.MinimalState(
+            hand: ImmutableArray.Create(
+                Instance(first, "first-1"),
+                Instance(second, "second-1"),
+                Instance(guard, "guard-1"))) with { Energy = 3 };
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { first, second, guard });
+
+        var (afterFirst, _) = BattleEngine.PlayCard(state, 0, 0, 0, Rng(), catalog);
+        Assert.Equal("first-attack",
+            Assert.Single(afterFirst.LastFinisherRecord).CardDefinitionId);
+
+        var (afterSecond, _) = BattleEngine.PlayCard(afterFirst, 0, 0, 0, Rng(), catalog);
+        Assert.Equal("second-attack",
+            Assert.Single(afterSecond.LastFinisherRecord).CardDefinitionId);
+
+        var (afterGuard, _) = BattleEngine.PlayCard(afterSecond, 0, 0, 0, Rng(), catalog);
+        Assert.Equal("second-attack",
+            Assert.Single(afterGuard.LastFinisherRecord).CardDefinitionId);
+        Assert.Equal(3, afterGuard.PlayedCardHistoryThisTurn.Length);
+    }
+
+    [Fact]
+    public void Afterimage_without_finisher_replays_the_last_attack_of_the_turn()
+    {
+        var strike = Card(
+            "plain-attack", CardType.Attack, 0,
+            new CardEffect("attack", EffectScope.Single, EffectSide.Enemy, 5));
+        var hero = BattleFixtures.Hero() with
+        {
+            Statuses = BattleFixtures.Hero().Statuses.SetItem(BattleStatusIds.Afterimage, 2),
+        };
+        var state = BattleFixtures.MinimalState(
+            hand: ImmutableArray.Create(Instance(strike, "plain-1"))) with
+        {
+            Allies = ImmutableArray.Create(hero),
+            Energy = 1,
+        };
+        var catalog = BattleFixtures.MinimalCatalog(cards: new[] { strike });
+
+        var (played, _) = BattleEngine.PlayCard(state, 0, 0, 0, Rng(), catalog);
+        var attacking = played with { Phase = BattlePhase.PlayerAttacking };
+        var (next, events, paused) = BattleEngine.ResolveAfterimageAtActorEnd(
+            attacking, hero.InstanceId, Rng(), catalog, 0);
+
+        Assert.False(paused);
+        Assert.Equal(2, events.Count(battleEvent =>
+            battleEvent.Kind == BattleEventKind.ReenactCardEffects
+            && battleEvent.CardId == "plain-attack"));
+        Assert.Equal(0, next.Allies[0].GetStatus(BattleStatusIds.Afterimage));
+    }
+
+    [Fact]
     public void Contingency_skips_effects_and_arms_in_normal_exhaust_pile()
     {
         var contingency = new CardDefinition(

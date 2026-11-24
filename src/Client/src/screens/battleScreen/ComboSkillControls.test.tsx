@@ -81,31 +81,39 @@ describe('ComboGauge', () => {
 })
 
 describe('BattleComboControls', () => {
-  it('shows a finisher record button below the gauge only while cards are saved', () => {
+  it('always shows a play history button and highlights it while afterimage cards are saved', () => {
     const onOpenFinisherRecord = vi.fn()
     const { rerender } = render(
       <TooltipHost>
         <BattleComboControls
           {...baseProps}
           finisherRecord={finisherRecord}
+          playHistoryCount={3}
           onOpenFinisherRecord={onOpenFinisherRecord}
         />
       </TooltipHost>,
     )
 
     const button = screen.getByRole('button', {
-      name: '保存された残光を表示（1枚）',
+      name: 'このターンのプレイ履歴を表示（3枚、残光保存1枚）',
     })
-    expect(button).toHaveTextContent('保存された残光 1')
+    expect(button).toHaveTextContent('プレイ履歴 3残光 1')
+    expect(button).toHaveClass('is-afterimage-saved')
     fireEvent.click(button)
     expect(onOpenFinisherRecord).toHaveBeenCalledOnce()
 
     rerender(
       <TooltipHost>
-        <BattleComboControls {...baseProps} finisherRecord={null} />
+        <BattleComboControls
+          {...baseProps}
+          finisherRecord={null}
+          playHistoryCount={2}
+          onOpenFinisherRecord={onOpenFinisherRecord}
+        />
       </TooltipHost>,
     )
-    expect(screen.queryByRole('button', { name: /保存された残光/ })).not.toBeInTheDocument()
+    const plain = screen.getByRole('button', { name: 'このターンのプレイ履歴を表示（2枚）' })
+    expect(plain).not.toHaveClass('is-afterimage-saved')
   })
 
   it('renders tactical, center combo column, and ultimate in that DOM order', () => {

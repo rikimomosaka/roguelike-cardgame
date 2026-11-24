@@ -158,3 +158,16 @@
     gap: 18px;
   }
 }
+
+/* プレイ履歴: 残光で再実行される（保存中の）カードだけを強調する。 */
+.finisher-record__cards li.is-afterimage-saved > .card,
+.finisher-record__cards li.is-afterimage-saved > :not(.finisher-record__order) {
+  filter: drop-shadow(0 0 6px rgba(111, 235, 255, 0.75));
+}
+
+.finisher-record__empty {
+  margin: 0;
+  padding: 28px;
+  color: var(--fg-muted);
+  text-align: center;
+}

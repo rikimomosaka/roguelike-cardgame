@@ -35,7 +35,7 @@ public static class BattleStatusTextCatalog
             [BattleStatusIds.Haste] = new("加速", "ターン開始時のエナジー回復量を+[N:X]し、[S:haste]が消滅する。"),
             [BattleStatusIds.Continuity] = new("継続", "コンボ条件を満たさないカードを使った時、コンボを継続し、[S:continuity]が1減少する。"),
             [BattleStatusIds.Mastery] = new("熟練", "ターン開始時にコンボゲージを[N:X]得て、[S:mastery]が1減少する。"),
-            [BattleStatusIds.Afterimage] = new("残光", "自身の攻撃終了時、[K:finisher]によって保存された全ての効果を使用順に[N:X]回再実行し、[S:afterimage]が消滅する。"),
+            [BattleStatusIds.Afterimage] = new("残光", "自身の攻撃終了時、このターン最後の攻撃を[N:X]回実行し、[S:afterimage]が消滅する。"),
             [BattleStatusIds.Steadfast] = new("堅持", "ターン終了時に消滅するブロックの[N:50]%を次のターンに持ち越す。ターン終了時に[S:steadfast]が1減少する。"),
             [BattleStatusIds.Cover] = new("護衛", "アタックによって味方が受けるダメージを、自身のブロックで可能な限り防ぐ。ターン終了時に[S:cover]が1減少する。"),
             [BattleStatusIds.DefensiveStance] = new("守勢", "自身のブロックを使って敵のアタックを完全に防いだ時、コンボゲージを[N:1]得る。ターン終了時に[S:defensiveStance]が1減少する。"),

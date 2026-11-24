@@ -156,7 +156,7 @@ describe('CharacterPickScreen', () => {
 
     const tooltip = screen.getByRole('tooltip')
     expect(within(tooltip).getAllByText('残光').length).toBeGreaterThan(0)
-    expect(tooltip).toHaveTextContent('終撃によって保存された全ての効果')
+    expect(tooltip).toHaveTextContent('このターン最後の攻撃')
   })
 
   it('opens the starting deck as inspectable cards and closes the pile modal', async () => {

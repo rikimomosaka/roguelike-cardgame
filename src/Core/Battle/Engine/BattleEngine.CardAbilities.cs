@@ -78,6 +78,12 @@ public static partial class BattleEngine
         {
             RepriseEligibleHistory = state.RepriseEligibleHistory.Add(completed),
             NextEffectResolutionSequence = sequence,
+            // 全クラス共通: 解決を終えた最後のアタックカードを残光用に保存する
+            // （残光は終撃なしでも「このターン最後の攻撃」を再実行できる）。
+            // 終撃はこの後でコンボ中の全アタックカードに上書きする。
+            LastFinisherRecord = snapshot.CardType == CardType.Attack
+                ? ImmutableArray.Create(snapshot)
+                : state.LastFinisherRecord,
         };
     }
 

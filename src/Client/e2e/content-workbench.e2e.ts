@@ -38,7 +38,7 @@ test('all game data layers open in the full-viewport content workbench', async (
   await expect(statusTerm).toBeVisible()
   await statusTerm.hover()
   await expect(page.getByRole('tooltip')).toContainText('残光')
-  await expect(page.getByRole('tooltip')).toContainText('終撃によって保存された全ての効果')
+  await expect(page.getByRole('tooltip')).toContainText('このターン最後の攻撃')
 
   await page.getByRole('button', { name: 'レリック', exact: true }).click()
   await page.locator('[data-content-id="nyango_bell"]').click()

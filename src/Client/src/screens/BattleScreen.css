@@ -2834,3 +2834,36 @@ html[data-motion='reduced'] .playing-card {
   border-color: #a3213a;
   box-shadow: 0 0 12px rgba(200, 20, 50, 0.6);
 }
+
+/* プレイ履歴ボタン: 通常は控えめ、残光保存中だけ発光で強調する。 */
+.finisher-record-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  color: var(--fg-muted, #b9a58a);
+  border-color: var(--border-mid, rgba(201, 152, 90, 0.5));
+  background: linear-gradient(180deg, rgba(40, 24, 14, 0.92), rgba(14, 8, 5, 0.96));
+  box-shadow: none;
+}
+
+.finisher-record-button.is-afterimage-saved {
+  color: #d8f7ff;
+  border-color: rgba(111, 235, 255, 0.78);
+  background: linear-gradient(180deg, rgba(18, 53, 70, 0.96), rgba(6, 24, 36, 0.98));
+  box-shadow: 0 0 8px rgba(72, 203, 255, 0.45);
+}
+
+.finisher-record-button__saved {
+  padding: 0 4px;
+  border-radius: 2px;
+  background: rgba(111, 235, 255, 0.2);
+  color: #b9f7ff;
+  font-size: 9px;
+}
+
+.finisher-record-button {
+  white-space: nowrap;
+  gap: 4px;
+  padding-inline: 3px;
+}

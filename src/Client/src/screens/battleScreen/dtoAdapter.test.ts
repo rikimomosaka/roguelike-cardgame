@@ -296,7 +296,7 @@ describe('toBuffs', () => {
       '/icons/ui/resonance.png',
       '/icons/ui/disruption.png',
     ])
-    expect(buffs[0].desc).toContain('[N:2]回再実行')
+    expect(buffs[0].desc).toContain('このターン最後の攻撃を[N:2]回実行')
     expect(buffs[7].desc).toContain('[S:disruption]が1減少')
   })
 })

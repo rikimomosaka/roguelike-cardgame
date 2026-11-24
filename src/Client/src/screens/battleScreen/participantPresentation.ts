@@ -325,5 +325,6 @@ export function projectParticipantForDisplay(
     characterSkillsRestricted: participant.characterSkillsRestricted
       ?? state.characterSkillsRestricted,
     finisherRecord: participant.finisherRecord ?? null,
+    playHistoryThisTurn: participant.playHistoryThisTurn ?? [],
   }
 }

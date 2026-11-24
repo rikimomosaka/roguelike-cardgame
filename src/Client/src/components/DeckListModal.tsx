@@ -24,11 +24,15 @@ export function DeckListModal({
   emptyText?: string
 }) {
   useEffect(() => {
+    // 捕捉段階で処理し、マップ画面の「ESC でメニュー」に伝わらないようにする。
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      onClose()
     }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    window.addEventListener('keydown', handleKeyDown, true)
+    return () => window.removeEventListener('keydown', handleKeyDown, true)
   }, [onClose])
 
   return (

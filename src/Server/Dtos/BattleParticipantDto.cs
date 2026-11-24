@@ -40,4 +40,6 @@ public sealed record BattleParticipantDto(
     int CpuCardPlaysThisTurn,
     bool IsReady,
     FinisherRecordDto? FinisherRecord = null,
-    bool ComboCarryoverPending = false);
+    bool ComboCarryoverPending = false,
+    /// <summary>この参加者がこのターンに使用したカード（使用順）。プレイ履歴表示用。</summary>
+    IReadOnlyList<FinisherRecordCardDto>? PlayHistoryThisTurn = null);

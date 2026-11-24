@@ -76,7 +76,9 @@ public sealed record BattleParticipantState(
         ImmutableArray<PlayedCardEffectSnapshot>.Empty;
 
     /// <summary>
-    /// Attack-card snapshots saved by the most recent Finisher this turn.
+    /// Attack-card snapshots replayed by Afterimage (残光): the last resolved
+    /// Attack card this turn, or every Attack card of the combo saved by the
+    /// most recent Finisher (終撃).
     /// </summary>
     public ImmutableArray<PlayedCardEffectSnapshot> LastFinisherRecord { get; init; } =
         ImmutableArray<PlayedCardEffectSnapshot>.Empty;

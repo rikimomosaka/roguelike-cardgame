@@ -117,7 +117,25 @@ internal static class BattleStateDtoMapper
                         participant.DrawPile.Length,
                         participant.DiscardPile.Length,
                         participant.ExhaustPile.Length))
-                    .ToList());
+                    .ToList(),
+            PlayHistoryThisTurn: ToPlayHistoryDto(primary, hero, data));
+    }
+
+    /// <summary>このターンに使用したカード（実際のプレイのみ、使用順）。</summary>
+    private static IReadOnlyList<FinisherRecordCardDto> ToPlayHistoryDto(
+        BattleParticipantState participant,
+        CombatActor? owner,
+        DataCatalog data)
+    {
+        if (participant.PlayedCardHistoryThisTurn.IsDefaultOrEmpty)
+            return Array.Empty<FinisherRecordCardDto>();
+        var context = BuildHeroContext(owner);
+        return participant.PlayedCardHistoryThisTurn
+            .OrderBy(snapshot => snapshot.PlaySequence)
+            .Select(snapshot => new FinisherRecordCardDto(
+                PlaySequence: snapshot.PlaySequence,
+                Card: ToFinisherCardDto(snapshot, data, context)))
+            .ToList();
     }
 
     private static List<BattleParticipantDto> ParticipantDtos(
@@ -222,7 +240,8 @@ internal static class BattleStateDtoMapper
             IsReady: participant.IsReady,
             FinisherRecord: ToFinisherRecordDto(
                 state, participant, owner, data),
-            ComboCarryoverPending: participant.ComboCarryoverPending);
+            ComboCarryoverPending: participant.ComboCarryoverPending,
+            PlayHistoryThisTurn: ToPlayHistoryDto(participant, owner, data));
     }
 
     private static FinisherRecordDto? ToFinisherRecordDto(

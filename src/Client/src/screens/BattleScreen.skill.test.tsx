@@ -414,11 +414,12 @@ describe('BattleScreen character skill integration', () => {
 
     const { container } = renderBattle()
     fireEvent.click(await screen.findByRole('button', {
-      name: '保存された残光を表示（1枚）',
+      name: 'このターンのプレイ履歴を表示（0枚、残光保存1枚）',
     }))
 
-    expect(await screen.findByRole('dialog', { name: '保存された残光' })).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: 'このターンのプレイ履歴' })).toBeInTheDocument()
     expect(container.querySelector('.finisher-record__cards .card__name')).toHaveTextContent('決着斬り')
+    expect(container.querySelector('[data-afterimage-order="1"]')).not.toBeNull()
     expect(container.querySelector('[data-attack-summary="20(2HIT)"]')).not.toBeNull()
     expect(container.querySelector('[data-attack-summary="8(1HIT)"]')).not.toBeNull()
   })

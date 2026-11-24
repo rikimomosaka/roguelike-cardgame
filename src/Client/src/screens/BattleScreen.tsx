@@ -91,7 +91,7 @@ import {
   toAttackIntentSummarySegments,
 } from './battleScreen/intentSummary'
 import { CardChoiceModal } from './battleScreen/CardChoiceModal'
-import { FinisherRecordModal } from './battleScreen/FinisherRecordModal'
+import { PlayHistoryModal } from './battleScreen/FinisherRecordModal'
 import { characterSkillCutinDurationMs } from './battleScreen/characterSkillCutinPresentation'
 import {
   formatComboDescription,
@@ -1796,6 +1796,7 @@ export function BattleComboControls({
   tacticalHidden = false,
   ultimateHidden = false,
   finisherRecord,
+  playHistoryCount = 0,
   onOpenFinisherRecord,
   tacticalDisabledReason,
   ultimateDisabledReason,
@@ -1820,10 +1821,13 @@ export function BattleComboControls({
   tacticalHidden?: boolean
   ultimateHidden?: boolean
   finisherRecord?: FinisherRecordDto | null
+  /** このターンに使ったカードの枚数（プレイ履歴ボタンの表示用）。 */
+  playHistoryCount?: number
   onOpenFinisherRecord?: () => void
   tacticalDisabledReason?: string
   ultimateDisabledReason?: string
 }) {
+  const afterimageSavedCount = finisherRecord?.cards.length ?? 0
   return (
     <div className="battle__combo-controls">
       {tacticalHidden ? <div className="battle__combo-skill-placeholder" aria-hidden="true" /> : (
@@ -1851,14 +1855,20 @@ export function BattleComboControls({
           comboCarryoverPending={comboCarryoverPending}
         />
         <ComboGauge value={comboGauge} />
-        {finisherRecord && finisherRecord.cards.length > 0 ? (
+        {onOpenFinisherRecord ? (
+          // プレイ履歴（どのクラスでも使える）。残光が保存されている間は強調表示。
           <button
             type="button"
-            className="finisher-record-button"
+            className={`finisher-record-button${afterimageSavedCount > 0 ? ' is-afterimage-saved' : ''}`}
             onClick={onOpenFinisherRecord}
-            aria-label={`保存された残光を表示（${finisherRecord.cards.length}枚）`}
+            aria-label={afterimageSavedCount > 0
+              ? `このターンのプレイ履歴を表示（${playHistoryCount}枚、残光保存${afterimageSavedCount}枚）`
+              : `このターンのプレイ履歴を表示（${playHistoryCount}枚）`}
           >
-            保存された残光 {finisherRecord.cards.length}
+            プレイ履歴 {playHistoryCount}
+            {afterimageSavedCount > 0 ? (
+              <span className="finisher-record-button__saved">残光 {afterimageSavedCount}</span>
+            ) : null}
           </button>
         ) : null}
       </div>
@@ -1958,7 +1968,7 @@ export function BattleScreen({
     if (error) void playSe(selectSe('uiError', error))
   }, [error, playSe])
   const [pileOpen, setPileOpen] = useState<PileKind | null>(null)
-  const [finisherRecordModal, setFinisherRecordModal] = useState<FinisherRecordDto | null>(null)
+  const [playHistoryOpen, setPlayHistoryOpen] = useState(false)
   // Why: ターン終了時 attack アニメーションの transient state。
   // attackerId: slide 中の slot、hitId: 赤点滅の被弾 slot、dyingIds: 撃破点滅中。
   const [slotAnim, setSlotAnim] = useState<SlotAnim>({})
@@ -4546,11 +4556,8 @@ export function BattleScreen({
             ultimateUsesThisTurn={displayedState.characterSkillUsesThisTurn?.ultimate ??
               (displayedState.usedCharacterSkillIdsThisTurn.includes('ultimate') ? 1 : 0)}
             finisherRecord={displayedState.finisherRecord}
-            onOpenFinisherRecord={() => {
-              if (displayedState.finisherRecord) {
-                setFinisherRecordModal(displayedState.finisherRecord)
-              }
-            }}
+            playHistoryCount={displayedState.playHistoryThisTurn?.length ?? 0}
+            onOpenFinisherRecord={() => setPlayHistoryOpen(true)}
           />
           <button
             type="button"
@@ -4640,14 +4647,16 @@ export function BattleScreen({
           onClose={() => setPileOpen(null)}
         />
       ) : null}
-      {finisherRecordModal ? (
-        <FinisherRecordModal
-          record={finisherRecordModal}
-          onClose={() => setFinisherRecordModal(null)}
-          plannedIntent={finisherRecordModal.plannedAfterimageIntent ? (
+      {playHistoryOpen ? (
+        // 表示中の参加者（再生中なら再生対象）の現在のプレイ履歴を開く。
+        <PlayHistoryModal
+          history={displayedState.playHistoryThisTurn ?? []}
+          record={displayedState.finisherRecord ?? null}
+          onClose={() => setPlayHistoryOpen(false)}
+          plannedIntent={displayedState.finisherRecord?.plannedAfterimageIntent ? (
             <div className="intents finisher-record__intents">
               <IntentChipRow
-                intents={toIntentDemos(finisherRecordModal.plannedAfterimageIntent)}
+                intents={toIntentDemos(displayedState.finisherRecord.plannedAfterimageIntent)}
               />
             </div>
           ) : null}
