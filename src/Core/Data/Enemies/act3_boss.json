@@ -9,8 +9,8 @@
   "attack": 12,
   "defense": 26,
   "initialEnergy": 0,
-  "energyPerTurn": 1,
-  "drawPerTurn": 3,
+  "energyPerTurn": 3,
+  "drawPerTurn": 2,
   "handLimit": 5,
   "aiProfileId": "low_cost_combo",
   "deck": [

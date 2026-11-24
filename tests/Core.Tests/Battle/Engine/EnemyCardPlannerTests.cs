@@ -178,6 +178,37 @@ public class EnemyCardPlannerTests
     }
 
     [Fact]
+    public void One_draw_enemy_acts_twice_only_after_drawing_a_two_card_skill()
+    {
+        // 雑魚は 1 ドローで 1 行動。2 ドローのスキルを引いた時だけ、引いた 2 枚も使って 2 回行動する。
+        var prepare = Card("e_prepare", 0,
+            new CardEffect("draw", EffectScope.Self, null, 2)) with { UsesPerTurn = 1 };
+        var catalog = BattleFixtures.MinimalCatalog(
+            cards: new[] { BattleFixtures.Strike(), BattleFixtures.Defend(), Strike, Guard, Rage, Think, prepare },
+            enemies: new[] { CardGoblin(energyPerTurn: 2, drawPerTurn: 1) },
+            encounters: new[]
+            {
+                new EncounterDefinition("enc_card", new EnemyPool(1, EnemyTier.Weak), new[] { EnemyId }),
+            });
+        BattleState WithDrawOne(BattleState state) => state with
+        {
+            EnemyParticipants = state.EnemyParticipants.SetItem(
+                0, state.EnemyParticipants[0] with { DrawPerTurn = 1 }),
+        };
+
+        var (plain, _) = EnemyCardPlanner.StartTurnAndPlan(
+            WithDrawOne(StateWithEnemyDeck("e_strike", "e_guard", "e_prepare")), Rng(), catalog);
+        Assert.Equal(new[] { "attack" },
+            plain.Enemies[0].PlannedEffects.Select(planned => planned.Effect.Action));
+
+        var (doubled, _) = EnemyCardPlanner.StartTurnAndPlan(
+            WithDrawOne(StateWithEnemyDeck("e_prepare", "e_strike", "e_guard")), Rng(), catalog);
+        Assert.Equal(
+            new[] { "attack", "block" },
+            doubled.Enemies[0].PlannedEffects.Select(planned => planned.Effect.Action).OrderBy(x => x));
+    }
+
+    [Fact]
     public void Enemy_action_announces_each_card_before_its_effects()
     {
         var catalog = Catalog();

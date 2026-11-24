@@ -1,0 +1,26 @@
+{
+  "id": "enemy_common_prepare",
+  "name": "臨戦態勢",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy common action: draw two to act twice",
+      "spec": {
+        "rarity": 5,
+        "cardType": "Skill",
+        "cost": 0,
+        "usesPerTurn": 1,
+        "effects": [
+          {
+            "action": "draw",
+            "scope": "self",
+            "amount": 2
+          }
+        ]
+      }
+    }
+  ]
+}
