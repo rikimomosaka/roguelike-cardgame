@@ -2867,3 +2867,102 @@ html[data-motion='reduced'] .playing-card {
   gap: 4px;
   padding-inline: 3px;
 }
+
+/* ================= 敵の行動演出 =================
+   敵が使ったカード名を頭上に札で表示する（行動ボタン▼より上）。 */
+.slot-action-label {
+  position: absolute;
+  top: -150px;
+  left: 50%;
+  z-index: 12;
+  transform: translateX(-50%);
+  pointer-events: none;
+  animation: slot-action-label-in 1400ms cubic-bezier(.16, .8, .22, 1) forwards;
+}
+
+.slot-action-label__text {
+  display: block;
+  min-width: 96px;
+  padding: 6px 16px 7px;
+  border: 2px solid #c9985a;
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(58, 30, 18, 0.97), rgba(20, 10, 6, 0.97));
+  box-shadow: 0 0 0 1px #000, 0 4px 14px rgba(0, 0, 0, 0.7), 0 0 14px rgba(255, 196, 92, 0.35);
+  color: #ffe6a8;
+  font-family: var(--font-body);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-align: center;
+  white-space: nowrap;
+  text-shadow: 0 2px 0 #000;
+}
+
+.battle__side--enemy .slot-action-label__text {
+  border-color: #d0485e;
+  box-shadow: 0 0 0 1px #000, 0 4px 14px rgba(0, 0, 0, 0.7), 0 0 16px rgba(230, 50, 80, 0.5);
+}
+
+@keyframes slot-action-label-in {
+  0%   { opacity: 0; transform: translate(-50%, 10px) scale(0.86); }
+  14%  { opacity: 1; transform: translate(-50%, 0) scale(1.06); }
+  24%  { transform: translate(-50%, 0) scale(1); }
+  82%  { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -8px) scale(1); }
+}
+
+/* バフ・デバフ・ブロック・回復を受けた瞬間の発光（スプライトの足元から立ち上る光柱＋外周リング）。 */
+.slot-aura {
+  position: absolute;
+  left: 50%;
+  top: 30px;
+  z-index: 3;
+  width: 140px;
+  height: 180px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  border-radius: 50% / 40%;
+  background: radial-gradient(ellipse at 50% 85%, var(--aura-color) 0%, transparent 62%);
+  mix-blend-mode: screen;
+  animation: slot-aura-rise 760ms ease-out forwards;
+}
+
+.slot-aura::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  width: 120px;
+  height: 30px;
+  transform: translateX(-50%);
+  border: 3px solid var(--aura-color);
+  border-radius: 50%;
+  box-shadow: 0 0 12px var(--aura-color);
+  animation: slot-aura-ring 760ms ease-out forwards;
+}
+
+.slot-aura--buff   { --aura-color: rgba(255, 214, 92, 0.85); }
+.slot-aura--debuff { --aura-color: rgba(190, 100, 255, 0.85); }
+.slot-aura--block  { --aura-color: rgba(110, 200, 255, 0.85); }
+.slot-aura--heal   { --aura-color: rgba(110, 240, 160, 0.85); }
+
+.battle__slot.has-aura--buff .sprite   { filter: drop-shadow(0 0 8px rgba(255, 214, 92, 0.9)); }
+.battle__slot.has-aura--debuff .sprite { filter: drop-shadow(0 0 8px rgba(190, 100, 255, 0.9)); }
+.battle__slot.has-aura--block .sprite  { filter: drop-shadow(0 0 8px rgba(110, 200, 255, 0.9)); }
+.battle__slot.has-aura--heal .sprite   { filter: drop-shadow(0 0 8px rgba(110, 240, 160, 0.9)); }
+
+@keyframes slot-aura-rise {
+  0%   { opacity: 0; transform: translateX(-50%) scaleY(0.4); }
+  25%  { opacity: 1; transform: translateX(-50%) scaleY(1.05); }
+  100% { opacity: 0; transform: translateX(-50%) scaleY(1.15); }
+}
+
+@keyframes slot-aura-ring {
+  0%   { opacity: 1; transform: translateX(-50%) scale(0.5); }
+  100% { opacity: 0; transform: translateX(-50%) scale(1.5); }
+}
+
+html[data-motion='off'] .slot-aura,
+html[data-motion='off'] .slot-aura::after {
+  animation-duration: 1ms;
+}

@@ -325,6 +325,10 @@ type Props = {
 // -------------------- Animation timing --------------------
 
 const STEP_DELAY_MS = 80         // 既存 fallback (汎用 event)
+/** 敵が使ったカード名を読ませる間。 */
+const ENEMY_CARD_ACTION_READ_MS = 650
+/** 敵によるバフ・デバフ・ブロック・回復は発光が見えるまで少し待つ。 */
+const ENEMY_SUPPORT_EFFECT_MS = 320
 // Readability floors used when an actor has no authored motion duration.
 // A valid manifest duration takes precedence, and the slot keyframes receive
 // that same value so the sheet and physical lunge always finish together.
@@ -618,7 +622,13 @@ type SlotProps = {
   replayFeedState?: 'live' | 'ready' | 'complete'
   participantReady?: boolean
   feedbackItems?: readonly CombatFeedbackItem[]
+  /** 敵がこの瞬間に使っているカード名（頭上に札として表示）。 */
+  actionLabel?: { id: number; text: string } | null
+  /** バフ・デバフ・ブロック・回復を受けた瞬間の発光エフェクト。 */
+  aura?: { id: number; kind: SlotAuraKind } | null
 }
+
+type SlotAuraKind = 'buff' | 'debuff' | 'block' | 'heal'
 
 /**
  * 敵の行動再生用の参加者表現。敵の手札の中身は公開しないため、
@@ -842,6 +852,8 @@ function Slot({
   replayFeedState,
   participantReady,
   feedbackItems = [],
+  actionLabel = null,
+  aura = null,
 }: SlotProps) {
   const traitTip = useTip(char.traitDescription
     ? {
@@ -970,6 +982,7 @@ function Slot({
     attackingDir === 'toward-ally' ? 'is-attacking-ally' : '',
     isHit ? 'is-hit' : '',
     isBlocked ? 'is-blocked' : '',
+    aura ? `has-aura has-aura--${aura.kind}` : '',
   ].filter(Boolean).join(' ')
   // Why: スプレッドにすることで onClick が undefined のとき role/tabIndex 属性自体が
   // JSX に出ない。axe/aria リンターの "role must be valid ARIA role: {expression}"
@@ -999,6 +1012,19 @@ function Slot({
       {...interactiveProps}
     >
       <CombatFeedbackStack items={feedbackItems} />
+      {actionLabel ? (
+        <div key={actionLabel.id} className="slot-action-label" role="status">
+          <span className="slot-action-label__text">{actionLabel.text}</span>
+        </div>
+      ) : null}
+      {aura ? (
+        <span
+          key={aura.id}
+          className={`slot-aura slot-aura--${aura.kind}`}
+          data-presentation="flash"
+          aria-hidden="true"
+        />
+      ) : null}
       {isHit ? (
         <span className="battle-hit-flash" data-presentation="flash" aria-hidden="true" />
       ) : null}
@@ -1987,6 +2013,28 @@ export function BattleScreen({
   // block 消費量として累積する。
   const [blockOverlay, setBlockOverlay] = useState<Record<string, number>>({})
   const [combatFeedback, setCombatFeedback] = useState<CombatFeedbackItem[]>([])
+  // 敵が使ったカード名の札と、バフ等の発光エフェクト（キャラ単位・時間で消える）。
+  const [actionLabels, setActionLabels] = useState<Record<string, { id: number; text: string }>>({})
+  const [slotAuras, setSlotAuras] = useState<Record<string, { id: number; kind: SlotAuraKind }>>({})
+  const presentationSequenceRef = useRef(0)
+  const showActionLabel = useCallback((actorId: string, text: string, lifetimeMs: number) => {
+    const id = ++presentationSequenceRef.current
+    setActionLabels(current => ({ ...current, [actorId]: { id, text } }))
+    window.setTimeout(() => {
+      setActionLabels(current => current[actorId]?.id === id
+        ? Object.fromEntries(Object.entries(current).filter(([key]) => key !== actorId))
+        : current)
+    }, lifetimeMs)
+  }, [])
+  const showSlotAura = useCallback((actorId: string, kind: SlotAuraKind) => {
+    const id = ++presentationSequenceRef.current
+    setSlotAuras(current => ({ ...current, [actorId]: { id, kind } }))
+    window.setTimeout(() => {
+      setSlotAuras(current => current[actorId]?.id === id
+        ? Object.fromEntries(Object.entries(current).filter(([key]) => key !== actorId))
+        : current)
+    }, 760)
+  }, [])
   const feedbackSequenceRef = useRef(0)
   const feedbackTimersRef = useRef<Map<number, number>>(new Map())
   const pushCombatFeedback = useCallback((
@@ -2594,6 +2642,11 @@ export function BattleScreen({
         const appRect = document.querySelector('.app-stage')?.getBoundingClientRect()
         return resolveBattleElementCenter(pileRect, appRect, fallback)
       }
+      // 敵が行うバフ・デバフ・ブロック・回復は発光を見せる間だけ長めに待つ。
+      const supportEffectDelay = (casterInstanceId: string | null | undefined) =>
+        casterInstanceId && baselineActor(casterInstanceId)?.side === 'Enemy'
+          ? ENEMY_SUPPORT_EFFECT_MS
+          : STEP_DELAY_MS
       // Why: 「敵のターン」 banner は 1 turn につき 1 回 (味方攻撃終了 → 初の
       // 敵 caster AttackFire の前) で出す。表示済フラグでガードする。
       let shownEnemyTurnBanner = false
@@ -2680,7 +2733,8 @@ export function BattleScreen({
 
         // 「敵のターン」 banner: 最初の敵 caster の AttackFire 直前に出す。
         // 攻撃 burst を始める前に判定し、敵側ならまず banner を流す。
-        if ((ev.kind === 'GainAttack' || ev.kind === 'AttackFire')
+        if ((ev.kind === 'GainAttack' || ev.kind === 'AttackFire'
+            || ev.kind === 'EnemyCardAction')
             && !shownEnemyTurnBanner) {
           const isEnemyCaster = ev.casterInstanceId
             ? step.snapshotAfter.enemies.some(e => e.instanceId === ev.casterInstanceId)
@@ -3079,12 +3133,30 @@ export function BattleScreen({
           continue
         }
 
+        // 敵が予約したカードの実行開始: カード名を頭上に札で見せ、読める間を取る。
+        if (ev.kind === 'EnemyCardAction' && ev.casterInstanceId) {
+          const cardName = (ev.cardId
+            ? cardCatalog?.[ev.cardId]?.displayName ?? cardCatalog?.[ev.cardId]?.name
+            : null) ?? ev.cardId ?? '行動'
+          const readMs = Math.round(ENEMY_CARD_ACTION_READ_MS * motionScale / playbackSpeed)
+          showActionLabel(ev.casterInstanceId, cardName, Math.max(readMs + 900, 1200))
+          if (!await waitForPresentation(ENEMY_CARD_ACTION_READ_MS)) {
+            clearTransientPresentation()
+            return
+          }
+          i++
+          continue
+        }
+
         if (ev.kind === 'Heal' && ev.targetInstanceId) {
           const amount = Math.max(0, ev.amount ?? 0)
-          if (amount > 0) pushCombatFeedback(ev.targetInstanceId, 'heal', `+${amount} HP`)
+          if (amount > 0) {
+            pushCombatFeedback(ev.targetInstanceId, 'heal', `+${amount} HP`)
+            showSlotAura(ev.targetInstanceId, 'heal')
+          }
           dmg[ev.targetInstanceId] = (dmg[ev.targetInstanceId] ?? 0) - amount
           setDamageOverlay({ ...dmg })
-          if (!await waitForPresentation(STEP_DELAY_MS)) {
+          if (!await waitForPresentation(supportEffectDelay(ev.casterInstanceId))) {
             clearTransientPresentation()
             return
           }
@@ -3099,6 +3171,7 @@ export function BattleScreen({
               'block',
               blockGainFeedbackText(ev.amount ?? 0),
             )
+            showSlotAura(ev.targetInstanceId, 'block')
           }
           blockStateByActor[ev.targetInstanceId] = gainAnimatedBlock(
             currentBlockState(ev.targetInstanceId),
@@ -3106,7 +3179,7 @@ export function BattleScreen({
           )
           commitBlockOverlay(ev.targetInstanceId)
           setBlockOverlay({ ...blk })
-          if (!await waitForPresentation(STEP_DELAY_MS)) {
+          if (!await waitForPresentation(supportEffectDelay(ev.casterInstanceId))) {
             clearTransientPresentation()
             return
           }
@@ -3144,6 +3217,7 @@ export function BattleScreen({
               feedbackKind,
               statusFeedbackText(ev.note, ev.amount ?? 0, ev.kind === 'RemoveStatus'),
             )
+            if (ev.kind === 'ApplyStatus') showSlotAura(ev.targetInstanceId, feedbackKind)
           }
           applyRuntimeStatusChange(
             ev.targetInstanceId,
@@ -3152,7 +3226,9 @@ export function BattleScreen({
             ev.kind === 'RemoveStatus',
           )
           setBlockOverlay({ ...blk })
-          if (!await waitForPresentation(STEP_DELAY_MS)) {
+          if (!await waitForPresentation(ev.kind === 'ApplyStatus'
+            ? supportEffectDelay(ev.casterInstanceId)
+            : STEP_DELAY_MS)) {
             clearTransientPresentation()
             return
           }
@@ -4323,6 +4399,8 @@ export function BattleScreen({
                     feedbackItems={actor
                       ? combatFeedback.filter(item => item.targetId === actor.instanceId)
                       : []}
+                    actionLabel={actor ? actionLabels[actor.instanceId] ?? null : null}
+                    aura={showTransientBattleAnimation && actor ? slotAuras[actor.instanceId] ?? null : null}
                     participantReady={actorParticipant
                       ? actorParticipant.isReady
                         || (readyIntent?.participantId === actorParticipant.participantId
@@ -4386,6 +4464,8 @@ export function BattleScreen({
                     feedbackItems={actor
                       ? combatFeedback.filter(item => item.targetId === actor.instanceId)
                       : []}
+                    actionLabel={actor ? actionLabels[actor.instanceId] ?? null : null}
+                    aura={showTransientBattleAnimation && actor ? slotAuras[actor.instanceId] ?? null : null}
                   />
                 )
               })}

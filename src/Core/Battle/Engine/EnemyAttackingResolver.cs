@@ -173,6 +173,7 @@ internal static class EnemyAttackingResolver
                 if (!currentEnemyState.IsAlive)
                     continue;
             }
+            string? announcedCardInstanceId = null;
             for (int effectIndex = 0; effectIndex < actionEffects.Count; effectIndex++)
             {
                 if (ResolutionShouldStop(state)) break;
@@ -181,6 +182,22 @@ internal static class EnemyAttackingResolver
                     e => e.InstanceId == currentEnemyState.InstanceId);
                 if (refreshedAtEffectStart is null || !refreshedAtEffectStart.IsAlive) break;
                 currentEnemyState = refreshedAtEffectStart;
+
+                // 使ったカードが切り替わる時にカード名の演出用イベントを出す。
+                if (plannedSources is not null)
+                {
+                    var cardSource = plannedSources[effectIndex];
+                    string cardKey = cardSource.InstanceId ?? cardSource.DefinitionId ?? "";
+                    if (!string.Equals(cardKey, announcedCardInstanceId, System.StringComparison.Ordinal))
+                    {
+                        announcedCardInstanceId = cardKey;
+                        events.Add(new BattleEvent(
+                            BattleEventKind.EnemyCardAction, Order: order++,
+                            CasterInstanceId: currentEnemyState.InstanceId,
+                            CardId: cardSource.DefinitionId,
+                            Source: cardSource));
+                    }
+                }
                 // 能力値参照（攻撃力・守備力）は実行時点の有効値で確定する。
                 eff = EffectApplier.ResolveActorStatAtExecution(eff, state, currentEnemyState);
 

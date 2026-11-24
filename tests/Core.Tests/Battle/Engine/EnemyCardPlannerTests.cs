@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using RoguelikeCardGame.Core.Battle.Definitions;
 using RoguelikeCardGame.Core.Battle.Engine;
+using RoguelikeCardGame.Core.Battle.Events;
 using RoguelikeCardGame.Core.Battle.Projection;
 using RoguelikeCardGame.Core.Battle.State;
 using RoguelikeCardGame.Core.Cards;
@@ -174,6 +175,33 @@ public class EnemyCardPlannerTests
         Assert.Equal(2, enemy.GetStatus("strength"));
         Assert.Equal(4, enemy.Block.Sum);
         Assert.Empty(enemy.PlannedEffects);
+    }
+
+    [Fact]
+    public void Enemy_action_announces_each_card_before_its_effects()
+    {
+        var catalog = Catalog();
+        var (planned, _) = EnemyCardPlanner.StartTurnAndPlan(
+            StateWithEnemyDeck("e_strike", "e_rage", "e_guard"), Rng(), catalog);
+
+        var (_, events) = EnemyAttackingResolver.Resolve(
+            planned with { Phase = BattlePhase.EnemyAttacking }, Rng(), catalog);
+
+        var announcements = events
+            .Where(battleEvent => battleEvent.Kind == BattleEventKind.EnemyCardAction)
+            .ToArray();
+        // 3 枚のカードそれぞれの名前が演出用に告知され、効果より先に並ぶ。
+        Assert.Equal(
+            new[] { "e_guard", "e_rage", "e_strike" }.OrderBy(id => id),
+            announcements.Select(battleEvent => battleEvent.CardId!).OrderBy(id => id));
+        Assert.All(announcements, battleEvent =>
+            Assert.Equal(planned.Enemies[0].InstanceId, battleEvent.CasterInstanceId));
+        var firstAnnouncement = events.ToList().IndexOf(announcements[0]);
+        var firstEffect = events.ToList().FindIndex(battleEvent =>
+            battleEvent.Kind is BattleEventKind.GainBlock
+                or BattleEventKind.ApplyStatus
+                or BattleEventKind.AttackFire);
+        Assert.True(firstAnnouncement < firstEffect);
     }
 
     [Fact]

@@ -66,4 +66,9 @@ public enum BattleEventKind
     Shuffle = 36,
     /// <summary>An actor gained an Attack in its Single, Random, or All attack pool.</summary>
     GainAttack = 37,
+    /// <summary>
+    /// カード制御の敵が、予約したカードの効果を実行し始めた（CardId = カード定義 ID）。
+    /// 同じカードの効果が連続する間は 1 回だけ出す。演出でカード名を見せるため。
+    /// </summary>
+    EnemyCardAction = 38,
 }

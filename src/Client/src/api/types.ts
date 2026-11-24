@@ -294,6 +294,8 @@ export type BattleEventKind =
   | 'FinisherResolved' | 'ReenactCardEffects' | 'CoverBlockSpent'
   | 'CharacterTraitTriggered' | 'Shuffle'
   | 'GainAttack'
+  /** カード制御の敵が予約したカードの実行を始めた（cardId = カード定義 ID）。 */
+  | 'EnemyCardAction'
 
 export type IntentDto = {
   /** 通常攻撃 (single) の予定ダメージ。 */

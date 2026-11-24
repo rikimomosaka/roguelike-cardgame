@@ -45,6 +45,9 @@ function describeEffectNote(kind: string, amount: number | null, description: st
 
 function describeEffect(entry: BattleReplayEntryDto): string[] {
   return entry.effects.map(effect => {
+    if (effect.kind === 'EnemyCardAction') {
+      return `カード使用: ${effect.card?.displayName ?? effect.cardDefinitionId ?? '不明'}`
+    }
     if (effect.description) {
       return describeEffectNote(effect.kind, effect.amount, effect.description)
     }

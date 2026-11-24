@@ -143,6 +143,9 @@ export function readAttackAnimationHit(
       || event.kind === 'ReenactCardEffects'
       || event.kind === 'ContingencyTriggered'
       || event.kind === 'ContingencyResolved'
+      // 次に行動する敵のカード名演出。ここで区切らないと次の敵の行動が
+      // 前の攻撃ヒットに吸収され、カード名もバフ演出も出なくなる。
+      || event.kind === 'EnemyCardAction'
     )) break
 
     if (event.kind === 'AttackFire' && belongsToHit) {

@@ -90,6 +90,7 @@ export function battleAudioCuesForEvent(
     }
     case 'GainBlock': return groupedHit || (event.amount ?? 0) <= 0 ? [] : ['gainBlock']
     case 'GainAttack': return []
+    case 'EnemyCardAction': return ['cardPlay']
     case 'ApplyStatus': return groupedHit ? [] : [statusAudioCue(event.note, event.amount)]
     case 'RemoveStatus': return []
     case 'PoisonTick': return ['poison']

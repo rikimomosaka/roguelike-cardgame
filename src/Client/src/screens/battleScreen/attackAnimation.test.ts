@@ -36,6 +36,19 @@ function step(
 }
 
 describe('readAttackAnimationHit', () => {
+  it('stops at the next enemy card announcement so its effects are not absorbed', () => {
+    const steps = [
+      step('AttackFire', 'hero', 6, 0),
+      step('DealDamage', 'hero', 6, 0, 0),
+      step('EnemyCardAction', null, null, null),
+      step('GainBlock', 'enemy-b', 3, null),
+    ]
+
+    const hit = readAttackAnimationHit(steps, 0)
+
+    expect(hit?.nextStepIndex).toBe(2)
+  })
+
   it('applies Dexterity status events before later GainBlock display', () => {
     let state: AnimatedBlockState = { rawSum: 0, addCount: 0, dexterity: 1 }
     state = {
