@@ -3268,7 +3268,14 @@ export function BattleScreen({
           ?? state.allies.find(actor => actor.definitionId === 'hero')?.instanceId
         const hasDrawTrigger = hasDrawPresentationTrigger(steps, drawActorId)
         const hasShuffleTrigger = hasShufflePresentationTrigger(steps, drawActorId)
-        const oldHandIds = new Set(state.hand.map(c => c.instanceId))
+        // ターンをまたぐ時、前ターンの手札は「待機」等で残る札以外は捨札へ行く。
+        //  捨札→山札の再構築で同じ札を引き直すことがあるので、残らない札は
+        //  「引いたカード」として扱い、着地するまで手札に出さない。
+        //  （retainsAtTurnEnd を持たない古いサーバーでは従来どおり）
+        const crossesTurnBoundary = steps.some(step => step.event.kind === 'TurnStart')
+        const oldHandIds = new Set(state.hand
+          .filter(card => !crossesTurnBoundary || card.retainsAtTurnEnd !== false)
+          .map(c => c.instanceId))
         const newlyDrawn = resp.state.hand.filter(c => !oldHandIds.has(c.instanceId))
         const preDrawIds = new Set(state.drawPile.map(c => c.instanceId))
         const postReshuffleDrawn = newlyDrawn.filter(c => !preDrawIds.has(c.instanceId))
@@ -3299,12 +3306,31 @@ export function BattleScreen({
           const reshuffleCards = reshuffleHappened
             ? [...resp.state.drawPile, ...postReshuffleDrawn]
             : null
-          setState({
-            ...resp.state,
+          // Why: 画面の手札・山札・捨札は参加者 DTO（participants[].hand 等）から
+          //  表示される。root だけ途中状態にすると最終手札が最初から見えてしまうため、
+          //  ドローする参加者の資源も同じ途中状態にそろえる。
+          const stagePiles = (piles: {
+            hand: BattleCardInstanceDto[]
+            drawPile: BattleCardInstanceDto[]
+            discardPile?: BattleCardInstanceDto[]
+          }): BattleStateDto => {
+            const discardPile = piles.discardPile ?? resp.state.discardPile
+            return {
+              ...resp.state,
+              hand: piles.hand,
+              drawPile: piles.drawPile,
+              discardPile,
+              participants: resp.state.participants?.map(participant =>
+                participant.actorInstanceId === drawActorId
+                  ? { ...participant, hand: piles.hand, drawPile: piles.drawPile, discardPile }
+                  : participant),
+            }
+          }
+          setState(stagePiles({
             hand: survivingHand,
             drawPile: state.drawPile,
-            ...(reshuffleCards ? { discardPile: reshuffleCards } : { discardPile: resp.state.discardPile }),
-          })
+            discardPile: reshuffleCards ?? resp.state.discardPile,
+          }))
           await sleep(80)
 
           // Why: ドロー演出は parallel に進む (前 sprite が着地する前に次 sprite が
@@ -3328,12 +3354,11 @@ export function BattleScreen({
                 window.setTimeout(() => {
                   triggerDrawAnim(card, handAfters[i].length - 1, handAfters[i].length)
                   window.setTimeout(() => {
-                    setState({
-                      ...resp.state,
+                    setState(stagePiles({
                       hand: handAfters[i],
                       drawPile: drawPileAfters[i],
                       ...(discardPileAfter !== null ? { discardPile: discardPileAfter } : {}),
-                    })
+                    }))
                     remaining -= 1
                     if (remaining === 0) resolveAll()
                   }, FLIGHT)

@@ -39,7 +39,12 @@ public sealed record BattleCardInstanceDto(
     IReadOnlyList<CardCostChangeDto>? CostChanges = null,
     string? PoolClass = null,
     bool IsContingencyArmed = false,
-    string? ContingencyTriggerText = null);
+    string? ContingencyTriggerText = null,
+    /// <summary>
+    /// ターン終了時に手札へ残るカード（待機・自己保持）。クライアントのドロー演出で、
+    /// ターンをまたいで手札に残った札と、捨札→山札→再ドローされた札を区別するために使う。
+    /// </summary>
+    bool RetainsAtTurnEnd = false);
 
 /// <summary>
 /// Ordered, authoritative step in the payable-cost calculation.

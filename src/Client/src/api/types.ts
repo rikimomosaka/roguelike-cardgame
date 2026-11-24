@@ -371,6 +371,8 @@ export type BattleCardInstanceDto = {
   isContingencyArmed?: boolean
   /** Authoritative Japanese trigger label, for example `3コンボ達成時`. */
   contingencyTriggerText?: string | null
+  /** ターン終了時に手札へ残る（待機・自己保持）。ドロー演出で引き直しと区別する。 */
+  retainsAtTurnEnd?: boolean
   /** Compatibility alias: currentCost when it differs from originalCost. */
   costOverride: number | null
   /**

@@ -8,7 +8,7 @@ namespace RoguelikeCardGame.Core.Battle.Engine;
 /// <summary>
 /// Defines the single retention rule used by every participant at turn end.
 /// </summary>
-internal static class BattleCardRetention
+public static class BattleCardRetention
 {
     public static bool ShouldRetain(
         BattleCardInstance card,

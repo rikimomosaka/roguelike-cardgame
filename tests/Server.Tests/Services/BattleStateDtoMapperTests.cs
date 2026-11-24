@@ -1163,6 +1163,8 @@ public class BattleStateDtoMapperTests : IClassFixture<TempDataFactory>
             var strike = allCards.FirstOrDefault(c => c.CardDefinitionId == "basic_attack");
             Assert.NotNull(strike);
             Assert.Equal("敵単体に[R:6|:自身の攻撃力]アタック。", strike!.AdjustedDescription);
+            // 待機等を持たない札はターン終了で手札に残らない（ドロー演出の引き直し判定用）。
+            Assert.False(strike.RetainsAtTurnEnd);
         }
         finally
         {

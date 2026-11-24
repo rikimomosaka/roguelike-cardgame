@@ -512,7 +512,9 @@ internal static class BattleStateDtoMapper
             IsContingencyArmed: armedContingency is not null,
             ContingencyTriggerText: armedContingency is null
                 ? null
-                : FormatContingencyTrigger(armedContingency.Trigger));
+                : FormatContingencyTrigger(armedContingency.Trigger),
+            RetainsAtTurnEnd: definition is not null
+                && BattleCardRetention.ShouldRetain(card, definition));
     }
 
     private static string FormatContingencyTrigger(
