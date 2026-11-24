@@ -29,6 +29,23 @@ describe('actorVisualManifest', () => {
     expect(visual?.animations?.hurt?.durationMs).toBe(remade ? 400 : 440)
   })
 
+  it('registers attack B, skill and down only for remade characters', () => {
+    const sera = resolveActorVisual({ isHero: true, characterId: 'default', side: 'Ally' })
+    expect(sera?.animations?.attackAlt?.src).toBe('/characters/default_attack_alt.png')
+    expect(sera?.animations?.attackAlt?.frameCount).toBe(6)
+    // 奥義は上に余白を足した枠。表示の基準高さは他のシートと同じ 256。
+    expect(sera?.animations?.skill?.frameHeight).toBe(288)
+    expect(sera?.animations?.skill?.baseFrameHeight).toBe(256)
+    expect(sera?.animations?.skill?.frameCount).toBe(8)
+    expect(sera?.animations?.down?.loop).toBe(false)
+    expect(sera?.animations?.down?.frameCount).toBe(6)
+
+    const mireille = resolveActorVisual({ isHero: true, characterId: 'guardian_mireille', side: 'Ally' })
+    expect(mireille?.animations?.attackAlt).toBeUndefined()
+    expect(mireille?.animations?.skill).toBeUndefined()
+    expect(mireille?.animations?.down).toBeUndefined()
+  })
+
   it('routes enemy and summon art to separate asset namespaces', () => {
     expect(resolveActorVisual({
       isHero: false,

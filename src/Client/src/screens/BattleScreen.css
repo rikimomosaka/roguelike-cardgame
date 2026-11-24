@@ -1208,7 +1208,8 @@ html[data-flash='off'] .battle__slot.is-blocked::before {
 .sprite-sheet__frame,
 .sprite-sheet__viewport {
   width: var(--sprite-frame-width, 74px);
-  height: var(--tier-height, 148px);
+  /* 上に余白を足したシート（奥義など）は tier の高さより高い。足元は bottom 基準なので上へ伸びる。 */
+  height: var(--sprite-frame-height, var(--tier-height, 148px));
 }
 
 /* filter は overflow の外側に置く。これによりシートの隣接セルだけを隠しつつ、
@@ -1251,6 +1252,9 @@ html[data-motion='reduced'] .sprite[data-motion="idle"] img.sprite-sheet__image 
 }
 
 html[data-motion='reduced'] .sprite[data-motion="attack"] img.sprite-sheet__image,
+html[data-motion='reduced'] .sprite[data-motion="attackAlt"] img.sprite-sheet__image,
+html[data-motion='reduced'] .sprite[data-motion="skill"] img.sprite-sheet__image,
+html[data-motion='reduced'] .sprite[data-motion="down"] img.sprite-sheet__image,
 html[data-motion='reduced'] .sprite[data-motion="hurt"] img.sprite-sheet__image {
   animation-duration: var(--sprite-duration-reduced, var(--sprite-duration, 1000ms));
 }
@@ -1360,6 +1364,9 @@ html[data-motion='reduced'] .battle__slot.is-hit .sprite__static-image {
   /* One-shot poses convey who acted and who was hurt, so OS reduced motion
      shortens them instead of freezing every sheet on frame one. */
   .sprite[data-motion="attack"] img.sprite-sheet__image,
+  .sprite[data-motion="attackAlt"] img.sprite-sheet__image,
+  .sprite[data-motion="skill"] img.sprite-sheet__image,
+  .sprite[data-motion="down"] img.sprite-sheet__image,
   .sprite[data-motion="hurt"] img.sprite-sheet__image {
     animation-duration: var(--sprite-duration-reduced, var(--sprite-duration, 1000ms));
   }

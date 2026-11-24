@@ -87,7 +87,8 @@ describe('toCharacterDemo', () => {
     expect(demo.name).not.toBe('見習い冒険者')   // catalog name must NOT win
     expect(demo.spriteKind).toBe('hero')
     expect(demo.image).toBe('/characters/default_stand.png')
-    expect(demo.animations).toEqual({
+    // 攻撃B・奥義・ダウンの追加分は actorVisualManifest.test.ts で確認する。
+    expect(demo.animations).toMatchObject({
       idle: {
         src: '/characters/default_idle.png',
         frameWidth: 192,

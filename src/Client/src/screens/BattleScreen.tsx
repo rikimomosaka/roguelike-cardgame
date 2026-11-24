@@ -231,7 +231,10 @@ export type IntentDemo = {
 export type SpriteKind = 'hero' | 'ally' | 'enemy' | 'elite'
 
 /** Character animation state. New sprite sheets can be added without changing Slot markup. */
-export type CharacterMotion = 'idle' | 'attack' | 'hurt'
+export type CharacterMotion = 'idle' | 'attack' | 'attackAlt' | 'skill' | 'hurt' | 'down'
+
+/** 攻撃時に使う攻撃モーション。attackAlt が無いキャラは常に attack を使う。 */
+export type AttackMotion = 'attack' | 'attackAlt'
 
 /** Metadata for a horizontal, equally-sized sprite sheet. */
 export type SpriteSheetDemo = {
@@ -242,6 +245,11 @@ export type SpriteSheetDemo = {
   durationMs: number
   /** Idle usually loops; one-shot attack/hurt sheets stop on their final valid frame. */
   loop: boolean
+  /**
+   * 表示高さ（tier の高さ）に対応するフレームの高さ。省略時は frameHeight。
+   * frameHeight の方が大きいシートは、足元をそろえたまま上にはみ出して描く（剣を振り上げる奥義など）。
+   */
+  baseFrameHeight?: number
 }
 
 export type CharacterDemo = {
@@ -355,6 +363,11 @@ const REENACT_HOLD_MS = 260
 const REENACT_LEAVE_MS = 160
 // Why: 死亡アニメーションは廃止 (ユーザ要望)。HP=0 で alive filter から外れて
 // 自然消滅するため、後追い blink は入れない。
+// 例外: down シートを持つキャラ（新規格で作ったキャラ）は HP 0 でも残り、倒れる姿勢で止まる。
+/** 奥義モーションで技を放つ位置（8 コマ中 5 コマ目の頭）。 */
+const SKILL_RELEASE_RATIO = 5 / 8
+/** ダウンモーションの後、敗北処理へ進む前に倒れた姿を見せる時間。 */
+const DOWN_HOLD_MS = 500
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -368,6 +381,10 @@ function sleep(ms: number): Promise<void> {
 type SlotAnim = {
   attackerId?: string
   attackerSide?: 'Ally' | 'Enemy'
+  /** 攻撃者が使う攻撃モーション（同じキャラの攻撃ごとに A/B を交互）。 */
+  attackMotion?: AttackMotion
+  /** 戦技・奥義の発動モーションを再生中のキャラ。 */
+  skillCasterId?: string
   hitIds?: ReadonlyArray<string>
   blockedIds?: ReadonlyArray<string>
   playbackSpeed?: number
@@ -618,6 +635,10 @@ type SlotProps = {
   showTargetVisual?: boolean
   /** Why: 攻撃中 / 被弾中の演出クラス付与用 (死亡演出は廃止)。 */
   attackingDir?: 'toward-enemy' | 'toward-ally'
+  /** 攻撃中に使う攻撃モーション（A/B の交互）。省略時は attack。 */
+  attackMotion?: AttackMotion
+  /** 戦技・奥義の発動モーション中。 */
+  isSkill?: boolean
   isHit?: boolean
   isBlocked?: boolean
   /** Replay speed applied only while this slot is in a one-shot motion. */
@@ -798,7 +819,14 @@ type ActiveCharacterAnimation = {
   sheet: SpriteSheetDemo
 }
 
-const CHARACTER_MOTION_PRIORITY: readonly CharacterMotion[] = ['hurt', 'attack', 'idle']
+type CharacterMotionFlags = {
+  /** 攻撃中なら使う攻撃モーション。攻撃していなければ null。 */
+  attack: AttackMotion | null
+  isHit: boolean
+  isSkill: boolean
+  /** HP 0 で倒れている（down シートを持つキャラだけ表示が残る）。 */
+  isDown: boolean
+}
 
 function readableMotionDuration(
   sheet: SpriteSheetDemo | undefined,
@@ -817,21 +845,21 @@ function readableMotionDuration(
  */
 function selectCharacterAnimation(
   animations: CharacterDemo['animations'],
-  isAttacking: boolean,
-  isHit: boolean,
+  flags: CharacterMotionFlags,
   failedSources: ReadonlySet<string>,
 ): ActiveCharacterAnimation | null {
-  const active: Record<CharacterMotion, boolean> = {
-    idle: true,
-    attack: isAttacking,
-    hurt: isHit,
-  }
+  // 優先度: ダウン > 被弾 > 奥義 > 攻撃（指定の型 → 基本の attack）> 待機。
+  const candidates: CharacterMotion[] = []
+  if (flags.isDown) candidates.push('down')
+  if (flags.isHit) candidates.push('hurt')
+  if (flags.isSkill) candidates.push('skill')
+  if (flags.attack) candidates.push(flags.attack, 'attack')
+  candidates.push('idle')
 
-  for (const motion of CHARACTER_MOTION_PRIORITY) {
+  for (const motion of candidates) {
     const sheet = animations?.[motion]
     if (
-      active[motion]
-      && sheet
+      sheet
       && sheet.frameWidth > 0
       && sheet.frameHeight > 0
       && sheet.frameCount > 0
@@ -850,6 +878,8 @@ function Slot({
   isTargeted,
   showTargetVisual,
   attackingDir,
+  attackMotion = 'attack',
+  isSkill = false,
   isHit,
   isBlocked,
   motionPlaybackSpeed = 1,
@@ -880,8 +910,12 @@ function Slot({
   )
   const activeAnimation = selectCharacterAnimation(
     char.animations,
-    attackingDir !== undefined,
-    isHit === true,
+    {
+      attack: attackingDir !== undefined ? attackMotion : null,
+      isHit: isHit === true,
+      isSkill,
+      isDown: char.hpCur <= 0,
+    },
     failedAnimationSources,
   )
   const imageAspect = imageMeasurement !== null
@@ -910,14 +944,19 @@ function Slot({
   const actorSizeClass = actorSizeClassForTier(char.heightTier)
   const spriteLift = Math.round(displayHeight * stageProfile.liftRatio)
   const actorImpactY = resolveActorImpactAnchorY(char.image, displayHeight)
-  const oneShotPlaybackSpeed = attackingDir !== undefined || isHit
+  const oneShotPlaybackSpeed = attackingDir !== undefined || isHit || isSkill
     ? normalizeMotionPlaybackSpeed(motionPlaybackSpeed)
     : 1
   const animationFrameAspect = activeAnimation !== null
     ? activeAnimation.sheet.frameWidth / activeAnimation.sheet.frameHeight
     : null
+  // 上に余白を足したシートは、その分だけ表示枠を上へ伸ばす（足元は bottom 基準なので動かない）。
+  const animationFrameHeight = activeAnimation !== null
+    ? displayHeight * activeAnimation.sheet.frameHeight
+      / (activeAnimation.sheet.baseFrameHeight ?? activeAnimation.sheet.frameHeight)
+    : displayHeight
   const animationFrameWidth = animationFrameAspect !== null
-    ? displayHeight * animationFrameAspect
+    ? animationFrameHeight * animationFrameAspect
     : null
   const idleFrameAspect = char.animations?.idle
     ? char.animations.idle.frameWidth / char.animations.idle.frameHeight
@@ -1074,6 +1113,7 @@ function Slot({
               ...(activeAnimation && animationFrameWidth !== null
                 ? {
                     '--sprite-frame-width': `${animationFrameWidth}px`,
+                    '--sprite-frame-height': `${animationFrameHeight}px`,
                     '--sprite-frame-count': activeAnimation.sheet.frameCount,
                     '--sprite-step-count': animationStepCount,
                     '--sprite-step-position': animationStepPosition,
@@ -2007,6 +2047,8 @@ export function BattleScreen({
   // Why: ターン終了時 attack アニメーションの transient state。
   // attackerId: slide 中の slot、hitId: 赤点滅の被弾 slot、dyingIds: 撃破点滅中。
   const [slotAnim, setSlotAnim] = useState<SlotAnim>({})
+  // キャラごとの攻撃回数。攻撃モーション A/B の交互切り替えに使う（戦闘をまたいでも続く）。
+  const attackMotionCountRef = useRef(new Map<string, number>())
   // Why: MVP 仕様で step.snapshotAfter は全 step が「最終 state」と同一なため、
   // burst 終了時に setState を呼ぶと一気に最終 HP / dead に飛んでしまう。
   // playSteps 中は setState せず、ここに instanceId → 累積 damage を蓄積し、
@@ -2581,24 +2623,30 @@ export function BattleScreen({
         ? [...baselineState.allies, ...baselineState.enemies]
             .find(candidate => candidate.instanceId === actorInstanceId)
         : undefined
-      const actorMotionDuration = (
-        actorInstanceId: string | undefined,
-        motion: 'attack' | 'hurt',
-        minimumMs: number,
-      ) => {
-        if (!actorInstanceId) return minimumMs
+      const actorAnimations = (actorInstanceId: string | undefined) => {
+        if (!actorInstanceId) return undefined
         const actor = baselineActor(actorInstanceId)
-        if (!actor) return minimumMs
+        if (!actor) return undefined
         const participant = baselineState
           ? findParticipantForActor(baselineState, actorInstanceId)
           : null
-        const demo = toCharacterDemo(
+        return toCharacterDemo(
           actor,
           { enemies: enemyCatalog, units: unitCatalog, characters: characterCatalog },
           accountId,
           participant?.characterId ?? snapshot.run.characterId,
-        )
-        return readableMotionDuration(demo.animations?.[motion], minimumMs)
+        ).animations
+      }
+      const actorMotionDuration = (
+        actorInstanceId: string | undefined,
+        motion: CharacterMotion,
+        minimumMs: number,
+      ) => readableMotionDuration(actorAnimations(actorInstanceId)?.[motion], minimumMs)
+      const nextAttackMotion = (actorInstanceId: string | undefined): AttackMotion => {
+        if (!actorInstanceId || !actorAnimations(actorInstanceId)?.attackAlt) return 'attack'
+        const count = attackMotionCountRef.current.get(actorInstanceId) ?? 0
+        attackMotionCountRef.current.set(actorInstanceId, count + 1)
+        return count % 2 === 0 ? 'attack' : 'attackAlt'
       }
       const currentBlockState = (actorInstanceId: string) => {
         if (Object.prototype.hasOwnProperty.call(blockStateByActor, actorInstanceId)) {
@@ -2793,6 +2841,25 @@ export function BattleScreen({
               clearTransientPresentation()
               return
             }
+            // カットインの後、発動したキャラが奥義モーションを再生する。
+            // 放つ瞬間（release、8 コマ中 5 コマ目）まで待ってから効果へ進み、残りは効果と並行して流す。
+            const casterId = ev.casterInstanceId ?? undefined
+            const skillSheet = actorAnimations(casterId)?.skill
+            if (casterId && skillSheet && effectiveMotionLevel !== 'off') {
+              const skillDurationMs = readableMotionDuration(skillSheet, 1)
+              const releaseMs = Math.round(skillDurationMs * SKILL_RELEASE_RATIO)
+              setSlotAnim({ skillCasterId: casterId, playbackSpeed })
+              if (!await waitForPresentation(releaseMs)) {
+                clearTransientPresentation()
+                return
+              }
+              const restMs = Math.round((skillDurationMs - releaseMs) * motionScale / playbackSpeed)
+              window.setTimeout(() => {
+                setSlotAnim(current => current.skillCasterId === casterId
+                  ? { ...current, skillCasterId: undefined }
+                  : current)
+              }, restMs)
+            }
           } else {
             const recipe = battleSoundRecipeForEvent(ev)
             if (recipe) {
@@ -2895,9 +2962,11 @@ export function BattleScreen({
           const blockedTargets = Array.from(new Set(
             hit.targets.filter(target => target.blockConsumed > 0).map(target => target.targetId),
           ))
+          // 攻撃モーションは同じキャラの攻撃ごとに A/B を交互に使う（attackAlt が無いキャラは A のみ）。
+          const attackMotion = nextAttackMotion(casterId)
           const attackDurationMs = actorMotionDuration(
             casterId,
-            'attack',
+            attackMotion,
             ATTACK_SLIDE_MS,
           )
           const affectedTargetIds = Array.from(new Set([
@@ -2921,7 +2990,7 @@ export function BattleScreen({
           const recoveryDurationMs = Math.max(0, attackDurationMs - contactDurationMs)
 
           // 1論理ヒットにつき1 slide。damage/block もそのヒットの中盤で反映する。
-          setSlotAnim({ attackerId: casterId, attackerSide: side, playbackSpeed })
+          setSlotAnim({ attackerId: casterId, attackerSide: side, attackMotion, playbackSpeed })
           if (!await waitForPresentation(contactDurationMs)) {
             clearTransientPresentation()
             return
@@ -3030,6 +3099,7 @@ export function BattleScreen({
             setSlotAnim({
               attackerId: casterId,
               attackerSide: side,
+              attackMotion,
               hitIds: flashTargets,
               blockedIds: blockedTargets,
               playbackSpeed,
@@ -3346,6 +3416,9 @@ export function BattleScreen({
           // Why: ユーザ要望で死亡アニメーションは廃止 (HP=0 で消えるのが
           // 優先される現状のレンダーに対し、後追い演出だと一瞬復活したように
           // 見える)。event は consume するだけで delay も入れない。
+          // down シートを持つキャラの倒れる演出は、表示側（HP 0 で down を再生して残す）と
+          // 敗北時の待ち（playSteps の最後）で扱う。攻撃のヒット処理がこの event を
+          // 先に読み飛ばすことがあるため、ここでは待たない。
           i++
           continue
         }
@@ -3551,6 +3624,17 @@ export function BattleScreen({
       // Victory のみ「勝利」banner を出す (ユーザ要望、Defeat は banner なし)。
       if (!presentationOnly && resp.state.outcome === 'Victory') {
         await showBanner('勝利')
+      }
+      // 敗北時、倒れたキャラ（down シートを持つキャラ）が倒れ切るのを見せてから結果画面へ進む。
+      if (!presentationOnly && resp.state.outcome === 'Defeat' && effectiveMotionLevel !== 'off') {
+        const downDurations = resp.state.allies
+          .filter(ally => ally.currentHp <= 0)
+          .map(ally => actorAnimations(ally.instanceId)?.down)
+          .filter((sheet): sheet is SpriteSheetDemo => !!sheet)
+          .map(sheet => readableMotionDuration(sheet, 1))
+        if (downDurations.length > 0) {
+          await waitForPresentation(Math.max(...downDurations) + DOWN_HOLD_MS)
+        }
       }
       setAnimating(false)
 
@@ -4279,8 +4363,16 @@ export function BattleScreen({
     : applyOverlay
   const allAllies = displayedState.allies.map(applyCurrentOverlay)
   const allEnemies = displayedState.enemies.map(applyCurrentOverlay)
-  const aliveAllies = allAllies.filter((a) => a.currentHp > 0)
-  const aliveEnemies = allEnemies.filter((e) => e.currentHp > 0)
+  // down シートを持つキャラ（新規格のキャラ）は HP 0 でも残し、倒れた姿勢を見せる。
+  const showsDownPose = (actor: CombatActorDto) => !!toCharacterDemo(
+    actor,
+    { enemies: enemyCatalog, units: unitCatalog, characters: characterCatalog },
+    accountId,
+    findParticipantForActor(displayedState, actor.instanceId)?.characterId
+      ?? snapshot.run.characterId,
+  ).animations?.down
+  const aliveAllies = allAllies.filter((a) => a.currentHp > 0 || showsDownPose(a))
+  const aliveEnemies = allEnemies.filter((e) => e.currentHp > 0 || showsDownPose(e))
 
   // 4 スロット zero-pad で side ごとに描画。
   const playerActorsBySlot = placeActorsBySlot(aliveAllies, 4)
@@ -4518,6 +4610,9 @@ export function BattleScreen({
                     isTargeted={isTargeted}
                     showTargetVisual={playerOccupiedCount > 1}
                     attackingDir={attackingDir}
+                    attackMotion={attackingDir ? slotAnim.attackMotion : undefined}
+                    isSkill={!!(showTransientBattleAnimation && actor
+                      && slotAnim.skillCasterId === actor.instanceId)}
                     isHit={isHit}
                     isBlocked={isBlocked}
                     motionPlaybackSpeed={slotAnim.playbackSpeed}
@@ -4578,6 +4673,9 @@ export function BattleScreen({
                     isTargeted={isTargeted}
                     showTargetVisual={enemyOccupiedCount > 1}
                     attackingDir={attackingDir}
+                    attackMotion={attackingDir ? slotAnim.attackMotion : undefined}
+                    isSkill={!!(showTransientBattleAnimation && actor
+                      && slotAnim.skillCasterId === actor.instanceId)}
                     isHit={isHit}
                     isBlocked={isBlocked}
                     motionPlaybackSpeed={slotAnim.playbackSpeed}

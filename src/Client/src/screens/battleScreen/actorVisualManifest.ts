@@ -42,6 +42,46 @@ const HERO_SHEET_TIMING: Partial<Record<HeroId, Partial<Record<CharacterMotion, 
   },
 }
 
+/**
+ * 新規格のキャラだけが持つ追加モーション（攻撃B・奥義・ダウン）。
+ * 旧素材のキャラはファイルが無いので登録しない（404 を出さないため）。
+ */
+const HERO_EXTRA_MOTIONS: Partial<Record<HeroId, true>> = {
+  default: true,
+}
+
+function extraMotions(root: string): Partial<Record<CharacterMotion, SpriteSheetDemo>> {
+  return {
+    attackAlt: {
+      src: `${root}_attack_alt.png`,
+      frameWidth: 384,
+      frameHeight: 256,
+      frameCount: 6,
+      durationMs: 600,
+      loop: false,
+    },
+    skill: {
+      src: `${root}_skill.png`,
+      // 剣を振り上げるため、上に 32px の余白を足した枠（足元の位置は他と同じ）。
+      frameWidth: 384,
+      frameHeight: 288,
+      baseFrameHeight: 256,
+      frameCount: 8,
+      durationMs: 800,
+      loop: false,
+    },
+    down: {
+      src: `${root}_down.png`,
+      frameWidth: 384,
+      frameHeight: 256,
+      frameCount: 6,
+      durationMs: 720,
+      // 最後のコマ（倒れた姿勢）で止める。
+      loop: false,
+    },
+  }
+}
+
 function heroVisual(id: HeroId): ActorVisual {
   const root = `/characters/${id}`
   const timing = HERO_SHEET_TIMING[id] ?? {}
@@ -77,6 +117,7 @@ function heroVisual(id: HeroId): ActorVisual {
         loop: false,
         ...timing.hurt,
       },
+      ...(HERO_EXTRA_MOTIONS[id] ? extraMotions(root) : {}),
     },
   }
 }

@@ -4,7 +4,8 @@
 //     [--skip-first 1]        先頭フレーム（入力画像のコピー）を捨てる（既定 1）
 //     [--extra 8]             基本パレットから遠い色（エフェクト等）に追加で割り当てる最大色数
 //     [--main-only 1]         本体とつながっていない塊（浮いたエフェクト）を消す
-//     [--clear-above 17]      この行より上を消す（頭上に残ったエフェクト用）
+//     [--drop-white 30]       白からの距離がこれ未満の画素を消す（勝手に付く白い斬撃の弧用）
+//     [--clear-above 17]     この行より上を消す（頭上に残ったエフェクト用）
 //     [--offset-x -2,-3,-1,0]フレームごとの横ずらし（原寸 px、ノックバック等）
 //     [--tint 1,0,0,0]        フレームごとの赤フラッシュ（1 = 適用）
 //     [--anchor-x 63.5]       原寸での体の横中心（ゲーム用シートでセル中央に合わせる）
@@ -89,6 +90,13 @@ function keepMain(fr) {
 
 const offsets = list(a['offset-x']), tints = list(a.tint)
 const out = frames.map((fr, f) => {
+  // 純白に近い画素（勝手に付く斬撃の弧など）を消す。髪・肌の最も明るい色より白いものだけが対象。
+  if (a['drop-white']) {
+    const t = Number(a['drop-white']) ** 2
+    for (let i = 0; i < fr.data.length; i += 4) {
+      if (fr.data[i + 3] && d2([fr.data[i], fr.data[i + 1], fr.data[i + 2]], [255, 255, 255]) < t) fr.data[i + 3] = 0
+    }
+  }
   if (a['main-only']) keepMain(fr)
   // 頭より上に出たエフェクト（髪に接していて連結判定で消えないもの）を消す。
   if (a['clear-above']) fr.data.fill(0, 0, Number(a['clear-above']) * W * 4)
