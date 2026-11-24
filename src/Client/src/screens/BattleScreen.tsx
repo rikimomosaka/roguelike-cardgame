@@ -1827,7 +1827,10 @@ export function BattleComboControls({
   tacticalDisabledReason?: string
   ultimateDisabledReason?: string
 }) {
-  const afterimageSavedCount = finisherRecord?.cards.length ?? 0
+  // 終撃で保存された時だけ「残光 N」を出す（通常の最後のアタック保存は履歴で分かる）。
+  const afterimageSavedCount = finisherRecord?.savedByFinisher
+    ? finisherRecord.cards.length
+    : 0
   return (
     <div className="battle__combo-controls">
       {tacticalHidden ? <div className="battle__combo-skill-placeholder" aria-hidden="true" /> : (

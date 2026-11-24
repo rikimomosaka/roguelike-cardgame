@@ -275,7 +275,16 @@ internal static class BattleStateDtoMapper
                 AfterimageIntentProjectionAvailability.Available => true,
                 AfterimageIntentProjectionAvailability.Unavailable => false,
                 _ => null,
-            });
+            })
+        {
+            // 終撃が保存した記録か（保存カードに終撃カード自身が含まれる）。
+            // 通常の「最後のアタック」保存は UI で強調表示しない。
+            SavedByFinisher = participant.LastFinisherRecord.Any(snapshot =>
+                data.Cards.TryGetValue(snapshot.CardDefinitionId, out var definition)
+                && definition.EffectiveAbilities(snapshot.IsUpgraded)
+                    .OfType<FinisherAbilityDefinition>()
+                    .Any()),
+        };
     }
 
     private static BattleReplayCardDto ToFinisherCardDto(

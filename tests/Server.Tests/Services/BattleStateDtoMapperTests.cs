@@ -108,6 +108,23 @@ public class BattleStateDtoMapperTests : IClassFixture<TempDataFactory>
             Assert.Equal(
                 rootRecord.Cards.Select(entry => entry.PlaySequence),
                 participantRecord.Cards.Select(entry => entry.PlaySequence));
+
+            // 終撃カードを含まない保存（全クラス共通の「最後のアタック」）は強調対象外。
+            Assert.Equal(
+                definition.EffectiveAbilities(true).OfType<FinisherAbilityDefinition>().Any(),
+                rootRecord.SavedByFinisher);
+            var finisherSnapshot = snapshot with
+            {
+                CardDefinitionId = "striker_epic_flash_finale",
+            };
+            var finisherState = BattleParticipantAccess.Replace(
+                state,
+                BattleParticipantAccess.GetPrimary(state) with
+                {
+                    LastFinisherRecord = [finisherSnapshot],
+                });
+            Assert.True(BattleStateDtoMapper.ToDto(finisherState, catalog)
+                .FinisherRecord!.SavedByFinisher);
         }
         finally
         {

@@ -19,6 +19,8 @@
 .popup--modal   { z-index: var(--z-overlay-modal); }
 .popup--picker  { z-index: var(--z-picker); }
 .popup--confirm { z-index: var(--z-confirm); }
+/* ゲームメニュー系は種類（modal/confirm）に関係なく最前面の層。 */
+.popup.popup--game-menu { z-index: var(--z-game-menu); }
 
 .popup__dim {
   position: absolute;

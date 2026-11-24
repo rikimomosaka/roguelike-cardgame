@@ -12,7 +12,14 @@ public sealed record FinisherRecordDto(
     /// null when Afterimage is not currently applicable; true when the preview
     /// is deterministic (including a known zero attacks); false when it is not.
     /// </summary>
-    bool? IsPlannedAfterimageIntentAvailable = null);
+    bool? IsPlannedAfterimageIntentAvailable = null)
+{
+    /// <summary>
+    /// 終撃によって保存された記録なら true。全クラス共通の「最後のアタック」保存は false で、
+    /// プレイ履歴の残光表示（ボタンの「残光 N」・番号・説明文）は true の時だけ出す。
+    /// </summary>
+    public bool SavedByFinisher { get; init; }
+}
 
 /// <summary>
 /// One saved card face. PlaySequence is the stable per-play UI key and retains

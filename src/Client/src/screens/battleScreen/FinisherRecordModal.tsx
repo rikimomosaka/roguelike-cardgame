@@ -32,7 +32,8 @@ export function PlayHistoryModal({
     return () => window.removeEventListener('keydown', handleKeyDown, true)
   }, [onClose])
 
-  const savedCards = record?.cards ?? []
+  // 番号・説明文は終撃で保存された時だけ。通常の「最後のアタック」保存は強調しない。
+  const savedCards = record?.savedByFinisher ? record.cards : []
   const savedOrder = new Map(savedCards.map((entry, index) => [entry.playSequence, index + 1]))
   // 連環でターンを跨いだ保存カードなど、今ターンの履歴に無い保存分も表示する。
   const historySequences = new Set(history.map(entry => entry.playSequence))

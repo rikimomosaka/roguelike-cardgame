@@ -524,6 +524,8 @@ export type FinisherRecordDto = {
   plannedAfterimageIntent: IntentDto | null
   /** null when 残光 is inactive; false when Core cannot determine an exact preview. */
   isPlannedAfterimageIntentAvailable: boolean | null
+  /** 終撃が保存した記録なら true。false（最後のアタックの通常保存）は UI で強調しない。 */
+  savedByFinisher?: boolean
 }
 
 export type BattleParticipantControllerKind = 'Human' | 'Cpu'

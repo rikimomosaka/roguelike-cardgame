@@ -6,6 +6,7 @@ import { PlayHistoryModal } from './FinisherRecordModal'
 
 const record: FinisherRecordDto = {
   afterimageStacks: 2,
+  savedByFinisher: true,
   isPlannedAfterimageIntentAvailable: true,
   plannedAfterimageIntent: {
     attackSingle: 20,
@@ -69,6 +70,21 @@ describe('PlayHistoryModal', () => {
     expect(names).toEqual(['防御の基本', '決着斬り+'])
     expect(container.querySelectorAll('.finisher-record__order')).toHaveLength(1)
     expect(container.querySelector('[data-afterimage-order="1"] .card__name')).toHaveTextContent('決着斬り+')
+  })
+
+  it('does not number or explain the ordinary last-attack save without Finisher', () => {
+    const { container } = render(
+      <TooltipHost>
+        <PlayHistoryModal
+          history={[otherPlay, record.cards[0]]}
+          record={{ ...record, savedByFinisher: false }}
+          onClose={() => {}}
+        />
+      </TooltipHost>,
+    )
+    expect(container.querySelector('.finisher-record__order')).toBeNull()
+    expect(container.querySelector('.finisher-record__note')).toBeNull()
+    expect(container.querySelectorAll('.finisher-record__cards .card__name')).toHaveLength(2)
   })
 
   it('works as a plain history without any saved afterimage', () => {

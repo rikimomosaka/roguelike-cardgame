@@ -154,6 +154,9 @@
   --z-overlay-modal: 20;
   --z-picker: 30;
   --z-confirm: 40;
+  /* ゲームメニュー（続ける/設定/メニューに戻る/あきらめる）は、ショップ・報酬・
+     プレイ履歴などゲーム内のどのウインドウよりも前面に出す。 */
+  --z-game-menu: 300;
   --z-screen-transition: 500;
   --z-topbar: 200;
   --z-tooltip: 10000;  /* always on top */

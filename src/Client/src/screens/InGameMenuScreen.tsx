@@ -86,6 +86,7 @@ export function InGameMenuScreen({ onClose, onExitToMenu, onAbandon, elapsedSeco
       <Popup
         open
         variant="modal"
+        popupClassName="popup--game-menu"
         title="設 定"
         width={560}
         closeOnEsc={false}
@@ -102,6 +103,7 @@ export function InGameMenuScreen({ onClose, onExitToMenu, onAbandon, elapsedSeco
       <Popup
         open
         variant="confirm"
+        popupClassName="popup--game-menu"
         title="メニューに戻る"
         width={420}
         closeOnEsc={false}
@@ -140,6 +142,7 @@ export function InGameMenuScreen({ onClose, onExitToMenu, onAbandon, elapsedSeco
       <Popup
         open
         variant="confirm"
+        popupClassName="popup--game-menu"
         title="放棄の確認"
         width={420}
         closeOnEsc={false}
@@ -177,6 +180,7 @@ export function InGameMenuScreen({ onClose, onExitToMenu, onAbandon, elapsedSeco
     <Popup
       open
       variant="modal"
+      popupClassName="popup--game-menu"
       title="ゲームメニュー"
       width={420}
       onClose={onClose}

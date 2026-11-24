@@ -26,6 +26,7 @@ const baseProps = {
 
 const finisherRecord: FinisherRecordDto = {
   afterimageStacks: 1,
+  savedByFinisher: true,
   isPlannedAfterimageIntentAvailable: true,
   plannedAfterimageIntent: null,
   cards: [{
@@ -114,6 +115,21 @@ describe('BattleComboControls', () => {
     )
     const plain = screen.getByRole('button', { name: 'このターンのプレイ履歴を表示（2枚）' })
     expect(plain).not.toHaveClass('is-afterimage-saved')
+
+    // 終撃なしの「最後のアタック」保存では「残光 N」を出さない。
+    rerender(
+      <TooltipHost>
+        <BattleComboControls
+          {...baseProps}
+          finisherRecord={{ ...finisherRecord, savedByFinisher: false }}
+          playHistoryCount={2}
+          onOpenFinisherRecord={onOpenFinisherRecord}
+        />
+      </TooltipHost>,
+    )
+    const ordinary = screen.getByRole('button', { name: 'このターンのプレイ履歴を表示（2枚）' })
+    expect(ordinary).not.toHaveClass('is-afterimage-saved')
+    expect(ordinary).not.toHaveTextContent('残光')
   })
 
   it('renders tactical, center combo column, and ultimate in that DOM order', () => {

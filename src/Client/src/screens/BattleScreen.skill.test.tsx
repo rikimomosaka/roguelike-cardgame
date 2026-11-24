@@ -371,6 +371,7 @@ describe('BattleScreen character skill integration', () => {
     const initial = battleState({
       finisherRecord: {
         afterimageStacks: 2,
+        savedByFinisher: true,
         isPlannedAfterimageIntentAvailable: true,
         plannedAfterimageIntent: {
           attackSingle: 20,
