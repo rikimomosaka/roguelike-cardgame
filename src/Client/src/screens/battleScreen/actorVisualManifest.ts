@@ -77,7 +77,7 @@ const AIRBORNE_STAGE_BY_IMAGE_ID: Readonly<Record<string, number>> = {
  * miss short and airborne actors (most visibly the cave bats).
  */
 const IMPACT_CENTER_RATIO_BY_IMAGE_ID: Readonly<Record<string, number>> = {
-  default_stand: 0.533,
+  default_stand: 0.516,
   enhancer_lyra_stand: 0.533,
   guardian_mireille_stand: 0.533,
   tactician_yuno_stand: 0.533,

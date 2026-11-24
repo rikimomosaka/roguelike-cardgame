@@ -73,7 +73,7 @@ describe('actorVisualManifest', () => {
   it('anchors impact feedback to the visible silhouette instead of the PNG canvas centre', () => {
     expect(resolveActorImpactCenterRatio('/characters/enemies/cave_bat_a.png')).toBe(0.773)
     expect(resolveActorImpactCenterRatio('/characters/enemies/louse_red.png')).toBe(0.748)
-    expect(resolveActorImpactCenterRatio('/characters/default_stand.png')).toBe(0.533)
+    expect(resolveActorImpactCenterRatio('/characters/default_stand.png')).toBe(0.516)
     expect(resolveActorImpactCenterRatio('/characters/enemies/future_enemy.png')).toBe(0.6)
     // Cave bat A: tier 2 => 82px display height and 34px flight lift.
     expect(resolveActorImpactAnchorY('/characters/enemies/cave_bat_a.png', 82)).toBe(143)
