@@ -339,5 +339,30 @@
         "loop": false
       }
     }
-  }
+  },
+  "cardArt": [
+    "enhancer_basic_attack",
+    "enhancer_basic_defense",
+    "guardian_basic_attack",
+    "guardian_basic_defense",
+    "striker_basic_attack",
+    "striker_basic_defense",
+    "striker_basic_finishing_slash",
+    "striker_basic_quickdraw",
+    "striker_basic_step",
+    "striker_common_chain_fang",
+    "striker_common_offensive_breath",
+    "striker_common_rising_break",
+    "striker_common_step_in",
+    "striker_epic_battle_breath",
+    "striker_epic_dance_finale",
+    "striker_epic_flash_finale",
+    "striker_epic_form_copy",
+    "striker_rare_composure",
+    "striker_rare_converging_slash",
+    "striker_rare_rising_flurry",
+    "striker_rare_sunder",
+    "tactician_basic_attack",
+    "tactician_basic_defense"
+  ]
 }

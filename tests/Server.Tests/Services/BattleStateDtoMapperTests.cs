@@ -1160,7 +1160,7 @@ public class BattleStateDtoMapperTests : IClassFixture<TempDataFactory>
                 Assert.DoesNotContain("|down]", c.AdjustedDescription);
             });
 
-            var strike = allCards.FirstOrDefault(c => c.CardDefinitionId == "basic_attack");
+            var strike = allCards.FirstOrDefault(c => c.CardDefinitionId == "striker_basic_attack");
             Assert.NotNull(strike);
             Assert.Equal("敵単体に[R:6|:自身の攻撃力]アタック。", strike!.AdjustedDescription);
             // 待機等を持たない札はターン終了で手札に残らない（ドロー演出の引き直し判定用）。
@@ -1194,7 +1194,7 @@ public class BattleStateDtoMapperTests : IClassFixture<TempDataFactory>
                 .Concat(state.DrawPile)
                 .Concat(state.DiscardPile)
                 .ToList();
-            var strike = allCards.FirstOrDefault(c => c.CardDefinitionId == "basic_attack");
+            var strike = allCards.FirstOrDefault(c => c.CardDefinitionId == "striker_basic_attack");
             Assert.NotNull(strike);
             // 6 + 2 = 8、base 6 と異なるので up 修飾。
             // Phase 10.5.M6.4: 数字 marker 前後 space 全削除
@@ -1225,7 +1225,7 @@ public class BattleStateDtoMapperTests : IClassFixture<TempDataFactory>
                 .Concat(state.DrawPile)
                 .Concat(state.DiscardPile)
                 .ToList();
-            var strike = allCards.FirstOrDefault(c => c.CardDefinitionId == "basic_attack");
+            var strike = allCards.FirstOrDefault(c => c.CardDefinitionId == "striker_basic_attack");
             Assert.NotNull(strike);
             // 6 * 0.75 = 4.5 → floor 4、base 6 と異なるので down 修飾。
             // Phase 10.5.M6.4: 数字 marker 前後 space 全削除
@@ -1256,7 +1256,7 @@ public class BattleStateDtoMapperTests : IClassFixture<TempDataFactory>
                 .Concat(state.DrawPile)
                 .Concat(state.DiscardPile)
                 .ToList();
-            var defend = allCards.FirstOrDefault(c => c.CardDefinitionId == "basic_defense");
+            var defend = allCards.FirstOrDefault(c => c.CardDefinitionId == "striker_basic_defense");
             Assert.NotNull(defend);
             // dexterity=3 で 5 + 3 = 8、base 5 と異なるので up 修飾。
             Assert.Contains("|up:自身の守備力]", defend!.AdjustedDescription);
@@ -1556,7 +1556,7 @@ public class BattleStateDtoMapperTests : IClassFixture<TempDataFactory>
                 .ToList();
 
             // 攻撃の基本は IsUpgradable なので AdjustedUpgradedDescription も非 null。
-            var strike = allCards.FirstOrDefault(c => c.CardDefinitionId == "basic_attack");
+            var strike = allCards.FirstOrDefault(c => c.CardDefinitionId == "striker_basic_attack");
             Assert.NotNull(strike);
             Assert.NotNull(strike!.AdjustedUpgradedDescription);
             Assert.Equal("敵単体に[R:9|:自身の攻撃力×1.5]アタック。", strike.AdjustedUpgradedDescription);

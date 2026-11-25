@@ -105,6 +105,7 @@ export function MerchantScreen(p: Props) {
                     aria-label={`Discard ${name} at index ${i}`}
                   >
                     <Card
+                      cardId={c.id}
                       name={disp.name}
                       cost={disp.cost}
                       type={disp.type}
@@ -211,6 +212,7 @@ export function MerchantScreen(p: Props) {
           aria-label={`Select ${name}`}
         >
           <Card
+            cardId={offer.id}
             name={disp.name}
             cost={disp.cost}
             type={disp.type}

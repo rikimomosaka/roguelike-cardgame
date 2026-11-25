@@ -71,10 +71,10 @@
     }
   ],
   "deck": [
-    "basic_attack",
-    "basic_attack",
-    "basic_defense",
-    "basic_defense",
+    "guardian_basic_attack",
+    "guardian_basic_attack",
+    "guardian_basic_defense",
+    "guardian_basic_defense",
     "guardian_basic_foothold",
     "guardian_basic_foothold",
     "guardian_basic_defensive_form",

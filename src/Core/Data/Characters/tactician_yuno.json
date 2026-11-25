@@ -70,10 +70,10 @@
     }
   ],
   "deck": [
-    "basic_attack",
-    "basic_attack",
-    "basic_defense",
-    "basic_defense",
+    "tactician_basic_attack",
+    "tactician_basic_attack",
+    "tactician_basic_defense",
+    "tactician_basic_defense",
     "tactician_basic_disrupting_shot",
     "tactician_basic_disrupting_shot",
     "tactician_basic_counterplan",

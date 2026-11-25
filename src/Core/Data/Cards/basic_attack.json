@@ -2,11 +2,7 @@
   "id": "basic_attack",
   "name": "攻撃の基本",
   "displayName": null,
-  "poolKinds": [
-    "Basic"
-  ],
-  "poolClass": "Universal",
-  "eligibleCharacterIds": [],
+  "poolKinds": [],
   "activeVersion": "v1",
   "versions": [
     {

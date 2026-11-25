@@ -50,6 +50,11 @@ export const sceneArt = (id: SceneArtId) => `${ROOT}/icons/scene/${id}.png`
 export type CardFramePart = 'affiliations' | 'types' | 'costs' | 'masks'
 export const cardFrame = (part: CardFramePart, id: string) => `${ROOT}/cards/frames/${part}/${id}.png`
 
+// カードイラスト（106×80）。イラストの無いカードは null（仮表示のまま）。
+const CARD_ART_IDS: ReadonlySet<string> = new Set((actorAssets as { cardArt?: string[] }).cardArt ?? [])
+export const cardArt = (cardId: string | null | undefined): string | null =>
+  cardId && CARD_ART_IDS.has(cardId) ? `${ROOT}/cards/art/${cardId}.png` : null
+
 // ---- キャラクター ----
 export const DEFAULT_HERO_ID = 'default'
 /** バストアップの立ち絵（キャラ選択・カットインなど）。 */

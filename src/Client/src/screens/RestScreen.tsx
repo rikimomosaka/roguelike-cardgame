@@ -77,6 +77,7 @@ export function RestScreen({ deck, completed, healPreview, onHeal, onUpgrade, on
                       aria-label={`Upgrade ${name} at ${e.index}`}
                     >
                       <Card
+                        cardId={e.card.id}
                         name={disp.name}
                         cost={disp.cost}
                         type={disp.type}
@@ -143,6 +144,7 @@ export function RestScreen({ deck, completed, healPreview, onHeal, onUpgrade, on
               {disp ? (
                 <div className="rs-confirm-preview">
                   <Card
+                    cardId={target?.id}
                     name={disp.name}
                     cost={disp.cost}
                     type={disp.type}
@@ -154,6 +156,7 @@ export function RestScreen({ deck, completed, healPreview, onHeal, onUpgrade, on
                   />
                   <span className="rs-confirm-arrow" aria-hidden="true">→</span>
                   <Card
+                    cardId={target?.id}
                     name={disp.name}
                     cost={disp.cost}
                     type={disp.type}

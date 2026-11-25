@@ -39,6 +39,7 @@
 | マップのマス | `icons/map/` | 32×32 | ×2 | 24 | |
 | 休憩画面などの場面の絵 | `icons/scene/` | 48×48 | ×4 | 24 | コマ数は `<id>.json` の frames |
 | カード枠 | `cards/frames/<部位>/` | 112×157 | ×1 | 48 | カードの表示幅 112px に一致。マスクは 4 色、コスト台座は 28×28・16 色 |
+| カードイラスト | `cards/art/` | 106×80 | ×1 | 64 | ファイル名はカード ID。見える範囲は種類ごとのマスクでおよそ x13–93・y10–67（§4.5） |
 | キャラ専用UI | `ui/heroes/<id>/` | §4 | ×2 | 32 | |
 | 敵の汎用UI | `ui/enemy/` | §4 | ×2 | 32 | |
 | 共通UI | `ui/common/` | 部品ごと | ×2 | 32 | |
@@ -116,6 +117,20 @@
 | `action_plate.png` | 64×16 | 行動時のカード名の札 |
 | `action_button.png` | 24×12 | 「行動」（再生）ボタン |
 | `energy.png` | 32×32 | 敵の行動再生中のエナジーの枠 |
+
+### 4.5 カードイラスト
+
+- 置き場所は `art/source/cards/art/<カードID>.png`（106×80）。ビルドすると表示用の一覧（`generated/actor-assets.json` の `cardArt`）に載り、
+  `Card` コンポーネントが `cardId` からイラストを表示する。一覧に無いカードは従来どおり仮表示（ILLUST）。
+- 絵の上下左右の端はマスクで隠れる。主役は中央の 80×58 に収める。
+- 生成の指示文は `tools/art-pipeline/card-art-prompts.mjs` に一覧で持つ。
+  - 初期デッキの「攻撃の基本」「防御の基本」（クラスごと）: 背景だけ生成し、そのクラスの主人公のモーションの 1 コマを等倍で合成する（膝上の構図）。
+  - クラス固有カード: 同じクラスに別のキャラが増える前提なので、プレイアブルキャラは描かない（道具・エフェクトが主役か、カードに合った無名の人物）。
+- 流れ:
+  1. `node tools/art-pipeline/gen-card-art.mjs --ids <id,...> --seeds 1,2` で候補を `art-work/cards/<id>_<seed>.png` に作る（1 枚 1 回分）。
+  2. `node tools/art-pipeline/card-art-preview.mjs --out art-work/review/x.png <id>:<種類>:<所属>:<候補のパス> ...` で実際の枠に重ねて比べる。
+  3. `node tools/art-pipeline/compose-card-art.mjs <id>=<seed> ...` で採用した候補を `art/source/cards/art/` に置く（背景のカードはここで合成。横の `<id>.json` に採用した seed を記録）。
+  4. `node tools/art-pipeline/build-assets.mjs cards/art`。
 
 ## 5. 命名規則
 

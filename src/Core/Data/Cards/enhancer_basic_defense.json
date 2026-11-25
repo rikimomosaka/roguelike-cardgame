@@ -1,0 +1,42 @@
+{
+  "id": "enhancer_basic_defense",
+  "name": "防御の基本",
+  "displayName": null,
+  "poolKinds": [
+    "Basic"
+  ],
+  "poolClass": "Enhancer",
+  "eligibleCharacterIds": [
+    "enhancer_lyra"
+  ],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 0,
+            "amountSource": "selfDefense"
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 0,
+            "amountSource": "selfDefense",
+            "amountScalePercent": 160
+          }
+        ]
+      }
+    }
+  ]
+}

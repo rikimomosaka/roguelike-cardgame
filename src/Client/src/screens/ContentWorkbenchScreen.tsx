@@ -521,14 +521,14 @@ function ContentPreview({ kind, id, document, meta, references }: {
           <Card
             name={String(document.displayName ?? document.name ?? id)} cost={cost} type={cardType} rarity={rarity}
             poolClass={cardPoolClassCode(document.poolClass)}
-            description={preview.description} upgradedDescription={preview.upgradedDescription} upgraded={false} art={<span>ILLUST</span>}
+            description={preview.description} upgradedDescription={preview.upgradedDescription} upgraded={false} cardId={id}
           />
           {preview.upgradedDescription && (
             <Card
               name={String(document.displayName ?? document.name ?? id)}
               cost={source.upgradedCost === null || source.upgradedCost === undefined ? cost : number(source.upgradedCost)}
               type={cardType} rarity={rarity} poolClass={cardPoolClassCode(document.poolClass)} description={preview.description}
-              upgradedDescription={preview.upgradedDescription} upgraded art={<span>ILLUST</span>}
+              upgradedDescription={preview.upgradedDescription} upgraded cardId={id}
             />
           )}
         </div>

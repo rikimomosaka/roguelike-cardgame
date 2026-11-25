@@ -79,10 +79,10 @@
     }
   ],
   "deck": [
-    "basic_attack",
-    "basic_attack",
-    "basic_defense",
-    "basic_defense",
+    "striker_basic_attack",
+    "striker_basic_attack",
+    "striker_basic_defense",
+    "striker_basic_defense",
     "striker_basic_quickdraw",
     "striker_basic_quickdraw",
     "striker_basic_step",

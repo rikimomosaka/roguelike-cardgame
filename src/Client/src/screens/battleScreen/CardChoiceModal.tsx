@@ -143,6 +143,7 @@ export function CardChoiceModal({
                 onClick={cand && !busy ? () => toggle(c.instanceId) : undefined}
               >
                 <Card
+                  cardId={c.cardDefinitionId}
                   name={cardNames[c.cardDefinitionId] ?? c.cardDefinitionId}
                   cost={c.currentCost ?? 'X'}
                   costOrig={c.currentCost !== c.originalCost ? c.originalCost : null}
@@ -211,6 +212,7 @@ export function CardChoiceModal({
               onClick={cand && !busy ? () => toggle(c.instanceId) : undefined}
             >
               <Card
+                cardId={c.cardDefinitionId}
                 name={cardNames[c.cardDefinitionId] ?? c.cardDefinitionId}
                 cost={c.currentCost ?? 'X'}
                 costOrig={c.currentCost !== c.originalCost ? c.originalCost : null}

@@ -12,8 +12,14 @@ public sealed class ExpandedRewardCardCatalogTests
 {
     private static readonly string[] ApprovedBasicIds =
     [
-        "basic_attack",
-        "basic_defense",
+        "striker_basic_attack",
+        "striker_basic_defense",
+        "guardian_basic_attack",
+        "guardian_basic_defense",
+        "tactician_basic_attack",
+        "tactician_basic_defense",
+        "enhancer_basic_attack",
+        "enhancer_basic_defense",
         "striker_basic_quickdraw",
         "striker_basic_step",
         "striker_basic_finishing_slash",
@@ -115,9 +121,10 @@ public sealed class ExpandedRewardCardCatalogTests
         var approved = ApprovedBasicIds.Concat(ApprovedRewardIds)
             .Select(id => catalog.Cards[id])
             .ToArray();
-        Assert.Equal(74, approved.Length);
-        Assert.Equal(74, approved.Select(card => card.Id).Distinct(StringComparer.Ordinal).Count());
-        Assert.Equal(74, approved.Select(card => card.Name).Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(80, approved.Length);
+        Assert.Equal(80, approved.Select(card => card.Id).Distinct(StringComparer.Ordinal).Count());
+        // 攻撃の基本・防御の基本はクラスごとに同名のカードがある（4 クラス × 2 種）。それ以外は名前が重複しない。
+        Assert.Equal(80 - 6, approved.Select(card => card.Name).Distinct(StringComparer.Ordinal).Count());
         Assert.All(approved, card =>
         {
             Assert.NotNull(card.UpgradedEffects);

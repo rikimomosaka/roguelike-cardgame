@@ -102,8 +102,8 @@ public sealed class DevContentControllerTests : IClassFixture<DevWebApplicationF
         var client = _factory.CreateClient();
         var cards = await client.GetFromJsonAsync<JsonElement>("/api/dev/content/cards");
         var basicAttack = cards.EnumerateArray()
-            .Single(item => item.GetProperty("id").GetString() == "basic_attack");
-        Assert.Equal("Universal", basicAttack.GetProperty("poolClass").GetString());
+            .Single(item => item.GetProperty("id").GetString() == "striker_basic_attack");
+        Assert.Equal("Striker", basicAttack.GetProperty("poolClass").GetString());
 
         var poolless = cards.EnumerateArray()
             .Single(item => item.GetProperty("id").GetString() == "starter_summon_3");

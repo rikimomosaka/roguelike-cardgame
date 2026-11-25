@@ -2,11 +2,7 @@
   "id": "basic_defense",
   "name": "防御の基本",
   "displayName": null,
-  "poolKinds": [
-    "Basic"
-  ],
-  "poolClass": "Universal",
-  "eligibleCharacterIds": [],
+  "poolKinds": [],
   "activeVersion": "v1",
   "versions": [
     {

@@ -32,8 +32,8 @@ public class EmbeddedDataLoaderTests
             Assert.Equal(12, catalog.Cards.Values.Count(card =>
                 CardPoolRules.IsReward(card) && card.PoolClass == poolClass));
         }
-        Assert.Equal(14, catalog.Cards.Values.Count(CardPoolRules.IsBasic));
-        Assert.Equal(9, catalog.Cards.Values.Count(card =>
+        Assert.Equal(20, catalog.Cards.Values.Count(CardPoolRules.IsBasic));
+        Assert.Equal(11, catalog.Cards.Values.Count(card =>
             card.EffectivePoolKinds.Count == 0 && !card.Id.StartsWith("enemy_", System.StringComparison.Ordinal)));
         // 敵の行動カードはトークンで、報酬・収集の対象外。
         foreach (var enemyCard in catalog.Cards.Values.Where(card =>
@@ -43,7 +43,10 @@ public class EmbeddedDataLoaderTests
             Assert.Empty(enemyCard.EffectivePoolKinds);
         }
 
-        Assert.Equal(CardPoolClass.Universal, catalog.Cards["basic_attack"].PoolClass);
+        // 旧共通の基本カードは初期デッキから外れ、古いセーブの読み込み用に残している。
+        Assert.Empty(catalog.Cards["basic_attack"].EffectivePoolKinds);
+        Assert.Null(catalog.Cards["basic_attack"].PoolClass);
+        Assert.Equal(CardPoolClass.Striker, catalog.Cards["striker_basic_attack"].PoolClass);
         Assert.Equal(CardPoolClass.Striker, catalog.Cards["striker_basic_quickdraw"].PoolClass);
         Assert.Empty(catalog.Cards["strike"].EffectivePoolKinds);
         Assert.Empty(catalog.Cards["starter_strike_2"].EffectivePoolKinds);

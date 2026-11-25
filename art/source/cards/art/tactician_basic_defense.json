@@ -1,0 +1,10 @@
+{
+  "note": "tools/art-pipeline/compose-card-art.mjs が生成（指示文は card-art-prompts.mjs）",
+  "kind": "backdrop",
+  "seed": 2,
+  "actor": {
+    "hero": "tactician_yuno",
+    "sheet": "stand",
+    "frame": 0
+  }
+}

@@ -136,6 +136,7 @@ export function RewardPopup(p: Props) {
                 disabled={pending !== null}
               >
                 <Card
+                  cardId={cid}
                   name={disp.name}
                   cost={disp.cost}
                   type={disp.type}

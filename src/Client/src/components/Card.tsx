@@ -7,7 +7,7 @@ import { CardDesc } from './CardDesc'
 import { useCardCatalog } from '../hooks/useCardCatalog'
 import { useUnitCatalog } from '../hooks/useUnitCatalog'
 import type { CardPoolClass } from '../api/catalog'
-import { cardFrame } from '../presentation/assets'
+import { cardArt, cardFrame } from '../presentation/assets'
 import './Card.css'
 
 export type CardType = 'attack' | 'skill' | 'power' | 'curse' | 'status' | 'unit'
@@ -66,6 +66,8 @@ type Props = {
   rarity: CardRarity
   /** Acquisition pool used to select the complete affiliation-frame PNG. */
   poolClass?: CardPoolClass | null
+  /** カード定義 ID。イラストがあれば art の代わりに表示する。 */
+  cardId?: string | null
   art?: ReactNode
   upgraded?: boolean
   selected?: boolean
@@ -99,6 +101,7 @@ export function Card({
   type,
   rarity,
   poolClass,
+  cardId,
   art,
   upgraded,
   selected,
@@ -119,6 +122,7 @@ export function Card({
   const affiliationFrameSrc = cardFrame('affiliations', frameAffiliation)
   const typeFrameSrc = cardFrame('types', type)
   const costFrameSrc = cardFrame('costs', frameAffiliation)
+  const artSrc = cardArt(cardId)
   const comboAuraActive = comboRingHighlighted ?? comboContinues ?? comboReductionEligible
   const classes = [
     'card',
@@ -281,7 +285,7 @@ export function Card({
         draggable={false}
       />
       <div className="card__illust" aria-hidden="true">
-        <div className="card__art-content">{art ?? 'ILLUST'}</div>
+        <div className="card__art-content">{art ?? (artSrc ? <img src={artSrc} alt="" draggable={false} /> : 'ILLUST')}</div>
       </div>
       <img
         className="card__type-frame"

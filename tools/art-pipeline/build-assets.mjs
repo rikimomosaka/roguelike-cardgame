@@ -183,7 +183,9 @@ for (const rule of rules) {
 
 fs.mkdirSync(path.dirname(GENERATED), { recursive: true })
 const sortKeys = (o) => Object.fromEntries(Object.keys(o).sort().map(k => [k, o[k]]))
-fs.writeFileSync(GENERATED, JSON.stringify({ actors: sortKeys(generated.actors), heroes: sortKeys(generated.heroes) }, null, 2) + '\n')
+// イラストのあるカード ID（無いカードは画像を読みに行かず、仮の表示にする）。
+const cardArt = pngs(path.join(OUT, 'cards/art')).map(f => f.replace(/\.png$/, ''))
+fs.writeFileSync(GENERATED, JSON.stringify({ actors: sortKeys(generated.actors), heroes: sortKeys(generated.heroes), cardArt }, null, 2) + '\n')
 
 console.log(`built ${built} files`)
 if (failures.length) {

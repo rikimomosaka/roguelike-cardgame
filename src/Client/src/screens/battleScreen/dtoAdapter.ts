@@ -516,6 +516,7 @@ export function toHandCardDemo(
   const upgradedDescription =
     card.adjustedUpgradedDescription ?? def?.upgradedDescription ?? null
   return {
+    cardId: card.cardDefinitionId,
     name: def?.displayName ?? def?.name ?? card.cardDefinitionId,
     // Why: PileModal と同じく Card 側に upgraded を渡して "+" を専用 span で
     //  描画する (CSS class card__plus による色分け維持)。ユーザ要望: 手札にも +。

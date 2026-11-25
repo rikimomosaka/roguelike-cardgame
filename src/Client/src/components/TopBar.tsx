@@ -249,6 +249,7 @@ export function TopBar({
                     return (
                       <li key={`${card.id}-${i}`} className="topbar__deck-item">
                         <Card
+                          cardId={card.id}
                           name={disp.name}
                           cost={disp.cost}
                           type={disp.type}

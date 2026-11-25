@@ -25,8 +25,8 @@ public sealed class FourClassVerticalSliceTests
         {
             "default",
             [
-                "basic_attack", "basic_attack",
-                "basic_defense", "basic_defense",
+                "striker_basic_attack", "striker_basic_attack",
+                "striker_basic_defense", "striker_basic_defense",
                 "striker_basic_quickdraw", "striker_basic_quickdraw",
                 "striker_basic_step", "striker_basic_step",
                 "striker_basic_finishing_slash", "striker_basic_finishing_slash",
@@ -35,8 +35,8 @@ public sealed class FourClassVerticalSliceTests
         {
             "guardian_mireille",
             [
-                "basic_attack", "basic_attack",
-                "basic_defense", "basic_defense",
+                "guardian_basic_attack", "guardian_basic_attack",
+                "guardian_basic_defense", "guardian_basic_defense",
                 "guardian_basic_foothold", "guardian_basic_foothold",
                 "guardian_basic_defensive_form", "guardian_basic_defensive_form",
                 "guardian_basic_cover_line", "guardian_basic_cover_line",
@@ -45,8 +45,8 @@ public sealed class FourClassVerticalSliceTests
         {
             "tactician_yuno",
             [
-                "basic_attack", "basic_attack",
-                "basic_defense", "basic_defense",
+                "tactician_basic_attack", "tactician_basic_attack",
+                "tactician_basic_defense", "tactician_basic_defense",
                 "tactician_basic_disrupting_shot", "tactician_basic_disrupting_shot",
                 "tactician_basic_counterplan", "tactician_basic_counterplan",
                 "tactician_basic_recursive_plan", "tactician_basic_recursive_plan",
@@ -55,8 +55,8 @@ public sealed class FourClassVerticalSliceTests
         {
             "enhancer_lyra",
             [
-                "basic_attack", "basic_attack",
-                "basic_defense", "basic_defense",
+                "enhancer_basic_attack", "enhancer_basic_attack",
+                "enhancer_basic_defense", "enhancer_basic_defense",
                 "enhancer_basic_preparation", "enhancer_basic_preparation",
                 "enhancer_basic_self_attunement", "enhancer_basic_self_attunement",
                 "enhancer_basic_afterglow_hymn", "enhancer_basic_afterglow_hymn",

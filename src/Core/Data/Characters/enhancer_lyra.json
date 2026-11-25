@@ -74,10 +74,10 @@
     }
   ],
   "deck": [
-    "basic_attack",
-    "basic_attack",
-    "basic_defense",
-    "basic_defense",
+    "enhancer_basic_attack",
+    "enhancer_basic_attack",
+    "enhancer_basic_defense",
+    "enhancer_basic_defense",
     "enhancer_basic_preparation",
     "enhancer_basic_preparation",
     "enhancer_basic_self_attunement",

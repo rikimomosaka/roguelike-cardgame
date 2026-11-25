@@ -100,6 +100,7 @@ export function PlayHistoryModal({
                     </span>
                   ) : null}
                   <Card
+                    cardId={card.definitionId}
                     name={card.displayName}
                     cost={card.currentCost}
                     costOrig={card.currentCost !== card.originalCost

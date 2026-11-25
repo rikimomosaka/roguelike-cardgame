@@ -771,7 +771,7 @@ test('two queued card attacks display and resolve as two real browser hits', asy
     expect(event.actualHpLoss).toBeGreaterThan(0)
     expect(event.source?.ownerSlot).toBe(0)
     expect([
-      'basic_attack',
+      'striker_basic_attack',
       'striker_basic_quickdraw',
       'striker_basic_finishing_slash',
     ]).toContain(event.source?.definitionId)

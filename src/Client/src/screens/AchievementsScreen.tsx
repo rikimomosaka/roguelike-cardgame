@@ -330,6 +330,7 @@ function CardsTab({ allIds, discovered }: { allIds: string[]; discovered: Set<st
                     aria-label={isDiscovered ? undefined : '未発見カード'}
                   >
                     <Card
+                      cardId={id}
                       name={disp.name}
                       cost={disp.cost}
                       type={disp.type}
@@ -587,6 +588,7 @@ function CharacterTile({ character, cardNames, onOpenDeck }: {
             <div className="achievements__summon-cards">
               {character.summonCards.map(card => (
                 <Card
+                  cardId={card.id}
                   key={card.id}
                   name={card.name}
                   cost={card.cost ?? 'X'}

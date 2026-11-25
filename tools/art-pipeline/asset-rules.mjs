@@ -25,6 +25,8 @@ export const RULES = [
   { key: 'cards/frames/affiliations', mode: 'pixelize', w: 112, h: 157, colors: 48, fit: 'stretch' },
   { key: 'cards/frames/types', mode: 'pixelize', w: 112, h: 157, colors: 48, fit: 'stretch' },
   { key: 'cards/frames/masks', mode: 'pixelize', w: 112, h: 157, colors: 4, fit: 'stretch' },
+  // カードイラスト（カードの絵の枠いっぱい。種類ごとのマスクで見える範囲はおよそ x13–93, y10–67）。
+  { key: 'cards/art', mode: 'pixelize', w: 106, h: 80, colors: 64, fit: 'cover' },
   { key: 'cards/frames/costs', mode: 'pixelize', w: 28, h: 28, colors: 16, fit: 'stretch' },
 
   { key: 'portraits', mode: 'pixelize', w: 120, h: 160, colors: 48, fit: 'cover' },

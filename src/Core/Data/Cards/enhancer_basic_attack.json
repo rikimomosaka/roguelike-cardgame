@@ -1,0 +1,44 @@
+{
+  "id": "enhancer_basic_attack",
+  "name": "攻撃の基本",
+  "displayName": null,
+  "poolKinds": [
+    "Basic"
+  ],
+  "poolClass": "Enhancer",
+  "eligibleCharacterIds": [
+    "enhancer_lyra"
+  ],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-08-21T00:00:00Z",
+      "label": "approved-v2",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 0,
+            "amountSource": "selfAttack"
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "attack",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 0,
+            "amountSource": "selfAttack",
+            "amountScalePercent": 150
+          }
+        ]
+      }
+    }
+  ]
+}

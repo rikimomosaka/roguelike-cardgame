@@ -57,6 +57,7 @@ export function DeckListModal({
               return (
                 <li key={`${cardId}-${index}`}>
                   <Card
+                    cardId={cardId}
                     name={definition?.displayName ?? definition?.name ?? cardId}
                     cost={definition?.cost ?? 'X'}
                     costOriginal={definition?.cost ?? null}

@@ -315,6 +315,8 @@ export type HandCardDemo = {
   type: CardType
   rarity: CardRarity
   poolClass?: import('../api/catalog').CardPoolClass | null
+  /** カード定義 ID（イラストの解決用）。 */
+  cardId?: string
   art?: ReactNode
   playable?: boolean
   unavailableReason?: string
@@ -1290,6 +1292,7 @@ function BattleCardVisual({
 }: BattleCardVisualProps) {
   return (
     <Card
+      cardId={card.cardId}
       name={card.name}
       cost={card.cost}
       costOrig={card.costOrig}
@@ -1650,6 +1653,7 @@ function PileModal({ kind, cards, onClose }: PileModalProps) {
               return (
                 <li key={`${card.instanceId}-${i}`} className="pile-modal__item">
                   <Card
+                    cardId={card.cardDefinitionId}
                     name={disp.name}
                     cost={disp.cost}
                     costOrig={disp.costOrig}
