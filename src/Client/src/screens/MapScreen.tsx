@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react'
 import { getCurrentRun, heartbeat, moveToNode } from '../api/runs'
+import { PixelRouteCanvas } from './mapScreen/PixelRouteCanvas'
+import type { RouteEdge } from './mapScreen/PixelRouteCanvas'
 import {
   claimGold,
   claimPotion,
@@ -761,18 +763,12 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
             className="map-screen__inner"
             style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
           >
-            <svg
-              className="map-screen__svg"
-              viewBox="0 0 100 100"
-              preserveAspectRatio="none"
-              aria-hidden="true"
-            >
-              {snap.map.nodes.map((n) =>
-                n.outgoingNodeIds.map((toId) => {
+            {/* 道はドット絵としてキャンバスに描く（PixelRouteCanvas）。状態の判定は旧 SVG 版と同じ。 */}
+            <PixelRouteCanvas
+              edges={snap.map.nodes.flatMap((n) =>
+                n.outgoingNodeIds.flatMap((toId): RouteEdge[] => {
                   const to = snap.map.nodes.find((x) => x.id === toId)
-                  if (!to) return null
-                  const a = posViewBox(n)
-                  const b = posViewBox(to)
+                  if (!to) return []
                   const visitedEdge = visited.has(n.id) && visited.has(toId)
                   // Hide "next" highlighting on outgoing edges from a Start
                   // tile that hasn't been entered yet — the player must step
@@ -781,67 +777,19 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
                   const nextEdge = !startEntryActive
                     && n.id === snap.run.currentNodeId
                     && isSelectable(to)
-                  // Why: 過去の道は青、次に行ける道は黄色、それ以外は白。
-                  // 全ての道を黒で縁取り (ユーザ要望)。
-                  const stroke = visitedEdge
-                    ? '#3ec6ff'
-                    : nextEdge
-                      ? '#f1c95b'
-                      : '#ffffff'
-                  // Why: 旧太さ (viewBox 単位 0.45) は斜道で十分太かったが、
-                  // vector-effect="non-scaling-stroke" 化で px 換算したら
-                  // 細すぎたため、斜道相当の見た目に合わせて太く。
-                  // outer (黒縁) は inner (色) より太く描画して縁取り効果を出す。
-                  const edgeState = visitedEdge ? 'is-traced' : nextEdge ? 'is-next' : 'is-far'
-                  return (
-                    <g key={`${n.id}-${toId}`}>
-                      <line
-                        x1={a.x} y1={a.y} x2={b.x} y2={b.y}
-                        stroke="#000000"
-                        strokeOpacity={0.85}
-                        strokeWidth={9}
-                        strokeLinecap="round"
-                        vectorEffect="non-scaling-stroke"
-                      />
-                      <line
-                        className={`map-screen__edge ${edgeState}`}
-                        x1={a.x} y1={a.y} x2={b.x} y2={b.y}
-                        stroke={stroke}
-                        strokeOpacity={1}
-                        strokeWidth={6}
-                        strokeLinecap="round"
-                        vectorEffect="non-scaling-stroke"
-                      />
-                    </g>
-                  )
+                  // Why: 過去の道は青、次に行ける道は黄色、それ以外は白。全ての道を黒で縁取り (ユーザ要望)。
+                  const state = visitedEdge ? 'traced' : nextEdge ? 'next' : 'far'
+                  return [{ id: `${n.id}-${toId}`, from: posViewBox(n), to: posViewBox(to), state }]
                 }),
               )}
-              {travel && (() => {
+              travel={(() => {
+                if (!travel) return null
                 const from = snap.map.nodes.find(node => node.id === travel.fromId)
                 const to = snap.map.nodes.find(node => node.id === travel.toId)
                 if (!from || !to) return null
-                const a = posViewBox(from)
-                const b = posViewBox(to)
-                return (
-                  <circle className="map-screen__travel-dot" r="1.15" cx={a.x} cy={a.y}>
-                    <animate
-                      attributeName="cx"
-                      from={a.x}
-                      to={b.x}
-                      dur="500ms"
-                      fill="freeze"
-                    />
-                    <animate
-                      attributeName="cy"
-                      from={a.y}
-                      to={b.y}
-                      dur="500ms"
-                      fill="freeze"
-                    />
-                  </circle>
-                )
+                return { key: `${travel.fromId}-${travel.toId}`, from: posViewBox(from), to: posViewBox(to) }
               })()}
-            </svg>
+            />
 
             {snap.map.nodes.map((n) => {
               const { left, top } = posPct(n, maxCol)

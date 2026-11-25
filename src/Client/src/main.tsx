@@ -3,6 +3,8 @@ import { StrictMode, useEffect, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './styles/fonts.css'
 import './index.css'
+// ドット絵の枠（各画面の枠・ボタンの見た目を上書き）。docs/current-art-asset-spec.md §4
+import './styles/pixel-frames.css'
 import './styles/tokens.css'
 import './App.css'
 import App from './App.tsx'

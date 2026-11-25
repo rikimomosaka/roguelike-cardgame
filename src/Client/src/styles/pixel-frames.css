@@ -1,0 +1,314 @@
+/*
+ * ドット絵の枠（docs/current-art-asset-spec.md §4「共通UI」）。
+ *
+ * 枠・パネル・ボタンの見た目だけをここで上書きする。各画面の CSS にある
+ * アニメーション（transition / animation / transform / filter / box-shadow）には触れない。
+ *
+ * 仕組み: 共通の枠画像（ui/common/*.png、tools/art-pipeline/gen-ui-frames.mjs が生成）を
+ * border-image の 9 分割で貼る。枠は border の内側へ描く（border-image-width > border-width）ので、
+ * 要素の大きさ・位置は変わらない。中の見出しが端まで塗る窓（ポップアップなど）は --px-window で
+ * 外側へはみ出して描く。
+ *
+ * 新しい部品に枠を付けるときは、下の該当する種類のセレクタ一覧に足す。
+ * :root を前に付けて、各画面の CSS（読み込み順が後になり得る）より優先させている。
+ * ホバー・選択中の見た目は、各画面の :hover などのセレクタをここに足して「アクティブな枠」に切り替える。
+ */
+:root {
+  --px-panel: url('/assets/ui/common/panel.png') 6 fill / 12px / 0 stretch;
+  --px-panel-hollow: url('/assets/ui/common/panel.png') 6 / 12px / 0 stretch;
+  --px-window: url('/assets/ui/common/panel.png') 6 fill / 12px / 10px stretch;
+  --px-box: url('/assets/ui/common/box.png') 3 fill / 6px / 0 stretch;
+  --px-inset: url('/assets/ui/common/inset.png') 3 fill / 6px / 0 stretch;
+  --px-inset-active: url('/assets/ui/common/inset_active.png') 3 fill / 6px / 0 stretch;
+  --px-button: url('/assets/ui/common/button.png') 4 fill / 8px / 0 stretch;
+  --px-button-hover: url('/assets/ui/common/button_hover.png') 4 fill / 8px / 0 stretch;
+  --px-button-secondary: url('/assets/ui/common/button_secondary.png') 4 fill / 8px / 0 stretch;
+  --px-button-danger: url('/assets/ui/common/button_danger.png') 4 fill / 8px / 0 stretch;
+  --px-button-danger-hover: url('/assets/ui/common/button_danger_hover.png') 4 fill / 8px / 0 stretch;
+  --px-tooltip: url('/assets/ui/common/tooltip.png') 3 fill / 6px / 0 stretch;
+  --px-bar: url('/assets/ui/common/bar.png') 2 fill / 4px / 0 stretch;
+}
+
+/* ---------- 浮いている窓（外側へはみ出して描く） ---------- */
+:root :is(
+  .popup__panel,
+  .topbar__deck-menu,
+  .potion-slot__menu,
+  .pile-modal,
+  .character-pick__deck-modal,
+  .finisher-record__modal,
+  .main-menu__dialog
+) {
+  border-color: transparent;
+  border-image: var(--px-window);
+  border-radius: 0;
+}
+
+/* ---------- 大きいパネル（画面全体・一覧の外枠） ---------- */
+:root :is(
+  .main-menu,
+  .login-screen,
+  .settings-screen,
+  .rr,
+  .achievements,
+  .character-pick,
+  .mc-shopkeeper,
+  .ev-narrative-wrap,
+  .map-screen__key,
+  .battle-replay__toolbar
+) {
+  border-color: transparent;
+  border-image: var(--px-panel);
+  border-radius: 0;
+}
+/* 画像の周りの額縁（中を塗らない）。 */
+:root .ev-frame {
+  border-color: transparent;
+  border-image: var(--px-panel-hollow);
+  border-radius: 0;
+}
+/* 大きいパネルの内側にあった細い飾り線は、ドットの枠と二重になるので消す。 */
+:root :is(.main-menu, .login-screen, .settings-screen, .rr, .achievements, .character-pick)::before {
+  border-color: transparent;
+}
+
+/* ---------- 小さい箱（ラベル・数値・情報のまとまり） ---------- */
+:root :is(
+  .topbar__group,
+  .topbar__relics,
+  .topbar__potions,
+  .map-screen__act-badge,
+  .map-screen__controls,
+  .map-screen__travel-status,
+  .map-screen__dev-note,
+  .map-screen__shop-toast,
+  .rr__panel,
+  .rs-action-status,
+  .settings-screen__slider-row,
+  .settings-screen__select-row,
+  .im-item-hotkey,
+  .ev-choice__cond,
+  .achievements__panel,
+  .achievements__history-summary,
+  .achievements__history-outcome,
+  .character-pick__details > section,
+  .character-pick__selection-mark,
+  .mc-shopkeeper__line,
+  .mc-shopkeeper__name,
+  .mc-card-slot__price,
+  .mc-row__price,
+  .mc-tile__price,
+  .battle-state-ribbon,
+  .battle__error,
+  .battle__side--player .slot-action-label__text,
+  .finisher-record-button
+) {
+  border-color: transparent;
+  border-image: var(--px-box);
+  border-radius: 0;
+}
+
+/* ---------- へこんだ枠（選択肢の行・アイコンの台・入力欄） ---------- */
+:root :is(
+  .rs-choice,
+  .rs-choice-icon,
+  .rw-tile,
+  .rw-tile__icon,
+  .ev-choice,
+  .im-item,
+  .im-item-icon,
+  .ar-slot,
+  .ar-icon,
+  .rr__item,
+  .rr__item-icon,
+  .battle-replay__entry,
+  .ccm-list__row,
+  .login-screen__input,
+  .settings-screen__choice,
+  .achievements__tile,
+  .achievements__search,
+  .character-pick__party-member,
+  .mc-shopkeeper__avatar,
+  .mc-row,
+  .mc-row__icon,
+  .mc-tile
+) {
+  border-color: transparent;
+  border-image: var(--px-inset);
+  border-radius: 0;
+}
+/* ホバー・選択中は金の縁。 */
+:root :is(
+  .rs-choice:hover:not(:disabled),
+  .rw-tile:hover:not(:disabled),
+  .ev-choice:hover:not(:disabled),
+  .im-item:hover:not(:disabled),
+  .ar-slot:hover:not(:disabled),
+  .ar-slot.is-chosen,
+  .ccm-list__row.is-selected,
+  .settings-screen__choice:hover,
+  .settings-screen__choice.is-on,
+  .settings-screen__slider-row:hover,
+  .settings-screen__select-row:hover,
+  .mc-row:hover,
+  .mc-tile:hover,
+  .login-screen__input:focus
+) {
+  border-image: var(--px-inset-active);
+}
+
+/* ---------- ボタン ---------- */
+:root :is(
+  .btn,
+  .topbar__btn,
+  .main-menu__btn,
+  .login-screen__submit,
+  .settings-screen__reset,
+  .settings-screen__back,
+  .rr__btn,
+  .rw-picker__skip,
+  .im-confirm-btn--cancel,
+  .battle-replay__button,
+  .battle-replay__page-button,
+  .battle-replay__speed select,
+  .map-screen__controls button,
+  .map-screen__controls output,
+  .finisher-record__header button,
+  .potion-slot__menu button,
+  .pile-modal__close,
+  .character-pick__deck-modal-header button,
+  .achievements__back,
+  .achievements__filter-chip,
+  .achievements__discovery-filter button
+) {
+  border-color: transparent;
+  border-image: var(--px-button);
+  border-radius: 0;
+}
+:root :is(
+  .btn:hover:not(:disabled),
+  .topbar__btn:hover,
+  .topbar__btn[aria-pressed='true'],
+  .main-menu__btn:hover,
+  .login-screen__submit:hover:not(:disabled),
+  .settings-screen__reset:hover,
+  .settings-screen__back:hover,
+  .rr__btn:hover:not(:disabled),
+  .rw-picker__skip:hover,
+  .im-confirm-btn--cancel:hover:not(:disabled),
+  .battle-replay__button:hover:not(:disabled),
+  .battle-replay__page-button:hover:not(:disabled),
+  .battle-replay__speed select:hover,
+  .map-screen__controls button:hover,
+  .map-screen__controls button:focus-visible,
+  .potion-slot__menu button:hover,
+  .pile-modal__close:hover,
+  .achievements__back:hover,
+  .achievements__filter-chip:hover,
+  .achievements__filter-chip[aria-pressed='true'],
+  .achievements__discovery-filter button:hover,
+  .achievements__discovery-filter button[aria-pressed='true']
+) {
+  border-image: var(--px-button-hover);
+}
+:root .topbar__btn:disabled:hover {
+  border-image: var(--px-button);
+}
+:root .btn--secondary {
+  border-image: var(--px-button-secondary);
+}
+:root :is(.btn--danger, .main-menu__btn--danger, .im-confirm-btn--danger) {
+  border-color: transparent;
+  border-image: var(--px-button-danger);
+  border-radius: 0;
+}
+:root :is(
+  .btn--danger:hover:not(:disabled),
+  .main-menu__btn--danger:hover,
+  .im-confirm-btn--danger:hover:not(:disabled)
+) {
+  border-image: var(--px-button-danger-hover);
+}
+
+/* ---------- ツールチップ ---------- */
+:root :is(.tip, .tip__cost-panel) {
+  border-color: transparent;
+  border-image: var(--px-tooltip);
+  border-radius: 0;
+}
+
+/* ---------- ゲージの溝（HP バーなど） ---------- */
+:root :is(.topbar__hp-track, .status-hp__track, .hud-hp .track, .combo-gauge, .settings-screen__slider-track) {
+  border-color: transparent;
+  border-image: var(--px-bar);
+  border-radius: 0;
+}
+
+/* ---------- 区切り線（1px → 2px = 1 ドット） ---------- */
+:root :is(
+  .popup__head,
+  .topbar__deck-menu-header,
+  .pile-modal__header,
+  .character-pick__header,
+  .character-pick__deck-modal-header,
+  .settings-screen__section-title,
+  .login-screen__tabs,
+  .achievements__tabs,
+  .achievements__panel-title-row,
+  .achievements__rarity-heading,
+  .rr__panel-title-row
+) {
+  border-bottom-width: 2px;
+}
+:root :is(.popup__foot, .settings-screen__footer, .character-pick__footer) {
+  border-top-width: 2px;
+}
+:root .topbar {
+  border-bottom-width: 2px;
+}
+
+/* ---------- 丸い部品（ドットの円の枠を背景に重ねる） ---------- */
+/* マップのマス。光の脈動（box-shadow）や拡大のアニメーションは丸い形のまま残る。 */
+:root .map-screen__node {
+  border-color: transparent;
+  background: url('/assets/ui/common/node_default.png') center / 100% 100% no-repeat;
+}
+:root .map-screen__node.is-past { background-image: url('/assets/ui/common/node_past.png'); }
+:root .map-screen__node.is-far { background-image: url('/assets/ui/common/node_far.png'); }
+:root .map-screen__node.is-next { background-image: url('/assets/ui/common/node_next.png'); }
+:root .map-screen__node.is-next:hover { background-image: url('/assets/ui/common/node_next_hover.png'); }
+:root .map-screen__node.k--elite.is-next { background-image: url('/assets/ui/common/node_elite_next.png'); }
+:root .map-screen__node.k--rest.is-next { background-image: url('/assets/ui/common/node_rest_next.png'); }
+:root .map-screen__node.k--merchant.is-next { background-image: url('/assets/ui/common/node_merchant_next.png'); }
+:root .map-screen__node.k--boss { background-image: url('/assets/ui/common/node_default_boss.png'); }
+:root .map-screen__node.k--boss.is-past { background-image: url('/assets/ui/common/node_past_boss.png'); }
+:root .map-screen__node.k--boss.is-far { background-image: url('/assets/ui/common/node_boss_far_boss.png'); }
+:root .map-screen__node.k--boss.is-next { background-image: url('/assets/ui/common/node_next_boss.png'); }
+:root .map-screen__node.k--boss.is-next:hover { background-image: url('/assets/ui/common/node_next_hover_boss.png'); }
+:root .map-screen__node.is-current { background-image: url('/assets/ui/common/node_current.png'); }
+
+/* 走破記録のマス・凡例の印。 */
+:root :is(.rr__journey-node, .rr__trail-legend .lg__sym) {
+  border-color: transparent;
+  background: url('/assets/ui/common/node_default.png') center / 100% 100% no-repeat;
+}
+
+/* ポーションの枠。 */
+:root .potion-slot {
+  border-color: transparent;
+  background: url('/assets/ui/common/slot_round.png') center / 100% 100% no-repeat;
+}
+
+/* 戦闘のエナジーの玉。 */
+:root .energy {
+  border-color: transparent;
+  background: url('/assets/ui/common/orb.png') center / 100% 100% no-repeat;
+}
+
+/* ゲージの中身は溝の枠（2px）の内側に収める。 */
+:root :is(.status-hp__fill, .topbar__hp-fill) {
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  max-width: calc(100% - 4px);
+}
