@@ -233,7 +233,7 @@ export type IntentDemo = {
 export type SpriteKind = 'hero' | 'ally' | 'enemy' | 'elite'
 
 /** Character animation state. New sprite sheets can be added without changing Slot markup. */
-export type CharacterMotion = 'idle' | 'attack' | 'attackAlt' | 'skill' | 'guard' | 'hurt' | 'down'
+export type CharacterMotion = 'idle' | 'attack' | 'attackAlt' | 'skill' | 'guard' | 'cast' | 'hurt' | 'down'
 
 /** 攻撃時に使う攻撃モーション。attackAlt が無いキャラは常に attack を使う。 */
 export type AttackMotion = 'attack' | 'attackAlt'
@@ -390,8 +390,14 @@ function heroUiStyle(heroId: string | undefined): CSSProperties | undefined {
 const STAGE_CANVAS_BOTTOM_Y = 198
 /** 奥義モーションで技を放つ位置（8 コマ中 5 コマ目の頭）。 */
 const SKILL_RELEASE_RATIO = 5 / 8
-/** 防御モーションで構えが固まるまでの割合（6 コマ中 2 コマ目）。ここまで待ってからブロックを付ける。 */
-const GUARD_BRACE_RATIO = 2 / 6
+/**
+ * スキルカードのモーションで、効果を出すまで待つ割合。
+ * guard: 構えが固まる 2/6 コマ目でブロックを付ける。cast: 刀に力が宿る 3/6 コマ目で効果を出す。
+ */
+const SKILL_CARD_MOTION_RELEASE_RATIO: Readonly<Record<SkillCardMotion, number>> = {
+  guard: 2 / 6,
+  cast: 3 / 6,
+}
 /** ダウンモーションの後、敗北処理へ進む前に倒れた姿を見せる時間。 */
 const DOWN_HOLD_MS = 500
 /** 勝敗が決まってから、勝利の表示・結果画面へ進むまでの間（倒れた側を見せる）。 */
@@ -415,8 +421,8 @@ type SlotAnim = {
   attackMotion?: AttackMotion
   /** 戦技・奥義の発動モーションを再生中のキャラ。 */
   skillCasterId?: string
-  /** 防御効果を持つスキルを使い、防御モーションを再生中のキャラ。 */
-  guardCasterId?: string
+  /** スキルカードを使い、そのモーション（防御 / それ以外）を再生中のキャラ。 */
+  cardMotion?: { casterId: string; motion: SkillCardMotion }
   hitIds?: ReadonlyArray<string>
   blockedIds?: ReadonlyArray<string>
   playbackSpeed?: number
@@ -671,8 +677,8 @@ type SlotProps = {
   attackMotion?: AttackMotion
   /** 戦技・奥義の発動モーション中。 */
   isSkill?: boolean
-  /** 防御効果を持つスキルの防御モーション中。 */
-  isGuard?: boolean
+  /** スキルカードのモーション中（防御効果あり = guard、それ以外 = cast）。 */
+  cardMotion?: SkillCardMotion | null
   isHit?: boolean
   isBlocked?: boolean
   /** 撃破された直後（点滅して消える）。 */
@@ -860,26 +866,33 @@ type CharacterMotionFlags = {
   attack: AttackMotion | null
   isHit: boolean
   isSkill: boolean
-  isGuard: boolean
+  cardMotion: SkillCardMotion | null
   /** HP 0 で倒れている（down シートを持つキャラだけ表示が残る）。 */
   isDown: boolean
 }
 
+/** スキルカードを使ったときのモーション。 */
+export type SkillCardMotion = 'guard' | 'cast'
+
 /**
- * 使ったカードの解決中（次のカード使用まで）に、使ったキャラがブロックを付与したか。
- * 防御効果を持つスキルの判定に使う。
+ * スキルカードの解決中（次のカード使用まで）の出来事から、使ったキャラのモーションを決める。
+ * - 使ったキャラが攻撃する: null（攻撃モーションに任せる）
+ * - 使ったキャラがブロックを付与する: guard（防御モーション）
+ * - それ以外: cast（発動モーション）
  */
-export function playedCardGainsBlock(
+export function skillCardMotion(
   steps: ReadonlyArray<{ event: { kind: string; casterInstanceId: string | null; amount: number | null } }>,
   playCardIndex: number,
   casterId: string,
-): boolean {
+): SkillCardMotion | null {
+  let gainsBlock = false
   for (let j = playCardIndex + 1; j < steps.length; j++) {
     const ev = steps[j].event
-    if (ev.kind === 'PlayCard') return false
-    if (ev.kind === 'GainBlock' && ev.casterInstanceId === casterId && (ev.amount ?? 0) > 0) return true
+    if (ev.kind === 'PlayCard') break
+    if (ev.kind === 'AttackFire' && ev.casterInstanceId === casterId) return null
+    if (ev.kind === 'GainBlock' && ev.casterInstanceId === casterId && (ev.amount ?? 0) > 0) gainsBlock = true
   }
-  return false
+  return gainsBlock ? 'guard' : 'cast'
 }
 
 function readableMotionDuration(
@@ -902,12 +915,12 @@ function selectCharacterAnimation(
   flags: CharacterMotionFlags,
   failedSources: ReadonlySet<string>,
 ): ActiveCharacterAnimation | null {
-  // 優先度: ダウン > 被弾 > 奥義 > 防御 > 攻撃（指定の型 → 基本の attack）> 待機。
+  // 優先度: ダウン > 被弾 > 奥義 > スキルカード（防御 / 発動）> 攻撃（指定の型 → 基本の attack）> 待機。
   const candidates: CharacterMotion[] = []
   if (flags.isDown) candidates.push('down')
   if (flags.isHit) candidates.push('hurt')
   if (flags.isSkill) candidates.push('skill')
-  if (flags.isGuard) candidates.push('guard')
+  if (flags.cardMotion) candidates.push(flags.cardMotion)
   if (flags.attack) candidates.push(flags.attack, 'attack')
   candidates.push('idle')
 
@@ -935,7 +948,7 @@ function Slot({
   attackingDir,
   attackMotion = 'attack',
   isSkill = false,
-  isGuard = false,
+  cardMotion = null,
   isHit,
   isBlocked,
   isDying = false,
@@ -971,7 +984,7 @@ function Slot({
       attack: attackingDir !== undefined ? attackMotion : null,
       isHit: isHit === true,
       isSkill,
-      isGuard,
+      cardMotion,
       isDown: char.hpCur <= 0,
     },
     failedAnimationSources,
@@ -1007,7 +1020,7 @@ function Slot({
     displayHeight,
     char.stage ? STAGE_CANVAS_BOTTOM_Y : undefined,
   )
-  const oneShotPlaybackSpeed = attackingDir !== undefined || isHit || isSkill || isGuard
+  const oneShotPlaybackSpeed = attackingDir !== undefined || isHit || isSkill || cardMotion !== null
     ? normalizeMotionPlaybackSpeed(motionPlaybackSpeed)
     : 1
   const animationFrameAspect = activeAnimation !== null
@@ -2662,10 +2675,10 @@ export function BattleScreen({
         await sleep(Math.round(durationMs * motionScale / playbackSpeed))
         return !isCancelled()
       }
-      // 防御モーションが終わる時刻。最後の片付けで途中のコマが消えないよう、ここまで待つ。
-      let guardMotionEndsAt = 0
-      const finishGuardMotion = async () => {
-        const restMs = guardMotionEndsAt - performance.now()
+      // スキルカードのモーションが終わる時刻。最後の片付けで途中のコマが消えないよう、ここまで待つ。
+      let cardMotionEndsAt = 0
+      const finishCardMotion = async () => {
+        const restMs = cardMotionEndsAt - performance.now()
         if (restMs > 0) await sleep(restMs)
       }
       const clearTransientPresentation = () => {
@@ -2963,28 +2976,26 @@ export function BattleScreen({
           // Current responses carry the exact reset-before-Finisher value.
           // Legacy responses still receive the required first-tier sound.
           playComboTone(comboToneTier(ev.comboCountAfter) ?? 1)
-          // 防御効果を持つスキルを使ったキャラは、防御モーションで構えてからブロックを得る。
-          const guardCasterId = ev.casterInstanceId ?? undefined
-          const guardSheet = actorAnimations(guardCasterId)?.guard
-          if (
-            guardCasterId
-            && guardSheet
-            && effectiveMotionLevel !== 'off'
-            && isSkillCard(ev.cardId)
-            && playedCardGainsBlock(steps, i, guardCasterId)
-          ) {
-            const guardDurationMs = readableMotionDuration(guardSheet, 1)
-            const braceMs = Math.round(guardDurationMs * GUARD_BRACE_RATIO)
-            setSlotAnim({ guardCasterId, playbackSpeed })
-            if (!await waitForPresentation(braceMs)) {
+          // スキルカードを使ったキャラは、防御効果があれば防御モーションで構えてからブロックを得る。
+          // それ以外（強化・ドロー等）は発動モーションで力をためてから効果を出す。攻撃するスキルは攻撃モーションに任せる。
+          const cardCasterId = ev.casterInstanceId ?? undefined
+          const cardMotion = cardCasterId && isSkillCard(ev.cardId)
+            ? skillCardMotion(steps, i, cardCasterId)
+            : null
+          const cardMotionSheet = cardMotion ? actorAnimations(cardCasterId)?.[cardMotion] : undefined
+          if (cardCasterId && cardMotion && cardMotionSheet && effectiveMotionLevel !== 'off') {
+            const motionDurationMs = readableMotionDuration(cardMotionSheet, 1)
+            const releaseMs = Math.round(motionDurationMs * SKILL_CARD_MOTION_RELEASE_RATIO[cardMotion])
+            setSlotAnim({ cardMotion: { casterId: cardCasterId, motion: cardMotion }, playbackSpeed })
+            if (!await waitForPresentation(releaseMs)) {
               clearTransientPresentation()
               return
             }
-            const restMs = Math.round((guardDurationMs - braceMs) * motionScale / playbackSpeed)
-            guardMotionEndsAt = performance.now() + restMs
+            const restMs = Math.round((motionDurationMs - releaseMs) * motionScale / playbackSpeed)
+            cardMotionEndsAt = performance.now() + restMs
             window.setTimeout(() => {
-              setSlotAnim(current => current.guardCasterId === guardCasterId
-                ? { ...current, guardCasterId: undefined }
+              setSlotAnim(current => current.cardMotion?.casterId === cardCasterId
+                ? { ...current, cardMotion: undefined }
                 : current)
             }, restMs)
           }
@@ -3575,7 +3586,7 @@ export function BattleScreen({
         if (shouldStage) {
           // Why: HP overlay 等は events ループで累積済み。staging 用 setState は
           //  resp.state ベースなので、ここでクリアして二重適用を避ける。
-          await finishGuardMotion()
+          await finishCardMotion()
           setSlotAnim({})
           setDamageOverlay({})
           setBlockOverlay({})
@@ -3684,7 +3695,7 @@ export function BattleScreen({
       }
 
       // 全 event 処理完了 → 最終 state に確定 + overlay クリア
-      await finishGuardMotion()
+      await finishCardMotion()
       setSlotAnim({})
       setDamageOverlay({})
       setBlockOverlay({})
@@ -4749,8 +4760,10 @@ export function BattleScreen({
                     attackMotion={attackingDir ? slotAnim.attackMotion : undefined}
                     isSkill={!!(showTransientBattleAnimation && actor
                       && slotAnim.skillCasterId === actor.instanceId)}
-                    isGuard={!!(showTransientBattleAnimation && actor
-                      && slotAnim.guardCasterId === actor.instanceId)}
+                    cardMotion={showTransientBattleAnimation && actor
+                      && slotAnim.cardMotion?.casterId === actor.instanceId
+                      ? slotAnim.cardMotion.motion
+                      : null}
                     isHit={isHit}
                     isBlocked={isBlocked}
                     isDying={!!actor && isDyingBlink(actor)}
@@ -4815,8 +4828,10 @@ export function BattleScreen({
                     attackMotion={attackingDir ? slotAnim.attackMotion : undefined}
                     isSkill={!!(showTransientBattleAnimation && actor
                       && slotAnim.skillCasterId === actor.instanceId)}
-                    isGuard={!!(showTransientBattleAnimation && actor
-                      && slotAnim.guardCasterId === actor.instanceId)}
+                    cardMotion={showTransientBattleAnimation && actor
+                      && slotAnim.cardMotion?.casterId === actor.instanceId
+                      ? slotAnim.cardMotion.motion
+                      : null}
                     isHit={isHit}
                     isBlocked={isBlocked}
                     isDying={!!actor && isDyingBlink(actor)}

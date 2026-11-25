@@ -1281,6 +1281,7 @@ html[data-motion='reduced'] .sprite[data-motion="attack"] img.sprite-sheet__imag
 html[data-motion='reduced'] .sprite[data-motion="attackAlt"] img.sprite-sheet__image,
 html[data-motion='reduced'] .sprite[data-motion="skill"] img.sprite-sheet__image,
 html[data-motion='reduced'] .sprite[data-motion="guard"] img.sprite-sheet__image,
+html[data-motion='reduced'] .sprite[data-motion="cast"] img.sprite-sheet__image,
 html[data-motion='reduced'] .sprite[data-motion="down"] img.sprite-sheet__image,
 html[data-motion='reduced'] .sprite[data-motion="hurt"] img.sprite-sheet__image {
   animation-duration: var(--sprite-duration-reduced, var(--sprite-duration, 1000ms));
@@ -1394,6 +1395,7 @@ html[data-motion='reduced'] .battle__slot.is-hit .sprite__static-image {
   .sprite[data-motion="attackAlt"] img.sprite-sheet__image,
   .sprite[data-motion="skill"] img.sprite-sheet__image,
   .sprite[data-motion="guard"] img.sprite-sheet__image,
+  .sprite[data-motion="cast"] img.sprite-sheet__image,
   .sprite[data-motion="down"] img.sprite-sheet__image,
   .sprite[data-motion="hurt"] img.sprite-sheet__image {
     animation-duration: var(--sprite-duration-reduced, var(--sprite-duration, 1000ms));

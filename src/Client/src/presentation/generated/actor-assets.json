@@ -262,6 +262,11 @@
         "durationMs": 720,
         "loop": false
       },
+      "cast": {
+        "frames": 6,
+        "durationMs": 720,
+        "loop": false
+      },
       "hurt": {
         "frames": 4,
         "durationMs": 400,
