@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import type { RunResultDto, RunResultJourneyEntryDto, RunSnapshotDto, TileKind } from '../api/types'
 import { cardDisplay } from '../components/cardDisplay'
 import { optionalRarityCodeFromNumber, rarityCodeFromName } from '../components/rarity'
@@ -10,7 +10,7 @@ import { useRelicCatalog } from '../hooks/useRelicCatalog'
 import type { CardCatalog, PotionCatalog, RelicCatalog } from '../api/catalog'
 import { getRelicTooltipContent } from '../components/relicTooltip'
 import { rarityToItemClass } from './runResultRarity'
-import { mapIcon, potionIcon, relicIcon } from '../presentation/assets'
+import { cardArt, mapIcon, potionIcon, relicIcon } from '../presentation/assets'
 import './RunResultScreen.css'
 
 const TILE_IMG_SRC: Record<TileKind, string> = {
@@ -424,6 +424,7 @@ function CardRow({
   }, [disp.name, disp.rarity, activeDesc, upgraded])
   const tip = useTooltipTarget(tooltipContent)
   const typeLabel = disp.type.slice(0, 3).toUpperCase()
+  const artSrc = cardArt(id)
   return (
     <li
       className={`rr__item ${rarityToItemClass(disp.rarity)}`}
@@ -431,7 +432,16 @@ function CardRow({
       onMouseMove={tip.onMouseMove}
       onMouseLeave={tip.onMouseLeave}
     >
-      <div className="rr__item-icon" aria-hidden="true">{typeLabel}</div>
+      {artSrc ? (
+        <div className="rr__item-icon" aria-hidden="true">
+          <span
+            className="rr__card-art"
+            style={{ '--rr-card-art': `url('${artSrc}')` } as CSSProperties}
+          />
+        </div>
+      ) : (
+        <div className="rr__item-icon" aria-hidden="true">{typeLabel}</div>
+      )}
       <div className="rr__item-name">
         {disp.name}
         {upgraded ? <span className="rr__item-plus">+</span> : null}

@@ -860,6 +860,22 @@ button.pile:hover { filter: brightness(1.2); }
   46% { transform: translateX(var(--hit-recoil-settle-x, -10px)); }
 }
 
+/* 撃破（倒れる姿勢を持たないキャラ）: 点滅して消える。時間は BattleScreen.tsx の DEATH_BLINK_MS。
+   被弾の揺れ（slot-hit: transform/filter）と重なっても両方効くよう、opacity だけを動かす。 */
+.battle__slot.is-dying {
+  pointer-events: none;
+  animation: slot-dying 720ms steps(1, end) forwards;
+}
+.battle__slot.is-dying.is-hit {
+  animation:
+    slot-hit var(--slot-hit-duration, 420ms) ease-in-out,
+    slot-dying 720ms steps(1, end) forwards;
+}
+@keyframes slot-dying {
+  0%, 20%, 40%, 60%, 76%, 88% { opacity: 1; }
+  10%, 30%, 50%, 68%, 82%, 94%, 100% { opacity: 0; }
+}
+
 @keyframes slot-impact-pixels {
   0% { opacity: 0; transform: translate(-50%, -50%) scale(.35) rotate(0deg); }
   18% { opacity: 1; }

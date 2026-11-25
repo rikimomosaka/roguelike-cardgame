@@ -392,6 +392,10 @@ const STAGE_CANVAS_BOTTOM_Y = 198
 const SKILL_RELEASE_RATIO = 5 / 8
 /** ダウンモーションの後、敗北処理へ進む前に倒れた姿を見せる時間。 */
 const DOWN_HOLD_MS = 500
+/** 勝敗が決まってから、勝利の表示・結果画面へ進むまでの間（倒れた側を見せる）。 */
+const OUTCOME_HOLD_MS = 1000
+/** 倒れる姿勢を持たないキャラが、HP 0 になってから点滅して消えるまでの時間（CSS の is-dying と合わせる）。 */
+const DEATH_BLINK_MS = 720
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -665,6 +669,8 @@ type SlotProps = {
   isSkill?: boolean
   isHit?: boolean
   isBlocked?: boolean
+  /** 撃破された直後（点滅して消える）。 */
+  isDying?: boolean
   /** Replay speed applied only while this slot is in a one-shot motion. */
   motionPlaybackSpeed?: number
   onClick?: () => void
@@ -906,6 +912,7 @@ function Slot({
   isSkill = false,
   isHit,
   isBlocked,
+  isDying = false,
   motionPlaybackSpeed = 1,
   onClick,
   onViewActions,
@@ -1059,6 +1066,7 @@ function Slot({
     attackingDir === 'toward-ally' ? 'is-attacking-ally' : '',
     isHit ? 'is-hit' : '',
     isBlocked ? 'is-blocked' : '',
+    isDying ? 'is-dying' : '',
     aura ? `has-aura has-aura--${aura.kind}` : '',
   ].filter(Boolean).join(' ')
   // Why: スプレッドにすることで onClick が undefined のとき role/tabIndex 属性自体が
@@ -3655,20 +3663,22 @@ export function BattleScreen({
       }
       if (!presentationOnly) setState(resp.state)
 
+      // 決着したら、倒れた側（撃破の点滅・倒れる姿勢）を見せてから先へ進む（ユーザ要望: 約 1 秒）。
+      //  敗北時に倒れる姿勢（down シート）を持つキャラは、倒れ切ってから少し止めるまで待つ。
+      if (!presentationOnly
+        && (resp.state.outcome === 'Victory' || resp.state.outcome === 'Defeat')) {
+        const downDurations = resp.state.outcome === 'Defeat'
+          ? resp.state.allies
+              .filter(ally => ally.currentHp <= 0)
+              .map(ally => actorAnimations(ally.instanceId)?.down)
+              .filter((sheet): sheet is SpriteSheetDemo => !!sheet)
+              .map(sheet => readableMotionDuration(sheet, 1) + DOWN_HOLD_MS)
+          : []
+        await waitForPresentation(Math.max(OUTCOME_HOLD_MS, ...downDurations))
+      }
       // Victory のみ「勝利」banner を出す (ユーザ要望、Defeat は banner なし)。
       if (!presentationOnly && resp.state.outcome === 'Victory') {
         await showBanner('勝利')
-      }
-      // 敗北時、倒れたキャラ（down シートを持つキャラ）が倒れ切るのを見せてから結果画面へ進む。
-      if (!presentationOnly && resp.state.outcome === 'Defeat' && effectiveMotionLevel !== 'off') {
-        const downDurations = resp.state.allies
-          .filter(ally => ally.currentHp <= 0)
-          .map(ally => actorAnimations(ally.instanceId)?.down)
-          .filter((sheet): sheet is SpriteSheetDemo => !!sheet)
-          .map(sheet => readableMotionDuration(sheet, 1))
-        if (downDurations.length > 0) {
-          await waitForPresentation(Math.max(...downDurations) + DOWN_HOLD_MS)
-        }
       }
       setAnimating(false)
 
@@ -4294,6 +4304,32 @@ export function BattleScreen({
     if (newState) setState(newState)
   }
 
+  // 撃破の点滅: 表示上の HP が 0 になったキャラを、消える前に DEATH_BLINK_MS だけ点滅させる。
+  //  （倒れる姿勢を持つキャラは点滅させず、HP 0 のまま倒れた姿で残る。描画側で判定する。）
+  const [dyingIds, setDyingIds] = useState<ReadonlySet<string>>(() => new Set())
+  const aliveIdsRef = useRef<Set<string> | null>(null)
+  const dyingIdsRef = useRef(new Set<string>())
+  useEffect(() => {
+    if (!state) return
+    const alive = new Set<string>()
+    const newlyDead: string[] = []
+    for (const actor of [...state.allies, ...state.enemies]) {
+      const hp = actor.currentHp - (damageOverlay[actor.instanceId] ?? 0)
+      if (hp > 0) alive.add(actor.instanceId)
+      else if (aliveIdsRef.current?.has(actor.instanceId) && !dyingIdsRef.current.has(actor.instanceId)) {
+        newlyDead.push(actor.instanceId)
+      }
+    }
+    aliveIdsRef.current = alive
+    if (newlyDead.length === 0) return
+    newlyDead.forEach(id => dyingIdsRef.current.add(id))
+    setDyingIds(new Set(dyingIdsRef.current))
+    window.setTimeout(() => {
+      newlyDead.forEach(id => dyingIdsRef.current.delete(id))
+      setDyingIds(new Set(dyingIdsRef.current))
+    }, DEATH_BLINK_MS)
+  }, [state, damageOverlay])
+
   // ------------- Render -------------
 
   if (state === null) {
@@ -4405,8 +4441,10 @@ export function BattleScreen({
     findParticipantForActor(displayedState, actor.instanceId)?.characterId
       ?? snapshot.run.characterId,
   ).animations?.down
-  const aliveAllies = allAllies.filter((a) => a.currentHp > 0 || showsDownPose(a))
-  const aliveEnemies = allEnemies.filter((e) => e.currentHp > 0 || showsDownPose(e))
+  const isDyingBlink = (actor: CombatActorDto) =>
+    actor.currentHp <= 0 && dyingIds.has(actor.instanceId) && !showsDownPose(actor)
+  const aliveAllies = allAllies.filter((a) => a.currentHp > 0 || showsDownPose(a) || isDyingBlink(a))
+  const aliveEnemies = allEnemies.filter((e) => e.currentHp > 0 || showsDownPose(e) || isDyingBlink(e))
 
   // 4 スロット zero-pad で side ごとに描画。
   const playerActorsBySlot = placeActorsBySlot(aliveAllies, 4)
@@ -4651,6 +4689,7 @@ export function BattleScreen({
                       && slotAnim.skillCasterId === actor.instanceId)}
                     isHit={isHit}
                     isBlocked={isBlocked}
+                    isDying={!!actor && isDyingBlink(actor)}
                     motionPlaybackSpeed={slotAnim.playbackSpeed}
                     onClick={onClick}
                     onViewActions={
@@ -4714,6 +4753,7 @@ export function BattleScreen({
                       && slotAnim.skillCasterId === actor.instanceId)}
                     isHit={isHit}
                     isBlocked={isBlocked}
+                    isDying={!!actor && isDyingBlink(actor)}
                     motionPlaybackSpeed={slotAnim.playbackSpeed}
                     onClick={onClick}
                     onViewActions={(() => {
