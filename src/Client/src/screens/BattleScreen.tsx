@@ -173,7 +173,7 @@ import {
   statusFeedbackText,
 } from './battleScreen/statusFeedback'
 import { attackGainFeedbackText } from './battleScreen/attackGainFeedback'
-import { HEROES_WITH_OWN_UI, heroUi, intentIcon, statusIcon, systemIcon, type HeroUiPart } from '../presentation/assets'
+import { HEROES_WITH_OWN_UI, battleIcon, heroUi, intentIcon, statusIcon, type HeroUiPart } from '../presentation/assets'
 import './BattleScreen.css'
 
 // -------------------- Exported intermediate types --------------------
@@ -274,6 +274,8 @@ export type CharacterDemo = {
    * 全キャラ同じ倍率で表示する（大きさは絵の中に描かれている）。
    */
   stage?: ActorStage
+  /** 主人公の ID（キャラ専用の戦闘UIを選ぶ）。主人公以外は undefined。 */
+  uiHeroId?: string
   /** Playable-character passive shown when hovering the character sprite. */
   traitName?: string
   /** Marker-bearing passive text rendered with the common card tooltip. */
@@ -374,7 +376,7 @@ const REENACT_LEAVE_MS = 160
 /** 主人公専用の戦闘操作UIを CSS 変数で渡す（専用UIが無い主人公は共通の枠のまま）。 */
 function heroUiStyle(heroId: string | undefined): CSSProperties | undefined {
   if (!heroId || !HEROES_WITH_OWN_UI.has(heroId)) return undefined
-  const parts: readonly HeroUiPart[] = ['combo', 'tactical', 'ultimate', 'ready']
+  const parts: readonly HeroUiPart[] = ['combo', 'tactical', 'ultimate', 'ready', 'energy']
   return Object.fromEntries(parts.map(part => [`--hero-ui-${part}`, `url('${heroUi(heroId, part)}')`])) as CSSProperties
 }
 
@@ -1031,6 +1033,8 @@ function Slot({
     HIT_FLASH_MS,
   ), oneShotPlaybackSpeed)
   const slotMotionStyle = {
+    // 頭上の行動予告の下地（主人公ごとのデザイン。主人公以外は CSS 側の共通の枠）。
+    ...(char.uiHeroId ? { '--slot-intent-plate': `url('${heroUi(char.uiHeroId, 'intent_plate')}')` } : {}),
     '--slot-attack-duration': `${attackMotionDuration}ms`,
     '--slot-hit-duration': `${hitMotionDuration}ms`,
     '--slot-attack-duration-reduced': `${Math.max(1, Math.round(attackMotionDuration * 0.48))}ms`,
@@ -4755,7 +4759,7 @@ export function BattleScreen({
             onClick={() => setPileOpen('draw')}
             aria-label={`山札 (${displayedState.drawPile.length}枚) を表示`}
           >
-            <img className="pile__sym pile__sym--img" src={systemIcon('pile_draw')} alt="" draggable={false} />
+            <img className="pile__sym pile__sym--img" src={battleIcon('pile_draw')} alt="" draggable={false} />
             <span className="pile__lbl">山札</span>
             <span className="pile__num">{displayedState.drawPile.length}</span>
           </button>
@@ -4771,7 +4775,7 @@ export function BattleScreen({
               ? `除外 (${displayedState.exhaustPile.length}枚、伏策待機中${armedContingencyCount}枚) を表示`
               : `除外 (${displayedState.exhaustPile.length}枚) を表示`}
           >
-            <img className="pile__sym pile__sym--img" src={systemIcon('pile_exhaust')} alt="" draggable={false} />
+            <img className="pile__sym pile__sym--img" src={battleIcon('pile_exhaust')} alt="" draggable={false} />
             <span className="pile__lbl">除外</span>
             <span className="pile__num">{displayedState.exhaustPile.length}</span>
             {armedContingencyCount > 0 ? (
@@ -4785,7 +4789,7 @@ export function BattleScreen({
             onClick={() => setPileOpen('discard')}
             aria-label={`捨札 (${displayedState.discardPile.length}枚) を表示`}
           >
-            <img className="pile__sym pile__sym--img" src={systemIcon('pile_discard')} alt="" draggable={false} />
+            <img className="pile__sym pile__sym--img" src={battleIcon('pile_discard')} alt="" draggable={false} />
             <span className="pile__lbl">捨札</span>
             <span className="pile__num">{displayedState.discardPile.length}</span>
           </button>

@@ -154,17 +154,40 @@ main.map-screen {
   will-change: transform;
 }
 
-/* ---------- Routes (pixel canvas, full-size overlay) ---------- */
-/* 道は PixelRouteCanvas が半分の解像度で描き、ここで ×2 に拡大する。
-   流れる点線・通った道の流れ込み・移動中の点のアニメーションはキャンバス側で描く。 */
-.map-screen__routes {
+/* ---------- Edges SVG (full-size overlay) ---------- */
+.map-screen__svg {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   pointer-events: none;
   z-index: 2;
-  image-rendering: pixelated;
+}
+
+.map-screen__edge.is-traced {
+  stroke-dasharray: 18 5;
+  animation: map-route-trace 620ms steps(8, end) both;
+}
+
+.map-screen__edge.is-next {
+  stroke-dasharray: 8 7;
+  animation: map-route-ready 1.1s linear infinite;
+}
+
+.map-screen__travel-dot {
+  fill: #e6faff;
+  stroke: #1687aa;
+  stroke-width: 0.65;
+  filter: drop-shadow(0 0 2px #68dcff);
+}
+
+@keyframes map-route-trace {
+  from { stroke-dashoffset: 72; opacity: 0.35; }
+  to { stroke-dashoffset: 0; opacity: 1; }
+}
+
+@keyframes map-route-ready {
+  to { stroke-dashoffset: -30; }
 }
 
 /* ---------- Nodes ---------- */
@@ -237,6 +260,7 @@ main.map-screen {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .map-screen__edge,
   .map-screen__node,
   .map-screen__act-banner,
   .map-screen__gameover {
@@ -244,6 +268,7 @@ main.map-screen {
     transition: none !important;
   }
 
+  .map-screen__travel-dot { display: none; }
 }
 
 /* 現在地は「次に行けるマス」の金色パルスと混同しないよう、

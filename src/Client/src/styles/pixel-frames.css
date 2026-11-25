@@ -26,7 +26,7 @@
   --px-button-danger: url('/assets/ui/common/button_danger.png') 4 fill / 8px / 0 stretch;
   --px-button-danger-hover: url('/assets/ui/common/button_danger_hover.png') 4 fill / 8px / 0 stretch;
   --px-tooltip: url('/assets/ui/common/tooltip.png') 3 fill / 6px / 0 stretch;
-  --px-bar: url('/assets/ui/common/bar.png') 2 fill / 4px / 0 stretch;
+  --px-bar: url('/assets/ui/common/bar.png') 1 fill / 2px / 0 stretch;
 }
 
 /* ---------- 浮いている窓（外側へはみ出して描く） ---------- */
@@ -273,6 +273,15 @@
   border-color: transparent;
   background: url('/assets/ui/common/node_default.png') center / 100% 100% no-repeat;
 }
+/* 状態ごとの元の CSS が background を一括指定で上書きしても、円の画像は 1 枚を枠いっぱいに表示する
+   （原寸・繰り返しに戻ると 2×2 などに並んでしまう）。 */
+:root .map-screen__node,
+:root .map-screen__node[class] {
+  background-color: transparent !important;
+  background-size: 100% 100% !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
 :root .map-screen__node.is-past { background-image: url('/assets/ui/common/node_past.png'); }
 :root .map-screen__node.is-far { background-image: url('/assets/ui/common/node_far.png'); }
 :root .map-screen__node.is-next { background-image: url('/assets/ui/common/node_next.png'); }
@@ -299,10 +308,14 @@
   background: url('/assets/ui/common/slot_round.png') center / 100% 100% no-repeat;
 }
 
-/* 戦闘のエナジーの玉。 */
+/* 戦闘のエナジーの枠（主人公ごとのデザイン。BattleScreen が --hero-ui-energy を設定）。
+   敵の行動再生中（data-ui-owner=enemy）は敵の汎用UI。 */
 :root .energy {
   border-color: transparent;
-  background: url('/assets/ui/common/orb.png') center / 100% 100% no-repeat;
+  background: var(--hero-ui-energy, url('/assets/ui/heroes/default_frame/energy.png')) center / 100% 100% no-repeat;
+}
+:root .battle[data-ui-owner='enemy'] .energy {
+  background-image: url('/assets/ui/enemy/energy.png');
 }
 
 /* ゲージの中身は溝の枠（2px）の内側に収める。 */

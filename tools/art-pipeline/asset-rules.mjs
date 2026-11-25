@@ -14,6 +14,8 @@ export const RULES = [
   { key: 'icons/status', mode: 'pixelize', w: 16, h: 16, colors: 16, fit: 'contain' },
   { key: 'icons/intent', mode: 'pixelize', w: 16, h: 16, colors: 16, fit: 'contain' },
   { key: 'icons/system', mode: 'pixelize', w: 16, h: 16, colors: 16, fit: 'contain' },
+  // 戦闘画面の大きいアイコン（山札・捨札・除外。64px 表示）。
+  { key: 'icons/battle', mode: 'pixelize', w: 32, h: 32, colors: 24, fit: 'contain' },
   { key: 'icons/relics', mode: 'pixelize', w: 32, h: 32, colors: 24, fit: 'contain', margin: 1 },
   { key: 'icons/potions', mode: 'pixelize', w: 32, h: 32, colors: 24, fit: 'contain', margin: 1 },
   { key: 'icons/map', mode: 'pixelize', w: 32, h: 32, colors: 24, fit: 'contain', margin: 1 },
@@ -34,7 +36,10 @@ export const RULES = [
   // nested: true は「キャラごとのフォルダ」を持つ種類。files でファイル名ごとのキャンバスを決める。
   {
     key: 'ui/heroes', nested: true, mode: 'pixelize', colors: 32, fit: 'stretch',
-    files: { combo: { w: 56, h: 28 }, tactical: { w: 44, h: 28 }, ultimate: { w: 44, h: 28 }, ready: { w: 76, h: 32 } },
+    files: {
+      combo: { w: 56, h: 28 }, tactical: { w: 44, h: 28 }, ultimate: { w: 44, h: 28 }, ready: { w: 76, h: 32 },
+      energy: { w: 32, h: 32 }, intent_plate: { w: 48, h: 16 },
+    },
   },
   // 共通UIの枠（9 分割）。tools/art-pipeline/gen-ui-frames.mjs がコードで描く。
   {
@@ -43,15 +48,15 @@ export const RULES = [
       panel: { w: 24, h: 24 }, box: { w: 12, h: 12 }, inset: { w: 12, h: 12 }, inset_active: { w: 12, h: 12 },
       button: { w: 16, h: 16 }, button_hover: { w: 16, h: 16 }, button_secondary: { w: 16, h: 16 },
       button_danger: { w: 16, h: 16 }, button_danger_hover: { w: 16, h: 16 },
-      tooltip: { w: 12, h: 12 }, bar: { w: 8, h: 8 },
-      node_current: { w: 34, h: 34 }, slot_round: { w: 18, h: 18 }, orb: { w: 32, h: 32 },
+      tooltip: { w: 12, h: 12 }, bar: { w: 6, h: 6 },
+      node_current: { w: 34, h: 34 }, slot_round: { w: 18, h: 18 },
       ...Object.fromEntries(['default', 'past', 'far', 'next', 'next_hover', 'elite_next', 'rest_next', 'merchant_next', 'boss_far']
         .flatMap(state => [[`node_${state}`, { w: 28, h: 28 }], [`node_${state}_boss`, { w: 40, h: 40 }]])),
     },
   },
   {
     key: 'ui/enemy', mode: 'pixelize', colors: 32, fit: 'stretch',
-    files: { intent_plate: { w: 48, h: 16 }, action_plate: { w: 64, h: 16 }, action_button: { w: 24, h: 12 } },
+    files: { intent_plate: { w: 48, h: 16 }, action_plate: { w: 64, h: 16 }, action_button: { w: 24, h: 12 }, energy: { w: 32, h: 32 } },
   },
 ]
 

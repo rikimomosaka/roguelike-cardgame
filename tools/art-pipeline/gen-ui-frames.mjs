@@ -111,9 +111,9 @@ const made = [
     rings: [[C.outline, C.outline], [C.goldDeep, C.borderMid]],
     fill: '#0e0806', cut: 1,
   }),
-  // ゲージの溝（HP バーなど）: 8×8、端 2 ドット。
-  frame('bar', 8, {
-    rings: [[C.outline, C.outline], ['#050302', C.borderDark]],
+  // ゲージの溝（HP バーなど）: 6×6、端 1 ドット。目立ちすぎないよう黒縁は付けず、茶色の細い縁だけ。
+  frame('bar', 6, {
+    rings: [[C.borderMid, C.borderDark]],
     fill: '#050302',
   }),
 ]
@@ -156,8 +156,6 @@ for (const [state, [edge, fill]] of Object.entries(NODE)) {
 made.push(ring('node_current', 34, '#3ec6ff', '#071a24'))
 // ポーション枠（36px = 18 ドット ×2）。
 made.push(ring('slot_round', 18, C.borderLight, C.outline))
-// 戦闘のエナジーの玉（64px = 32 ドット ×2）。
-made.push(ring('orb', 32, C.goldDeep, '#2a1608'))
 
 // 規格（ビルドの検査）: そのまま使う native。サイズはファイル名ごとに asset-rules.mjs の files に書く。
 for (const name of made) {

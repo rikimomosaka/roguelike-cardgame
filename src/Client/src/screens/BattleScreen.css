@@ -3031,3 +3031,15 @@ html[data-motion='off'] .slot-aura::after {
 .battle__side--enemy .status-replay-button:focus-visible {
   filter: brightness(1.25) drop-shadow(0 0 4px rgba(230, 50, 80, 0.7));
 }
+
+/* ===== プレイヤー側の頭上の行動予告の下地（主人公ごとのデザイン） ===== */
+/* Slot が --slot-intent-plate に主人公専用の絵を入れる。召喚ユニットなどは共通の枠。48×16 を 9 分割で ×2。 */
+.battle__side--player .intent {
+  border: 10px solid transparent;
+  border-image-source: var(--slot-intent-plate, url('/assets/ui/heroes/default_frame/intent_plate.png'));
+  border-image-slice: 5 fill;
+  border-image-width: 10px;
+  border-image-repeat: stretch;
+  padding: 0 4px;
+  image-rendering: pixelated;
+}

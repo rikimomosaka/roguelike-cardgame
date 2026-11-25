@@ -32,9 +32,12 @@ export const intentIcon = (id: IntentIconId) => `${ROOT}/icons/intent/${id}.png`
 /** 設定・地図・山札などのシステムアイコン。16×16。 */
 export type SystemIconId =
   | 'abandon' | 'bestiary' | 'close' | 'continue' | 'deck' | 'discard' | 'gold' | 'loading' | 'lock'
-  | 'map' | 'merchant' | 'pile_discard' | 'pile_draw' | 'pile_exhaust' | 'rest' | 'reward' | 'reward_gold'
+  | 'map' | 'merchant' | 'rest' | 'reward' | 'reward_gold'
   | 'settings' | 'time' | 'unavailable' | 'upgrade'
 export const systemIcon = (id: SystemIconId) => `${ROOT}/icons/system/${id}.png`
+/** 戦闘画面の大きいアイコン（山札・捨札・除外）。32×32（×2 表示）。 */
+export type BattleIconId = 'pile_draw' | 'pile_discard' | 'pile_exhaust'
+export const battleIcon = (id: BattleIconId) => `${ROOT}/icons/battle/${id}.png`
 export const relicIcon = (relicId: string) => `${ROOT}/icons/relics/${safe(relicId, 'unknown')}.png`
 export const potionIcon = (potionId: string) => `${ROOT}/icons/potions/${safe(potionId, 'unknown')}.png`
 export type MapIconId = 'boss' | 'elite' | 'enemy' | 'event' | 'merchant' | 'rest' | 'start' | 'treasure' | 'unknown'
@@ -80,12 +83,12 @@ const HERO_MOTIONS = actorAssets.heroes as Record<string, Record<string, HeroMot
 export const heroMotions = (heroId: string): Record<string, HeroMotionInfo> | undefined => HERO_MOTIONS[heroId]
 
 // ---- UI ----
-export type HeroUiPart = 'combo' | 'tactical' | 'ultimate' | 'ready'
+export type HeroUiPart = 'combo' | 'tactical' | 'ultimate' | 'ready' | 'energy' | 'intent_plate'
 /** 主人公ごとの戦闘操作UI。専用の絵が無い主人公は共通の枠（default_frame）。 */
 export const HEROES_WITH_OWN_UI: ReadonlySet<string> = new Set<string>(['default'])
 export const heroUi = (heroId: string | null | undefined, part: HeroUiPart) => {
   const id = heroId && HEROES_WITH_OWN_UI.has(heroId) ? heroId : 'default_frame'
   return `${ROOT}/ui/heroes/${id}/${part}.png`
 }
-export type EnemyUiPart = 'intent_plate' | 'action_plate' | 'action_button'
+export type EnemyUiPart = 'intent_plate' | 'action_plate' | 'action_button' | 'energy'
 export const enemyUi = (part: EnemyUiPart) => `${ROOT}/ui/enemy/${part}.png`
