@@ -72,6 +72,7 @@ export const HERO_MOTIONS = {
   attack: { frames: 6, durationMs: 600, loop: false },
   attack_alt: { frames: 6, durationMs: 600, loop: false },
   skill: { frames: 8, durationMs: 800, loop: false },
+  guard: { frames: 6, durationMs: 720, loop: false },
   hurt: { frames: 4, durationMs: 400, loop: false },
   down: { frames: 6, durationMs: 720, loop: false },
 }

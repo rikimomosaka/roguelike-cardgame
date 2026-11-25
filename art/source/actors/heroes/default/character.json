@@ -9,6 +9,7 @@
     "attack":     { "file": "attack_a.png", "frameWidth": 128, "frameHeight": 96, "frames": 6, "footRow": 93, "anchorX": 63.5 },
     "attack_alt": { "file": "attack_b.png", "frameWidth": 128, "frameHeight": 96, "frames": 6, "footRow": 93, "anchorX": 63.5 },
     "skill":      { "file": "skill.png",    "frameWidth": 128, "frameHeight": 96, "frames": 8, "footRow": 93, "anchorX": 63.5 },
+    "guard":      { "file": "guard.png",    "frameWidth": 128, "frameHeight": 96, "frames": 6, "footRow": 93, "anchorX": 63.5 },
     "hurt":       { "file": "hurt.png",     "frameWidth": 128, "frameHeight": 96, "frames": 4, "footRow": 93, "anchorX": 63.5, "colors": 48 },
     "down":       { "file": "down.png",     "frameWidth": 128, "frameHeight": 96, "frames": 6, "footRow": 93, "anchorX": 63.5 }
   },

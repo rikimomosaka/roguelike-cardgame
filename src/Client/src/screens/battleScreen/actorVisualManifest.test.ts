@@ -41,6 +41,9 @@ describe('actorVisualManifest', () => {
       src: '/assets/actors/heroes/default/attack_alt.png', frameCount: 6, durationMs: 600,
     })
     expect(sera?.animations?.skill).toMatchObject({ frameCount: 8, durationMs: 800, frameHeight: 128 })
+    expect(sera?.animations?.guard).toMatchObject({
+      src: '/assets/actors/heroes/default/guard.png', frameCount: 6, durationMs: 720, loop: false,
+    })
     expect(sera?.animations?.hurt).toMatchObject({ frameCount: 4, durationMs: 400 })
     expect(sera?.animations?.down).toMatchObject({ frameCount: 6, durationMs: 720, loop: false })
 
@@ -49,6 +52,7 @@ describe('actorVisualManifest', () => {
     expect(mireille?.animations?.attack).toMatchObject({ frameCount: 4, durationMs: 480 })
     expect(mireille?.animations?.attackAlt).toBeUndefined()
     expect(mireille?.animations?.skill).toBeUndefined()
+    expect(mireille?.animations?.guard).toBeUndefined()
     expect(mireille?.animations?.down).toBeUndefined()
   })
 

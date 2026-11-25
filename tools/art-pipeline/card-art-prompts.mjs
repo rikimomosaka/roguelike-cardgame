@@ -39,7 +39,7 @@ export const CARD_ART = {
 // 基本カードに合成するキャラ（actors/heroes の表示用シート、コマ番号は 0 始まり）。
 export const CARD_ART_ACTORS = {
   striker_basic_attack: { hero: 'default', sheet: 'attack', frame: 2 },
-  striker_basic_defense: { hero: 'default', sheet: 'skill', frame: 1 },
+  striker_basic_defense: { hero: 'default', sheet: 'guard', frame: 3 },
   guardian_basic_attack: { hero: 'guardian_mireille', sheet: 'attack', frame: 2 },
   guardian_basic_defense: { hero: 'guardian_mireille', sheet: 'stand', frame: 0 },
   tactician_basic_attack: { hero: 'tactician_yuno', sheet: 'attack', frame: 2 },

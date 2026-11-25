@@ -257,6 +257,11 @@
         "durationMs": 800,
         "loop": false
       },
+      "guard": {
+        "frames": 6,
+        "durationMs": 720,
+        "loop": false
+      },
       "hurt": {
         "frames": 4,
         "durationMs": 400,

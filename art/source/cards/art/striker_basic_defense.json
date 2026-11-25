@@ -4,7 +4,7 @@
   "seed": 1,
   "actor": {
     "hero": "default",
-    "sheet": "skill",
-    "frame": 1
+    "sheet": "guard",
+    "frame": 3
   }
 }

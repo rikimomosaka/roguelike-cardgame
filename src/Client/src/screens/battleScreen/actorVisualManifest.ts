@@ -74,6 +74,7 @@ const MOTION_FILES: Readonly<Record<string, CharacterMotion>> = {
   attack: 'attack',
   attack_alt: 'attackAlt',
   skill: 'skill',
+  guard: 'guard',
   hurt: 'hurt',
   down: 'down',
 }
