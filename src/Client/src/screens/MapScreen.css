@@ -497,15 +497,13 @@ main.map-screen {
 .map-screen__key-sym.k--boss { color: var(--state-danger-soft); }
 
 /* Tile icons rendered as <img> on map nodes and the legend.
-   Source PNGs sit slightly high in their canvas; nudge them ~5px down so
-   the visible art is centered against the circular node border. */
+   マスのアイコンは 32×32 のドット絵（中身は中央に寄せて変換済み）を等倍で置く。 */
 .map-screen__node-img {
-  width: 70%;
-  height: 70%;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
   image-rendering: pixelated;
   pointer-events: none;
-  transform: translateY(5px);
   -webkit-user-select: none;
   user-select: none;
 }

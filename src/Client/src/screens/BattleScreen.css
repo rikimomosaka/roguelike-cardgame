@@ -1017,8 +1017,9 @@ html[data-flash='off'] .battle__slot.is-blocked::before {
 
 .intent__icon { font-size: 28px; }
 .intent__icon--img {
-  width: 28px;
-  height: 28px;
+  /* 行動予告アイコンは 16×16 のドット絵を ×2。 */
+  width: 32px;
+  height: 32px;
   object-fit: contain;
   vertical-align: middle;
   image-rendering: pixelated;
@@ -2989,4 +2990,44 @@ html[data-motion='reduced'] .playing-card {
 html[data-motion='off'] .slot-aura,
 html[data-motion='off'] .slot-aura::after {
   animation-duration: 1ms;
+}
+
+/* ===== 敵の汎用UI（docs/current-art-asset-spec.md §4。ドット絵を ×2 で表示） ===== */
+/* 行動時のカード名の札: 64×16 の絵を 9 分割で貼る（端 6 ドットは等倍、中央だけ伸ばす）。 */
+.battle__side--enemy .slot-action-label__text {
+  border: 12px solid transparent;
+  border-image: url('/assets/ui/enemy/action_plate.png') 6 fill / 12px / 0 stretch;
+  border-radius: 0;
+  padding: 0 6px;
+  background: none;
+  box-shadow: none;
+  color: #ffd9de;
+  line-height: 8px;
+  image-rendering: pixelated;
+}
+
+/* 頭上の行動予告（アイコン＋数値）の下地: 48×16 の絵を 9 分割で貼る。 */
+.battle__side--enemy .intent {
+  border: 10px solid transparent;
+  border-image: url('/assets/ui/enemy/intent_plate.png') 5 fill / 10px / 0 stretch;
+  padding: 0 4px;
+  image-rendering: pixelated;
+}
+
+/* 「行動」（再生）ボタン: 24×12 の絵を ×2。 */
+.battle__side--enemy .status-replay-button,
+.battle__side--enemy .status-replay-button[data-feed-state="ready"] {
+  width: 48px;
+  height: 24px;
+  border: 0;
+  border-radius: 0;
+  background: url('/assets/ui/enemy/action_button.png') center / 100% 100% no-repeat;
+  box-shadow: none;
+  color: #ffd9de;
+  font-size: 9px;
+  image-rendering: pixelated;
+}
+.battle__side--enemy .status-replay-button:hover,
+.battle__side--enemy .status-replay-button:focus-visible {
+  filter: brightness(1.25) drop-shadow(0 0 4px rgba(230, 50, 80, 0.7));
 }

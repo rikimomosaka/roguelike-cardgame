@@ -82,7 +82,7 @@ export const heroMotions = (heroId: string): Record<string, HeroMotionInfo> | un
 // ---- UI ----
 export type HeroUiPart = 'combo' | 'tactical' | 'ultimate' | 'ready'
 /** 主人公ごとの戦闘操作UI。専用の絵が無い主人公は共通の枠（default_frame）。 */
-export const HEROES_WITH_OWN_UI: ReadonlySet<string> = new Set<string>([])
+export const HEROES_WITH_OWN_UI: ReadonlySet<string> = new Set<string>(['default'])
 export const heroUi = (heroId: string | null | undefined, part: HeroUiPart) => {
   const id = heroId && HEROES_WITH_OWN_UI.has(heroId) ? heroId : 'default_frame'
   return `${ROOT}/ui/heroes/${id}/${part}.png`

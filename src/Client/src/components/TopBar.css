@@ -284,8 +284,9 @@
 }
 
 .topbar__btn-icon {
-  width: 36px;
-  height: 36px;
+  /* システムアイコンは 16×16 のドット絵を ×2。 */
+  width: 32px;
+  height: 32px;
   object-fit: contain;
   image-rendering: pixelated;
   display: block;

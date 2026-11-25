@@ -7,8 +7,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  /* レリックは 32×32 のドット絵を等倍で表示する。 */
+  width: 34px;
+  height: 34px;
   flex-shrink: 0;
   background: rgba(10, 6, 4, 0.75);
   border: 1px solid var(--border-mid);
@@ -39,8 +40,8 @@
 }
 
 .relic-icon__sprite img {
-  width: 88%;
-  height: 88%;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
   image-rendering: pixelated;
   -webkit-user-select: none;
