@@ -314,8 +314,11 @@
   border-color: transparent;
   background: var(--hero-ui-energy, url('/assets/ui/heroes/default_frame/energy.png')) center / 100% 100% no-repeat;
 }
+/* BattleScreen.css の敵用ルールが background を一括指定するので、ここも一括で上書きする
+   （image だけ替えると size/repeat が初期値に戻り、画像が 2×2 に並ぶ）。 */
 :root .battle[data-ui-owner='enemy'] .energy {
-  background-image: url('/assets/ui/enemy/energy.png');
+  border-color: transparent;
+  background: url('/assets/ui/enemy/energy.png') center / 100% 100% no-repeat;
 }
 
 /* ゲージの中身は溝の枠（2px）の内側に収める。 */
