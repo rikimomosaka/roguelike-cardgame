@@ -27,6 +27,8 @@ body {
 
 html {
   color-scheme: dark;
+  /* 画像はすべてドット絵（docs/current-art-asset-spec.md）。拡大時にぼかさない。継承されるので全要素に効く。 */
+  image-rendering: pixelated;
   font-family: var(--font-body);
 }
 

@@ -152,6 +152,7 @@ import {
   actorSizeClassForTier,
   resolveActorImpactAnchorY,
   resolveActorStageProfile,
+  type ActorStage,
 } from './battleScreen/actorVisualManifest'
 import {
   normalizeMotionPlaybackSpeed,
@@ -172,6 +173,7 @@ import {
   statusFeedbackText,
 } from './battleScreen/statusFeedback'
 import { attackGainFeedbackText } from './battleScreen/attackGainFeedback'
+import { HEROES_WITH_OWN_UI, heroUi, intentIcon, statusIcon, systemIcon, type HeroUiPart } from '../presentation/assets'
 import './BattleScreen.css'
 
 // -------------------- Exported intermediate types --------------------
@@ -267,6 +269,11 @@ export type CharacterDemo = {
   /** キャラのサイズ段階 (1 〜 10)。1 = スライム級の小型、5 = 標準、10 = 巨大ボス級。
    *  立ち絵 image 表示時は heightTier に応じて高さが決定される (縦横比は維持)。 */
   heightTier?: number
+  /**
+   * 新規格（128×128 共通キャンバス）のキャラの表示寸法。あるときは heightTier より優先し、
+   * 全キャラ同じ倍率で表示する（大きさは絵の中に描かれている）。
+   */
+  stage?: ActorStage
   /** Playable-character passive shown when hovering the character sprite. */
   traitName?: string
   /** Marker-bearing passive text rendered with the common card tooltip. */
@@ -364,6 +371,19 @@ const REENACT_LEAVE_MS = 160
 // Why: 死亡アニメーションは廃止 (ユーザ要望)。HP=0 で alive filter から外れて
 // 自然消滅するため、後追い blink は入れない。
 // 例外: down シートを持つキャラ（新規格で作ったキャラ）は HP 0 でも残り、倒れる姿勢で止まる。
+/** 主人公専用の戦闘操作UIを CSS 変数で渡す（専用UIが無い主人公は共通の枠のまま）。 */
+function heroUiStyle(heroId: string | undefined): CSSProperties | undefined {
+  if (!heroId || !HEROES_WITH_OWN_UI.has(heroId)) return undefined
+  const parts: readonly HeroUiPart[] = ['combo', 'tactical', 'ultimate', 'ready']
+  return Object.fromEntries(parts.map(part => [`--hero-ui-${part}`, `url('${heroUi(heroId, part)}')`])) as CSSProperties
+}
+
+/**
+ * 新規格のキャラのキャンバス下端（スロット上端からの y）。CSS の .sprite--stage と合わせる。
+ * キャンバスの足元の下には 4 ドット（×2 = 8px）の余白があるので、影の中心 y=190 に足が乗るよう
+ * キャンバス下端を 198 に置く（slot 高 260 − bottom 62）。
+ */
+const STAGE_CANVAS_BOTTOM_Y = 198
 /** 奥義モーションで技を放つ位置（8 コマ中 5 コマ目の頭）。 */
 const SKILL_RELEASE_RATIO = 5 / 8
 /** ダウンモーションの後、敗北処理へ進む前に倒れた姿を見せる時間。 */
@@ -492,7 +512,7 @@ function StatusBlock({ value }: { value: number }) {
   return (
     <div className="status-block" {...tip}>
       <img className="status-block__icon-img"
-           src="/icons/ui/block_value.png"
+           src={statusIcon('block')}
            alt="" draggable={false} />
       <span className="status-block__num">{value}</span>
     </div>
@@ -550,10 +570,10 @@ function IntentSegment({
 
   const renderAttackScopeIcon = (scope: 'single' | 'random' | 'all') => {
     const src = scope === 'all'
-      ? '/icons/ui/attack_all.png'
+      ? intentIcon('attack_all')
       : scope === 'random'
-        ? '/icons/ui/attack_random.png'
-        : '/icons/ui/attack.png'
+        ? intentIcon('attack_random')
+        : intentIcon('attack')
     return <img className="intent__icon intent__icon--img" src={src} alt="" draggable={false} />
   }
 
@@ -939,11 +959,16 @@ function Slot({
       return next
     })
   }
-  const displayHeight = char.heightTier !== undefined ? heightForTier(char.heightTier) : 148
+  const displayHeight = char.stage?.displayHeight
+    ?? (char.heightTier !== undefined ? heightForTier(char.heightTier) : 148)
   const stageProfile = resolveActorStageProfile(char.image)
   const actorSizeClass = actorSizeClassForTier(char.heightTier)
   const spriteLift = Math.round(displayHeight * stageProfile.liftRatio)
-  const actorImpactY = resolveActorImpactAnchorY(char.image, displayHeight)
+  const actorImpactY = resolveActorImpactAnchorY(
+    char.image,
+    displayHeight,
+    char.stage ? STAGE_CANVAS_BOTTOM_Y : undefined,
+  )
   const oneShotPlaybackSpeed = attackingDir !== undefined || isHit || isSkill
     ? normalizeMotionPlaybackSpeed(motionPlaybackSpeed)
     : 1
@@ -977,6 +1002,7 @@ function Slot({
       )
     : null
   const shadowWidth: number | null = (() => {
+    if (char.stage) return char.stage.shadowWidth
     if (char.heightTier === undefined) return null // text fallback: CSS default
     const h = heightForTier(char.heightTier)
     // Wide attack cells reserve room for weapons. They must not make the
@@ -1100,7 +1126,7 @@ function Slot({
           --tier-height CSS 変数で高さを段階制御 (1〜10)。 */}
       {activeAnimation || char.image ? (
         <div
-          className={`sprite sprite--image sprite--${char.spriteKind}`}
+          className={`sprite sprite--image sprite--${char.spriteKind}${char.stage ? ' sprite--stage' : ''}`}
           data-motion={activeAnimation?.motion ?? 'idle'}
           tabIndex={char.traitDescription ? 0 : undefined}
           aria-label={char.traitDescription
@@ -4544,6 +4570,8 @@ export function BattleScreen({
       <div
         className={`battle${((slotAnim.hitIds?.length ?? 0) + (slotAnim.blockedIds?.length ?? 0)) > 0 ? ' is-impacting' : ''}`}
         data-act={snapshot.run.currentAct}
+        // 主人公ごとの戦闘操作UI（コンボ・戦技・奥義・READY）の画像。CSS が var(--hero-ui-*) で使う。
+        style={heroUiStyle(snapshot.run.characterId)}
         // 敵の行動再生中はプレイヤーUIを敵用の装飾に切り替える。
         data-ui-owner={replayView?.actor.side === 'Enemy' ? 'enemy' : undefined}
       >
@@ -4727,7 +4755,7 @@ export function BattleScreen({
             onClick={() => setPileOpen('draw')}
             aria-label={`山札 (${displayedState.drawPile.length}枚) を表示`}
           >
-            <img className="pile__sym pile__sym--img" src="/icons/ui/pile_draw.png" alt="" draggable={false} />
+            <img className="pile__sym pile__sym--img" src={systemIcon('pile_draw')} alt="" draggable={false} />
             <span className="pile__lbl">山札</span>
             <span className="pile__num">{displayedState.drawPile.length}</span>
           </button>
@@ -4743,7 +4771,7 @@ export function BattleScreen({
               ? `除外 (${displayedState.exhaustPile.length}枚、伏策待機中${armedContingencyCount}枚) を表示`
               : `除外 (${displayedState.exhaustPile.length}枚) を表示`}
           >
-            <img className="pile__sym pile__sym--img" src="/icons/ui/pile_exhaust.png" alt="" draggable={false} />
+            <img className="pile__sym pile__sym--img" src={systemIcon('pile_exhaust')} alt="" draggable={false} />
             <span className="pile__lbl">除外</span>
             <span className="pile__num">{displayedState.exhaustPile.length}</span>
             {armedContingencyCount > 0 ? (
@@ -4757,7 +4785,7 @@ export function BattleScreen({
             onClick={() => setPileOpen('discard')}
             aria-label={`捨札 (${displayedState.discardPile.length}枚) を表示`}
           >
-            <img className="pile__sym pile__sym--img" src="/icons/ui/pile_discard.png" alt="" draggable={false} />
+            <img className="pile__sym pile__sym--img" src={systemIcon('pile_discard')} alt="" draggable={false} />
             <span className="pile__lbl">捨札</span>
             <span className="pile__num">{displayedState.discardPile.length}</span>
           </button>

@@ -214,7 +214,7 @@ describe('CardDesc', () => {
   it('renders the OnHit visual next to its trigger label', () => {
     const { container } = render(<CardDesc text="[T:OnHit]" />)
     const icon = container.querySelector('.card-desc-trigger__icon')
-    expect(icon).toHaveAttribute('src', '/icons/ui/on_hit.png')
+    expect(icon).toHaveAttribute('src', '/assets/icons/status/on_hit.png')
   })
 
   it('renders [C:strike] as card name reference', () => {

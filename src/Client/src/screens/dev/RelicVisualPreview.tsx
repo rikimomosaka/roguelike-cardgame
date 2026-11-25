@@ -11,6 +11,7 @@ import type { RelicSpec } from './DevSpecTypes'
 import { CardDesc } from '../../components/CardDesc'
 import { useTooltipTarget } from '../../components/Tooltip'
 import type { CardRarity } from '../../components/Card'
+import { relicIcon } from '../../presentation/assets'
 
 type Props = {
   relicId: string
@@ -68,7 +69,7 @@ export function RelicVisualPreview({ relicId, relicName, spec, flavor, effectTex
       <div className="dev-relic-visual-preview__panel" tabIndex={0} {...tip}>
         <div className="dev-relic-visual-preview__icon">
           <img
-            src={`/icons/relics/${relicId}.png`}
+            src={relicIcon(relicId)}
             alt={relicName}
             draggable={false}
             onError={(e) => {

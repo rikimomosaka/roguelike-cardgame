@@ -1,0 +1,16 @@
+{
+  "id": "default",
+  "name": "残光剣士セラ",
+  "brief": "docs/art/characters/striker_sera.md",
+  "mode": "native",
+  "note": "原寸のドット絵。footRow は足元の行、anchorX は体の横中心（境界座標）。ビルドで 128×128 のコマ（足元 123 行・中心 64）へ並べ直す。",
+  "motions": {
+    "idle":       { "file": "idle.png",     "frameWidth": 80,  "frameHeight": 80, "frames": 8, "footRow": 77, "anchorX": 39.5 },
+    "attack":     { "file": "attack_a.png", "frameWidth": 128, "frameHeight": 96, "frames": 6, "footRow": 93, "anchorX": 63.5 },
+    "attack_alt": { "file": "attack_b.png", "frameWidth": 128, "frameHeight": 96, "frames": 6, "footRow": 93, "anchorX": 63.5 },
+    "skill":      { "file": "skill.png",    "frameWidth": 128, "frameHeight": 96, "frames": 8, "footRow": 93, "anchorX": 63.5 },
+    "hurt":       { "file": "hurt.png",     "frameWidth": 128, "frameHeight": 96, "frames": 4, "footRow": 93, "anchorX": 63.5, "colors": 48 },
+    "down":       { "file": "down.png",     "frameWidth": 128, "frameHeight": 96, "frames": 6, "footRow": 93, "anchorX": 63.5 }
+  },
+  "base": { "file": "base.png", "blink": "blink.png", "colors": 24 }
+}

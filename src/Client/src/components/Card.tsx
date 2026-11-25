@@ -7,6 +7,7 @@ import { CardDesc } from './CardDesc'
 import { useCardCatalog } from '../hooks/useCardCatalog'
 import { useUnitCatalog } from '../hooks/useUnitCatalog'
 import type { CardPoolClass } from '../api/catalog'
+import { cardFrame } from '../presentation/assets'
 import './Card.css'
 
 export type CardType = 'attack' | 'skill' | 'power' | 'curse' | 'status' | 'unit'
@@ -14,7 +15,6 @@ export type CardRarity = 'c' | 'r' | 'e' | 'l' | 't'
 
 type CardFrameAffiliation = 'striker' | 'guardian' | 'tactician' | 'enhancer' | 'universal' | 'curse'
 
-const CARD_FRAME_ROOT = '/cards/frames'
 const KNOWN_POOL_CLASSES: Readonly<Record<string, Exclude<CardFrameAffiliation, 'curse'>>> = {
   striker: 'striker',
   guardian: 'guardian',
@@ -116,9 +116,9 @@ export function Card({
 }: Props) {
   const frameAffiliation = resolveFrameAffiliation(type, poolClass)
   const frameAffiliationLabel = FRAME_AFFILIATION_LABELS[frameAffiliation]
-  const affiliationFrameSrc = `${CARD_FRAME_ROOT}/affiliations/${frameAffiliation}.png`
-  const typeFrameSrc = `${CARD_FRAME_ROOT}/types/${type}.png`
-  const costFrameSrc = `${CARD_FRAME_ROOT}/costs/${frameAffiliation}.png`
+  const affiliationFrameSrc = cardFrame('affiliations', frameAffiliation)
+  const typeFrameSrc = cardFrame('types', type)
+  const costFrameSrc = cardFrame('costs', frameAffiliation)
   const comboAuraActive = comboRingHighlighted ?? comboContinues ?? comboReductionEligible
   const classes = [
     'card',

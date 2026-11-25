@@ -10,18 +10,19 @@ import { useRelicCatalog } from '../hooks/useRelicCatalog'
 import type { CardCatalog, PotionCatalog, RelicCatalog } from '../api/catalog'
 import { getRelicTooltipContent } from '../components/relicTooltip'
 import { rarityToItemClass } from './runResultRarity'
+import { mapIcon, potionIcon, relicIcon } from '../presentation/assets'
 import './RunResultScreen.css'
 
 const TILE_IMG_SRC: Record<TileKind, string> = {
-  Start: '/icons/tiles/start.png',
-  Enemy: '/icons/tiles/enemy.png',
-  Elite: '/icons/tiles/elite.png',
-  Merchant: '/icons/tiles/merchant.png',
-  Rest: '/icons/tiles/rest.png',
-  Treasure: '/icons/tiles/treasure.png',
-  Event: '/icons/tiles/event.png',
-  Unknown: '/icons/tiles/unknown.png',
-  Boss: '/icons/tiles/boss.png',
+  Start: mapIcon('start'),
+  Enemy: mapIcon('enemy'),
+  Elite: mapIcon('elite'),
+  Merchant: mapIcon('merchant'),
+  Rest: mapIcon('rest'),
+  Treasure: mapIcon('treasure'),
+  Event: mapIcon('event'),
+  Unknown: mapIcon('unknown'),
+  Boss: mapIcon('boss'),
 }
 
 type Props = {
@@ -236,14 +237,14 @@ export function RunResultScreen({ result, snapshot, onReturnToMenu }: Props) {
               </div>
 
               <div className="rr__trail-legend" aria-hidden="true">
-                <span className="lg--start"><span className="lg__sym"><img src="/icons/tiles/start.png" alt="" /></span>開始</span>
-                <span className="lg--boss"><span className="lg__sym"><img src="/icons/tiles/boss.png" alt="" /></span>ボス</span>
-                <span className="lg--fight"><span className="lg__sym"><img src="/icons/tiles/enemy.png" alt="" /></span>敵</span>
-                <span className="lg--elite"><span className="lg__sym"><img src="/icons/tiles/elite.png" alt="" /></span>強敵</span>
-                <span className="lg--event"><span className="lg__sym"><img src="/icons/tiles/event.png" alt="" /></span>イベント</span>
-                <span className="lg--merchant"><span className="lg__sym"><img src="/icons/tiles/merchant.png" alt="" /></span>商店</span>
-                <span className="lg--rest"><span className="lg__sym"><img src="/icons/tiles/rest.png" alt="" /></span>休憩</span>
-                <span className="lg--treasure"><span className="lg__sym"><img src="/icons/tiles/treasure.png" alt="" /></span>宝箱</span>
+                <span className="lg--start"><span className="lg__sym"><img src={mapIcon('start')} alt="" /></span>開始</span>
+                <span className="lg--boss"><span className="lg__sym"><img src={mapIcon('boss')} alt="" /></span>ボス</span>
+                <span className="lg--fight"><span className="lg__sym"><img src={mapIcon('enemy')} alt="" /></span>敵</span>
+                <span className="lg--elite"><span className="lg__sym"><img src={mapIcon('elite')} alt="" /></span>強敵</span>
+                <span className="lg--event"><span className="lg__sym"><img src={mapIcon('event')} alt="" /></span>イベント</span>
+                <span className="lg--merchant"><span className="lg__sym"><img src={mapIcon('merchant')} alt="" /></span>商店</span>
+                <span className="lg--rest"><span className="lg__sym"><img src={mapIcon('rest')} alt="" /></span>休憩</span>
+                <span className="lg--treasure"><span className="lg__sym"><img src={mapIcon('treasure')} alt="" /></span>宝箱</span>
               </div>
             </div>
           </div>
@@ -362,7 +363,7 @@ function RelicRow({
       onMouseLeave={tip.onMouseLeave}
     >
       <div className="rr__item-icon" aria-hidden="true">
-        <img src={`/icons/relics/${id}.png`} alt="" draggable={false} />
+        <img src={relicIcon(id)} alt="" draggable={false} />
       </div>
       <div className="rr__item-name">{name}</div>
     </li>
@@ -395,7 +396,7 @@ function PotionRow({
       onMouseLeave={tip.onMouseLeave}
     >
       <div className="rr__item-icon" aria-hidden="true">
-        <img src={`/icons/potions/${id}.png`} alt="" draggable={false} />
+        <img src={potionIcon(id)} alt="" draggable={false} />
       </div>
       <div className="rr__item-name">{name}</div>
     </li>

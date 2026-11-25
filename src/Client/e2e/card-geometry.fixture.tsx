@@ -158,7 +158,7 @@ function LongTextCard() {
       rarity="r"
       poolClass="Striker"
       description={'終撃。\n敵単体に10アタック。\n乗勢4：敵単体に10アタック。\n1ターン1回。'}
-      art={<img src="/backgrounds/events/forgotten_forge.png" alt="" />}
+      art={<img src="/assets/backgrounds/events/forgotten_forge.png" alt="" />}
     />
   )
 }
@@ -213,7 +213,7 @@ function LongNameCard({ name }: { name: string }) {
       rarity="e"
       poolClass="Enhancer"
       description="味方全体にバフを付与。"
-      art={<img src="/backgrounds/events/moonlit_garden.png" alt="" />}
+      art={<img src="/assets/backgrounds/events/moonlit_garden.png" alt="" />}
     />
   )
 }
@@ -245,7 +245,7 @@ function StyledCard({
       contingencyArmed={contingencyArmed}
       contingencyTriggerText={contingencyArmed ? '相手のアタック時' : undefined}
       description="クラス枠とタイプ別イラスト窓の検証用。"
-      art={<img src="/backgrounds/events/moonlit_garden.png" alt="" />}
+      art={<img src="/assets/backgrounds/events/moonlit_garden.png" alt="" />}
     />
   )
 }

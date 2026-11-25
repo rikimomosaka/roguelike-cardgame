@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useTooltipTarget } from './Tooltip'
 import type { RelicCatalog } from '../api/catalog'
 import { getRelicTooltipContent } from './relicTooltip'
+import { relicIcon } from '../presentation/assets'
 import './RelicIcon.css'
 
 type Props = {
@@ -31,7 +32,7 @@ export function RelicIcon({ id, catalog, names }: Props) {
       {...tip}
     >
       <span className="relic-icon__sprite" aria-hidden="true">
-        <img src={`/icons/relics/${id}.png`} alt="" draggable={false} />
+        <img src={relicIcon(id)} alt="" draggable={false} />
       </span>
     </span>
   )

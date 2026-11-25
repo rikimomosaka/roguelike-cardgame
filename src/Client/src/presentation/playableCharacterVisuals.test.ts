@@ -7,7 +7,7 @@ import {
 describe('resolveCharacterPortrait', () => {
   it('resolves a playable character to the shared bust-up directory', () => {
     expect(resolveCharacterPortrait('enhancer_lyra')).toBe(
-      '/characters/portraits/enhancer_lyra.png',
+      '/assets/portraits/enhancer_lyra.png',
     )
   })
 

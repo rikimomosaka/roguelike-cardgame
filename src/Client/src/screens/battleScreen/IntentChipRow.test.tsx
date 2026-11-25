@@ -42,9 +42,9 @@ describe('IntentChipRow', () => {
       .toEqual(['33(2HIT)', '12(3HIT)', '7(1HIT)'])
     expect(rows.map(row => row.querySelector('img')?.getAttribute('src')))
       .toEqual([
-        '/icons/ui/attack.png',
-        '/icons/ui/attack_random.png',
-        '/icons/ui/attack_all.png',
+        '/assets/icons/intent/attack.png',
+        '/assets/icons/intent/attack_random.png',
+        '/assets/icons/intent/attack_all.png',
       ])
     for (const row of rows) {
       expect(row.querySelectorAll('.intent__icon')).toHaveLength(1)

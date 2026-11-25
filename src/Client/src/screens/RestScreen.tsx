@@ -5,6 +5,7 @@ import { Card } from '../components/Card'
 import { cardDisplay } from '../components/cardDisplay'
 import { Popup } from '../components/Popup'
 import { useCardCatalog } from '../hooks/useCardCatalog'
+import { sceneArt, systemIcon } from '../presentation/assets'
 import './RestScreen.css'
 
 type Props = {
@@ -190,23 +191,23 @@ export function RestScreen({ deck, completed, healPreview, onHeal, onUpgrade, on
       <div className="rs-fire" aria-hidden="true">
         <img
           className="rs-fire__logs"
-          src="/icons/ui/rest_logs.png"
+          src={sceneArt('rest_logs')}
           alt=""
-          width={180}
-          height={180}
+          width={192}
+          height={192}
           draggable={false}
         />
         <span
           className="rs-fire__flame-viewport"
           data-frame-count="6"
-          data-frame-width="180"
+          data-frame-width="192"
         >
           <img
             className="rs-fire__flame"
-            src="/icons/ui/rest_flame.png?v=2"
+            src={sceneArt('rest_flame')}
             alt=""
-            width={1080}
-            height={180}
+            width={1152}
+            height={192}
             draggable={false}
           />
         </span>
@@ -245,7 +246,7 @@ export function RestScreen({ deck, completed, healPreview, onHeal, onUpgrade, on
               aria-label="Heal"
             >
               <span className="rs-choice-icon" aria-hidden="true">
-                <img src="/icons/ui/rest_heal.png" alt="" draggable={false} />
+                <img src={sceneArt('rest_heal')} alt="" draggable={false} />
               </span>
               <span className="rs-choice-body">
                 <span className="rs-choice-name">休息</span>
@@ -273,7 +274,7 @@ export function RestScreen({ deck, completed, healPreview, onHeal, onUpgrade, on
               aria-label="Upgrade card"
             >
               <span className="rs-choice-icon" aria-hidden="true">
-                <img src="/icons/ui/upgrade.png" alt="" draggable={false} />
+                <img src={systemIcon('upgrade')} alt="" draggable={false} />
               </span>
               <span className="rs-choice-body">
                 <span className="rs-choice-name">鍛造</span>

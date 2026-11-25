@@ -32,6 +32,7 @@ import { MerchantScreen } from './MerchantScreen'
 import { EventScreen } from './EventScreen'
 import { RestScreen } from './RestScreen'
 import { ActStartRelicScreen } from './ActStartRelicScreen'
+import { mapIcon } from '../presentation/assets'
 import './MapScreen.css'
 
 type Props = {
@@ -46,15 +47,15 @@ const SHOP_MESSAGE_MS = 2500
 const MAX_ROW = 16
 
 const TILE_IMG_SRC: Record<TileKind, string> = {
-  Enemy: '/icons/tiles/enemy.png',
-  Elite: '/icons/tiles/elite.png',
-  Merchant: '/icons/tiles/merchant.png',
-  Rest: '/icons/tiles/rest.png',
-  Treasure: '/icons/tiles/treasure.png',
-  Event: '/icons/tiles/event.png',
-  Unknown: '/icons/tiles/unknown.png',
-  Boss: '/icons/tiles/boss.png',
-  Start: '/icons/tiles/start.png',
+  Enemy: mapIcon('enemy'),
+  Elite: mapIcon('elite'),
+  Merchant: mapIcon('merchant'),
+  Rest: mapIcon('rest'),
+  Treasure: mapIcon('treasure'),
+  Event: mapIcon('event'),
+  Unknown: mapIcon('unknown'),
+  Boss: mapIcon('boss'),
+  Start: mapIcon('start'),
 }
 
 function iconFor(kind: TileKind, resolvedKind: TileKind | null): ReactNode {
@@ -915,14 +916,14 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
 
           <div className="map-screen__key" aria-hidden="true">
             <div className="map-screen__key-title">マップ凡例</div>
-            <div className="map-screen__key-row"><span className="map-screen__key-sym"><img src="/icons/tiles/enemy.png" alt="" /></span><span>敵</span></div>
-            <div className="map-screen__key-row"><span className="map-screen__key-sym k--elite"><img src="/icons/tiles/elite.png" alt="" /></span><span>強敵</span></div>
-            <div className="map-screen__key-row"><span className="map-screen__key-sym k--rest"><img src="/icons/tiles/rest.png" alt="" /></span><span>休憩</span></div>
-            <div className="map-screen__key-row"><span className="map-screen__key-sym k--merchant"><img src="/icons/tiles/merchant.png" alt="" /></span><span>商店</span></div>
-            <div className="map-screen__key-row"><span className="map-screen__key-sym k--treasure"><img src="/icons/tiles/treasure.png" alt="" /></span><span>宝箱</span></div>
-            <div className="map-screen__key-row"><span className="map-screen__key-sym"><img src="/icons/tiles/event.png" alt="" /></span><span>イベント</span></div>
-            <div className="map-screen__key-row"><span className="map-screen__key-sym"><img src="/icons/tiles/unknown.png" alt="" /></span><span>不明</span></div>
-            <div className="map-screen__key-row"><span className="map-screen__key-sym k--boss"><img src="/icons/tiles/boss.png" alt="" /></span><span>ボス</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym"><img src={mapIcon('enemy')} alt="" /></span><span>敵</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym k--elite"><img src={mapIcon('elite')} alt="" /></span><span>強敵</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym k--rest"><img src={mapIcon('rest')} alt="" /></span><span>休憩</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym k--merchant"><img src={mapIcon('merchant')} alt="" /></span><span>商店</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym k--treasure"><img src={mapIcon('treasure')} alt="" /></span><span>宝箱</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym"><img src={mapIcon('event')} alt="" /></span><span>イベント</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym"><img src={mapIcon('unknown')} alt="" /></span><span>不明</span></div>
+            <div className="map-screen__key-row"><span className="map-screen__key-sym k--boss"><img src={mapIcon('boss')} alt="" /></span><span>ボス</span></div>
           </div>
           {busyLabel && (
             <div className="map-screen__travel-status" role="status" aria-live="polite">

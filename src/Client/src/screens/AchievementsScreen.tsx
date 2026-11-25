@@ -19,6 +19,7 @@ import {
   DEFAULT_CHARACTER_PORTRAIT,
   resolveCharacterPortrait,
 } from '../presentation/playableCharacterVisuals'
+import { actorSheet, potionIcon, relicIcon } from '../presentation/assets'
 import './AchievementsScreen.css'
 
 // Why: Token rarity (Phase 10.5.G) は achievements (図鑑) の通常コレクション
@@ -464,7 +465,7 @@ function CharacterTile({ character, cardNames, onOpenDeck }: {
   const image = character.kind === 'player'
     ? resolveCharacterPortrait(character.id)
     : character.imageId
-      ? `/characters/units/${character.imageId}.png`
+      ? actorSheet('units', character.imageId)
       : null
 
   return (
@@ -728,7 +729,7 @@ function TilesTab({ title, kind, allIds, discovered }: {
         })
         : null
     const imageSrc = kind === 'enemy' && enemyCatalog?.[id]?.imageId
-      ? `/characters/enemies/${enemyCatalog[id].imageId}.png`
+      ? actorSheet('enemies', enemyCatalog[id].imageId)
       : null
     const rarity =
       kind === 'relic' ? rarityCodeFromName(relicCatalog?.[id]?.rarity)
@@ -833,8 +834,8 @@ function BestiaryTile({ kind, id, isDiscovered, displayName, description, rarity
   const tip = useTooltipTarget(isDiscovered ? (tooltipContent ?? fallbackTooltip) : null)
 
   const art = (() => {
-    if (kind === 'relic') return <img src={`/icons/relics/${id}.png`} alt="" draggable={false} />
-    if (kind === 'potion') return <img src={`/icons/potions/${id}.png`} alt="" draggable={false} />
+    if (kind === 'relic') return <img src={relicIcon(id)} alt="" draggable={false} />
+    if (kind === 'potion') return <img src={potionIcon(id)} alt="" draggable={false} />
     if (isDiscovered && imageSrc) return (
       <>
         <img
@@ -1010,7 +1011,7 @@ function MonsterTile({ id, enemy, isDiscovered, cardNames, cardCatalog, onOpenDe
   onOpenDeck: () => void
 }) {
   const shown = isDiscovered && enemy !== null ? enemy : null
-  const image = shown?.imageId ? `/characters/enemies/${shown.imageId}.png` : null
+  const image = shown?.imageId ? actorSheet('enemies', shown.imageId) : null
   const deckIds = shown ? expandEnemyDeck(shown) : []
   const deck = aggregateDeck(deckIds, cardNames)
   const openingActions = shown?.openingActions ?? []

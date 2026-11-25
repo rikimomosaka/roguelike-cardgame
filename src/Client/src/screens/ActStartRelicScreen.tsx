@@ -3,6 +3,7 @@ import { Button } from '../components/Button'
 import { Popup } from '../components/Popup'
 import { useTooltipTarget } from '../components/Tooltip'
 import type { TooltipContent } from '../components/Tooltip'
+import { relicIcon } from '../presentation/assets'
 import './ActStartRelicScreen.css'
 
 type Props = {
@@ -123,7 +124,7 @@ function RelicChoice({ id, name, desc, flavor, disabled, isSelected, onClick }: 
       onMouseLeave={tip.onMouseLeave}
     >
       <span className="ar-icon" aria-hidden="true">
-        <img src={`/icons/relics/${id}.png`} alt="" draggable={false} />
+        <img src={relicIcon(id)} alt="" draggable={false} />
       </span>
       <span className="ar-name">{name}</span>
     </button>

@@ -5,6 +5,7 @@ import type { CardRarity } from './Card'
 import { rarityCodeFromNumber } from './rarity'
 import { useTooltipTarget } from './Tooltip'
 import type { TooltipContent } from './Tooltip'
+import { potionIcon } from '../presentation/assets'
 import './PotionSlot.css'
 
 type Props = {
@@ -78,7 +79,7 @@ export function PotionSlot({ slotIndex, potionId, onDiscard, onUse, outsideBattl
         onMouseLeave={tip.onMouseLeave}
         aria-label={`ポーション: ${potionId}`}
       >
-        <img src={`/icons/potions/${potionId}.png`} alt="" draggable={false} />
+        <img src={potionIcon(potionId)} alt="" draggable={false} />
       </button>
       {menuOpen && menuPos && createPortal(
         <div

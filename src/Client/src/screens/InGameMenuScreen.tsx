@@ -4,6 +4,7 @@ import type { RunResultDto } from '../api/types'
 import { Popup } from '../components/Popup'
 import { useAccount } from '../context/AccountContext'
 import { SettingsScreen } from './SettingsScreen'
+import { systemIcon } from '../presentation/assets'
 import './InGameMenuScreen.css'
 
 type Props = {
@@ -195,7 +196,7 @@ export function InGameMenuScreen({ onClose, onExitToMenu, onAbandon, elapsedSeco
             aria-label="続ける"
           >
             <span className="im-item-icon" aria-hidden="true">
-              <img src="/icons/ui/continue.png" alt="" draggable={false} />
+              <img src={systemIcon('continue')} alt="" draggable={false} />
             </span>
             <span className="im-item-body">
               <span className="im-item-name">続ける</span>
@@ -212,7 +213,7 @@ export function InGameMenuScreen({ onClose, onExitToMenu, onAbandon, elapsedSeco
             aria-label="音量設定"
           >
             <span className="im-item-icon" aria-hidden="true">
-              <img src="/icons/ui/settings.png" alt="" draggable={false} />
+              <img src={systemIcon('settings')} alt="" draggable={false} />
             </span>
             <span className="im-item-body">
               <span className="im-item-name">音量設定</span>
@@ -233,7 +234,7 @@ export function InGameMenuScreen({ onClose, onExitToMenu, onAbandon, elapsedSeco
             aria-label="メニューに戻る"
           >
             <span className="im-item-icon" aria-hidden="true">
-              <img src="/icons/ui/map.png" alt="" draggable={false} />
+              <img src={systemIcon('map')} alt="" draggable={false} />
             </span>
             <span className="im-item-body">
               <span className="im-item-name">メニューに戻る</span>
@@ -250,7 +251,7 @@ export function InGameMenuScreen({ onClose, onExitToMenu, onAbandon, elapsedSeco
             aria-label="あきらめる"
           >
             <span className="im-item-icon" aria-hidden="true">
-              <img src="/icons/ui/abandon.png" alt="" draggable={false} />
+              <img src={systemIcon('abandon')} alt="" draggable={false} />
             </span>
             <span className="im-item-body">
               <span className="im-item-name">あきらめる</span>

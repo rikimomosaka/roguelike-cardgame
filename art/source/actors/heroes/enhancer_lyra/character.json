@@ -1,0 +1,12 @@
+{
+  "id": "enhancer_lyra",
+  "mode": "legacy",
+  "note": "旧素材（192×256 のコマ）を縮小した仮の素材。新規格で作り直すまでの代用。height は身長（ドット）。",
+  "height": 72,
+  "motions": {
+    "stand":  { "file": "stand.png",  "frameWidth": 192, "frames": 1 },
+    "idle":   { "file": "idle.png",   "frameWidth": 192, "frames": 8, "durationMs": 1600 },
+    "attack": { "file": "attack.png", "frameWidth": 384, "frames": 4, "durationMs": 480 },
+    "hurt":   { "file": "hurt.png",   "frameWidth": 192, "frames": 4, "durationMs": 440 }
+  }
+}

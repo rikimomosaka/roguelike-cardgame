@@ -6,6 +6,7 @@ import { PotionSlot } from './PotionSlot'
 import { RelicIcon } from './RelicIcon'
 import { useCardCatalog } from '../hooks/useCardCatalog'
 import { useRelicCatalog } from '../hooks/useRelicCatalog'
+import { systemIcon } from '../presentation/assets'
 import './TopBar.css'
 
 // Tween a number from its previous value to the new value over `durationMs`.
@@ -223,7 +224,7 @@ export function TopBar({
             aria-pressed={deckOpenAria}
             onClick={() => setDeckOpen((v) => !v)}
           >
-            <img className="topbar__btn-icon" src="/icons/ui/deck.png" alt="" draggable={false} />
+            <img className="topbar__btn-icon" src={systemIcon('deck')} alt="" draggable={false} />
             <span className="topbar__btn-num">{deck.length}</span>
           </button>
           {deckOpen && (
@@ -273,7 +274,7 @@ export function TopBar({
           onClick={onTogglePeek}
           disabled={peekDisabled || !onTogglePeek}
         >
-          <img className="topbar__btn-icon" src="/icons/ui/map.png" alt="" draggable={false} />
+          <img className="topbar__btn-icon" src={systemIcon('map')} alt="" draggable={false} />
         </button>
         <button
           type="button"
@@ -282,7 +283,7 @@ export function TopBar({
           aria-pressed={menuPressedAria}
           onClick={onOpenMenu}
         >
-          <img className="topbar__btn-icon" src="/icons/ui/settings.png" alt="" draggable={false} />
+          <img className="topbar__btn-icon" src={systemIcon('settings')} alt="" draggable={false} />
         </button>
       </div>
     </div>

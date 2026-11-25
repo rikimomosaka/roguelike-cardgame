@@ -381,7 +381,7 @@ test('PNG affiliation and type layers stay distinct inside the fixed card box', 
       }
     })
     expect(affiliation).toMatchObject({
-      source: `/cards/frames/affiliations/${pool}.png`,
+      source: `/assets/cards/frames/affiliations/${pool}.png`,
       naturalWidth: 560,
       naturalHeight: 784,
       zIndex: '0',
@@ -403,7 +403,7 @@ test('PNG affiliation and type layers stay distinct inside the fixed card box', 
       const name = element.querySelector<HTMLElement>('.card__name')!
       const style = getComputedStyle(illustration)
       const mask = new Image()
-      mask.src = `/cards/frames/masks/${cardType}.png`
+      mask.src = `/assets/cards/frames/masks/${cardType}.png`
       await Promise.all([mask.decode(), frame.decode()])
       const canvas = document.createElement('canvas')
       canvas.width = mask.naturalWidth
@@ -480,8 +480,8 @@ test('PNG affiliation and type layers stay distinct inside the fixed card box', 
           && artRect.bottom >= aperture.bottom,
       }
     }, type)
-    expect(layer.frameSource).toBe(`/cards/frames/types/${type}.png`)
-    expect(layer.maskImage).toContain(`/cards/frames/masks/${type}.png`)
+    expect(layer.frameSource).toBe(`/assets/cards/frames/types/${type}.png`)
+    expect(layer.maskImage).toContain(`/assets/cards/frames/masks/${type}.png`)
     expect(layer.clipPath).toBe('none')
     expect(layer).toMatchObject({
       frameNaturalWidth: 560,
@@ -502,10 +502,10 @@ test('PNG affiliation and type layers stay distinct inside the fixed card box', 
   expect(new Set(typeMasks).size).toBe(typeMasks.length)
 
   await expect(cardAt(page, 'plain').locator('.card__affiliation-frame'))
-    .toHaveAttribute('src', '/cards/frames/affiliations/universal.png')
+    .toHaveAttribute('src', '/assets/cards/frames/affiliations/universal.png')
   await expect(cardAt(page, 'type-curse')).toHaveAttribute('data-card-affiliation', 'curse')
   await expect(cardAt(page, 'type-curse').locator('.card__affiliation-frame'))
-    .toHaveAttribute('src', '/cards/frames/affiliations/curse.png')
+    .toHaveAttribute('src', '/assets/cards/frames/affiliations/curse.png')
 
   const combinedState = await cardAt(page, 'combined-frame-states').evaluate(element => {
     const cardStyle = getComputedStyle(element)
@@ -527,7 +527,7 @@ test('PNG affiliation and type layers stay distinct inside the fixed card box', 
   })
   expect(combinedState.boxShadow).not.toBe('none')
   expect(combinedState.selectionBorderColor).toBe('rgb(255, 213, 79)')
-  expect(combinedState.frameSource).toBe('/cards/frames/affiliations/tactician.png')
+  expect(combinedState.frameSource).toBe('/assets/cards/frames/affiliations/tactician.png')
   expect(Number(combinedState.contingencyZ)).toBeGreaterThan(Number(combinedState.typeFrameZ))
 })
 

@@ -7,40 +7,46 @@ import {
   resolveActorStageProfile,
   resolveActorVisual,
 } from './actorVisualManifest'
+import actorAssets from '../../presentation/generated/actor-assets.json'
+
+const metrics = actorAssets.actors as Record<string, { centerY: number; footprint: number; top: number; bottom: number }>
 
 describe('actorVisualManifest', () => {
-  it.each(PLAYABLE_ACTOR_VISUAL_IDS)('provides a complete motion set for %s', (id) => {
+  it.each(PLAYABLE_ACTOR_VISUAL_IDS)('provides 128x128 sheets and stage metrics for %s', (id) => {
     const visual = resolveActorVisual({
       isHero: true,
       characterId: id,
       side: 'Ally',
     })
 
-    expect(visual?.image).toBe(`/characters/${id}_stand.png`)
-    expect(visual?.portrait).toBe(`/characters/portraits/${id}.png`)
-    // セラ（default）は新規格で作り直したモーション。他のキャラは旧素材の値。
-    const remade = id === 'default'
-    expect(visual?.animations?.idle?.frameCount).toBe(8)
-    expect(visual?.animations?.idle?.durationMs).toBe(remade ? 1200 : 1600)
-    expect(visual?.animations?.attack?.frameCount).toBe(remade ? 6 : 4)
-    expect(visual?.animations?.attack?.frameWidth).toBe(384)
-    expect(visual?.animations?.attack?.durationMs).toBe(remade ? 600 : 480)
-    expect(visual?.animations?.hurt?.frameCount).toBe(4)
-    expect(visual?.animations?.hurt?.durationMs).toBe(remade ? 400 : 440)
+    expect(visual?.image).toBe(`/assets/actors/heroes/${id}/stand.png`)
+    expect(visual?.portrait).toBe(`/assets/portraits/${id}.png`)
+    // 全主人公が待機・攻撃・被弾を持ち、コマは 128×128。
+    for (const motion of ['idle', 'attack', 'hurt'] as const) {
+      const sheet = visual?.animations?.[motion]
+      expect(sheet?.src).toBe(`/assets/actors/heroes/${id}/${motion}.png`)
+      expect(sheet?.frameWidth).toBe(128)
+      expect(sheet?.frameHeight).toBe(128)
+    }
+    expect(visual?.animations?.idle?.loop).toBe(true)
+    // 表示は全キャラ共通の ×2（256px）。
+    expect(visual?.stage?.displayHeight).toBe(256)
   })
 
-  it('registers attack B, skill and down only for remade characters', () => {
+  it('uses the remade standard motions for Sera and the converted legacy timing for others', () => {
     const sera = resolveActorVisual({ isHero: true, characterId: 'default', side: 'Ally' })
-    expect(sera?.animations?.attackAlt?.src).toBe('/characters/default_attack_alt.png')
-    expect(sera?.animations?.attackAlt?.frameCount).toBe(6)
-    // 奥義は上に余白を足した枠。表示の基準高さは他のシートと同じ 256。
-    expect(sera?.animations?.skill?.frameHeight).toBe(288)
-    expect(sera?.animations?.skill?.baseFrameHeight).toBe(256)
-    expect(sera?.animations?.skill?.frameCount).toBe(8)
-    expect(sera?.animations?.down?.loop).toBe(false)
-    expect(sera?.animations?.down?.frameCount).toBe(6)
+    expect(sera?.animations?.idle).toMatchObject({ frameCount: 8, durationMs: 1200 })
+    expect(sera?.animations?.attack).toMatchObject({ frameCount: 6, durationMs: 600 })
+    expect(sera?.animations?.attackAlt).toMatchObject({
+      src: '/assets/actors/heroes/default/attack_alt.png', frameCount: 6, durationMs: 600,
+    })
+    expect(sera?.animations?.skill).toMatchObject({ frameCount: 8, durationMs: 800, frameHeight: 128 })
+    expect(sera?.animations?.hurt).toMatchObject({ frameCount: 4, durationMs: 400 })
+    expect(sera?.animations?.down).toMatchObject({ frameCount: 6, durationMs: 720, loop: false })
 
     const mireille = resolveActorVisual({ isHero: true, characterId: 'guardian_mireille', side: 'Ally' })
+    expect(mireille?.animations?.idle).toMatchObject({ frameCount: 8, durationMs: 1600 })
+    expect(mireille?.animations?.attack).toMatchObject({ frameCount: 4, durationMs: 480 })
     expect(mireille?.animations?.attackAlt).toBeUndefined()
     expect(mireille?.animations?.skill).toBeUndefined()
     expect(mireille?.animations?.down).toBeUndefined()
@@ -51,12 +57,12 @@ describe('actorVisualManifest', () => {
       isHero: false,
       imageId: 'slime_king',
       side: 'Enemy',
-    })?.image).toBe('/characters/enemies/slime_king.png')
+    })?.image).toBe('/assets/actors/enemies/slime_king/stand.png')
     expect(resolveActorVisual({
       isHero: false,
       imageId: 'wisp',
       side: 'Ally',
-    })?.image).toBe('/characters/units/wisp.png')
+    })?.image).toBe('/assets/actors/units/wisp/stand.png')
   })
 
   it('falls back to the striker visual for an unknown hero id', () => {
@@ -64,7 +70,7 @@ describe('actorVisualManifest', () => {
       isHero: true,
       characterId: 'future_character',
       side: 'Ally',
-    })?.image).toBe('/characters/default_stand.png')
+    })?.image).toBe('/assets/actors/heroes/default/stand.png')
   })
 
   it('classifies height tiers into stable presentation sizes', () => {
@@ -76,27 +82,38 @@ describe('actorVisualManifest', () => {
     expect(actorSizeClassForTier(10)).toBe('large')
   })
 
-  it.each([
-    ['/characters/enemies/cave_bat_a.png', 0.42],
-    ['/characters/enemies/cave_bat_b.png', 0.42],
-    ['/characters/units/wisp.png', 0.38],
-    ['/characters/enemies/six_ghost.png', 0.18],
-  ] as const)('lifts airborne art while leaving grounded art untouched: %s', (image, liftRatio) => {
-    expect(resolveActorStageProfile(image)).toEqual({ airborne: true, liftRatio })
-    expect(resolveActorStageProfile('/characters/enemies/slime.png')).toEqual({
-      airborne: false,
-      liftRatio: 0,
-    })
+  it('draws every actor at the same scale: the size difference lives inside the 128x128 canvas', () => {
+    const slime = resolveActorVisual({ isHero: false, imageId: 'slime_green_s', side: 'Enemy' })
+    const boss = resolveActorVisual({ isHero: false, imageId: 'act2_boss', side: 'Enemy' })
+    expect(slime?.stage?.displayHeight).toBe(256)
+    expect(boss?.stage?.displayHeight).toBe(256)
+    // 影の幅はキャラの横幅で決まるので、小さい敵ほど狭い。
+    expect(slime!.stage!.shadowWidth).toBeLessThan(boss!.stage!.shadowWidth)
   })
 
-  it('anchors impact feedback to the visible silhouette instead of the PNG canvas centre', () => {
-    expect(resolveActorImpactCenterRatio('/characters/enemies/cave_bat_a.png')).toBe(0.773)
-    expect(resolveActorImpactCenterRatio('/characters/enemies/louse_red.png')).toBe(0.748)
-    expect(resolveActorImpactCenterRatio('/characters/default_stand.png')).toBe(0.516)
-    expect(resolveActorImpactCenterRatio('/characters/enemies/future_enemy.png')).toBe(0.6)
-    // Cave bat A: tier 2 => 82px display height and 34px flight lift.
-    expect(resolveActorImpactAnchorY('/characters/enemies/cave_bat_a.png', 82)).toBe(143)
-    // A grounded louse remains close to its small visible body near the floor.
-    expect(resolveActorImpactAnchorY('/characters/enemies/louse_red.png', 60)).toBe(181)
+  it.each([
+    '/assets/actors/enemies/cave_bat_a/stand.png',
+    '/assets/actors/enemies/cave_bat_b/stand.png',
+    '/assets/actors/units/wisp/stand.png',
+    '/assets/actors/enemies/six_ghost/stand.png',
+  ])('keeps flying actors in the air inside the art, never lifting the sprite: %s', (image) => {
+    expect(resolveActorStageProfile(image)).toEqual({ airborne: true, liftRatio: 0 })
+  })
+
+  it('treats grounded and unknown actors as grounded', () => {
+    expect(resolveActorStageProfile('/assets/actors/enemies/slime_big/stand.png')).toEqual({ airborne: false, liftRatio: 0 })
+    expect(resolveActorStageProfile('/assets/actors/enemies/future_enemy/stand.png')).toEqual({ airborne: false, liftRatio: 0 })
+  })
+
+  it('anchors impact feedback to the visible silhouette measured at build time', () => {
+    expect(resolveActorImpactCenterRatio('/assets/actors/enemies/cave_bat_a/stand.png'))
+      .toBe(metrics['enemies/cave_bat_a'].centerY)
+    expect(resolveActorImpactCenterRatio('/assets/actors/heroes/default/stand.png'))
+      .toBe(metrics['heroes/default'].centerY)
+    expect(resolveActorImpactCenterRatio('/assets/actors/enemies/future_enemy/stand.png')).toBe(0.6)
+    // キャンバス下端 y=198、表示 256px のとき、中心は 198 − 256 × (1 − centerY)。
+    const bat = metrics['enemies/cave_bat_a'].centerY
+    expect(resolveActorImpactAnchorY('/assets/actors/enemies/cave_bat_a/stand.png', 256, 198))
+      .toBe(Math.round(198 - 256 * (1 - bat)))
   })
 })

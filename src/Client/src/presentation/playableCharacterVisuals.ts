@@ -1,16 +1,12 @@
-export const DEFAULT_CHARACTER_PORTRAIT = '/characters/portraits/default.png'
+import { DEFAULT_HERO_ID, portrait } from './assets'
 
-const SAFE_CHARACTER_ID = /^[a-z0-9][a-z0-9_-]*$/i
+export const DEFAULT_CHARACTER_PORTRAIT = portrait(DEFAULT_HERO_ID)
 
 /**
  * Returns the shared bust-up portrait used outside the battle stage and by cut-ins.
  * Battle stand sprites intentionally live on a separate visual path.
+ * パスの規則は presentation/assets.ts（不正な ID は既定の立ち絵になる）。
  */
 export function resolveCharacterPortrait(characterId: string | null | undefined): string {
-  const normalizedId = characterId?.trim()
-  if (!normalizedId || !SAFE_CHARACTER_ID.test(normalizedId)) {
-    return DEFAULT_CHARACTER_PORTRAIT
-  }
-
-  return `/characters/portraits/${normalizedId}.png`
+  return portrait(characterId)
 }

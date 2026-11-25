@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
+import { statusIcon } from '../presentation/assets'
 import './CardDesc.css'
 
 // Why: キーワード ID → 日本語表示名 + 説明文。Core 側 CardKeywords 辞書と同期。
@@ -442,7 +443,7 @@ function renderMarker(
           {value === 'OnHit' && (
             <img
               className="card-desc-trigger__icon"
-              src="/icons/ui/on_hit.png"
+              src={statusIcon('on_hit')}
               alt=""
               draggable={false}
             />

@@ -11,6 +11,7 @@ import { rarityCodeFromNumber } from '../components/rarity'
 import type { TooltipContent } from '../components/Tooltip'
 import { useCardCatalog, usePotionCatalog } from '../hooks/useCardCatalog'
 import { useRelicCatalog } from '../hooks/useRelicCatalog'
+import { potionIcon, relicIcon, systemIcon } from '../presentation/assets'
 import './RewardPopup.css'
 
 type Props = {
@@ -182,7 +183,7 @@ export function RewardPopup(p: Props) {
               onClick={() => void runAction('gold', p.onClaimGold)}
             >
               <span className="rw-tile__icon" aria-hidden="true">
-                {r.goldClaimed ? '✓' : <img src="/icons/ui/gold.png" alt="" draggable={false} />}
+                {r.goldClaimed ? '✓' : <img src={systemIcon('gold')} alt="" draggable={false} />}
               </span>
               <span className="rw-num">{r.gold}</span> ゴールド
             </button>
@@ -197,7 +198,7 @@ export function RewardPopup(p: Props) {
               onClick={() => void runAction('potion', p.onClaimPotion)}
             >
               <span className="rw-tile__icon" aria-hidden="true">
-                {r.potionClaimed ? '✓' : <img src={`/icons/potions/${r.potionId}.png`} alt="" draggable={false} />}
+                {r.potionClaimed ? '✓' : <img src={potionIcon(r.potionId)} alt="" draggable={false} />}
               </span>
               {potionLabel(r.potionId)}
             </button>
@@ -212,7 +213,7 @@ export function RewardPopup(p: Props) {
               onClick={() => setCardView(true)}
             >
               <span className="rw-tile__icon" aria-hidden="true">
-                {cardResolved ? '✓' : <img src="/icons/ui/reward.png" alt="" draggable={false} />}
+                {cardResolved ? '✓' : <img src={systemIcon('reward')} alt="" draggable={false} />}
               </span>
               カード報酬
             </button>
@@ -228,7 +229,7 @@ export function RewardPopup(p: Props) {
               {...relicTip}
             >
               <span className="rw-tile__icon" aria-hidden="true">
-                {r.relicClaimed ? '✓' : <img src={`/icons/relics/${r.relicId}.png`} alt="" draggable={false} />}
+                {r.relicClaimed ? '✓' : <img src={relicIcon(r.relicId)} alt="" draggable={false} />}
               </span>
               レリック: {relicNames[r.relicId] ?? r.relicId}
             </button>

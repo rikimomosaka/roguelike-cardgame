@@ -86,29 +86,29 @@ describe('toCharacterDemo', () => {
     expect(demo.name).toBe('alice')
     expect(demo.name).not.toBe('見習い冒険者')   // catalog name must NOT win
     expect(demo.spriteKind).toBe('hero')
-    expect(demo.image).toBe('/characters/default_stand.png')
+    expect(demo.image).toBe('/assets/actors/heroes/default/stand.png')
     // 攻撃B・奥義・ダウンの追加分は actorVisualManifest.test.ts で確認する。
     expect(demo.animations).toMatchObject({
       idle: {
-        src: '/characters/default_idle.png',
-        frameWidth: 192,
-        frameHeight: 256,
+        src: '/assets/actors/heroes/default/idle.png',
+        frameWidth: 128,
+        frameHeight: 128,
         frameCount: 8,
         durationMs: 1200,
         loop: true,
       },
       attack: {
-        src: '/characters/default_attack.png',
-        frameWidth: 384,
-        frameHeight: 256,
+        src: '/assets/actors/heroes/default/attack.png',
+        frameWidth: 128,
+        frameHeight: 128,
         frameCount: 6,
         durationMs: 600,
         loop: false,
       },
       hurt: {
-        src: '/characters/default_hurt.png',
-        frameWidth: 192,
-        frameHeight: 256,
+        src: '/assets/actors/heroes/default/hurt.png',
+        frameWidth: 128,
+        frameHeight: 128,
         frameCount: 4,
         durationMs: 400,
         loop: false,
@@ -146,7 +146,7 @@ describe('toCharacterDemo', () => {
     }, 'alice')
     expect(demo.heightTier).toBe(6)
     expect(demo.name).toBe('ダイア・ウルフ')
-    expect(demo.image).toBe('/characters/enemies/wolf_dire.png')
+    expect(demo.image).toBe('/assets/actors/enemies/wolf_dire/stand.png')
     expect(demo.animations).toBeUndefined()
   })
 
@@ -156,7 +156,7 @@ describe('toCharacterDemo', () => {
     }, 'alice')
     expect(demo.heightTier).toBe(3)
     expect(demo.name).toBe('ウィスプ')
-    expect(demo.image).toBe('/characters/units/wisp.png')
+    expect(demo.image).toBe('/assets/actors/units/wisp/stand.png')
   })
 
   it('enemy with missing catalog entry falls back to heightTier=5', () => {
@@ -175,9 +175,9 @@ describe('toBuffs', () => {
     }
 
     expect(toBuffs(actor)).toEqual(expect.arrayContaining([
-      expect.objectContaining({ name: 'バリア', icon: '/icons/ui/barrier.png', num: 2 }),
-      expect.objectContaining({ name: '吸血', icon: '/icons/ui/lifesteal.png', num: 25 }),
-      expect.objectContaining({ name: '反射', icon: '/icons/ui/reflect.png', num: 3 }),
+      expect.objectContaining({ name: 'バリア', icon: '/assets/icons/status/barrier.png', num: 2 }),
+      expect.objectContaining({ name: '吸血', icon: '/assets/icons/status/lifesteal.png', num: 25 }),
+      expect.objectContaining({ name: '反射', icon: '/assets/icons/status/reflect.png', num: 3 }),
     ]))
   })
 
@@ -253,12 +253,12 @@ describe('toBuffs', () => {
     const buffs = toBuffs(actor)
     expect(buffs).toHaveLength(Object.keys(statusIcons).length)
     expect(buffs.map(buff => buff.icon)).toEqual(
-      Object.values(statusIcons).map(file => `/icons/ui/${file}.png`),
+      Object.values(statusIcons).map(file => `/assets/icons/status/${file}.png`),
     )
     expect(new Set(buffs.map(buff => buff.icon)).size).toBe(33)
 
     const [unknown] = toBuffs({ ...heroActor(), statuses: { futureStatus: 1 } })
-    expect(unknown.icon).toBe('/icons/ui/status_unknown.png')
+    expect(unknown.icon).toBe('/assets/icons/status/status_unknown.png')
   })
 
   it('maps the new class statuses to their Japanese names and buff kinds', () => {
@@ -288,14 +288,14 @@ describe('toBuffs', () => {
       ['攪乱', 'debuff'],
     ])
     expect(buffs.map(buff => buff.icon)).toEqual([
-      '/icons/ui/afterimage.png',
-      '/icons/ui/steadfast.png',
-      '/icons/ui/cover.png',
-      '/icons/ui/defensive_stance.png',
-      '/icons/ui/combo_carryover.png',
-      '/icons/ui/afterglow.png',
-      '/icons/ui/resonance.png',
-      '/icons/ui/disruption.png',
+      '/assets/icons/status/afterimage.png',
+      '/assets/icons/status/steadfast.png',
+      '/assets/icons/status/cover.png',
+      '/assets/icons/status/defensive_stance.png',
+      '/assets/icons/status/combo_carryover.png',
+      '/assets/icons/status/afterglow.png',
+      '/assets/icons/status/resonance.png',
+      '/assets/icons/status/disruption.png',
     ])
     expect(buffs[0].desc).toContain('このターン最後の攻撃を[N:2]回実行')
     expect(buffs[7].desc).toContain('[S:disruption]が1減少')
@@ -364,7 +364,7 @@ describe('toIntentDemos', () => {
       attackAllHits: 3,
     }))
 
-    expect(demo.icon).toBe('/icons/ui/attack_all.png')
+    expect(demo.icon).toBe('/assets/icons/intent/attack_all.png')
     expect(demo.attack).toMatchObject({ all: 13, hits: 3, allHits: 3, total: 13 })
     expect(demo.attack?.single).toBeUndefined()
     expect(demo.attack?.random).toBeUndefined()

@@ -139,7 +139,7 @@ describe('CharacterPickScreen', () => {
     expect(screen.getByText('×2')).toBeInTheDocument()
     expect(screen.getByText('防御')).toBeInTheDocument()
     expect(container.querySelector('.character-pick__portrait img')).toHaveAttribute(
-      'src', '/characters/portraits/default.png',
+      'src', '/assets/portraits/default.png',
     )
     expect(screen.getByRole('button', { name: '冒険者を選択' })).toHaveClass(
       'character-pick__select',

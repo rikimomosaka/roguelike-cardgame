@@ -43,19 +43,23 @@
 }
 /* Why: 背景画像の上に直接 UI が乗る構成にするため、暗化 gradient と
    ドット模様 (.battle__pattern) と内枠線 (.battle::before) を除去 (ユーザ要望)。 */
+/* 背景はドット絵（640×360）を拡大するので、ぼかさない。 */
+.battle[data-act] {
+  image-rendering: pixelated;
+}
 .battle[data-act="1"] {
   background:
-    url('/backgrounds/battle/battle_forest.png') center / cover no-repeat,
+    url('/assets/backgrounds/battle/battle_forest.png') center / cover no-repeat,
     var(--bg-3);
 }
 .battle[data-act="2"] {
   background:
-    url('/backgrounds/battle/battle_cave.png') center / cover no-repeat,
+    url('/assets/backgrounds/battle/battle_cave.png') center / cover no-repeat,
     var(--bg-3);
 }
 .battle[data-act="3"] {
   background:
-    url('/backgrounds/battle/battle_hell.png') center / cover no-repeat,
+    url('/assets/backgrounds/battle/battle_hell.png') center / cover no-repeat,
     var(--bg-3);
 }
 
@@ -1170,6 +1174,11 @@ html[data-flash='off'] .battle__slot.is-blocked::before {
    揃えるため top でなく bottom anchor で配置する。
    sprite-shadow は top: 190px (= slot bottom 70px) に固定済なので、
    img の bottom もそこに合わせる: bottom: 70px。 */
+/* 新規格（128×128 共通キャンバス）のキャラ。足元の下に 8px の余白があるので、
+   影の中心（slot 下端から 70px）に足が乗るよう 62px に置く。BattleScreen の STAGE_CANVAS_BOTTOM_Y と対。 */
+.sprite.sprite--image.sprite--stage {
+  bottom: calc(62px + var(--sprite-lift, 0px));
+}
 .sprite.sprite--image {
   top: auto;
   /* Normalised actor PNGs reserve a 10px transparent lower gutter. At the
@@ -1683,7 +1692,9 @@ html[data-motion='reduced'] .battle__slot.is-hit .sprite__static-image {
 }
 
 .battle__combo::before {
-  background-image: url('/ui/battle-control-combo.png');
+  /* 主人公ごとの専用UI（BattleScreen が --hero-ui-combo を設定）。無ければ共通の枠。 */
+  background-image: var(--hero-ui-combo, url('/assets/ui/heroes/default_frame/combo.png'));
+  image-rendering: pixelated;
 }
 
 .battle__combo > * {
@@ -1868,7 +1879,9 @@ html[data-motion='reduced'] .battle__slot.is-hit .sprite__static-image {
 }
 
 .combo-skill-control--tactical .combo-skill-button::before {
-  background-image: url('/ui/battle-control-tactical.png');
+  /* 主人公ごとの専用UI（BattleScreen が --hero-ui-tactical を設定）。無ければ共通の枠。 */
+  background-image: var(--hero-ui-tactical, url('/assets/ui/heroes/default_frame/tactical.png'));
+  image-rendering: pixelated;
 }
 
 .combo-skill-control--ultimate .combo-skill-button {
@@ -1876,7 +1889,9 @@ html[data-motion='reduced'] .battle__slot.is-hit .sprite__static-image {
 }
 
 .combo-skill-control--ultimate .combo-skill-button::before {
-  background-image: url('/ui/battle-control-ultimate.png');
+  /* 主人公ごとの専用UI（BattleScreen が --hero-ui-ultimate を設定）。無ければ共通の枠。 */
+  background-image: var(--hero-ui-ultimate, url('/assets/ui/heroes/default_frame/ultimate.png'));
+  image-rendering: pixelated;
 }
 
 .combo-skill-button > * {
@@ -1963,7 +1978,9 @@ html[data-motion='reduced'] .battle__slot.is-hit .sprite__static-image {
 }
 
 .end-turn::before {
-  background-image: url('/ui/battle-control-ready.png');
+  /* 主人公ごとの専用UI（BattleScreen が --hero-ui-ready を設定）。無ければ共通の枠。 */
+  background-image: var(--hero-ui-ready, url('/assets/ui/heroes/default_frame/ready.png'));
+  image-rendering: pixelated;
 }
 
 .end-turn:hover:not(:disabled) {

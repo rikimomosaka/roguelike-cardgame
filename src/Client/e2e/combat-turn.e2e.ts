@@ -532,10 +532,10 @@ test('battle controls use transparent generated artwork without exposing skill-d
   })
 
   const expectedImages = {
-    tactical: '/ui/battle-control-tactical.png',
-    ultimate: '/ui/battle-control-ultimate.png',
-    combo: '/ui/battle-control-combo.png',
-    ready: '/ui/battle-control-ready.png',
+    tactical: '/assets/ui/heroes/default_frame/tactical.png',
+    ultimate: '/assets/ui/heroes/default_frame/ultimate.png',
+    combo: '/assets/ui/heroes/default_frame/combo.png',
+    ready: '/assets/ui/heroes/default_frame/ready.png',
   } as const
   for (const [kind, control] of Object.entries(presentation)) {
     expect(control.image).toContain(expectedImages[kind as keyof typeof expectedImages])
@@ -797,8 +797,8 @@ test('two queued card attacks display and resolve as two real browser hits', asy
   ).toBe(2)
   expect(await page.evaluate(() => (window as Window & { __rcgHeroAttackSources?: string[] })
     .__rcgHeroAttackSources ?? [])).toEqual([
-    '/characters/default_attack.png',
-    '/characters/default_attack.png',
+    '/assets/actors/heroes/default/attack.png',
+    '/assets/actors/heroes/default/attack.png',
   ])
   const attackTimings = await page.evaluate(() => (
     window as Window & { __rcgHeroAttackTimings?: string[] }
@@ -831,7 +831,7 @@ test('two queued card attacks display and resolve as two real browser hits', asy
       { timeout: 20_000 },
     ).toBeGreaterThanOrEqual(1)
     expect(await page.evaluate(() => (window as Window & { __rcgHeroHurtSources?: string[] })
-      .__rcgHeroHurtSources ?? [])).toContain('/characters/default_hurt.png')
+      .__rcgHeroHurtSources ?? [])).toContain('/assets/actors/heroes/default/hurt.png')
     const hurtDurations = await page.evaluate(() => (
       window as Window & { __rcgHeroHurtDurations?: string[] }
     ).__rcgHeroHurtDurations ?? [])
@@ -916,7 +916,7 @@ test('reduced motion keeps the shortened four-frame hero hurt reaction visible',
     { timeout: 20_000 },
   ).toBeGreaterThanOrEqual(1)
   expect(await page.evaluate(() => (window as Window & { __rcgHeroHurtSources?: string[] })
-    .__rcgHeroHurtSources ?? [])).toContain('/characters/default_hurt.png')
+    .__rcgHeroHurtSources ?? [])).toContain('/assets/actors/heroes/default/hurt.png')
   expect((await page.evaluate(() => (
     window as Window & { __rcgHeroHurtDurations?: string[] }
   ).__rcgHeroHurtDurations ?? [])).some(duration => Number.parseFloat(duration) > 0)).toBe(true)
@@ -931,43 +931,43 @@ test('generated combat status PNGs are crisp pixel art in a real browser', async
   await page.goto('/')
   const decoded = await page.evaluate(async () => {
     const sources = [
-      '/icons/ui/barrier.png',
-      '/icons/ui/lifesteal.png',
-      '/icons/ui/reflect.png',
-      '/icons/ui/on_hit.png',
-      '/icons/ui/omnistrike.png',
-      '/icons/ui/hand_cost_reduction.png',
-      '/icons/ui/hand_cost_increase.png',
-      '/icons/ui/vigor.png',
-      '/icons/ui/pursuit.png',
-      '/icons/ui/regeneration.png',
-      '/icons/ui/fortify.png',
-      '/icons/ui/resistance.png',
-      '/icons/ui/revive.png',
-      '/icons/ui/growth.png',
-      '/icons/ui/insight.png',
-      '/icons/ui/haste.png',
-      '/icons/ui/continuity.png',
-      '/icons/ui/mastery.png',
-      '/icons/ui/virulent_poison.png',
-      '/icons/ui/stagnation.png',
-      '/icons/ui/burn.png',
-      '/icons/ui/confusion.png',
-      '/icons/ui/curse.png',
-      '/icons/ui/bind.png',
-      '/icons/ui/silence.png',
-      '/icons/ui/seal.png',
-      '/icons/ui/exhaustion.png',
-      '/icons/ui/distress.png',
-      '/icons/ui/afterimage.png',
-      '/icons/ui/steadfast.png',
-      '/icons/ui/cover.png',
-      '/icons/ui/defensive_stance.png',
-      '/icons/ui/combo_carryover.png',
-      '/icons/ui/afterglow.png',
-      '/icons/ui/resonance.png',
-      '/icons/ui/disruption.png',
-      '/icons/ui/status_unknown.png',
+      '/assets/icons/status/barrier.png',
+      '/assets/icons/status/lifesteal.png',
+      '/assets/icons/status/reflect.png',
+      '/assets/icons/status/on_hit.png',
+      '/assets/icons/status/omnistrike.png',
+      '/assets/icons/status/hand_cost_reduction.png',
+      '/assets/icons/status/hand_cost_increase.png',
+      '/assets/icons/status/vigor.png',
+      '/assets/icons/status/pursuit.png',
+      '/assets/icons/status/regeneration.png',
+      '/assets/icons/status/fortify.png',
+      '/assets/icons/status/resistance.png',
+      '/assets/icons/status/revive.png',
+      '/assets/icons/status/growth.png',
+      '/assets/icons/status/insight.png',
+      '/assets/icons/status/haste.png',
+      '/assets/icons/status/continuity.png',
+      '/assets/icons/status/mastery.png',
+      '/assets/icons/status/virulent_poison.png',
+      '/assets/icons/status/stagnation.png',
+      '/assets/icons/status/burn.png',
+      '/assets/icons/status/confusion.png',
+      '/assets/icons/status/curse.png',
+      '/assets/icons/status/bind.png',
+      '/assets/icons/status/silence.png',
+      '/assets/icons/status/seal.png',
+      '/assets/icons/status/exhaustion.png',
+      '/assets/icons/status/distress.png',
+      '/assets/icons/status/afterimage.png',
+      '/assets/icons/status/steadfast.png',
+      '/assets/icons/status/cover.png',
+      '/assets/icons/status/defensive_stance.png',
+      '/assets/icons/status/combo_carryover.png',
+      '/assets/icons/status/afterglow.png',
+      '/assets/icons/status/resonance.png',
+      '/assets/icons/status/disruption.png',
+      '/assets/icons/status/status_unknown.png',
     ]
     return await Promise.all(sources.map(async source => {
       const image = new Image()

@@ -56,9 +56,9 @@ describe('Card', () => {
     expect(card).toHaveClass(`card--pool-${assetName}`)
     expect(card).toHaveAttribute('data-card-pool-class', poolClass)
     expect(card).toHaveAttribute('data-card-affiliation', assetName)
-    expect(frame).toHaveAttribute('src', `/cards/frames/affiliations/${assetName}.png`)
+    expect(frame).toHaveAttribute('src', `/assets/cards/frames/affiliations/${assetName}.png`)
     expect(container.querySelector('.card__cost--current .card__cost-base')).toHaveAttribute(
-      'src', `/cards/frames/costs/${assetName}.png`,
+      'src', `/assets/cards/frames/costs/${assetName}.png`,
     )
     expect(frame).toHaveAttribute('alt', '')
     expect(screen.getByText(`AFFILIATION: ${poolClass.toUpperCase()}`)).toHaveClass(
@@ -76,10 +76,10 @@ describe('Card', () => {
         'data-card-pool-class', 'Universal',
       )
       expect(container.querySelector('.card__affiliation-frame')).toHaveAttribute(
-        'src', '/cards/frames/affiliations/universal.png',
+        'src', '/assets/cards/frames/affiliations/universal.png',
       )
       expect(container.querySelector('.card__cost--current .card__cost-base')).toHaveAttribute(
-        'src', '/cards/frames/costs/universal.png',
+        'src', '/assets/cards/frames/costs/universal.png',
       )
     }
   })
@@ -95,13 +95,13 @@ describe('Card', () => {
     )
     expect(container.querySelector('.card')).toHaveAttribute('data-card-pool-class', 'Curse')
     expect(container.querySelector('.card__affiliation-frame')).toHaveAttribute(
-      'src', '/cards/frames/affiliations/curse.png',
+      'src', '/assets/cards/frames/affiliations/curse.png',
     )
     expect(container.querySelector('.card__type-frame')).toHaveAttribute(
-      'src', '/cards/frames/types/curse.png',
+      'src', '/assets/cards/frames/types/curse.png',
     )
     expect(container.querySelector('.card__cost--current .card__cost-base')).toHaveAttribute(
-      'src', '/cards/frames/costs/curse.png',
+      'src', '/assets/cards/frames/costs/curse.png',
     )
   })
 
@@ -116,11 +116,11 @@ describe('Card', () => {
     ].map(type => {
       const { container } = render(<Card {...baseProps} type={type as CardType} />)
       expect(container.querySelector('.card__type-frame')).toHaveAttribute(
-        'src', `/cards/frames/types/${type}.png`,
+        'src', `/assets/cards/frames/types/${type}.png`,
       )
       const rule = cssRule(`.card--type-${type}`)
       const mask = rule.match(/--card-art-mask:\s*url\('([^']+)'\)/)?.[1]
-      expect(mask).toBe(`/cards/frames/masks/${type}.png`)
+      expect(mask).toBe(`/assets/cards/frames/masks/${type}.png`)
       return mask
     })
 
@@ -279,10 +279,10 @@ describe('Card', () => {
     const plates = [...container.querySelectorAll<HTMLImageElement>('.card__cost-base')]
 
     expect(plates).toHaveLength(2)
-    expect(plates[0]).toHaveAttribute('src', '/cards/frames/costs/enhancer.png')
+    expect(plates[0]).toHaveAttribute('src', '/assets/cards/frames/costs/enhancer.png')
     expect(plates[0]).toHaveAttribute('alt', '')
     expect(plates[0].closest('.card__cost')).toHaveClass('card__cost--current')
-    expect(plates[1]).toHaveAttribute('src', '/cards/frames/costs/enhancer.png')
+    expect(plates[1]).toHaveAttribute('src', '/assets/cards/frames/costs/enhancer.png')
     expect(plates[1].closest('.card__cost')).toHaveClass('card__cost--orig')
     expect(cssRule('.card__cost-base')).toMatch(/\bz-index:\s*0\s*;/)
     expect(cssRule('.card__cost-n')).toMatch(/\bz-index:\s*2\s*;/)
@@ -298,7 +298,7 @@ describe('Card', () => {
     expect(container.querySelector('.card__cost-stack')).toHaveAttribute('aria-hidden', 'true')
     expect(container.querySelector('.card__cost--orig')).toHaveTextContent('3')
     expect(container.querySelector('.card__cost--orig .card__cost-base')).toHaveAttribute(
-      'src', '/cards/frames/costs/guardian.png',
+      'src', '/assets/cards/frames/costs/guardian.png',
     )
     expect(container.querySelector('.card__cost--current .card__cost-n')).toHaveClass(
       'card__cost-n--reduced',

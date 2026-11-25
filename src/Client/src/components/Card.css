@@ -5,7 +5,7 @@
    ============================================================= */
 
 .card {
-  --card-art-mask: url('/cards/frames/masks/attack.png');
+  --card-art-mask: url('/assets/cards/frames/masks/attack.png');
   width: var(--card-width);
   height: var(--card-height);
   flex: 0 0 auto;
@@ -94,22 +94,22 @@
 .card.is-locked .card__illust { font-size: 22px; color: #3a2a1a; }
 
 .card--type-attack {
-  --card-art-mask: url('/cards/frames/masks/attack.png');
+  --card-art-mask: url('/assets/cards/frames/masks/attack.png');
 }
 .card--type-skill {
-  --card-art-mask: url('/cards/frames/masks/skill.png');
+  --card-art-mask: url('/assets/cards/frames/masks/skill.png');
 }
 .card--type-power {
-  --card-art-mask: url('/cards/frames/masks/power.png');
+  --card-art-mask: url('/assets/cards/frames/masks/power.png');
 }
 .card--type-curse {
-  --card-art-mask: url('/cards/frames/masks/curse.png');
+  --card-art-mask: url('/assets/cards/frames/masks/curse.png');
 }
 .card--type-status {
-  --card-art-mask: url('/cards/frames/masks/status.png');
+  --card-art-mask: url('/assets/cards/frames/masks/status.png');
 }
 .card--type-unit {
-  --card-art-mask: url('/cards/frames/masks/unit.png');
+  --card-art-mask: url('/assets/cards/frames/masks/unit.png');
 }
 
 /* ---------- PNG card composition ----------

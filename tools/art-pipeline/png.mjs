@@ -97,8 +97,16 @@ function chunk(type, data) {
   return Buffer.concat([len, td, crc])
 }
 
-/** RGBA 画像を PNG（RGBA 8bit）で保存する。 */
-export function writePng(file, image) {
+/**
+ * RGBA 画像を PNG で保存する。
+ * opts.palette が true で色数が 256 以下なら、パレット形式（色番号 1/2/4/8bit + 透明色）で書く。
+ * 少色のドット絵はこれで RGBA の数分の一の容量になる。
+ */
+export function writePng(file, image, opts = {}) {
+  if (opts.palette) {
+    const indexed = encodeIndexed(image)
+    if (indexed) { fs.writeFileSync(file, indexed); return }
+  }
   const { width, height, data } = image
   const ihdr = Buffer.alloc(13)
   ihdr.writeUInt32BE(width, 0); ihdr.writeUInt32BE(height, 4)
@@ -115,6 +123,48 @@ export function writePng(file, image) {
     chunk('IEND', Buffer.alloc(0)),
   ])
   fs.writeFileSync(file, png)
+}
+
+function encodeIndexed({ width, height, data }) {
+  // 透明はすべて 1 色（インデックス 0）にまとめる。
+  const index = new Map()
+  const colors = []
+  const key = (i) => data[i + 3] === 0 ? -1 : data.readUInt32BE(i)
+  for (let i = 0; i < data.length; i += 4) {
+    const k = key(i)
+    if (!index.has(k)) {
+      if (index.size >= 256) return null
+      index.set(k, index.size)
+      colors.push(k)
+    }
+  }
+  // 透明を先頭に置くと tRNS が 1 バイトで済む。
+  colors.sort((p, q) => (p === -1 ? -1 : q === -1 ? 1 : 0))
+  colors.forEach((k, n) => index.set(k, n))
+  const bitDepth = colors.length <= 2 ? 1 : colors.length <= 4 ? 2 : colors.length <= 16 ? 4 : 8
+  const perByte = 8 / bitDepth
+  const stride = Math.ceil(width / perByte)
+  const raw = Buffer.alloc((stride + 1) * height)
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const n = index.get(key((y * width + x) * 4))
+      const shift = (perByte - 1 - (x % perByte)) * bitDepth
+      raw[y * (stride + 1) + 1 + Math.floor(x / perByte)] |= n << shift
+    }
+  }
+  const plte = Buffer.alloc(colors.length * 3)
+  colors.forEach((k, n) => { if (k !== -1) { plte[n * 3] = (k >>> 24) & 255; plte[n * 3 + 1] = (k >>> 16) & 255; plte[n * 3 + 2] = (k >>> 8) & 255 } })
+  const ihdr = Buffer.alloc(13)
+  ihdr.writeUInt32BE(width, 0); ihdr.writeUInt32BE(height, 4)
+  ihdr[8] = bitDepth; ihdr[9] = 3; ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', ihdr),
+    chunk('PLTE', plte),
+    ...(colors[0] === -1 ? [chunk('tRNS', Buffer.from([0]))] : []),
+    chunk('IDAT', zlib.deflateSync(raw, { level: 9 })),
+    chunk('IEND', Buffer.alloc(0)),
+  ])
 }
 
 export function createImage(width, height, rgba = [0, 0, 0, 0]) {

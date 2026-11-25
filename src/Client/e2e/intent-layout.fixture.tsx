@@ -5,7 +5,7 @@ import { IntentChipRow, type IntentDemo } from '../src/screens/BattleScreen'
 const intents: IntentDemo[] = [
   {
     kind: 'attack',
-    icon: '/icons/ui/attack.png',
+    icon: '/assets/icons/intent/attack.png',
     name: '攻撃',
     desc: '複数範囲への攻撃。',
     attack: {

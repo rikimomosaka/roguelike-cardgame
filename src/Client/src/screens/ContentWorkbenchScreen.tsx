@@ -20,6 +20,7 @@ import { CardDesc } from '../components/CardDesc'
 import type { CardDescTerm } from '../components/CardDesc'
 import { useTooltipTarget } from '../components/Tooltip'
 import { StructuredJsonEditor, type ReferenceCatalog } from './dev/StructuredJsonEditor'
+import { potionIcon, relicIcon } from '../presentation/assets'
 import './ContentWorkbenchScreen.css'
 
 type Props = {
@@ -545,7 +546,7 @@ function ContentPreview({ kind, id, document, meta, references }: {
     )
   }
 
-  const icon = kind === 'relics' ? `/icons/relics/${id}.png` : kind === 'potions' ? `/icons/potions/${id}.png` : null
+  const icon = kind === 'relics' ? relicIcon(id) : kind === 'potions' ? potionIcon(id) : null
   return (
     <div className="content-preview-generic">
       {icon && <img src={icon} alt="" onError={event => { event.currentTarget.style.display = 'none' }} />}

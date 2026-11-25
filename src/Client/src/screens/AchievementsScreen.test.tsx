@@ -226,19 +226,19 @@ describe('AchievementsScreen', () => {
     fireEvent.click(screen.getByRole('tab', { name: /^レリック/ }))
     await waitFor(() => {
       const image = container.querySelector(
-        '.achievements__tile-cell.is-locked img[src="/icons/relics/burning_blood.png"]',
+        '.achievements__tile-cell.is-locked img[src="/assets/icons/relics/burning_blood.png"]',
       )
       expect(image).not.toBeNull()
     })
     const relicImage = container.querySelector(
-      '.achievements__tile-cell.is-locked img[src="/icons/relics/burning_blood.png"]',
+      '.achievements__tile-cell.is-locked img[src="/assets/icons/relics/burning_blood.png"]',
     )!
     fireEvent.mouseEnter(relicImage.closest('.achievements__tile-cell')!)
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('tab', { name: /^ポーション/ }))
     await waitFor(() => expect(container.querySelector(
-      '.achievements__tile-cell.is-locked img[src="/icons/potions/fire_potion.png"]',
+      '.achievements__tile-cell.is-locked img[src="/assets/icons/potions/fire_potion.png"]',
     )).not.toBeNull())
   })
 
@@ -283,12 +283,12 @@ describe('AchievementsScreen', () => {
       expect(image).not.toBeNull()
       return image!
     })
-    expect(playerPortrait).toHaveAttribute('src', '/characters/portraits/default.png')
+    expect(playerPortrait).toHaveAttribute('src', '/assets/portraits/default.png')
 
     fireEvent.click(screen.getByRole('tab', { name: /^モンスター/ }))
     expect(await screen.findByText('アギトムシ')).toBeInTheDocument()
     expect(container.querySelector(
-      '.achievements__character-cell--monster img[src="/characters/enemies/jaw_worm.png"]',
+      '.achievements__character-cell--monster img[src="/assets/actors/enemies/jaw_worm/stand.png"]',
     )).toBeInTheDocument()
   })
 
@@ -323,7 +323,7 @@ describe('AchievementsScreen', () => {
     expect(screen.getByText('???')).toBeInTheDocument()
     expect(screen.queryByText('アギトムシ')).not.toBeInTheDocument()
     expect(container.querySelector(
-      'img[src="/characters/enemies/jaw_worm.png"]',
+      'img[src="/assets/actors/enemies/jaw_worm/stand.png"]',
     )).not.toBeInTheDocument()
   })
 

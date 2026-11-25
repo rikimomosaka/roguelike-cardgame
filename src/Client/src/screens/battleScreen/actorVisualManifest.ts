@@ -1,17 +1,40 @@
 import type { CharacterMotion, SpriteSheetDemo } from '../BattleScreen'
-import { resolveCharacterPortrait } from '../../presentation'
+import {
+  ACTOR_CANVAS,
+  actorMetrics,
+  actorSheet,
+  heroMotions,
+  portrait,
+  type ActorKind,
+} from '../../presentation/assets'
+
+/**
+ * 戦闘キャラの表示（128×128 共通キャンバス、×2 表示）。規格: docs/current-art-asset-spec.md §3。
+ * 大きさ・空中の位置は絵の中に描かれているので、表示側では拡大縮小・持ち上げをしない。
+ */
+export type ActorStage = {
+  /** キャンバスの表示高さ（px）。全キャラ共通。 */
+  displayHeight: number
+  /** 影の幅（px）。キャラの横幅から決める。 */
+  shadowWidth: number
+  /** 見た目の中心の高さ（キャンバス上端からの割合）。効果の表示位置に使う。 */
+  centerY: number
+  /** 空中にいるキャラ（絵の中で浮かせてある）。 */
+  airborne: boolean
+}
 
 export type ActorVisual = {
   image: string
   portrait?: string
   animations?: Partial<Record<CharacterMotion, SpriteSheetDemo>>
+  stage?: ActorStage
 }
 
 export type ActorSizeClass = 'small' | 'medium' | 'large'
 
 export type ActorStageProfile = {
   airborne: boolean
-  /** Fraction of the rendered actor height lifted above the grounded anchor. */
+  /** Fraction of the rendered actor height lifted above the grounded anchor. 新規格では常に 0（絵の中で浮かせる）。 */
   liftRatio: number
 }
 
@@ -28,193 +51,85 @@ function isHeroId(value: string | undefined): value is HeroId {
   return !!value && (HERO_IDS as readonly string[]).includes(value)
 }
 
-type SheetTiming = Pick<SpriteSheetDemo, 'frameCount' | 'durationMs'>
+const DISPLAY = ACTOR_CANVAS.size * ACTOR_CANVAS.scale
+/** 影はキャラの横幅より少し狭くする（足元に収まるように）。 */
+const SHADOW_RATIO = 0.8
 
-/**
- * 新規格（docs/proposed-graphics-asset-pipeline.md）で作り直したキャラのフレーム数と時間。
- * ここにないキャラは旧素材の値を使う。
- */
-const HERO_SHEET_TIMING: Partial<Record<HeroId, Partial<Record<CharacterMotion, SheetTiming>>>> = {
-  default: {
-    idle: { frameCount: 8, durationMs: 1200 },
-    attack: { frameCount: 6, durationMs: 600 },
-    hurt: { frameCount: 4, durationMs: 400 },
-  },
-}
-
-/**
- * 新規格のキャラだけが持つ追加モーション（攻撃B・奥義・ダウン）。
- * 旧素材のキャラはファイルが無いので登録しない（404 を出さないため）。
- */
-const HERO_EXTRA_MOTIONS: Partial<Record<HeroId, true>> = {
-  default: true,
-}
-
-function extraMotions(root: string): Partial<Record<CharacterMotion, SpriteSheetDemo>> {
+/** ビルドが記録したキャラの寸法から、表示用の値を作る。 */
+function stageFor(kind: ActorKind, id: string): ActorStage | undefined {
+  const m = actorMetrics(kind, id)
+  if (!m) return undefined
   return {
-    attackAlt: {
-      src: `${root}_attack_alt.png`,
-      frameWidth: 384,
-      frameHeight: 256,
-      frameCount: 6,
-      durationMs: 600,
-      loop: false,
-    },
-    skill: {
-      src: `${root}_skill.png`,
-      // 剣を振り上げるため、上に 32px の余白を足した枠（足元の位置は他と同じ）。
-      frameWidth: 384,
-      frameHeight: 288,
-      baseFrameHeight: 256,
-      frameCount: 8,
-      durationMs: 800,
-      loop: false,
-    },
-    down: {
-      src: `${root}_down.png`,
-      frameWidth: 384,
-      frameHeight: 256,
-      frameCount: 6,
-      durationMs: 720,
-      // 最後のコマ（倒れた姿勢）で止める。
-      loop: false,
-    },
+    displayHeight: DISPLAY,
+    shadowWidth: Math.max(24, Math.round(m.footprint * ACTOR_CANVAS.scale * SHADOW_RATIO)),
+    centerY: m.centerY,
+    // 地面の線より上に浮いている（足元の下に 4 ドット以上の隙間がある）キャラ。
+    airborne: ACTOR_CANVAS.footRow - m.bottom >= 4,
   }
+}
+
+/** ビルド時のモーション名（ファイル名）→ 表示側のモーション名。 */
+const MOTION_FILES: Readonly<Record<string, CharacterMotion>> = {
+  idle: 'idle',
+  attack: 'attack',
+  attack_alt: 'attackAlt',
+  skill: 'skill',
+  hurt: 'hurt',
+  down: 'down',
 }
 
 function heroVisual(id: HeroId): ActorVisual {
-  const root = `/characters/${id}`
-  const timing = HERO_SHEET_TIMING[id] ?? {}
+  const motions = heroMotions(id) ?? {}
+  const animations: Partial<Record<CharacterMotion, SpriteSheetDemo>> = {}
+  for (const [file, motion] of Object.entries(MOTION_FILES)) {
+    const info = motions[file]
+    if (!info) continue
+    animations[motion] = {
+      src: actorSheet('heroes', id, file),
+      frameWidth: ACTOR_CANVAS.size,
+      frameHeight: ACTOR_CANVAS.size,
+      frameCount: info.frames,
+      durationMs: info.durationMs,
+      loop: info.loop,
+    }
+  }
   return {
-    image: `${root}_stand.png`,
-    portrait: resolveCharacterPortrait(id),
-    animations: {
-      idle: {
-        src: `${root}_idle.png`,
-        frameWidth: 192,
-        frameHeight: 256,
-        frameCount: 8,
-        durationMs: 1600,
-        loop: true,
-        ...timing.idle,
-      },
-      attack: {
-        src: `${root}_attack.png`,
-        // Wide strike poses keep the weapon inside the authored cell.
-        frameWidth: 384,
-        frameHeight: 256,
-        frameCount: 4,
-        durationMs: 480,
-        loop: false,
-        ...timing.attack,
-      },
-      hurt: {
-        src: `${root}_hurt.png`,
-        frameWidth: 192,
-        frameHeight: 256,
-        frameCount: 4,
-        durationMs: 440,
-        loop: false,
-        ...timing.hurt,
-      },
-      ...(HERO_EXTRA_MOTIONS[id] ? extraMotions(root) : {}),
-    },
+    image: actorSheet('heroes', id, 'stand'),
+    portrait: portrait(id),
+    animations,
+    stage: stageFor('heroes', id),
   }
 }
 
-const AIRBORNE_STAGE_BY_IMAGE_ID: Readonly<Record<string, number>> = {
-  cave_bat_a: 0.42,
-  cave_bat_b: 0.42,
-  wisp: 0.38,
-  six_ghost: 0.18,
+/** 画像パス（/assets/actors/<区分>/<id>/<motion>.png）からキャラを特定する。 */
+function actorFromPath(image: string | undefined): { kind: ActorKind; id: string } | undefined {
+  const m = image?.match(/\/actors\/(heroes|units|enemies)\/([a-z0-9_-]+)\//i)
+  return m ? { kind: m[1] as ActorKind, id: m[2] } : undefined
 }
 
-/**
- * Vertical centre of each actor's non-transparent silhouette in its authored
- * 192x256 canvas.  The canvases intentionally keep different head/ground
- * gutters, so using the image box's geometric centre makes impact particles
- * miss short and airborne actors (most visibly the cave bats).
- */
-const IMPACT_CENTER_RATIO_BY_IMAGE_ID: Readonly<Record<string, number>> = {
-  default_stand: 0.516,
-  enhancer_lyra_stand: 0.533,
-  guardian_mireille_stand: 0.533,
-  tactician_yuno_stand: 0.533,
-  act2_boss: 0.566,
-  act2_brute: 0.615,
-  act2_elite: 0.666,
-  act2_grunt: 0.654,
-  act3_boss: 0.602,
-  act3_brute: 0.664,
-  act3_elite: 0.654,
-  act3_grunt: 0.664,
-  bandit: 0.613,
-  cave_bat_a: 0.773,
-  cave_bat_b: 0.777,
-  cultist_dark: 0.570,
-  dragon_sleep: 0.646,
-  goblin_a: 0.621,
-  goblin_b: 0.652,
-  goblin_c: 0.592,
-  guardian_golem: 0.576,
-  hobgoblin: 0.656,
-  iron_golem_a: 0.566,
-  iron_golem_b: 0.549,
-  iron_golem_c: 0.596,
-  jaw_worm: 0.668,
-  louse_red: 0.748,
-  mushroom_a: 0.557,
-  mushroom_b: 0.553,
-  ogre: 0.676,
-  orc_blue: 0.660,
-  orc_red: 0.646,
-  six_ghost: 0.592,
-  slime_big: 0.734,
-  slime_green_s: 0.801,
-  slime_king: 0.652,
-  slime_spike_s: 0.709,
-  wolf_dire: 0.738,
-  wisp: 0.541,
-}
-
-function imageIdFromPath(value: string | undefined): string | undefined {
-  if (!value) return undefined
-  const filename = value.split(/[\\/]/).pop()
-  return filename?.replace(/\.png(?:[?#].*)?$/i, '')
-}
-
-/**
- * Purely visual staging for actors whose art represents flight. Their shadow
- * stays on the common ground line while only the sprite is lifted.
- */
+/** 新規格のキャラは絵の中で浮かせてあるので、表示側の持ち上げは 0。 */
 export function resolveActorStageProfile(image: string | undefined): ActorStageProfile {
-  const imageId = imageIdFromPath(image)
-  const liftRatio = imageId ? AIRBORNE_STAGE_BY_IMAGE_ID[imageId] ?? 0 : 0
-  return { airborne: liftRatio > 0, liftRatio }
+  const actor = actorFromPath(image)
+  const stage = actor ? stageFor(actor.kind, actor.id) : undefined
+  return { airborne: stage?.airborne ?? false, liftRatio: 0 }
 }
 
 /** Returns the visual (alpha-bounds) centre, expressed from image top to bottom. */
 export function resolveActorImpactCenterRatio(image: string | undefined): number {
-  const imageId = imageIdFromPath(image)
-  return imageId ? IMPACT_CENTER_RATIO_BY_IMAGE_ID[imageId] ?? 0.6 : 0.6
+  const actor = actorFromPath(image)
+  return (actor ? actorMetrics(actor.kind, actor.id)?.centerY : undefined) ?? 0.6
 }
 
 /**
  * Pixel y-coordinate of the visible actor centre inside the 260px battle slot.
- * The sprite's authored canvas is bottom-anchored at y=196 before flight lift.
+ * The sprite's canvas is bottom-anchored at y=groundedCanvasBottom.
  */
 export function resolveActorImpactAnchorY(
   image: string | undefined,
   displayHeight: number,
   groundedCanvasBottom = 196,
 ): number {
-  const stage = resolveActorStageProfile(image)
-  const lift = Math.round(displayHeight * stage.liftRatio)
-  return Math.round(
-    groundedCanvasBottom
-      - lift
-      - displayHeight * (1 - resolveActorImpactCenterRatio(image)),
-  )
+  return Math.round(groundedCanvasBottom - displayHeight * (1 - resolveActorImpactCenterRatio(image)))
 }
 
 export function actorSizeClassForTier(tier: number | undefined): ActorSizeClass {
@@ -245,10 +160,10 @@ export function resolveActorVisual({
   }
 
   if (!imageId) return undefined
+  const kind: ActorKind = side === 'Ally' ? 'units' : 'enemies'
   return {
-    image: side === 'Ally'
-      ? `/characters/units/${imageId}.png`
-      : `/characters/enemies/${imageId}.png`,
+    image: actorSheet(kind, imageId),
+    stage: stageFor(kind, imageId),
   }
 }
 

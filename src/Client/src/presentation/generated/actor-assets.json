@@ -1,0 +1,343 @@
+{
+  "actors": {
+    "enemies/act2_boss": {
+      "centerY": 0.574,
+      "footprint": 84,
+      "top": 24,
+      "bottom": 122
+    },
+    "enemies/act2_brute": {
+      "centerY": 0.711,
+      "footprint": 64,
+      "top": 58,
+      "bottom": 123
+    },
+    "enemies/act2_elite": {
+      "centerY": 0.734,
+      "footprint": 70,
+      "top": 64,
+      "bottom": 123
+    },
+    "enemies/act2_grunt": {
+      "centerY": 0.824,
+      "footprint": 39,
+      "top": 87,
+      "bottom": 123
+    },
+    "enemies/act3_boss": {
+      "centerY": 0.613,
+      "footprint": 84,
+      "top": 33,
+      "bottom": 123
+    },
+    "enemies/act3_brute": {
+      "centerY": 0.75,
+      "footprint": 64,
+      "top": 68,
+      "bottom": 123
+    },
+    "enemies/act3_elite": {
+      "centerY": 0.715,
+      "footprint": 70,
+      "top": 59,
+      "bottom": 123
+    },
+    "enemies/act3_grunt": {
+      "centerY": 0.828,
+      "footprint": 40,
+      "top": 88,
+      "bottom": 123
+    },
+    "enemies/bandit": {
+      "centerY": 0.797,
+      "footprint": 43,
+      "top": 80,
+      "bottom": 123
+    },
+    "enemies/cave_bat_a": {
+      "centerY": 0.773,
+      "footprint": 28,
+      "top": 91,
+      "bottom": 106
+    },
+    "enemies/cave_bat_b": {
+      "centerY": 0.773,
+      "footprint": 29,
+      "top": 91,
+      "bottom": 106
+    },
+    "enemies/cultist_dark": {
+      "centerY": 0.746,
+      "footprint": 49,
+      "top": 67,
+      "bottom": 123
+    },
+    "enemies/dragon_sleep": {
+      "centerY": 0.688,
+      "footprint": 78,
+      "top": 52,
+      "bottom": 123
+    },
+    "enemies/goblin_a": {
+      "centerY": 0.832,
+      "footprint": 35,
+      "top": 89,
+      "bottom": 123
+    },
+    "enemies/goblin_b": {
+      "centerY": 0.844,
+      "footprint": 33,
+      "top": 92,
+      "bottom": 123
+    },
+    "enemies/goblin_c": {
+      "centerY": 0.828,
+      "footprint": 31,
+      "top": 88,
+      "bottom": 123
+    },
+    "enemies/guardian_golem": {
+      "centerY": 0.621,
+      "footprint": 79,
+      "top": 35,
+      "bottom": 123
+    },
+    "enemies/hobgoblin": {
+      "centerY": 0.766,
+      "footprint": 57,
+      "top": 73,
+      "bottom": 122
+    },
+    "enemies/iron_golem_a": {
+      "centerY": 0.637,
+      "footprint": 71,
+      "top": 40,
+      "bottom": 122
+    },
+    "enemies/iron_golem_b": {
+      "centerY": 0.625,
+      "footprint": 70,
+      "top": 36,
+      "bottom": 123
+    },
+    "enemies/iron_golem_c": {
+      "centerY": 0.664,
+      "footprint": 70,
+      "top": 46,
+      "bottom": 123
+    },
+    "enemies/jaw_worm": {
+      "centerY": 0.82,
+      "footprint": 43,
+      "top": 87,
+      "bottom": 122
+    },
+    "enemies/louse_red": {
+      "centerY": 0.906,
+      "footprint": 25,
+      "top": 108,
+      "bottom": 123
+    },
+    "enemies/mushroom_a": {
+      "centerY": 0.805,
+      "footprint": 35,
+      "top": 82,
+      "bottom": 123
+    },
+    "enemies/mushroom_b": {
+      "centerY": 0.805,
+      "footprint": 35,
+      "top": 82,
+      "bottom": 123
+    },
+    "enemies/ogre": {
+      "centerY": 0.758,
+      "footprint": 64,
+      "top": 70,
+      "bottom": 123
+    },
+    "enemies/orc_blue": {
+      "centerY": 0.77,
+      "footprint": 57,
+      "top": 73,
+      "bottom": 123
+    },
+    "enemies/orc_red": {
+      "centerY": 0.762,
+      "footprint": 55,
+      "top": 71,
+      "bottom": 123
+    },
+    "enemies/six_ghost": {
+      "centerY": 0.461,
+      "footprint": 79,
+      "top": 16,
+      "bottom": 101
+    },
+    "enemies/slime_big": {
+      "centerY": 0.879,
+      "footprint": 32,
+      "top": 101,
+      "bottom": 123
+    },
+    "enemies/slime_green_s": {
+      "centerY": 0.906,
+      "footprint": 34,
+      "top": 108,
+      "bottom": 123
+    },
+    "enemies/slime_king": {
+      "centerY": 0.66,
+      "footprint": 87,
+      "top": 45,
+      "bottom": 123
+    },
+    "enemies/slime_spike_s": {
+      "centerY": 0.906,
+      "footprint": 22,
+      "top": 108,
+      "bottom": 123
+    },
+    "enemies/wolf_dire": {
+      "centerY": 0.82,
+      "footprint": 57,
+      "top": 86,
+      "bottom": 123
+    },
+    "heroes/default": {
+      "centerY": 0.672,
+      "footprint": 53,
+      "top": 48,
+      "bottom": 123
+    },
+    "heroes/enhancer_lyra": {
+      "centerY": 0.684,
+      "footprint": 54,
+      "top": 51,
+      "bottom": 123
+    },
+    "heroes/guardian_mireille": {
+      "centerY": 0.684,
+      "footprint": 49,
+      "top": 51,
+      "bottom": 123
+    },
+    "heroes/tactician_yuno": {
+      "centerY": 0.684,
+      "footprint": 46,
+      "top": 51,
+      "bottom": 123
+    },
+    "units/wisp": {
+      "centerY": 0.648,
+      "footprint": 33,
+      "top": 63,
+      "bottom": 102
+    }
+  },
+  "heroes": {
+    "default": {
+      "idle": {
+        "frames": 8,
+        "durationMs": 1200,
+        "loop": true
+      },
+      "attack": {
+        "frames": 6,
+        "durationMs": 600,
+        "loop": false
+      },
+      "attack_alt": {
+        "frames": 6,
+        "durationMs": 600,
+        "loop": false
+      },
+      "skill": {
+        "frames": 8,
+        "durationMs": 800,
+        "loop": false
+      },
+      "hurt": {
+        "frames": 4,
+        "durationMs": 400,
+        "loop": false
+      },
+      "down": {
+        "frames": 6,
+        "durationMs": 720,
+        "loop": false
+      },
+      "stand": {
+        "frames": 1,
+        "durationMs": 0,
+        "loop": false
+      }
+    },
+    "enhancer_lyra": {
+      "stand": {
+        "frames": 1,
+        "durationMs": 0,
+        "loop": false
+      },
+      "idle": {
+        "frames": 8,
+        "durationMs": 1600,
+        "loop": true
+      },
+      "attack": {
+        "frames": 4,
+        "durationMs": 480,
+        "loop": false
+      },
+      "hurt": {
+        "frames": 4,
+        "durationMs": 440,
+        "loop": false
+      }
+    },
+    "guardian_mireille": {
+      "stand": {
+        "frames": 1,
+        "durationMs": 0,
+        "loop": false
+      },
+      "idle": {
+        "frames": 8,
+        "durationMs": 1600,
+        "loop": true
+      },
+      "attack": {
+        "frames": 4,
+        "durationMs": 480,
+        "loop": false
+      },
+      "hurt": {
+        "frames": 4,
+        "durationMs": 440,
+        "loop": false
+      }
+    },
+    "tactician_yuno": {
+      "stand": {
+        "frames": 1,
+        "durationMs": 0,
+        "loop": false
+      },
+      "idle": {
+        "frames": 8,
+        "durationMs": 1600,
+        "loop": true
+      },
+      "attack": {
+        "frames": 4,
+        "durationMs": 480,
+        "loop": false
+      },
+      "hurt": {
+        "frames": 4,
+        "durationMs": 440,
+        "loop": false
+      }
+    }
+  }
+}

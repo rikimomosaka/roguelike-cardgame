@@ -577,11 +577,11 @@ describe('BattleScreen character skill integration', () => {
     expect(cutin).toHaveTextContent('奥義')
     expect(cutin).toHaveTextContent('鉄壁反攻')
     const portrait = cutin.querySelector<HTMLImageElement>('.character-skill-burst__portrait')
-    expect(portrait).toHaveAttribute('src', '/characters/portraits/guardian_mireille.png')
+    expect(portrait).toHaveAttribute('src', '/assets/portraits/guardian_mireille.png')
     expect(screen.queryByText('筋力を1付与')).toBeNull()
 
     fireEvent.error(portrait!)
-    expect(portrait).toHaveAttribute('src', '/characters/portraits/default.png')
+    expect(portrait).toHaveAttribute('src', '/assets/portraits/default.png')
 
     expect(await screen.findByText('筋力を1付与', {}, { timeout: 3_500 })).toBeInTheDocument()
     await waitFor(() => expect(container.querySelector('.character-skill-burst')).toBeNull())
@@ -1765,7 +1765,7 @@ describe('BattleScreen participant Ready and replay integration', () => {
     })
   })
 
-  it('labels actor size classes and lifts an airborne summon without moving its shadow', async () => {
+  it('labels actor size classes and keeps an airborne summon in the air inside its art', async () => {
     const wisp = {
       ...actor('wisp-airborne', 'wisp', 'Ally'),
       slotIndex: 1,
@@ -1795,7 +1795,8 @@ describe('BattleScreen participant Ready and replay integration', () => {
     expect(hero).toHaveAttribute('data-airborne', 'false')
     expect(airborne).toHaveAttribute('data-size-class', 'small')
     expect(airborne).toHaveAttribute('data-airborne', 'true')
-    expect(airborne.style.getPropertyValue('--sprite-lift')).toBe('31px')
+    // 新規格では浮き具合は絵の中に描かれているので、表示側では持ち上げない（影は地面のまま）。
+    expect(airborne.style.getPropertyValue('--sprite-lift')).toBe('0px')
     expect(airborne.querySelector('.sprite-shadow')).not.toBeNull()
   })
 

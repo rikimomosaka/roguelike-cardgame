@@ -15,8 +15,9 @@
 }
 
 .rs-fire {
-  --rs-fire-frame-size: 180px;
-  --rs-fire-sheet-width: 1080px;
+  /* 場面の絵は 48×48 ドットを ×4 で表示（docs/current-art-asset-spec.md）。 */
+  --rs-fire-frame-size: 192px;
+  --rs-fire-sheet-width: 1152px;
   --rs-fire-last-frame-offset: -900px;
   align-self: center;
   position: relative;

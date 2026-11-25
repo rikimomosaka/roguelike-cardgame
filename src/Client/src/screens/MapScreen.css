@@ -53,13 +53,13 @@ main.map-screen {
 }
 
 .map-screen__body[data-act='1'] .map-screen__bg {
-  background-image: url('/backgrounds/map/act1.png');
+  background-image: url('/assets/backgrounds/map/act1.png');
 }
 .map-screen__body[data-act='2'] .map-screen__bg {
-  background-image: url('/backgrounds/map/act2.png');
+  background-image: url('/assets/backgrounds/map/act2.png');
 }
 .map-screen__body[data-act='3'] .map-screen__bg {
-  background-image: url('/backgrounds/map/act3.png');
+  background-image: url('/assets/backgrounds/map/act3.png');
 }
 
 /* ---------- Stage (the scrollable/pannable map viewport) ---------- */

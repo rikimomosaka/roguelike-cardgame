@@ -11,6 +11,7 @@ import type { TooltipContent } from '../components/Tooltip'
 import { useCardCatalog, usePotionCatalog } from '../hooks/useCardCatalog'
 import { useRelicCatalog } from '../hooks/useRelicCatalog'
 import { getRelicTooltipContent } from '../components/relicTooltip'
+import { potionIcon, relicIcon, systemIcon } from '../presentation/assets'
 import './MerchantScreen.css'
 
 type Props = {
@@ -251,7 +252,7 @@ export function MerchantScreen(p: Props) {
       <section className="mc-shopkeeper" aria-label="商人との取引">
         <div className="mc-shopkeeper__avatar" aria-hidden="true">
           <span className="mc-shopkeeper__sprite">
-            <img src="/icons/ui/merchant.png" alt="" draggable={false} />
+            <img src={systemIcon('merchant')} alt="" draggable={false} />
           </span>
         </div>
         <div className="mc-shopkeeper__line">
@@ -364,7 +365,7 @@ export function MerchantScreen(p: Props) {
             return (
               <li className={classes}>
                 <div className="mc-row__icon" aria-hidden="true">
-                  <img src="/icons/ui/discard.png" alt="" draggable={false} />
+                  <img src={systemIcon('discard')} alt="" draggable={false} />
                 </div>
                 <div className="mc-row__body">
                   <div className="mc-row__name">カード除去</div>
@@ -400,7 +401,7 @@ type TileProps = {
 }
 
 function RelicPotionTile({ kind, offer, name, description, rarity, relicTooltipContent, gold, selected, disabled, onSelect }: TileProps) {
-  const iconSrc = kind === 'relic' ? `/icons/relics/${offer.id}.png` : `/icons/potions/${offer.id}.png`
+  const iconSrc = kind === 'relic' ? relicIcon(offer.id) : potionIcon(offer.id)
   const fallbackTooltipContent = useMemo<TooltipContent | null>(() => {
     if (offer.sold || !description) return null
     return { name, rarity, desc: description }

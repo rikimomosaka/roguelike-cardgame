@@ -32,6 +32,7 @@ import type {
   RelicDemo,
 } from '../BattleScreen'
 import { resolveActorVisual } from './actorVisualManifest'
+import { intentIcon, statusIcon } from '../../presentation/assets'
 
 // ---------------- HP level (sprite tier) ----------------
 
@@ -174,6 +175,7 @@ export function toCharacterDemo(
     image,
     animations,
     heightTier,
+    stage: visual?.stage,
     traitName: characterDef?.traitName ?? undefined,
     traitDescription: characterDef?.traitEffects
       ?? characterDef?.traitDescription
@@ -238,11 +240,11 @@ export function toIntentDemos(intent: IntentDto): IntentDemo[] {
     // attackAll > attackSingle > attackRandom
     let attackIcon = '⚔'
     if (typeof intent.attackAll === 'number') {
-      attackIcon = '/icons/ui/attack_all.png'
+      attackIcon = intentIcon('attack_all')
     } else if (typeof intent.attackSingle === 'number') {
-      attackIcon = '/icons/ui/attack.png'
+      attackIcon = intentIcon('attack')
     } else if (typeof intent.attackRandom === 'number') {
-      attackIcon = '/icons/ui/attack_random.png'
+      attackIcon = intentIcon('attack_random')
     }
     const total = [intent.attackSingle, intent.attackRandom, intent.attackAll]
       .reduce<number>((sum, amount) => sum + (amount ?? 0), 0)
@@ -270,7 +272,7 @@ export function toIntentDemos(intent: IntentDto): IntentDemo[] {
   if (intent.block && intent.block > 0) {
     list.push({
       kind: 'defend',
-      icon: '/icons/ui/block.png',
+      icon: intentIcon('block'),
       num: intent.block,
       name: '防御',
       // Why: 「ターン終了時に」だと現在ターンの攻撃を防げると誤認するため、
@@ -279,15 +281,15 @@ export function toIntentDemos(intent: IntentDto): IntentDemo[] {
     })
   }
   if (intent.hasBuff) {
-    list.push({ kind: 'buff', icon: '/icons/ui/intent_buff.png',
+    list.push({ kind: 'buff', icon: intentIcon('buff'),
                 name: '強化', desc: '次のターンに自身を強化する。' })
   }
   if (intent.hasDebuff) {
-    list.push({ kind: 'buff', icon: '/icons/ui/intent_debuff.png',
+    list.push({ kind: 'buff', icon: intentIcon('debuff'),
                 name: '弱体化', desc: '次のターンにこちらを弱体化する。' })
   }
   if (intent.hasHeal) {
-    list.push({ kind: 'heal', icon: '/icons/ui/intent_heal.png',
+    list.push({ kind: 'heal', icon: intentIcon('heal'),
                 name: '回復', desc: '次のターンに自身を回復する。' })
   }
 
@@ -342,7 +344,7 @@ function statusMeta(id: string, amount: number): {
       // Phase 10.6.B follow-up: signed なので負値で「減少」表示に切替
       return {
         kind: amount < 0 ? 'debuff' : 'buff',
-        icon: '/icons/ui/strength.png', name: '筋力',
+        icon: statusIcon('strength'), name: '筋力',
         desc: amount < 0
           ? `アタックで与えるダメージが${-amount}減少する。`
           : `アタックで与えるダメージが${amount}増加する。`,
@@ -350,130 +352,130 @@ function statusMeta(id: string, amount: number): {
     case 'dexterity':
       return {
         kind: amount < 0 ? 'debuff' : 'buff',
-        icon: '/icons/ui/dexterity.png', name: '敏捷',
+        icon: statusIcon('dexterity'), name: '敏捷',
         desc: amount < 0
           ? `得るブロックが${-amount}減少する。`
           : `得るブロックが${amount}増加する。`,
       }
     case 'vulnerable':
-      return { kind: 'debuff', icon: '/icons/ui/vulnerable.png', name: '脆弱',
+      return { kind: 'debuff', icon: statusIcon('vulnerable'), name: '脆弱',
                desc: `アタックで受けるダメージが1.5倍になる。ターン終了時に${amount}が1減少する。` }
     case 'weak':
-      return { kind: 'debuff', icon: '/icons/ui/weak.png', name: '脱力',
+      return { kind: 'debuff', icon: statusIcon('weak'), name: '脱力',
                desc: `アタックで与えるダメージが0.75倍になる。ターン終了時に${amount}が1減少する。` }
     case 'poison':
-      return { kind: 'debuff', icon: '/icons/ui/poison.png', name: '毒',
+      return { kind: 'debuff', icon: statusIcon('poison'), name: '毒',
                desc: `ターン開始時に${amount}ダメージを受け、${amount}が1減少する。` }
     case 'omnistrike':
-      return { kind: 'buff', icon: '/icons/ui/omnistrike.png', name: '拡散',
+      return { kind: 'buff', icon: statusIcon('omnistrike'), name: '拡散',
                desc: `全ての攻撃を全体攻撃に変更する。ターン終了時に${amount}が1減少する。` }
     case 'barrier':
-      return { kind: 'buff', icon: '/icons/ui/barrier.png', name: 'バリア',
+      return { kind: 'buff', icon: statusIcon('barrier'), name: 'バリア',
                desc: `アタックによってHPが1以上減る場合、そのダメージを無効化し、${amount}が1減少する。` }
     case 'lifesteal':
-      return { kind: 'buff', icon: '/icons/ui/lifesteal.png', name: '吸血',
+      return { kind: 'buff', icon: statusIcon('lifesteal'), name: '吸血',
                desc: `アタックによって減らしたHPの${amount}%を回復する。` }
     case 'reflect':
-      return { kind: 'buff', icon: '/icons/ui/reflect.png', name: '反射',
+      return { kind: 'buff', icon: statusIcon('reflect'), name: '反射',
                desc: `アタックを受けた時、攻撃元にアタックの回数分だけ${amount}ダメージを返す(この際ブロックを無視する)。` }
     case 'handCostReduction':
-      return { kind: 'buff', icon: '/icons/ui/hand_cost_reduction.png', name: '節制',
+      return { kind: 'buff', icon: statusIcon('hand_cost_reduction'), name: '節制',
                desc: `手札のカードの使用コストを[N:${amount}]軽減する。カードの使用時に[S:handCostReduction]が1減少する。` }
     case 'handCostIncrease':
-      return { kind: 'debuff', icon: '/icons/ui/hand_cost_increase.png', name: '浪費',
+      return { kind: 'debuff', icon: statusIcon('hand_cost_increase'), name: '浪費',
                desc: `手札のカードの使用コストを[N:${amount}]増加する。カードの使用時に[S:handCostIncrease]が1減少する。` }
     case 'vigor':
-      return { kind: 'buff', icon: '/icons/ui/vigor.png', name: '元気',
+      return { kind: 'buff', icon: statusIcon('vigor'), name: '元気',
                desc: `アタックで与えるダメージが1.5倍になる。ターン終了時に${amount}が1減少する。` }
     case 'pursuit':
-      return { kind: 'buff', icon: '/icons/ui/pursuit.png', name: '追撃',
+      return { kind: 'buff', icon: statusIcon('pursuit'), name: '追撃',
                desc: `攻撃直前に、「敵全体に${amount}アタック。」を得て、${amount}が1減少する。` }
     case 'regeneration':
-      return { kind: 'buff', icon: '/icons/ui/regeneration.png', name: '再生',
+      return { kind: 'buff', icon: statusIcon('regeneration'), name: '再生',
                desc: `ターン開始時にHPを${amount}回復し、${amount}が1減少する。` }
     case 'fortify':
-      return { kind: 'buff', icon: '/icons/ui/fortify.png', name: '堅牢',
+      return { kind: 'buff', icon: statusIcon('fortify'), name: '堅牢',
                desc: `ブロックを最大${amount}まで次のターンに持ち越す。` }
     case 'resistance':
-      return { kind: 'buff', icon: '/icons/ui/resistance.png', name: '耐性',
+      return { kind: 'buff', icon: statusIcon('resistance'), name: '耐性',
                desc: `デバフを無効化し、${amount}が1減少する。` }
     case 'revive':
-      return { kind: 'buff', icon: '/icons/ui/revive.png', name: '復活',
+      return { kind: 'buff', icon: statusIcon('revive'), name: '復活',
                desc: `死亡時に1度だけHPを${amount}回復し、${amount}が0になる。` }
     case 'growth':
-      return { kind: 'buff', icon: '/icons/ui/growth.png', name: '成長',
+      return { kind: 'buff', icon: statusIcon('growth'), name: '成長',
                desc: `ターン開始時に筋力${amount}を得る。` }
     case 'insight':
-      return { kind: 'buff', icon: '/icons/ui/insight.png', name: '洞察',
+      return { kind: 'buff', icon: statusIcon('insight'), name: '洞察',
                desc: `ターン開始時に${amount}枚追加で引き、${amount}が0になる。` }
     case 'haste':
-      return { kind: 'buff', icon: '/icons/ui/haste.png', name: '加速',
+      return { kind: 'buff', icon: statusIcon('haste'), name: '加速',
                desc: 'ターン開始時のエナジー回復量を+[N:X]し、[S:haste]が消滅する。' }
     case 'continuity':
-      return { kind: 'buff', icon: '/icons/ui/continuity.png', name: '継続',
+      return { kind: 'buff', icon: statusIcon('continuity'), name: '継続',
                desc: `コンボ条件を満たさないカードを使った時、コンボを継続し、${amount}が1減少する。` }
     case 'mastery':
-      return { kind: 'buff', icon: '/icons/ui/mastery.png', name: '熟練',
+      return { kind: 'buff', icon: statusIcon('mastery'), name: '熟練',
                desc: `ターン開始時にコンボゲージを${amount}得て、${amount}が1減少する。` }
     case 'virulentPoison':
-      return { kind: 'debuff', icon: '/icons/ui/virulent_poison.png', name: '猛毒',
+      return { kind: 'debuff', icon: statusIcon('virulent_poison'), name: '猛毒',
                desc: `毒によって受けるダメージが${amount}倍になる。` }
     case 'stagnation':
-      return { kind: 'debuff', icon: '/icons/ui/stagnation.png', name: '停滞',
+      return { kind: 'debuff', icon: statusIcon('stagnation'), name: '停滞',
                desc: `コンボゲージが増えなくなる。ターン終了時に${amount}が1減少する。` }
     case 'burn':
-      return { kind: 'debuff', icon: '/icons/ui/burn.png', name: '火傷',
+      return { kind: 'debuff', icon: statusIcon('burn'), name: '火傷',
                desc: `ターン開始時に現在HPの${amount}%のダメージを受け、${amount}が0になる。` }
     case 'scorch':
-      return { kind: 'debuff', icon: '/icons/ui/scorch.png', name: '灼痕',
+      return { kind: 'debuff', icon: statusIcon('scorch'), name: '灼痕',
                desc: `火傷が消滅する時、代わりに灼痕が1減少する。` }
     case 'confusion':
-      return { kind: 'debuff', icon: '/icons/ui/confusion.png', name: '混乱',
+      return { kind: 'debuff', icon: statusIcon('confusion'), name: '混乱',
                desc: `カードが手札へ入った時、その使用コストを0～3のランダムな数値に変更する。ターン終了時に${amount}が1減少する。` }
     case 'curse':
-      return { kind: 'debuff', icon: '/icons/ui/curse.png', name: '呪縛',
+      return { kind: 'debuff', icon: statusIcon('curse'), name: '呪縛',
                desc: `カードを使用した時に${amount}が1減少する。${amount}が0になったターンはカードを使用できなくなる。` }
     case 'bind':
-      return { kind: 'debuff', icon: '/icons/ui/bind.png', name: '束縛',
+      return { kind: 'debuff', icon: statusIcon('bind'), name: '束縛',
                desc: `アタックカードを使用できない。ターン終了時に${amount}が1減少する。` }
     case 'silence':
-      return { kind: 'debuff', icon: '/icons/ui/silence.png', name: '沈黙',
+      return { kind: 'debuff', icon: statusIcon('silence'), name: '沈黙',
                desc: `アタック以外のカードを使用できない。ターン終了時に${amount}が1減少する。` }
     case 'seal':
-      return { kind: 'debuff', icon: '/icons/ui/seal.png', name: '封印',
+      return { kind: 'debuff', icon: statusIcon('seal'), name: '封印',
                desc: `戦技・奥義を使用できない。ターン終了時に${amount}が1減少する。` }
     case 'exhaustion':
-      return { kind: 'debuff', icon: '/icons/ui/exhaustion.png', name: '消耗',
+      return { kind: 'debuff', icon: statusIcon('exhaustion'), name: '消耗',
                desc: `ターン開始時にエナジーを${amount}失い、${amount}が1減少する。` }
     case 'distress':
-      return { kind: 'debuff', icon: '/icons/ui/distress.png', name: '動揺',
+      return { kind: 'debuff', icon: statusIcon('distress'), name: '動揺',
                desc: `カードを使用することでコンボが途切れた時、エナジーとコンボゲージを0にする。ターン終了時に${amount}が1減少する。` }
     case 'afterimage':
-      return { kind: 'buff', icon: '/icons/ui/afterimage.png', name: '残光',
+      return { kind: 'buff', icon: statusIcon('afterimage'), name: '残光',
                desc: STATUS_DEFS.afterimage.desc }
     case 'steadfast':
-      return { kind: 'buff', icon: '/icons/ui/steadfast.png', name: '堅持',
+      return { kind: 'buff', icon: statusIcon('steadfast'), name: '堅持',
                desc: STATUS_DEFS.steadfast.desc }
     case 'cover':
-      return { kind: 'buff', icon: '/icons/ui/cover.png', name: '護衛',
+      return { kind: 'buff', icon: statusIcon('cover'), name: '護衛',
                desc: STATUS_DEFS.cover.desc }
     case 'defensiveStance':
-      return { kind: 'buff', icon: '/icons/ui/defensive_stance.png', name: '守勢',
+      return { kind: 'buff', icon: statusIcon('defensive_stance'), name: '守勢',
                desc: STATUS_DEFS.defensiveStance.desc }
     case 'comboCarryover':
-      return { kind: 'buff', icon: '/icons/ui/combo_carryover.png', name: '連環',
+      return { kind: 'buff', icon: statusIcon('combo_carryover'), name: '連環',
                desc: STATUS_DEFS.comboCarryover.desc }
     case 'afterglow':
-      return { kind: 'buff', icon: '/icons/ui/afterglow.png', name: '余韻',
+      return { kind: 'buff', icon: statusIcon('afterglow'), name: '余韻',
                desc: STATUS_DEFS.afterglow.desc }
     case 'resonance':
-      return { kind: 'buff', icon: '/icons/ui/resonance.png', name: '共鳴',
+      return { kind: 'buff', icon: statusIcon('resonance'), name: '共鳴',
                desc: STATUS_DEFS.resonance.desc }
     case 'disruption':
-      return { kind: 'debuff', icon: '/icons/ui/disruption.png', name: '攪乱',
+      return { kind: 'debuff', icon: statusIcon('disruption'), name: '攪乱',
                desc: STATUS_DEFS.disruption.desc }
     default:
-      return { kind: 'buff', icon: '/icons/ui/status_unknown.png', name: id, desc: '' }
+      return { kind: 'buff', icon: statusIcon('status_unknown'), name: id, desc: '' }
   }
 }
 
