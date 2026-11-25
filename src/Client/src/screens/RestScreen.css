@@ -18,7 +18,8 @@
   /* 場面の絵は 48×48 ドットを ×4 で表示（docs/current-art-asset-spec.md）。 */
   --rs-fire-frame-size: 192px;
   --rs-fire-sheet-width: 1152px;
-  --rs-fire-last-frame-offset: -900px;
+  /* 最後のコマ（6 コマ目）の位置 = -(6 - 1) × 192px。 */
+  --rs-fire-last-frame-offset: -960px;
   align-self: center;
   position: relative;
   isolation: isolate;

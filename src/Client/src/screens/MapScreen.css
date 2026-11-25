@@ -499,6 +499,8 @@ main.map-screen {
 /* Tile icons rendered as <img> on map nodes and the legend.
    マスのアイコンは 32×32 のドット絵（中身は中央に寄せて変換済み）を等倍で置く。 */
 .map-screen__node-img {
+  /* 行内の画像だと行の高さとベースラインの余白で上へずれるので、ブロックにして中央に置く。 */
+  display: block;
   width: 32px;
   height: 32px;
   object-fit: contain;
