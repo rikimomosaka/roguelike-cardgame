@@ -189,6 +189,7 @@ export function toCharacterDemo(
     intent: undefined,
     intents,
     buffs: toBuffs(actor),
+    phase: actor.phase === 'calm' || actor.phase === 'motion' ? actor.phase : undefined,
   }
 }
 

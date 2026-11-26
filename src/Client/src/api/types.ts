@@ -296,6 +296,10 @@ export type BattleEventKind =
   | 'GainAttack'
   /** カード制御の敵が予約したカードの実行を始めた（cardId = カード定義 ID）。 */
   | 'EnemyCardAction'
+  /** キャラの位相が変わった（note = 前->後:理由）。 */
+  | 'PhaseChanged'
+  /** カードに後付け能力が足された（targetInstanceId = カード、note = キーワード:後の数）。 */
+  | 'CardAugmented'
 
 export type IntentDto = {
   /** 通常攻撃 (single) の予定ダメージ。 */
@@ -337,6 +341,8 @@ export type CombatActorDto = {
   statuses: Record<string, number>
   /** Status ids in acquisition order; newly gained statuses are appended. */
   statusOrder?: string[] | null
+  /** 位相（none = なし、calm = 静、motion = 動）。旧サーバーでは省略。 */
+  phase?: 'none' | 'calm' | 'motion'
   currentMoveId: string | null
   remainingLifetimeTurns: number | null
   associatedSummonHeldInstanceId: string | null

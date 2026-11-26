@@ -92,6 +92,7 @@ import {
 } from './battleScreen/intentSummary'
 import { CardChoiceModal } from './battleScreen/CardChoiceModal'
 import { PlayHistoryModal } from './battleScreen/FinisherRecordModal'
+import { PhaseAura, PhaseTag, type ActorPhaseDemo } from './battleScreen/PhaseMarks'
 import { characterSkillCutinDurationMs } from './battleScreen/characterSkillCutinPresentation'
 import {
   formatComboDescription,
@@ -266,6 +267,8 @@ export type CharacterDemo = {
   image?: string
   /** Motion-specific sheets. `image` remains the static loading/error fallback. */
   animations?: Partial<Record<CharacterMotion, SpriteSheetDemo>>
+  /** 位相（静・動）。位相なしは undefined。 */
+  phase?: ActorPhaseDemo
   /** キャラのサイズ段階 (1 〜 10)。1 = スライム級の小型、5 = 標準、10 = 巨大ボス級。
    *  立ち絵 image 表示時は heightTier に応じて高さが決定される (縦横比は維持)。 */
   heightTier?: number
@@ -1108,6 +1111,7 @@ function Slot({
     isBlocked ? 'is-blocked' : '',
     isDying ? 'is-dying' : '',
     aura ? `has-aura has-aura--${aura.kind}` : '',
+    char.phase ? `has-phase has-phase--${char.phase}` : '',
   ].filter(Boolean).join(' ')
   // Why: スプレッドにすることで onClick が undefined のとき role/tabIndex 属性自体が
   // JSX に出ない。axe/aria リンターの "role must be valid ARIA role: {expression}"
@@ -1137,6 +1141,7 @@ function Slot({
       {...interactiveProps}
     >
       <CombatFeedbackStack items={feedbackItems} />
+      <PhaseAura phase={char.phase} />
       {actionLabel ? (
         <div key={actionLabel.id} className="slot-action-label" role="status">
           <span className="slot-action-label__text">{actionLabel.text}</span>
@@ -1266,6 +1271,7 @@ function Slot({
       </div>
       {char.blockValue > 0 && <StatusBlock value={char.blockValue} />}
       <StatusName name={char.name} />
+      <PhaseTag phase={char.phase} />
       {onViewActions ? (
         <button
           type="button"
@@ -3433,6 +3439,13 @@ export function BattleScreen({
             clearTransientPresentation()
             return
           }
+          i++
+          continue
+        }
+
+        // 位相が変わった瞬間は一時的な光を出す（続く間のオーラは state の phase で描く）。
+        if (ev.kind === 'PhaseChanged' && ev.targetInstanceId) {
+          showSlotAura(ev.targetInstanceId, 'buff')
           i++
           continue
         }

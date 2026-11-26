@@ -79,6 +79,14 @@ const unitCatalog: UnitCatalog = {
 }
 
 describe('toCharacterDemo', () => {
+  it('carries the actor phase (calm / motion) and drops none', () => {
+    const catalogs = { enemies: enemyCatalog, units: unitCatalog, characters: characterCatalog }
+    expect(toCharacterDemo({ ...heroActor(), phase: 'calm' }, catalogs, 'alice').phase).toBe('calm')
+    expect(toCharacterDemo({ ...heroActor(), phase: 'motion' }, catalogs, 'alice').phase).toBe('motion')
+    expect(toCharacterDemo({ ...heroActor(), phase: 'none' }, catalogs, 'alice').phase).toBeUndefined()
+    expect(toCharacterDemo(heroActor(), catalogs, 'alice').phase).toBeUndefined()
+  })
+
   it('hero name uses accountId (not catalog name)', () => {
     const demo = toCharacterDemo(heroActor(), {
       enemies: enemyCatalog, units: unitCatalog, characters: characterCatalog,

@@ -22,6 +22,19 @@ describe('CardDesc', () => {
     expect(kw?.getAttribute('data-keyword')).toBe('wild')
   })
 
+  it('renders a counted keyword as name plus count', () => {
+    const { container } = render(<CardDesc text="[K:bipolar|2]" />)
+    const kw = container.querySelector('.card-desc-keyword')
+    expect(kw?.textContent).toBe('双極2')
+    expect(kw?.getAttribute('data-keyword')).toBe('bipolar')
+  })
+
+  it('renders a single keyword without a count', () => {
+    const { container } = render(<CardDesc text="[K:bipolar]" />)
+    expect(container.querySelector('.card-desc-keyword')?.textContent).toBe('双極')
+    expect(KEYWORD_DEFS.bipolar.desc).toContain('位相が静の時')
+  })
+
   it('marks a disabled Wild keyword with a strike-through label and red suffix', () => {
     const { container } = render(<CardDesc text="[K:wild]" disabledKeywords={['wild']} />)
     const keyword = container.querySelector('.card-desc-keyword--disabled')

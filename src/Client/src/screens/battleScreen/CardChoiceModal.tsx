@@ -254,6 +254,8 @@ function actionTitle(action: string): string {
       return '除外から戻すカードを選ぶ'
     case 'modifyCardCost':
       return 'コストを変更するカードを選ぶ'
+    case 'augmentCards':
+      return '能力を付与するカードを選ぶ'
     default:
       return 'カードを選ぶ'
   }

@@ -8,6 +8,10 @@ import './CardDesc.css'
 // Shared immutable description data is intentionally colocated with its renderer.
 // eslint-disable-next-line react-refresh/only-export-components
 export const KEYWORD_DEFS: Record<string, { name: string; desc: string }> = {
+  bipolar: {
+    name: '双極',
+    desc: '位相が静の時、ターン終了時に捨てられない。位相が動の時に使用すると、エナジーをこの数だけ得て、このカードの双極は全て消える。',
+  },
   wild: {
     name: 'ワイルド',
     desc: 'このカード及び次に使うカードではコンボが途切れない。このコンボ中、以降のワイルドを無効にする。',
@@ -416,7 +420,7 @@ function renderMarker(
           className={`card-desc-keyword${disabled ? ' card-desc-keyword--disabled' : ''}`}
           data-keyword={value}
         >
-          <span className="card-desc-keyword__label">{jp}</span>
+          <span className="card-desc-keyword__label">{jp}{extra && /^\d+$/.test(extra) ? extra : ''}</span>
           {disabled ? <span className="card-desc-keyword__disabled"> (無効)</span> : null}
         </span>
       )
