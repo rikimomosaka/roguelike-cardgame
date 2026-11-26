@@ -20,4 +20,6 @@ public sealed record CombatActorDto(
     IntentDto? Intent,
     IReadOnlyList<string>? StatusOrder = null,
     int BlockAddCount = 0,
-    int? BlockRawSum = null);
+    int? BlockRawSum = null,
+    /// <summary>位相: "none" | "calm"（静）| "motion"（動）。</summary>
+    string Phase = "none");

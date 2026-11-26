@@ -35,10 +35,14 @@ public static class CardTextFormatter
     /// context が <see cref="CardActorContext.Empty"/> でない場合、attack / block の
     /// amount は context により調整され、base と異なれば |up / |down マーカーを emit する。
     /// </summary>
-    public static string Format(CardDefinition def, bool upgraded, CardActorContext context)
+    public static string Format(
+        CardDefinition def,
+        bool upgraded,
+        CardActorContext context,
+        IReadOnlyList<(string Id, int Count)>? augmentedKeywords = null)
     {
         string? manual = upgraded ? def.UpgradedDescription : def.Description;
-        var keywords = def.EffectiveKeywords(upgraded);
+        var keywords = MergeAugmentedKeywords(def.EffectiveKeywords(upgraded), augmentedKeywords);
         string mainBody;
         string conditionalBody = string.Empty;
         if (!string.IsNullOrWhiteSpace(manual))
@@ -83,9 +87,10 @@ public static class CardTextFormatter
         CardDefinition def,
         bool upgraded,
         CardActorContext context,
-        int usageCount)
+        int usageCount,
+        IReadOnlyList<(string Id, int Count)>? augmentedKeywords = null)
     {
-        var text = Format(def, upgraded, context);
+        var text = Format(def, upgraded, context, augmentedKeywords);
         var limit = def.EffectiveUsesPerTurn(upgraded);
         if (limit <= 0) return text;
 
@@ -93,6 +98,28 @@ public static class CardTextFormatter
             $"(0/{limit})",
             $"({Math.Clamp(usageCount, 0, limit)}/{limit})",
             System.StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// カード定義のキーワードの後ろに、カード個体へ後から足されたキーワードを並べる。
+    /// 数が 2 以上なら "id|数"（表示は [K:id|数] → 「双極2」）。定義と同じ ID は数を合算して 1 つにする。
+    /// </summary>
+    private static IReadOnlyList<string>? MergeAugmentedKeywords(
+        IReadOnlyList<string>? keywords,
+        IReadOnlyList<(string Id, int Count)>? augmented)
+    {
+        if (augmented is null || augmented.Count == 0) return keywords;
+        var result = new List<string>(keywords ?? System.Array.Empty<string>());
+        foreach (var (id, count) in augmented)
+        {
+            if (count <= 0) continue;
+            int index = result.IndexOf(id);
+            int total = count + (index >= 0 ? 1 : 0);
+            string token = total >= 2 ? $"{id}|{total}" : id;
+            if (index >= 0) result[index] = token;
+            else result.Add(token);
+        }
+        return result;
     }
 
     /// <summary>

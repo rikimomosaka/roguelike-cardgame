@@ -366,7 +366,8 @@ internal static class BattleStateDtoMapper
             Intent: ToIntentDto(CombatIntentProjector.Project(state, actor, data)),
             StatusOrder: BuildStatusOrder(actor),
             BlockAddCount: actor.Block.AddCount,
-            BlockRawSum: actor.Block.Sum);
+            BlockRawSum: actor.Block.Sum,
+            Phase: PhaseRules.Name(actor.Phase));
 
     private static IReadOnlyList<string> BuildStatusOrder(CombatActor actor)
     {
@@ -441,12 +442,13 @@ internal static class BattleStateDtoMapper
                     battleState, owner, definition)
                 : null;
 
+            var augmentedKeywords = card.AugmentedKeywords();
             adjustedDescription = CardTextFormatter.FormatWithUsageCount(
-                definition, upgraded: false, heroContext, usageCount);
+                definition, upgraded: false, heroContext, usageCount, augmentedKeywords);
             if (definition.IsUpgradable)
             {
                 adjustedUpgradedDescription = CardTextFormatter.FormatWithUsageCount(
-                    definition, upgraded: true, heroContext, usageCount);
+                    definition, upgraded: true, heroContext, usageCount, augmentedKeywords);
             }
 
             var cost = isInHand && owner is not null
