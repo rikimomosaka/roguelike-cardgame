@@ -37,7 +37,7 @@ describe('phaseRingStyle', () => {
 describe('slotTooltipContent', () => {
   it('appends the current phase and its effect after the trait', () => {
     const tip = slotTooltipContent({ traitName: '残光', traitDescription: '特性の説明。', phase: 'calm' })
-    expect(tip?.name).toBe('残光')
+    expect(tip?.name).toBe('特性：残光')
     expect(tip?.desc).toContain('特性の説明。')
     expect(tip?.desc).toContain('位相：[P:calm]')
     expect(tip?.desc).toContain('[K:bipolar]')
@@ -53,7 +53,7 @@ describe('slotTooltipContent', () => {
   })
 
   it('keeps the trait-only tooltip and returns null without trait or phase', () => {
-    expect(slotTooltipContent({ traitName: '残光', traitDescription: '説明' })).toEqual({ name: '残光', desc: '説明' })
+    expect(slotTooltipContent({ traitName: '残光', traitDescription: '説明' })).toEqual({ name: '特性：残光', desc: '説明' })
     expect(slotTooltipContent({ traitDescription: '説明' })?.name).toBe('特性')
     expect(slotTooltipContent({})).toBeNull()
   })

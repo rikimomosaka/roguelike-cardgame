@@ -132,6 +132,25 @@ describe('Tooltip status line', () => {
   })
 })
 
+describe('tooltip phase terms', () => {
+  it('labels phase explanations as 静(位相) with 位相 in plain text', () => {
+    function PhaseTrigger() {
+      const tip = useTooltipTarget({ name: '静の型', desc: '位相を[P:calm]にする。' })
+      return <button {...tip}>位相カード</button>
+    }
+    render(
+      <TooltipHost>
+        <PhaseTrigger />
+      </TooltipHost>,
+    )
+    fireEvent.mouseEnter(screen.getByRole('button', { name: '位相カード' }), { clientX: 20, clientY: 20 })
+    const title = screen.getByRole('tooltip').querySelector('.tip__refs-panel .tip__ref-name')
+    expect(title).toHaveTextContent('静(位相)')
+    expect(title?.querySelector('.card-desc-phase--calm')).toHaveTextContent('静')
+    expect(title?.querySelector('.tip__ref-name-kind')).toHaveTextContent('(位相)')
+  })
+})
+
 describe('tooltip side panels', () => {
   it('aligns the side panel bottom with the description bottom', () => {
     // 本文 100px・別枠 300px → 別枠は本文の上端より 200px 上から始まる。

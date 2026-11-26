@@ -21,7 +21,8 @@ export function slotTooltipContent(char: {
 }): { name: ReactNode; desc: string } | null {
   const phase = char.phase ? PHASE_INFO[char.phase] : null
   if (char.traitDescription) {
-    const name = char.traitName ?? '特性'
+    // 戦技：技名・奥義：技名 と同じく「特性：名前」で出す。
+    const name = char.traitName ? `特性：${char.traitName}` : '特性'
     return phase
       ? { name, desc: `${char.traitDescription}\n\n位相：[P:${char.phase}]\n${phase.effect}` }
       : { name, desc: char.traitDescription }
