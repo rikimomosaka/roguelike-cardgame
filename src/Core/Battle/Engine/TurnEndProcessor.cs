@@ -53,6 +53,12 @@ internal static class TurnEndProcessor
         s = BattleCardCostModifierLifecycle.Remove(
             s, CardCostModifierDuration.UntilTurnEnd);
 
+        // Step 4.5: 静の持ち主は手札のアタックに双極を得る（手札を捨てる前）。
+        var phaseOwner = primaryActor is null
+            ? null
+            : s.Allies.FirstOrDefault(actor => actor.InstanceId == primaryActor.InstanceId) ?? primaryActor;
+        s = PhaseRules.ApplyCalmTurnEnd(s, phaseOwner, catalog, ref order, events);
+
         // Step 5: 手札整理 (retainSelf-aware, 10.2.D 既存)
         var keepInHand = ImmutableArray.CreateBuilder<BattleCardInstance>();
         var newDiscard = s.DiscardPile.ToBuilder();
@@ -63,7 +69,7 @@ internal static class TurnEndProcessor
                 newDiscard.Add(card);
                 continue;
             }
-            if (BattleCardRetention.ShouldRetain(card, def))
+            if (BattleCardRetention.ShouldRetain(card, def, phaseOwner?.Phase ?? ActorPhase.None))
                 keepInHand.Add(card);
             else
                 newDiscard.Add(card);

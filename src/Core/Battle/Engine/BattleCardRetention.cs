@@ -10,9 +10,11 @@ namespace RoguelikeCardGame.Core.Battle.Engine;
 /// </summary>
 public static class BattleCardRetention
 {
+    /// <param name="ownerPhase">カードの持ち主の位相。静なら双極付きのカードも残る。</param>
     public static bool ShouldRetain(
         BattleCardInstance card,
-        CardDefinition definition)
+        CardDefinition definition,
+        ActorPhase ownerPhase)
     {
         ArgumentNullException.ThrowIfNull(card);
         ArgumentNullException.ThrowIfNull(definition);
@@ -20,6 +22,8 @@ public static class BattleCardRetention
         var effects = card.IsUpgraded && definition.UpgradedEffects is not null
             ? definition.UpgradedEffects
             : definition.Effects;
+        if (ownerPhase == ActorPhase.Calm && card.KeywordCount(CardKeywords.Bipolar) > 0)
+            return true;
         return effects.Any(effect => effect.Action == "retainSelf")
             || (definition.EffectiveKeywords(card.IsUpgraded)?.Contains("wait") ?? false);
     }

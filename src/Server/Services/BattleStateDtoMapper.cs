@@ -514,7 +514,8 @@ internal static class BattleStateDtoMapper
                 ? null
                 : FormatContingencyTrigger(armedContingency.Trigger),
             RetainsAtTurnEnd: definition is not null
-                && BattleCardRetention.ShouldRetain(card, definition));
+                && BattleCardRetention.ShouldRetain(
+                    card, definition, owner?.Phase ?? ActorPhase.None));
     }
 
     private static string FormatContingencyTrigger(

@@ -78,6 +78,36 @@ public static class PhaseRules
         return state;
     }
 
+    /// <summary>
+    /// 静のターン終了: 持ち主が静なら、手札のアタック全てに双極を 1 付ける（手札を捨てる前に呼ぶ）。
+    /// events が null でなければ CardAugmented を記録する。
+    /// </summary>
+    public static BattleState ApplyCalmTurnEnd(
+        BattleState projected,
+        CombatActor? owner,
+        RoguelikeCardGame.Core.Data.DataCatalog catalog,
+        ref int order,
+        List<BattleEvent>? events)
+    {
+        if (owner is null || owner.Phase != ActorPhase.Calm) return projected;
+        var hand = projected.Hand.ToBuilder();
+        for (int i = 0; i < hand.Count; i++)
+        {
+            var card = hand[i];
+            if (!catalog.TryGetCard(card.CardDefinitionId, out var def) || def.CardType != CardType.Attack)
+                continue;
+            var augmented = card.AddKeyword(CardKeywords.Bipolar, 1);
+            hand[i] = augmented;
+            events?.Add(new BattleEvent(
+                BattleEventKind.CardAugmented, order++,
+                CasterInstanceId: owner.InstanceId,
+                TargetInstanceId: card.InstanceId,
+                Amount: 1,
+                Note: $"{CardKeywords.Bipolar}:{augmented.KeywordCount(CardKeywords.Bipolar)}"));
+        }
+        return projected with { Hand = hand.ToImmutable() };
+    }
+
     private static BattleEvent Changed(CombatActor actor, ActorPhase next, string reason, int order) =>
         new(BattleEventKind.PhaseChanged, order,
             TargetInstanceId: actor.InstanceId,

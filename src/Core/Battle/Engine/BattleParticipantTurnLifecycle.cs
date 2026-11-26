@@ -80,6 +80,10 @@ internal static class BattleParticipantTurnLifecycle
         projected = BattleCardCostModifierLifecycle.Remove(
             projected, CardCostModifierDuration.UntilTurnEnd);
 
+        // 静の持ち主は手札のアタックに双極を得る（手札を捨てる前）。
+        int phaseOrder = 0;
+        projected = PhaseRules.ApplyCalmTurnEnd(projected, participantActor, catalog, ref phaseOrder, events: null);
+
         var retained = ImmutableArray.CreateBuilder<BattleCardInstance>();
         var discard = projected.DiscardPile.ToBuilder();
         foreach (var card in projected.Hand)
@@ -90,7 +94,8 @@ internal static class BattleParticipantTurnLifecycle
                 continue;
             }
 
-            if (BattleCardRetention.ShouldRetain(card, definition))
+            if (BattleCardRetention.ShouldRetain(
+                    card, definition, participantActor?.Phase ?? ActorPhase.None))
                 retained.Add(card);
             else
                 discard.Add(card);
