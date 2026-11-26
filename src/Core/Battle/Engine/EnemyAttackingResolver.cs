@@ -194,15 +194,9 @@ internal static class EnemyAttackingResolver
                         && cardSource.DefinitionId is { } usedCardId
                         && catalog.TryGetCard(usedCardId, out var usedCard))
                     {
-                        var judged = PhaseRules.AfterCardUsed(currentEnemyState.Phase, usedCard.CardType);
-                        if (judged != currentEnemyState.Phase)
-                        {
-                            var phaseEvents = new List<BattleEvent>();
-                            state = PhaseRules.SetPhase(
-                                state, currentEnemyState.InstanceId, judged, "used", ref order, phaseEvents);
-                            events.AddRange(phaseEvents);
-                            currentEnemyState = state.Enemies.First(e => e.InstanceId == currentEnemyState.InstanceId);
-                        }
+                        // 消える予定にするだけ。実際に消すのはこの敵の行動が終わってから。
+                        state = PhaseRules.MarkExitOnUse(state, currentEnemyState.InstanceId, usedCard.CardType);
+                        currentEnemyState = state.Enemies.First(e => e.InstanceId == currentEnemyState.InstanceId);
                     }
                     if (!string.Equals(cardKey, announcedCardInstanceId, System.StringComparison.Ordinal))
                     {
@@ -382,6 +376,13 @@ internal static class EnemyAttackingResolver
             }
 
             if (ResolutionShouldStop(state)) break;
+
+            // 位相: この敵が使ったカードの判定で消える予定の位相を、行動が終わったここで消す。
+            {
+                var phaseEvents = new List<BattleEvent>();
+                state = PhaseRules.ResolvePendingExit(state, currentEnemyState.InstanceId, ref order, phaseEvents);
+                events.AddRange(phaseEvents);
+            }
 
             // NextMoveId へ遷移（InstanceId ベースで検索して IndexOf を回避）
             int enemyIdx = -1;

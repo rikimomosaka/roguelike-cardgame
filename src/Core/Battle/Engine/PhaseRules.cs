@@ -51,6 +51,9 @@ public static class PhaseRules
     /// キャラの位相を変える。変化したときだけ actor を置き換え、PhaseChanged を記録する。
     /// reason は "effect"（効果）か "used"（使用時の判定）。
     /// </summary>
+    /// <remarks>
+    /// 位相を得た（同じ位相を得直した場合も含む）ので、使用時の判定で待っていた「消える」予定は取り消す。
+    /// </remarks>
     public static BattleState SetPhase(
         BattleState state,
         string actorInstanceId,
@@ -59,22 +62,55 @@ public static class PhaseRules
         ref int order,
         List<BattleEvent> events)
     {
+        var actor = Find(state, actorInstanceId);
+        if (actor is null) return state;
+        if (actor.Phase == next && !actor.PhaseExitPending) return state;
+        if (actor.Phase != next)
+            events.Add(Changed(actor, next, reason, order++));
+        return Replace(state, actor with { Phase = next, PhaseExitPending = false });
+    }
+
+    /// <summary>
+    /// カード使用時の判定（効果の前）。位相が消える条件なら「消える予定」にするだけで、
+    /// 実際に消すのは効果処理が終わってから（<see cref="ResolvePendingExit"/>）。
+    /// </summary>
+    public static BattleState MarkExitOnUse(BattleState state, string actorInstanceId, CardType usedType)
+    {
+        var actor = Find(state, actorInstanceId);
+        if (actor is null) return state;
+        if (AfterCardUsed(actor.Phase, usedType) == actor.Phase) return state;
+        return Replace(state, actor with { PhaseExitPending = true });
+    }
+
+    /// <summary>効果処理が終わった時点で、まだ消える予定が残っていれば位相をなしにする。</summary>
+    public static BattleState ResolvePendingExit(
+        BattleState state,
+        string actorInstanceId,
+        ref int order,
+        List<BattleEvent> events)
+    {
+        var actor = Find(state, actorInstanceId);
+        if (actor is null || !actor.PhaseExitPending) return state;
+        return SetPhase(state, actorInstanceId, ActorPhase.None, "used", ref order, events);
+    }
+
+    private static CombatActor? Find(BattleState state, string actorInstanceId)
+    {
+        foreach (var actor in state.Allies)
+            if (actor.InstanceId == actorInstanceId) return actor;
+        foreach (var actor in state.Enemies)
+            if (actor.InstanceId == actorInstanceId) return actor;
+        return null;
+    }
+
+    private static BattleState Replace(BattleState state, CombatActor after)
+    {
         for (int i = 0; i < state.Allies.Length; i++)
-        {
-            var actor = state.Allies[i];
-            if (actor.InstanceId != actorInstanceId) continue;
-            if (actor.Phase == next) return state;
-            events.Add(Changed(actor, next, reason, order++));
-            return state with { Allies = state.Allies.SetItem(i, actor with { Phase = next }) };
-        }
+            if (state.Allies[i].InstanceId == after.InstanceId)
+                return state with { Allies = state.Allies.SetItem(i, after) };
         for (int i = 0; i < state.Enemies.Length; i++)
-        {
-            var actor = state.Enemies[i];
-            if (actor.InstanceId != actorInstanceId) continue;
-            if (actor.Phase == next) return state;
-            events.Add(Changed(actor, next, reason, order++));
-            return state with { Enemies = state.Enemies.SetItem(i, actor with { Phase = next }) };
-        }
+            if (state.Enemies[i].InstanceId == after.InstanceId)
+                return state with { Enemies = state.Enemies.SetItem(i, after) };
         return state;
     }
 

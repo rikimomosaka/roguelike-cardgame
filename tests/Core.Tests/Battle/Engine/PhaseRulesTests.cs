@@ -78,6 +78,40 @@ public sealed class PhaseRulesTests
     }
 
     [Fact]
+    public void MarkExitOnUse_DefersRemovalUntilResolve()
+    {
+        var state = BattleFixtures.MinimalState(
+            allies: ImmutableArray.Create(BattleFixtures.Hero() with { Phase = ActorPhase.Motion }));
+        var events = new List<BattleEvent>();
+        int order = 0;
+
+        state = PhaseRules.MarkExitOnUse(state, "hero_inst", CardType.Skill);
+        Assert.Equal(ActorPhase.Motion, state.Allies[0].Phase);
+        Assert.True(state.Allies[0].PhaseExitPending);
+
+        state = PhaseRules.ResolvePendingExit(state, "hero_inst", ref order, events);
+        Assert.Equal(ActorPhase.None, state.Allies[0].Phase);
+        Assert.False(state.Allies[0].PhaseExitPending);
+        Assert.Equal("motion->none:used", Assert.Single(events).Note);
+    }
+
+    [Fact]
+    public void SetPhaseByEffect_ClearsPendingExit_EvenWithTheSamePhase()
+    {
+        var state = BattleFixtures.MinimalState(
+            allies: ImmutableArray.Create(BattleFixtures.Hero() with { Phase = ActorPhase.Calm }));
+        var events = new List<BattleEvent>();
+        int order = 0;
+
+        state = PhaseRules.MarkExitOnUse(state, "hero_inst", CardType.Attack);
+        state = PhaseRules.SetPhase(state, "hero_inst", ActorPhase.Calm, "effect", ref order, events);
+        state = PhaseRules.ResolvePendingExit(state, "hero_inst", ref order, events);
+
+        Assert.Equal(ActorPhase.Calm, state.Allies[0].Phase);
+        Assert.Empty(events);
+    }
+
+    [Fact]
     public void SetPhase_FindsEnemyByInstanceId()
     {
         var state = BattleFixtures.MinimalState();

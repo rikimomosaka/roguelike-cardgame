@@ -276,7 +276,7 @@ public static partial class BattleEngine
 
         int order = events.Count;
 
-        // 位相: 使用時の位相で判定する（効果の実行より前）。
+        // 位相: 使用時の位相で判定する（効果の実行より前）。消えるのは効果処理の後（FinalizeCardPlay）。
         // 双極は動で使ったときにエナジーへ換わる。敵の予約（planEnemyEffects）では
         // 戦場へ反映しないので、判定は再現実行時（EnemyAttackingResolver）に行い、双極もそのまま残す。
         if (!planEnemyEffects)
@@ -296,9 +296,7 @@ public static partial class BattleEngine
                 foreach (var energyEvent in energyEvents)
                     events.Add(energyEvent with { Order = order++, Note = CardKeywords.Bipolar });
             }
-            var judged = PhaseRules.AfterCardUsed(usedPhase, def.CardType);
-            if (judged != usedPhase)
-                s = PhaseRules.SetPhase(s, actingActor.InstanceId, judged, "used", ref order, events);
+            s = PhaseRules.MarkExitOnUse(s, actingActor.InstanceId, def.CardType);
         }
 
         if (planEnemyEffects)
@@ -392,6 +390,10 @@ public static partial class BattleEngine
         IRng rng, DataCatalog catalog)
     {
         var s = state;
+
+        // 位相: 使用時の判定で消える予定になった位相を、効果処理が終わったここで消す。
+        // 効果で位相を得た（反転を含む）場合は予定が取り消されているので消えない。
+        s = PhaseRules.ResolvePendingExit(s, casterActorInstanceId, ref order, events);
 
         // Contingency is armed before OnPlayCard triggers.  Its normal effect
         // list is deliberately skipped by the caller, and this destination

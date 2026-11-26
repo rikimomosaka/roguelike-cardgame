@@ -26,13 +26,18 @@ public sealed class PhasePlayCardTests
         new CardEffect("setPhase", EffectScope.Self, null, 0, Name: "calm"));
     private static readonly CardDefinition MotionForm = Def("motion_form", CardType.Skill, 1,
         new CardEffect("setPhase", EffectScope.Self, null, 0, Name: "motion"));
+    private static readonly CardDefinition FlowingStance = Def("flowing_stance", CardType.Skill, 0,
+        new CardEffect("invertPhase", EffectScope.Self, null, 0));
+    private static readonly CardDefinition ReturnEdge = Def("return_edge", CardType.Attack, 1,
+        new CardEffect("attack", EffectScope.Single, EffectSide.Enemy, 6),
+        new CardEffect("invertPhase", EffectScope.Self, null, 0));
     private static readonly CardDefinition Honing = Def("honing", CardType.Skill, 0,
         new CardEffect("augmentCards", EffectScope.Self, null, 1, Name: "bipolar",
             Pile: "hand", Select: "choose", CardCount: 1, CardTypeFilter: "Attack"));
 
     private static DataCatalog Catalog() => BattleFixtures.MinimalCatalog(cards: new[]
     {
-        BattleFixtures.Strike(), BattleFixtures.Defend(), CalmBlade, MotionForm, Honing,
+        BattleFixtures.Strike(), BattleFixtures.Defend(), CalmBlade, MotionForm, Honing, FlowingStance, ReturnEdge,
     });
 
     private static BattleCardInstance Card(string defId, string instId) => new(instId, defId, false, null);
@@ -46,13 +51,48 @@ public sealed class PhasePlayCardTests
         events.Where(e => e.Kind == BattleEventKind.PhaseChanged).Select(e => e.Note!).ToArray();
 
     [Fact]
-    public void CalmHero_PlaysAttack_BecomesNone_BeforeEffects()
+    public void CalmHero_PlaysAttackThatSetsCalm_KeepsTheNewCalm()
     {
+        // 判定で静は消える予定になるが、効果で静を得直したので消えない。
         var (after, events) = BattleEngine.PlayCard(
             WithHero(ActorPhase.Calm, Card("calm_blade", "c1")), 0, 0, 0, Rng(), Catalog());
 
         Assert.Equal(ActorPhase.Calm, after.Allies[0].Phase);
-        Assert.Equal(new[] { "calm->none:used", "none->calm:effect" }, PhaseNotes(events));
+        Assert.False(after.Allies[0].PhaseExitPending);
+        Assert.Empty(PhaseNotes(events));
+    }
+
+    [Fact]
+    public void MotionHero_PlaysInvertSkill_EndsCalm()
+    {
+        var (after, events) = BattleEngine.PlayCard(
+            WithHero(ActorPhase.Motion, Card("flowing_stance", "f1")), 0, 0, 0, Rng(), Catalog());
+
+        Assert.Equal(ActorPhase.Calm, after.Allies[0].Phase);
+        Assert.Equal(new[] { "motion->calm:effect" }, PhaseNotes(events));
+    }
+
+    [Fact]
+    public void CalmHero_PlaysInvertAttack_EndsMotion()
+    {
+        var (after, _) = BattleEngine.PlayCard(
+            WithHero(ActorPhase.Calm, Card("return_edge", "r1")), 0, 0, 0, Rng(), Catalog());
+
+        Assert.Equal(ActorPhase.Motion, after.Allies[0].Phase);
+    }
+
+    [Fact]
+    public void CalmHero_PlaysPlainAttack_LosesCalmAfterEffects()
+    {
+        var (after, events) = BattleEngine.PlayCard(
+            WithHero(ActorPhase.Calm, Card("strike", "s1")), 0, 0, 0, Rng(), Catalog());
+
+        Assert.Equal(ActorPhase.None, after.Allies[0].Phase);
+        var phaseEvent = events.Single(e => e.Kind == BattleEventKind.PhaseChanged);
+        Assert.Equal("calm->none:used", phaseEvent.Note);
+        // 消えるのは効果（アタックの予約）の後。
+        var attackIndex = events.ToList().FindIndex(e => e.Kind == BattleEventKind.GainAttack);
+        Assert.True(attackIndex >= 0 && attackIndex < events.ToList().IndexOf(phaseEvent));
     }
 
     [Fact]
@@ -109,7 +149,8 @@ public sealed class PhasePlayCardTests
 
         var (paused, pauseEvents) = BattleEngine.PlayCard(state, 0, 0, 0, Rng(), Catalog());
         Assert.NotNull(paused.PendingCardPlay);
-        Assert.Equal(ActorPhase.None, paused.Allies[0].Phase);
+        // 選択待ちの間は効果処理の途中なので、まだ消えない。
+        Assert.Equal(ActorPhase.Motion, paused.Allies[0].Phase);
 
         var (resolved, resumeEvents) = BattleEngine.ResolveCardChoice(
             paused, ImmutableArray.Create("s1"), Rng(), Catalog());

@@ -69,6 +69,12 @@ public sealed record CombatActor(
     /// <summary>位相（静・動）。バフ・デバフとは別。旧データは None。</summary>
     public ActorPhase Phase { get; init; } = ActorPhase.None;
 
+    /// <summary>
+    /// 使用時の判定で「この位相は消える」と決まり、カードの効果処理が終わるのを待っている。
+    /// 効果処理中に位相を得た（同じ位相を得直した場合も含む）ら取り消される。
+    /// </summary>
+    public bool PhaseExitPending { get; init; }
+
     public bool IsAlive => CurrentHp > 0;
 
     /// <summary>未保持なら 0 を返す。Statuses は 0 以下の amount を持たない不変条件。</summary>
