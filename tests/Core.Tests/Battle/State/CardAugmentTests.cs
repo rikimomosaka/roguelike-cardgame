@@ -81,7 +81,7 @@ public sealed class CardAugmentTests
         Assert.NotNull(meta);
         Assert.Equal("双極", meta!.Name);
         Assert.Equal(
-            "位相が[P:calm]の時、手札にある限り、次のターンに持ち越される。位相が[P:motion]の時に使用すると、エナジーをこの数だけ得て、このカードの双極は全て消える。",
+            "位相が[P:calm]の時、手札にある限り、次のターンに持ち越される。\n位相が[P:motion]の時、発動時にエナジーを+[N:X]し、双極が消滅する。",
             meta.Description);
     }
 }

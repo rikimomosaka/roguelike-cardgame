@@ -102,7 +102,8 @@ public static class CardTextFormatter
 
     /// <summary>
     /// カード定義のキーワードの後ろに、カード個体へ後から足されたキーワードを並べる。
-    /// 数が 2 以上なら "id|数"（表示は [K:id|数] → 「双極2」）。定義と同じ ID は数を合算して 1 つにする。
+    /// 後付けは "id|+" / "id|+数"（数は 2 以上のとき。表示は「双極」「双極2」で、エンハンスの印として背景色が付く）。
+    /// 定義と同じ ID は数を合算して 1 つにする。
     /// </summary>
     private static IReadOnlyList<string>? MergeAugmentedKeywords(
         IReadOnlyList<string>? keywords,
@@ -115,7 +116,7 @@ public static class CardTextFormatter
             if (count <= 0) continue;
             int index = result.IndexOf(id);
             int total = count + (index >= 0 ? 1 : 0);
-            string token = total >= 2 ? $"{id}|{total}" : id;
+            string token = total >= 2 ? $"{id}|+{total}" : $"{id}|+";
             if (index >= 0) result[index] = token;
             else result.Add(token);
         }
@@ -443,7 +444,7 @@ public static class CardTextFormatter
         "recoverFromExhaust" => DescribeRecoverFromExhaust(e, context),
         "modifyCardCost" => DescribeModifyCardCost(e),
         "setPhase" => $"{PhaseOwnerPrefix(e)}位相を{PhaseJp(e.Name)}にする",
-        "invertPhase" => $"{PhaseOwnerPrefix(e)}位相を反転する",
+        "invertPhase" => $"{PhaseOwnerPrefix(e)}位相を[K:invert]する",
         "augmentCards" => DescribeAugmentCards(e),
         // Phase 10.5.L1: relic 固有 action の自動文章化。formatter は battle 用と
         // 共有のため、relic action もここに併記する。
@@ -618,23 +619,28 @@ public static class CardTextFormatter
         _ => "なし",
     };
 
+    /// <summary>
+    /// 例: 「手札の選んだアタック[N:1]枚に[K:enhance]【[K:bipolar]】する」。数が 2 以上なら【[K:bipolar|2]】（表示は双極2）。
+    /// 対象の言い方は modifyCardCost（選んだ／ランダムな／全）に合わせる。
+    /// </summary>
     private static string DescribeAugmentCards(CardEffect e)
     {
-        string keyword = $"[K:{e.Name ?? "?"}]";
-        string amount = $"[N:{e.Amount}]";
-        if (e.Pile == "self") return $"このカードに{keyword}を{amount}付与する";
+        string keyword = e.Amount >= 2 ? $"[K:{e.Name ?? "?"}|{e.Amount}]" : $"[K:{e.Name ?? "?"}]";
+        string enhance = $"[K:enhance]【{keyword}】する";
+        if (e.Pile == "self") return $"このカードに{enhance}";
         string zone = ZoneJp(e.Pile ?? "hand");
         string kind = string.IsNullOrEmpty(e.CardTypeFilter)
             || !System.Enum.TryParse<CardType>(e.CardTypeFilter, ignoreCase: true, out var type)
             ? "カード"
             : CardTypeJp(type);
         int count = e.CardCount ?? 1;
-        return e.Select switch
+        string targets = e.Select switch
         {
-            "all" => $"{zone}の{kind}全てに{keyword}を{amount}付与する",
-            "random" => $"{zone}のランダムな{kind}[N:{count}]枚に{keyword}を{amount}付与する",
-            _ => $"{zone}の{kind}[N:{count}]枚を選び、{keyword}を{amount}付与する",
+            "all" => $"{zone}の全{kind}",
+            "random" => $"{zone}のランダムな{kind}[N:{count}]枚",
+            _ => $"{zone}の選んだ{kind}[N:{count}]枚",
         };
+        return $"{targets}に{enhance}";
     }
 
     private static string DescribeModifyCardCost(CardEffect e)

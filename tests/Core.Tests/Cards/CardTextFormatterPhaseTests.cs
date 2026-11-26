@@ -21,17 +21,37 @@ public sealed class CardTextFormatterPhaseTests
 
     [Fact]
     public void InvertPhase_Self() =>
-        Assert.Equal("位相を反転する。", Format(new CardEffect("invertPhase", EffectScope.Self, null, 0)));
+        Assert.Equal("位相を[K:invert]する。", Format(new CardEffect("invertPhase", EffectScope.Self, null, 0)));
 
     [Fact]
     public void AugmentCards_ChooseOneAttack() =>
-        Assert.Equal("手札のアタック[N:1]枚を選び、[K:bipolar]を[N:1]付与する。",
+        Assert.Equal("手札の選んだアタック[N:1]枚に[K:enhance]【[K:bipolar]】する。",
             Format(new CardEffect("augmentCards", EffectScope.Self, null, 1, Name: "bipolar",
                 Pile: "hand", Select: "choose", CardCount: 1, CardTypeFilter: "Attack")));
 
     [Fact]
     public void AugmentCards_AllAttacks() =>
-        Assert.Equal("手札のアタック全てに[K:bipolar]を[N:1]付与する。",
+        Assert.Equal("手札の全アタックに[K:enhance]【[K:bipolar]】する。",
             Format(new CardEffect("augmentCards", EffectScope.Self, null, 1, Name: "bipolar",
                 Pile: "hand", Select: "all", CardTypeFilter: "Attack")));
+
+    [Fact]
+    public void AugmentCards_RandomTwoStacks() =>
+        Assert.Equal("手札のランダムなアタック[N:1]枚に[K:enhance]【[K:bipolar|2]】する。",
+            Format(new CardEffect("augmentCards", EffectScope.Self, null, 2, Name: "bipolar",
+                Pile: "hand", Select: "random", CardCount: 1, CardTypeFilter: "Attack")));
+
+    [Fact]
+    public void AugmentCards_Self() =>
+        Assert.Equal("このカードに[K:enhance]【[K:bipolar]】する。",
+            Format(new CardEffect("augmentCards", EffectScope.Self, null, 1, Name: "bipolar", Pile: "self")));
+
+    [Fact]
+    public void Keywords_EnhanceAndInvert_HaveDescriptions()
+    {
+        Assert.Equal("【 】内の効果を与える。", CardKeywords.Get("enhance")!.Description);
+        Assert.Equal("エンハンス", CardKeywords.Get("enhance")!.Name);
+        Assert.Equal("位相を持つ場合、対となる位相に変更する。", CardKeywords.Get("invert")!.Description);
+        Assert.Equal("反転", CardKeywords.Get("invert")!.Name);
+    }
 }

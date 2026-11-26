@@ -40,7 +40,12 @@ public static class CardKeywords
         ["contingency"] = new("contingency", "伏策",
             "使用時は効果が実行されず、発動待ちとして除外する。伏策条件を満たした時に効果を実行し、捨札へ移動する。"),
         ["bipolar"] = new("bipolar", "双極",
-            "位相が[P:calm]の時、手札にある限り、次のターンに持ち越される。位相が[P:motion]の時に使用すると、エナジーをこの数だけ得て、このカードの双極は全て消える。"),
+            "位相が[P:calm]の時、手札にある限り、次のターンに持ち越される。\n位相が[P:motion]の時、発動時にエナジーを+[N:X]し、双極が消滅する。"),
+        // カードに【 】内の能力を後から足す（今は双極）。表示側は X を実際の数に置き換える。
+        ["enhance"] = new("enhance", "エンハンス",
+            "【 】内の効果を与える。"),
+        ["invert"] = new("invert", "反転",
+            "位相を持つ場合、対となる位相に変更する。"),
     };
 
     public static KeywordMeta? Get(string id) =>
