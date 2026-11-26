@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using RoguelikeCardGame.Core.Cards;
@@ -47,6 +48,58 @@ public sealed record BattleCardInstance(
         ?? definition?.PoolClass
         ?? CardPoolClass.Universal;
 
+    /// <summary>
+    /// 後から足された能力（双極など）。null は旧データで、空として扱う。
+    /// コスト変更と同じくカード個体について領域を移動し、戦闘終了で消える。
+    /// </summary>
+    public ImmutableArray<CardAugment>? Augments { get; init; }
+
+    /// <summary>旧state/fixtureの null を安全に空配列として扱う。</summary>
+    public ImmutableArray<CardAugment> EffectiveAugments =>
+        Augments is { } augments && !augments.IsDefault
+            ? augments
+            : ImmutableArray<CardAugment>.Empty;
+
+    /// <summary>キーワードを足す。同じキーワードは数を加算して 1 件にまとめる。</summary>
+    public BattleCardInstance AddKeyword(string keywordId, int count)
+    {
+        if (count <= 0)
+            throw new ArgumentOutOfRangeException(nameof(count), count, "count must be positive");
+        var current = EffectiveAugments;
+        for (int i = 0; i < current.Length; i++)
+        {
+            var augment = current[i];
+            if (augment.Kind == CardAugment.KeywordKind && augment.KeywordId == keywordId)
+                return this with { Augments = current.SetItem(i, augment with { Count = augment.Count + count }) };
+        }
+        return this with { Augments = current.Add(new CardAugment(CardAugment.KeywordKind, keywordId, count)) };
+    }
+
+    /// <summary>後から足されたキーワードの数（無ければ 0）。</summary>
+    public int KeywordCount(string keywordId) =>
+        EffectiveAugments
+            .Where(augment => augment.Kind == CardAugment.KeywordKind && augment.KeywordId == keywordId)
+            .Sum(augment => augment.Count);
+
+    /// <summary>後から足されたキーワードをすべて取り除く。</summary>
+    public BattleCardInstance RemoveKeyword(string keywordId)
+    {
+        if (KeywordCount(keywordId) == 0) return this;
+        return this with
+        {
+            Augments = EffectiveAugments
+                .Where(augment => !(augment.Kind == CardAugment.KeywordKind && augment.KeywordId == keywordId))
+                .ToImmutableArray(),
+        };
+    }
+
+    /// <summary>後から足されたキーワードと数（足した順）。</summary>
+    public IReadOnlyList<(string Id, int Count)> AugmentedKeywords() =>
+        EffectiveAugments
+            .Where(augment => augment.Kind == CardAugment.KeywordKind)
+            .Select(augment => (augment.KeywordId, augment.Count))
+            .ToArray();
+
     public BattleCardInstance AddCostModifier(CardCostModifier modifier)
     {
         if (modifier.Amount == 0) return this;
@@ -79,7 +132,8 @@ public sealed record BattleCardInstance(
         && IsUpgraded == other.IsUpgraded
         && CostOverride == other.CostOverride
         && PoolClassOverride == other.PoolClassOverride
-        && EffectiveCostModifiers.SequenceEqual(other.EffectiveCostModifiers);
+        && EffectiveCostModifiers.SequenceEqual(other.EffectiveCostModifiers)
+        && EffectiveAugments.SequenceEqual(other.EffectiveAugments);
 
     public override int GetHashCode()
     {
@@ -91,6 +145,8 @@ public sealed record BattleCardInstance(
         hash.Add(PoolClassOverride);
         foreach (var modifier in EffectiveCostModifiers)
             hash.Add(modifier);
+        foreach (var augment in EffectiveAugments)
+            hash.Add(augment);
         return hash.ToHashCode();
     }
 }
