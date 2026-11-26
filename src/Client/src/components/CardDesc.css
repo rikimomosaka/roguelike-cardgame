@@ -147,3 +147,10 @@
 .card-desc-phase { font-weight: 700; }
 .card-desc-phase--calm { color: #6fb2ff; }
 .card-desc-phase--motion { color: #ff6b57; }
+
+/* エンハンスで後から付いたキーワード: 蛍光ペンの線のような薄い背景。 */
+.card-desc-keyword--enhanced {
+  background: linear-gradient(transparent 40%, rgba(255, 214, 90, 0.42) 40%);
+  padding: 0 1px;
+  border-radius: 1px;
+}

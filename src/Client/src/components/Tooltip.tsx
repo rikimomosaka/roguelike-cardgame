@@ -296,7 +296,9 @@ function TipRefs({ refs }: { refs: CardDescRef[] }) {
     <div className="tip__refs">
       {refs.map((r) => (
         <div key={`${r.kind}:${r.id}`} className={`tip__ref tip__ref--${r.kind}`}>
-          <div className="tip__ref-name">{r.name}</div>
+          <div className={r.kind === 'keyword' && r.id.startsWith('phase:')
+            ? `tip__ref-name card-desc-phase card-desc-phase--${r.id.slice('phase:'.length)}`
+            : 'tip__ref-name'}>{r.name}</div>
           {/* card は名前のみ (cardref として識別補助)。
               keyword / status は desc を併記。
               unit は extractCardDescRefs 側で除外済 (M6.9)。 */}

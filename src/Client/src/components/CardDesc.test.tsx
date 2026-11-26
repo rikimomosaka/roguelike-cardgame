@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { render } from '@testing-library/react'
-import { CardDesc, KEYWORD_DEFS, STATUS_DEFS } from './CardDesc'
+import { CardDesc, KEYWORD_DEFS, STATUS_DEFS, extractCardDescRefs } from './CardDesc'
 
 describe('CardDesc', () => {
   it('renders plain text without markers as-is', () => {
@@ -22,11 +22,42 @@ describe('CardDesc', () => {
     expect(kw?.getAttribute('data-keyword')).toBe('wild')
   })
 
-  it('renders a counted keyword as name plus count', () => {
+  it('renders a counted keyword as name plus a yellow count', () => {
     const { container } = render(<CardDesc text="[K:bipolar|2]" />)
     const kw = container.querySelector('.card-desc-keyword')
     expect(kw?.textContent).toBe('双極2')
     expect(kw?.getAttribute('data-keyword')).toBe('bipolar')
+    expect(kw?.querySelector('.card-desc-num')?.textContent).toBe('2')
+    expect(kw).not.toHaveClass('card-desc-keyword--enhanced')
+  })
+
+  it('marks keywords added by enhance with a highlighter background', () => {
+    const { container } = render(<CardDesc text={'[K:bipolar|+2]\n[K:wild]'} />)
+    const [added, own] = Array.from(container.querySelectorAll('.card-desc-keyword'))
+    expect(added.textContent).toBe('双極2')
+    expect(added).toHaveClass('card-desc-keyword--enhanced')
+    expect(own).not.toHaveClass('card-desc-keyword--enhanced')
+    const single = render(<CardDesc text="[K:bipolar|+]" />).container.querySelector('.card-desc-keyword')
+    expect(single?.textContent).toBe('双極')
+    expect(single).toHaveClass('card-desc-keyword--enhanced')
+  })
+
+  it('fills the bipolar count into its tooltip description and adds phase terms', () => {
+    const refs = extractCardDescRefs('[K:bipolar|+2]\n位相を[P:calm]にする。[K:enhance]【[K:bipolar]】[K:invert]')
+    const bipolar = refs.find(r => r.kind === 'keyword' && r.id === 'bipolar')
+    expect(bipolar && 'desc' in bipolar ? bipolar.desc : '').toBe(
+      '位相が[P:calm]の時、手札にある限り、次のターンに持ち越される。\n位相が[P:motion]の時、発動時にエナジーを+[N:2]し、双極が消滅する。')
+    expect(refs.map(r => r.id)).toEqual(['bipolar', 'phase:calm', 'enhance', 'invert'])
+    const calm = refs.find(r => r.id === 'phase:calm')
+    expect(calm?.name).toBe('静')
+    expect(refs.find(r => r.id === 'enhance')).toMatchObject({ name: 'エンハンス', desc: '【 】内の効果を与える。' })
+    expect(refs.find(r => r.id === 'invert')).toMatchObject({ name: '反転', desc: '位相を持つ場合、対となる位相に変更する。' })
+  })
+
+  it('uses 1 for the bipolar count when the keyword has no count', () => {
+    const refs = extractCardDescRefs('[K:bipolar]')
+    const bipolar = refs[0]
+    expect('desc' in bipolar ? bipolar.desc : '').toContain('+[N:1]し')
   })
 
   it('colours phase words: 静 blue and 動 red', () => {
@@ -41,7 +72,7 @@ describe('CardDesc', () => {
   it('renders a single keyword without a count', () => {
     const { container } = render(<CardDesc text="[K:bipolar]" />)
     expect(container.querySelector('.card-desc-keyword')?.textContent).toBe('双極')
-    expect(KEYWORD_DEFS.bipolar.desc).toBe('位相が[P:calm]の時、手札にある限り、次のターンに持ち越される。位相が[P:motion]の時に使用すると、エナジーをこの数だけ得て、このカードの双極は全て消える。')
+    expect(KEYWORD_DEFS.bipolar.desc).toBe('位相が[P:calm]の時、手札にある限り、次のターンに持ち越される。\n位相が[P:motion]の時、発動時にエナジーを+[N:X]し、双極が消滅する。')
   })
 
   it('marks a disabled Wild keyword with a strike-through label and red suffix', () => {
@@ -354,6 +385,7 @@ describe('CardDesc', () => {
     const { container } = render(
       <CardDesc text="敵全体に[R:9|:自身の攻撃力×1.5]アタック。" compress={false} />,
     )
-    expect(container.textContent).toBe('敵全体にX(Xは自身の攻撃力×1.5)アタック。')
+    expect(container.textContent).toBe('敵全体に9(自身の攻撃力×1.5)アタック。')
+    expect(container.querySelector('.card-desc-num')?.textContent).toBe('9')
   })
 })

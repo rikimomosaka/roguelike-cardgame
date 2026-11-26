@@ -1,18 +1,13 @@
 import type { ReactNode } from 'react'
+import { PHASE_DEFS } from '../../components/CardDesc'
 
 /** 位相（静・動）。位相なしは undefined で表す。 */
 export type ActorPhaseDemo = 'calm' | 'motion'
 
-/** 位相の名前と効果（キャラにカーソルを合わせたときの説明に出す）。 */
+/** 位相の名前と効果（CardDesc の PHASE_DEFS を共通で使う）。 */
 const PHASE_INFO: Readonly<Record<ActorPhaseDemo, { name: string; effect: string }>> = {
-  calm: {
-    name: '静',
-    effect: 'ターン終了時、手札のアタック全てに[K:bipolar]を1付与する。アタックを使うと、その効果の後に位相がなくなる。',
-  },
-  motion: {
-    name: '動',
-    effect: 'ターン終了時の攻撃のダメージが1.5倍になる。アタック以外を使うと、その効果の後に位相がなくなる。',
-  },
+  calm: { name: PHASE_DEFS.calm.name, effect: PHASE_DEFS.calm.desc },
+  motion: { name: PHASE_DEFS.motion.name, effect: PHASE_DEFS.motion.desc },
 }
 
 /**

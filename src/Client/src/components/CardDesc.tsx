@@ -10,7 +10,16 @@ import './CardDesc.css'
 export const KEYWORD_DEFS: Record<string, { name: string; desc: string }> = {
   bipolar: {
     name: '双極',
-    desc: '位相が[P:calm]の時、手札にある限り、次のターンに持ち越される。位相が[P:motion]の時に使用すると、エナジーをこの数だけ得て、このカードの双極は全て消える。',
+    // X は表示する双極の数に置き換える（keywordDesc）。
+    desc: '位相が[P:calm]の時、手札にある限り、次のターンに持ち越される。\n位相が[P:motion]の時、発動時にエナジーを+[N:X]し、双極が消滅する。',
+  },
+  enhance: {
+    name: 'エンハンス',
+    desc: '【 】内の効果を与える。',
+  },
+  invert: {
+    name: '反転',
+    desc: '位相を持つ場合、対となる位相に変更する。',
   },
   wild: {
     name: 'ワイルド',
@@ -147,6 +156,31 @@ export type CardDescRef =
 
 export type CardDescTerm = Extract<CardDescRef, { kind: 'keyword' | 'status' }>
 
+/** 位相（静・動）の名前と効果。カード本文に静・動が出たときの補足説明と、キャラの説明に使う。 */
+export const PHASE_DEFS: Record<'calm' | 'motion', { name: string; desc: string }> = {
+  calm: {
+    name: '静',
+    desc: 'ターン終了時、手札の全アタックに[K:enhance]【[K:bipolar]】する。アタックを使うと、その効果の後に位相がなくなる。',
+  },
+  motion: {
+    name: '動',
+    desc: 'ターン終了時の攻撃のダメージが1.5倍になる。アタック以外を使うと、その効果の後に位相がなくなる。',
+  },
+}
+
+/** キーワードマーカーの付加情報（"+" = エンハンスで後から付いた、数字 = 数）。 */
+function parseKeywordExtra(extra: string | undefined): { enhanced: boolean; count: number | null } {
+  const raw = extra ?? ''
+  const enhanced = raw.startsWith('+')
+  const digits = enhanced ? raw.slice(1) : raw
+  return { enhanced, count: /^\d+$/.test(digits) ? Number(digits) : null }
+}
+
+/** キーワードの説明。X はその場の数（双極2 なら 2、数が無ければ 1）に置き換える。 */
+function keywordDesc(desc: string, count: number | null): string {
+  return desc.replace('[N:X]', `[N:${count ?? 1}]`)
+}
+
 // Pure parser used by Tooltip; it has no Fast Refresh state of its own.
 // eslint-disable-next-line react-refresh/only-export-components
 export function extractCardDescRefs(
@@ -156,13 +190,19 @@ export function extractCardDescRefs(
   const seen = new Set<string>()
   const refs: CardDescRef[] = []
   for (const m of text.matchAll(MARKER_RE)) {
-    const [, kind, value] = m
+    const [, kind, value, extra] = m
     const key = `${kind}:${value}`
     if (seen.has(key)) continue
     seen.add(key)
     if (kind === 'K') {
       const def = KEYWORD_DEFS[value]
-      if (def) refs.push({ kind: 'keyword', id: value, name: def.name, desc: def.desc })
+      if (def) {
+        const { count } = parseKeywordExtra(extra)
+        refs.push({ kind: 'keyword', id: value, name: def.name, desc: keywordDesc(def.desc, count) })
+      }
+    } else if (kind === 'P') {
+      const def = value === 'calm' || value === 'motion' ? PHASE_DEFS[value] : undefined
+      if (def) refs.push({ kind: 'keyword', id: `phase:${value}`, name: def.name, desc: def.desc })
     } else if (kind === 'S') {
       const def = STATUS_DEFS[value]
       if (def) refs.push({ kind: 'status', id: value, name: def.name, desc: def.desc })
@@ -423,18 +463,23 @@ function renderMarker(
       const definition = KEYWORD_DEFS[value]
       const jp = definition?.name ?? value
       const disabled = disabledKeywords.includes(value)
+      const { enhanced, count } = parseKeywordExtra(extra)
       const rendered = (
         <span
           key={key}
-          className={`card-desc-keyword${disabled ? ' card-desc-keyword--disabled' : ''}`}
+          className={[
+            'card-desc-keyword',
+            disabled ? 'card-desc-keyword--disabled' : '',
+            enhanced ? 'card-desc-keyword--enhanced' : '',
+          ].filter(Boolean).join(' ')}
           data-keyword={value}
         >
-          <span className="card-desc-keyword__label">{jp}{extra && /^\d+$/.test(extra) ? extra : ''}</span>
+          <span className="card-desc-keyword__label">{jp}{count !== null ? <span className="card-desc-num">{count}</span> : null}</span>
           {disabled ? <span className="card-desc-keyword__disabled"> (無効)</span> : null}
         </span>
       )
       return definition && renderTerm
-        ? renderTerm({ kind: 'keyword', id: value, name: definition.name, desc: definition.desc }, rendered, key)
+        ? renderTerm({ kind: 'keyword', id: value, name: definition.name, desc: keywordDesc(definition.desc, count) }, rendered, key)
         : rendered
     }
     case 'S': {
@@ -481,9 +526,10 @@ function renderMarker(
       const modifier = separator >= 0 ? raw.slice(0, separator) : ''
       const label = separator >= 0 ? raw.slice(separator + 1) : raw
       if (revealStatRefs) {
+        // 展開表示（ポップアップ）では代入後の値と参照元を並べる: 「5(自身の攻撃力)」。
         return (
           <span key={key} className="card-desc-var" data-stat-ref={label}>
-            X(Xは{label})
+            <span className="card-desc-num">{value}</span>({label})
           </span>
         )
       }
