@@ -71,4 +71,6 @@ public enum BattleEventKind
     /// 同じカードの効果が連続する間は 1 回だけ出す。演出でカード名を見せるため。
     /// </summary>
     EnemyCardAction = 38,
+    /// <summary>キャラの位相が変わった（Note = 前->後:理由）。</summary>
+    PhaseChanged = 39,
 }

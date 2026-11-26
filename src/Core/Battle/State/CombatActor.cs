@@ -66,6 +66,9 @@ public sealed record CombatActor(
     /// <summary>基礎守備力。AmountSource "selfDefense" が参照する。敏捷は従来どおり加わる。</summary>
     public int DefensePower { get; init; }
 
+    /// <summary>位相（静・動）。バフ・デバフとは別。旧データは None。</summary>
+    public ActorPhase Phase { get; init; } = ActorPhase.None;
+
     public bool IsAlive => CurrentHp > 0;
 
     /// <summary>未保持なら 0 を返す。Statuses は 0 以下の amount を持たない不変条件。</summary>
