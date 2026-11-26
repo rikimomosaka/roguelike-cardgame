@@ -96,6 +96,10 @@ describe('actorVisualManifest', () => {
     expect(boss?.stage?.displayHeight).toBe(256)
     // 影の幅はキャラの横幅で決まるので、小さい敵ほど狭い。
     expect(slime!.stage!.shadowWidth).toBeLessThan(boss!.stage!.shadowWidth)
+    // 位相の輪はドットの横幅そのもの（影のように 0.8 倍にしない）。
+    expect(slime!.stage!.bodyWidth).toBeLessThan(boss!.stage!.bodyWidth)
+    expect(slime!.stage!.bodyWidth).toBeGreaterThan(slime!.stage!.shadowWidth)
+    expect(slime!.stage!.footGap).toBeGreaterThanOrEqual(0)
   })
 
   it.each([

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { render } from '@testing-library/react'
-import { PhaseAura, slotTooltipContent } from './PhaseMarks'
+import { PhaseAura, phaseRingStyle, slotTooltipContent } from './PhaseMarks'
 
 describe('PhaseMarks', () => {
   it('shows a calm aura ring for 静 and a motion ring for 動', () => {
@@ -13,6 +13,24 @@ describe('PhaseMarks', () => {
   it('renders nothing without a phase', () => {
     const { container } = render(<PhaseAura />)
     expect(container.innerHTML).toBe('')
+  })
+})
+
+describe('phaseRingStyle', () => {
+  it('sits on the bottom edge of the dots and matches their width', () => {
+    // キャンバス下端 198px、足元の下に 4 ドット（8px）の隙間 → ドットの下端は 190px。
+    const style = phaseRingStyle({ bodyWidth: 90, footGap: 8 })
+    expect(style.width).toBe('90px')
+    const height = parseFloat(String(style.height))
+    const top = parseFloat(String(style.top))
+    expect(top + height).toBeLessThanOrEqual(194)
+    expect(top + height).toBeGreaterThanOrEqual(190)
+  })
+
+  it('moves up with a floating actor', () => {
+    const grounded = parseFloat(String(phaseRingStyle({ bodyWidth: 90, footGap: 8 }).top))
+    const floating = parseFloat(String(phaseRingStyle({ bodyWidth: 90, footGap: 48 }).top))
+    expect(grounded - floating).toBe(40)
   })
 })
 

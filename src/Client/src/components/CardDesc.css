@@ -148,13 +148,13 @@
 .card-desc-phase--calm { color: #6fb2ff; }
 .card-desc-phase--motion { color: #ff6b57; }
 
-/* エンハンスで後から付いたキーワード: 文字のフチ（カード面では黒い 1px のフチ）を橙に変える。
+/* エンハンスで後から付いたキーワード: 文字のフチ（カード面では黒い 1px のフチ）を紫に変える。
    双極2 の数字も同じフチにする。カード面・ポップアップの両方に効く。 */
 .card-desc-keyword--enhanced,
 .card-desc-keyword--enhanced .card-desc-num {
   text-shadow:
-    -1px 0 0 #e8661a,
-    1px 0 0 #e8661a,
-    0 -1px 0 #e8661a,
-    0 1px 0 #e8661a;
+    -1px 0 0 #9b4dff,
+    1px 0 0 #9b4dff,
+    0 -1px 0 #9b4dff,
+    0 1px 0 #9b4dff;
 }

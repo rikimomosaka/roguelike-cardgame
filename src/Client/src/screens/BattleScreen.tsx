@@ -92,7 +92,7 @@ import {
 } from './battleScreen/intentSummary'
 import { CardChoiceModal } from './battleScreen/CardChoiceModal'
 import { PlayHistoryModal } from './battleScreen/FinisherRecordModal'
-import { PhaseAura, slotTooltipContent, type ActorPhaseDemo } from './battleScreen/PhaseMarks'
+import { PhaseAura, phaseRingStyle, slotTooltipContent, type ActorPhaseDemo } from './battleScreen/PhaseMarks'
 import { characterSkillCutinDurationMs } from './battleScreen/characterSkillCutinPresentation'
 import {
   formatComboDescription,
@@ -1139,7 +1139,12 @@ function Slot({
       {...interactiveProps}
     >
       <CombatFeedbackStack items={feedbackItems} />
-      <PhaseAura phase={char.phase} />
+      <PhaseAura
+        phase={char.phase}
+        style={char.stage
+          ? phaseRingStyle(char.stage)
+          : phaseRingStyle({ bodyWidth: (shadowWidth ?? 78) / 0.8, footGap: 8 })}
+      />
       {actionLabel ? (
         <div key={actionLabel.id} className="slot-action-label" role="status">
           <span className="slot-action-label__text">{actionLabel.text}</span>

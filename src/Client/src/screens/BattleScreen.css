@@ -3098,26 +3098,14 @@ html[data-motion='off'] .slot-aura::after {
   }
 }
 
+/* 足元の輪。位置・幅・高さは PhaseMarks の phaseRingStyle がインラインで決める（ドットの下端・左右幅）。 */
 .slot-phase-aura {
   position: absolute;
   left: 50%;
-  top: 40px;
   z-index: 1;
-  width: 130px;
-  height: 170px;
   transform: translateX(-50%);
   pointer-events: none;
   mix-blend-mode: screen;
-}
-
-.slot-phase-aura::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: 4px;
-  width: 110px;
-  height: 22px;
-  margin-left: -55px;
   border-radius: 50%;
   border: 2px solid var(--phase-soft);
   box-shadow: 0 0 10px var(--phase-soft);

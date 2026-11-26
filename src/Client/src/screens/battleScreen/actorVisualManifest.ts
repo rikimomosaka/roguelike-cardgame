@@ -21,6 +21,10 @@ export type ActorStage = {
   centerY: number
   /** 空中にいるキャラ（絵の中で浮かせてある）。 */
   airborne: boolean
+  /** ドットの左右幅（px）。位相の足元の輪の幅に使う。 */
+  bodyWidth: number
+  /** ドットの下端からキャンバス下端までの隙間（px）。足元の位置を出すのに使う。 */
+  footGap: number
 }
 
 export type ActorVisual = {
@@ -65,6 +69,8 @@ function stageFor(kind: ActorKind, id: string): ActorStage | undefined {
     centerY: m.centerY,
     // 地面の線より上に浮いている（足元の下に 4 ドット以上の隙間がある）キャラ。
     airborne: ACTOR_CANVAS.footRow - m.bottom >= 4,
+    bodyWidth: m.footprint * ACTOR_CANVAS.scale,
+    footGap: (ACTOR_CANVAS.size - 1 - m.bottom) * ACTOR_CANVAS.scale,
   }
 }
 

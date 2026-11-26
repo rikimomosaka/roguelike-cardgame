@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { PHASE_DEFS } from '../../components/CardDesc'
 
 /** 位相（静・動）。位相なしは undefined で表す。 */
@@ -34,11 +34,31 @@ export function slotTooltipContent(char: {
     : null
 }
 
+/** 新規格のキャラのキャンバス下端（スロット上端からの y）。BattleScreen の STAGE_CANVAS_BOTTOM_Y と同じ。 */
+const STAGE_CANVAS_BOTTOM_Y = 198
+/** 輪の縦横比（横に平たい楕円）。 */
+const RING_ASPECT = 0.2
+
 /**
- * 位相のオーラの足元の輪（静 = 青、動 = 赤）。
+ * 足元の輪の位置と大きさ。幅はドットの左右幅、下端はドットの下端に揃える
+ * （輪の 2 割だけ下にはみ出させて足を囲む）。
+ */
+export function phaseRingStyle(stage: { bodyWidth: number; footGap: number }): CSSProperties {
+  const width = Math.round(stage.bodyWidth)
+  const height = Math.max(8, Math.round(width * RING_ASPECT))
+  const footY = STAGE_CANVAS_BOTTOM_Y - stage.footGap
+  return {
+    width: `${width}px`,
+    height: `${height}px`,
+    top: `${Math.round(footY - height * 0.8)}px`,
+  }
+}
+
+/**
+ * 位相のオーラの足元の輪（静 = 青、動 = 赤）。位置と大きさは phaseRingStyle で決める。
  * 体の輪郭に沿って揺らめく光は、スロットの has-phase--* クラスでスプライトに付ける（BattleScreen.css）。
  */
-export function PhaseAura({ phase }: { phase?: ActorPhaseDemo }) {
+export function PhaseAura({ phase, style }: { phase?: ActorPhaseDemo; style?: CSSProperties }) {
   if (!phase) return null
-  return <span className={`slot-phase-aura slot-phase-aura--${phase}`} aria-hidden="true" />
+  return <span className={`slot-phase-aura slot-phase-aura--${phase}`} style={style} aria-hidden="true" />
 }

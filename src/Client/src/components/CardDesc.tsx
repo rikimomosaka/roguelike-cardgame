@@ -160,11 +160,11 @@ export type CardDescTerm = Extract<CardDescRef, { kind: 'keyword' | 'status' }>
 export const PHASE_DEFS: Record<'calm' | 'motion', { name: string; desc: string }> = {
   calm: {
     name: '静',
-    desc: 'ターン終了時、手札の全アタックに[K:enhance]【[K:bipolar]】する。アタックを使うと、その効果の後に位相がなくなる。',
+    desc: 'ターン終了時、手札の全アタックに[K:enhance]【[K:bipolar]】する。\nアタックカードを使用した時、この位相は消滅する。',
   },
   motion: {
     name: '動',
-    desc: 'ターン終了時の攻撃のダメージが1.5倍になる。アタック以外を使うと、その効果の後に位相がなくなる。',
+    desc: 'アタックで与えるダメージが1.5倍になる。\nアタックカード以外を使用した時、この位相は消滅する。',
   },
 }
 
