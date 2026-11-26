@@ -101,10 +101,32 @@
 
 /* Phase 10.5.M2: tooltip 二段目 — description 内のキーワード / ステータス /
    カード参照の詳細定義を並べる。各行は名前 (色付け) + 説明文。 */
+/* 本文の横に並ぶ別枠（コスト変更の内訳・用語の説明）。 */
+.tip__side {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: -1px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 270px;
+}
+
+.tip[data-side='left'] .tip__side {
+  right: calc(100% + 8px);
+  left: auto;
+}
+
+.tip__refs-panel {
+  box-sizing: border-box;
+  padding: 10px 12px;
+  background: rgba(10, 6, 4, 0.97);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 12px rgba(201, 152, 90, 0.25);
+}
+
 .tip__refs {
-  margin-top: 8px;
-  padding-top: 6px;
-  border-top: 1px dashed rgba(201, 152, 90, 0.4);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -124,6 +146,8 @@
   display: inline;
   margin-left: 6px;
   color: var(--fg-muted);
+  /* 用語の説明文は見出しより少し小さく。 */
+  font-size: 12px;
 }
 
 .tip__ref--keyword .tip__ref-name { color: #c5d4ff; }
@@ -136,11 +160,8 @@
 .tip__ref--unit .tip__ref-name { color: #d8b4ff; }
 
 .tip__cost-panel {
-  position: absolute;
-  left: calc(100% + 8px);
-  top: -1px;
   box-sizing: border-box;
-  width: 270px;
+  width: 100%;
   padding: 10px 12px;
   background: rgba(10, 6, 4, 0.97);
   border: 1px solid var(--border-light);
@@ -152,13 +173,7 @@
   line-height: 1.45;
 }
 
-/* The normal description is always the cursor-near panel. When the composite
-   flips to the cursor's left, put the calculation farther left instead of
-   leaving it between the cursor and the normal description. */
-.tip[data-cost-side='left'] .tip__cost-panel {
-  right: calc(100% + 8px);
-  left: auto;
-}
+/* 本文が常にカーソル側。左に出るときは別枠をさらに左に置く（.tip[data-side='left'] .tip__side）。 */
 
 .tip__cost-title {
   margin-bottom: 6px;
@@ -205,7 +220,8 @@
 }
 
 @media (max-width: 699px) {
-  .tip__cost-panel {
+  .tip__side,
+  .tip[data-side='left'] .tip__side {
     right: auto;
     left: 0;
     top: calc(100% + 8px);

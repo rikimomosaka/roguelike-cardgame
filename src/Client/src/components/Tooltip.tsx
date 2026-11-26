@@ -79,31 +79,38 @@ export function TooltipHost({ children }: { children: ReactNode }) {
     [],
   )
 
-  useEffect(() => {
-    const el = tipRef.current
-    if (!el || !state.content) return
-    const costPanel = el.querySelector<HTMLElement>('.tip__cost-panel')
-    const { left, top, costPanelSide } = computePlacement(
-      state.pos,
-      !!state.content.costBreakdown,
-      {
-        baseWidth: el.offsetWidth,
-        baseHeight: el.offsetHeight,
-        panelWidth: costPanel?.offsetWidth ?? 0,
-        panelHeight: costPanel?.offsetHeight ?? 0,
-      },
-    )
-    if (costPanelSide) el.dataset.costSide = costPanelSide
-    else delete el.dataset.costSide
-    el.style.setProperty('--tip-left', `${left}px`)
-    el.style.setProperty('--tip-top', `${top}px`)
-  }, [state])
-
   const { content } = state
   // Why: marker (e.g. [C:strike] / [U:wisp]) を表示名へ解決するため catalog を引く。
   //   未ロード時は空オブジェクトで CardDesc が ID フォールバック表示する。
   const { names: cardNames } = useCardCatalog()
   const { names: unitNames } = useUnitCatalog()
+  // 本文中のキーワード・状態の説明。本文の下ではなく、横の別枠（tip__side）に並べる。
+  const refs = content && typeof content.desc === 'string' && !content.suppressRefs
+    ? extractCardDescRefs(content.desc, cardNames).filter(
+        ref => ref.kind !== content.selfReference?.kind || ref.id !== content.selfReference.id,
+      )
+    : []
+  const hasSide = !!content?.costBreakdown || refs.length > 0
+
+  useEffect(() => {
+    const el = tipRef.current
+    if (!el || !state.content) return
+    const side = el.querySelector<HTMLElement>('.tip__side')
+    const { left, top, costPanelSide } = computePlacement(
+      state.pos,
+      !!side,
+      {
+        baseWidth: el.offsetWidth,
+        baseHeight: el.offsetHeight,
+        panelWidth: side?.offsetWidth ?? 0,
+        panelHeight: side?.offsetHeight ?? 0,
+      },
+    )
+    if (costPanelSide) el.dataset.side = costPanelSide
+    else delete el.dataset.side
+    el.style.setProperty('--tip-left', `${left}px`)
+    el.style.setProperty('--tip-top', `${top}px`)
+  }, [state])
 
   return (
     <TooltipContext.Provider value={ctx}>
@@ -114,7 +121,7 @@ export function TooltipHost({ children }: { children: ReactNode }) {
           ref={tipRef}
           className="tip is-on"
           role="tooltip"
-          data-cost-side={preferredCostPanelSide(state.pos, !!content.costBreakdown) ?? undefined}
+          data-side={preferredCostPanelSide(state.pos, hasSide) ?? undefined}
         >
           <div className="tip__head">
             <div className={`tip__name${content.rarity ? ` tip__name--${content.rarity}` : ''}`}>
@@ -150,17 +157,19 @@ export function TooltipHost({ children }: { children: ReactNode }) {
               <div className="tip__flavor">{content.flavor}</div>
             </>
           ) : null}
-          {/* Phase 10.5.M2: description に含まれる keyword / status / cardref の
-              詳細定義を二段目 popup として並べる。 */}
-          {typeof content.desc === 'string' && !content.suppressRefs ? (
-            <TipRefs
-              refs={extractCardDescRefs(content.desc, cardNames).filter(
-                ref => ref.kind !== content.selfReference?.kind || ref.id !== content.selfReference.id,
-              )}
-            />
-          ) : null}
-          {content.costBreakdown ? (
-            <CostBreakdownPanel breakdown={content.costBreakdown} />
+          {/* コスト変更の内訳と、本文中の keyword / status / cardref の説明は、本文の横の別枠に並べる。
+              本文がカーソルの右に出るときはさらに右、左に出るときはさらに左（data-side）。 */}
+          {hasSide ? (
+            <div className="tip__side">
+              {content.costBreakdown ? (
+                <CostBreakdownPanel breakdown={content.costBreakdown} />
+              ) : null}
+              {refs.length > 0 ? (
+                <aside className="tip__refs-panel" aria-label="用語の説明">
+                  <TipRefs refs={refs} />
+                </aside>
+              ) : null}
+            </div>
           ) : null}
         </div>
       ) : null}

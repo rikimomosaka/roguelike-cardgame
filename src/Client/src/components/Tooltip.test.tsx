@@ -80,4 +80,32 @@ describe('Tooltip status line', () => {
     expect(refs[0]).toHaveTextContent('筋力')
     expect(refs[0]).not.toHaveTextContent('加速')
   })
+
+  it('shows keyword explanations in a separate side panel, not under the description', () => {
+    render(
+      <TooltipHost>
+        <StatusTooltipTrigger />
+      </TooltipHost>,
+    )
+
+    fireEvent.mouseEnter(screen.getByRole('button', { name: '状態説明を表示' }), { clientX: 20, clientY: 20 })
+    const tooltip = screen.getByRole('tooltip')
+    const side = tooltip.querySelector('.tip__side')
+    expect(side).toBeInTheDocument()
+    expect(side?.querySelector('.tip__refs-panel .tip__ref')).toHaveTextContent('筋力')
+    expect(tooltip.querySelector('.tip__desc .tip__ref')).toBeNull()
+    // カーソルの右に出る本文の、さらに右に並べる。
+    expect(tooltip).toHaveAttribute('data-side', 'right')
+  })
+
+  it('has no side panel when there is nothing to explain', () => {
+    render(
+      <TooltipHost>
+        <TooltipTrigger />
+      </TooltipHost>,
+    )
+
+    fireEvent.mouseEnter(screen.getByRole('button', { name: '説明を表示' }), { clientX: 20, clientY: 20 })
+    expect(screen.getByRole('tooltip').querySelector('.tip__side')).toBeNull()
+  })
 })
