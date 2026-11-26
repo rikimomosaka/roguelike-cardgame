@@ -27,8 +27,8 @@ public class TurnStartProcessorOnTurnStartTests
 
         var (after, events) = TurnStartProcessor.Process(state, MakeRng(), catalog);
 
-        // 未使用 2 + ターン開始 3、その後 OnTurnStart relic が 1 加算 → final 6
-        Assert.Equal(6, after.Energy);
+        // 未使用 2 → ターン開始で規定値 3 まで回復、その後 OnTurnStart relic が 1 加算 → final 4
+        Assert.Equal(4, after.Energy);
         // events 順序: ... TurnStart event 最後
         var lastEv = events[^1];
         Assert.Equal(BattleEventKind.TurnStart, lastEv.Kind);
@@ -39,14 +39,14 @@ public class TurnStartProcessorOnTurnStartTests
     }
 
     [Fact]
-    public void OnTurnStart_with_no_relics_keeps_carried_energy_plus_turn_gain()
+    public void OnTurnStart_with_no_relics_refills_carried_energy_to_the_turn_amount()
     {
         var catalog = BattleFixtures.MinimalCatalog();
         var state = BattleFixtures.MinimalState(energy: 2, energyMax: 3);
 
         var (after, events) = TurnStartProcessor.Process(state, MakeRng(), catalog);
 
-        Assert.Equal(5, after.Energy);
+        Assert.Equal(3, after.Energy);
         Assert.Contains(events, e => e.Kind == BattleEventKind.TurnStart);
     }
 

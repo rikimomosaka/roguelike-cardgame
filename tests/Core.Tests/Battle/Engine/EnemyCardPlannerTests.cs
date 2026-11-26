@@ -257,7 +257,7 @@ public class EnemyCardPlannerTests
     }
 
     [Fact]
-    public void Unspent_energy_carries_over_without_a_cap()
+    public void Unspent_energy_above_the_per_turn_amount_is_kept_but_not_added_to()
     {
         var catalog = Catalog();
         var state = StateWithEnemyDeck("e_guard", "e_guard", "e_guard");
@@ -266,7 +266,8 @@ public class EnemyCardPlannerTests
 
         var (planned, _) = EnemyCardPlanner.StartTurnAndPlan(state, Rng(), catalog);
 
-        Assert.Equal(12, Participant(planned).Energy);
+        // 規定値（2）以上残っているのでそのまま。上限は無い。
+        Assert.Equal(10, Participant(planned).Energy);
     }
 
     [Fact]

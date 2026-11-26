@@ -105,7 +105,7 @@ public class BattleEngineEndTurnTests
     }
 
     [Fact]
-    public void EndTurn_carries_energy_while_still_discarding_and_redrawing_hand()
+    public void EndTurn_refills_energy_up_to_the_per_turn_amount_and_redraws_hand()
     {
         var oldHand = BattleFixtures.MakeBattleCard("strike", "old-hand");
         var state = MakeState(
@@ -122,14 +122,15 @@ public class BattleEngineEndTurnTests
 
         Assert.Equal(BattleOutcome.Pending, next.Outcome);
         Assert.Equal(2, next.Turn);
-        Assert.Equal(5, next.Energy);
+        // 残り 2 → 規定値 3 まで回復（足し算ではない）。
+        Assert.Equal(3, next.Energy);
         Assert.Equal(5, next.Hand.Length);
         Assert.Contains(next.DiscardPile, card => card.InstanceId == oldHand.InstanceId);
         Assert.DoesNotContain(next.Hand, card => card.InstanceId == oldHand.InstanceId);
     }
 
     [Fact]
-    public void OnTurnEnd_energy_gain_is_carried_before_next_turn_addition()
+    public void OnTurnEnd_energy_gain_counts_toward_the_refill_target()
     {
         var relic = BattleFixtures.Relic(
             "end-energy", "OnTurnEnd", true,
@@ -147,7 +148,39 @@ public class BattleEngineEndTurnTests
         var (next, _) = BattleEngine.EndTurn(state, Rng(), catalog);
 
         Assert.Equal(BattleOutcome.Pending, next.Outcome);
-        Assert.Equal(6, next.Energy); // 未使用2 + OnTurnEnd 1 + 次ターン3
+        Assert.Equal(3, next.Energy); // 未使用2 + OnTurnEnd 1 = 3 → 規定値 3 以上なのでそのまま
+    }
+
+    [Fact]
+    public void EndTurn_keeps_energy_above_the_per_turn_amount_without_adding()
+    {
+        var state = MakeState(
+            BattleFixtures.Hero(),
+            ImmutableArray.Create(BattleFixtures.Goblin(0, 50))) with
+        {
+            Energy = 5,
+            EnergyMax = 3,
+        };
+
+        var (next, _) = BattleEngine.EndTurn(state, Rng(), BattleFixtures.MinimalCatalog());
+
+        Assert.Equal(5, next.Energy);
+    }
+
+    [Fact]
+    public void EndTurn_with_zero_energy_refills_to_the_per_turn_amount()
+    {
+        var state = MakeState(
+            BattleFixtures.Hero(),
+            ImmutableArray.Create(BattleFixtures.Goblin(0, 50))) with
+        {
+            Energy = 0,
+            EnergyMax = 4,
+        };
+
+        var (next, _) = BattleEngine.EndTurn(state, Rng(), BattleFixtures.MinimalCatalog());
+
+        Assert.Equal(4, next.Energy);
     }
 
     [Fact]

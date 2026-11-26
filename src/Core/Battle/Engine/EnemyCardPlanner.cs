@@ -179,7 +179,7 @@ internal static class EnemyCardPlanner
         projected = ComboTurnBoundaryRules.ResetAtTurnStart(projected);
         projected = projected with
         {
-            Energy = EnergyMath.AddSaturating(projected.Energy, projected.EnergyMax),
+            Energy = EnergyMath.RefillTo(projected.Energy, projected.EnergyMax),
         };
         projected = DrawHelper.Draw(
             projected,

@@ -109,7 +109,8 @@ public sealed class ExpandedBattleStatusTests
         Assert.Equal(2, updated.GetStatus(BattleStatusIds.Mastery));
         Assert.Equal(0, updated.GetStatus(BattleStatusIds.Exhaustion));
         Assert.Equal(10, next.ComboGauge);
-        Assert.Equal(5, next.Energy);
+        // 残り 1 → 規定値 3 まで回復 → 加速 +2・疲労 -1 → 4
+        Assert.Equal(4, next.Energy);
         Assert.Equal(7, next.Hand.Length);
     }
 

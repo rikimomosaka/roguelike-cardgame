@@ -22,7 +22,8 @@ export function formatEnergyOrbValue(
 
   return {
     currentText: `${current}`,
-    recoveryText: `/+${recoveryPerTurn}`,
+    // ターン開始時にこの値まで回復する（足し算ではない）。
+    recoveryText: `/${recoveryPerTurn}`,
     capped: false,
   }
 }
@@ -35,8 +36,8 @@ export function formatEnergyTooltipStatusLine(
   current: number,
   recoveryPerTurn: number,
 ): string {
-  return `(現在${current} ターン開始時に${recoveryPerTurn}追加)`
+  return `(現在${current} ターン開始時に${recoveryPerTurn}まで回復)`
 }
 
 export const ENERGY_CARRYOVER_DESCRIPTION =
-  'カードをプレイするのに必要なリソース。ターン終了時に残っている分は次のターンへ持ち越され、ターン開始時に追加分を得る。'
+  'カードをプレイするのに必要なリソース。ターン開始時、規定値に満たなければ規定値まで回復する。規定値より多く残っている時は、増えも減りもせずそのまま持ち越される。'

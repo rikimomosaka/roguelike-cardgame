@@ -73,14 +73,15 @@ public class BattleParticipantTurnLifecycleTests
         var participant = Assert.Single(
             result.Participants, value => value.ParticipantId == participantId);
 
-        Assert.Equal(3, participant.Energy);
+        // 残り 2 が規定値以上なのでそのまま（足し算はしない）。
+        Assert.Equal(Math.Max(2, participant.EnergyPerTurn), participant.Energy);
         Assert.Equal(3, participant.Hand.Length);
         Assert.Equal(["held", "d1", "d2"],
             participant.Hand.Select(card => card.InstanceId));
         Assert.Equal(2, participant.DrawPile.Length);
         Assert.All(result.Participants, value => Assert.False(value.IsReady));
         Assert.Equal(
-            state.Participants[0].Energy + state.Participants[0].EnergyPerTurn,
+            Math.Max(state.Participants[0].Energy, state.Participants[0].EnergyPerTurn),
             result.Energy);
     }
 
@@ -118,7 +119,7 @@ public class BattleParticipantTurnLifecycleTests
             participant => participant.ParticipantId == participantId);
         var updatedActor = afterStart.Allies[actorIndex];
 
-        Assert.Equal(4, statusParticipant.Energy); // +2 Haste, -1 Exhaustion, +1 base
+        Assert.Equal(3, statusParticipant.Energy); // 残り 2（規定値 1 以上なのでそのまま）+2 Haste -1 Exhaustion
         Assert.Equal(3, statusParticipant.ComboGauge);
         Assert.Equal(3, statusParticipant.Hand.Length);
         Assert.Equal(["d1", "d2", "d3"],
@@ -127,7 +128,7 @@ public class BattleParticipantTurnLifecycleTests
         Assert.Equal(0, updatedActor.GetStatus(BattleStatusIds.Haste));
         Assert.Equal(2, updatedActor.GetStatus(BattleStatusIds.Mastery));
         Assert.Equal(0, updatedActor.GetStatus(BattleStatusIds.Exhaustion));
-        Assert.Equal(primaryEnergy + state.EnergyMax, afterStart.Energy);
+        Assert.Equal(Math.Max(primaryEnergy, state.EnergyMax), afterStart.Energy);
     }
 
     private static (BattleState State, string ParticipantId, UnitDefinition Unit)

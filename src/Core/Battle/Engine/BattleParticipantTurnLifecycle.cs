@@ -127,7 +127,7 @@ internal static class BattleParticipantTurnLifecycle
             var next = DrawHelper.Draw(
                 CharacterTraitRuntime.ResetTurnUsage(state) with
                 {
-                    Energy = EnergyMath.AddSaturating(
+                    Energy = EnergyMath.RefillTo(
                         state.Energy, state.EnergyMax),
                 },
                 state.DrawPerTurn,
@@ -172,7 +172,7 @@ internal static class BattleParticipantTurnLifecycle
                 projected, CardCostModifierDuration.UntilTurnEnd);
             projected = projected with
             {
-                Energy = EnergyMath.AddSaturating(
+                Energy = EnergyMath.RefillTo(
                     projected.Energy, projected.EnergyMax),
             };
 

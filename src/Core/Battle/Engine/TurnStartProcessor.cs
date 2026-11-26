@@ -53,7 +53,10 @@ internal static class TurnStartProcessor
 
         // Regeneration and other beneficial start effects resolve before
         // Burn/Poison so their ordering is deterministic and visible.
-        s = ApplyTurnStartStatuses(s, events, ref order, rng, catalog);
+        // 加速・消耗のエナジー増減は、規定値までの回復（ApplyStartToAllParticipants）の後に適用する。
+        // 先に足すと「規定値まで回復」に吸収されてしまうため。
+        var pendingEnergy = new Dictionary<string, int>(StringComparer.Ordinal);
+        s = ApplyTurnStartStatuses(s, events, ref order, rng, catalog, pendingEnergy);
 
         // Step 2: 毒ダメージ tick（Allies → Enemies、SlotIndex 順、InstanceId 検索で更新）
         s = ApplyPoisonTick(s, events, ref order, catalog, rng);
@@ -83,8 +86,9 @@ internal static class TurnStartProcessor
         // 10.2.D: Lifetime 死亡で召喚カードを Discard へ
         s = SummonCleanup.Apply(s, events, ref order);
 
-        // Step 6-7: 未使用 Energy を持ち越し、ターン開始時追加量 EnergyMax を加算して Draw。
-        // EnergyMax は互換性のため名称を維持しているが、現在は保有上限ではない。
+        // Step 6-7: エナジーを規定値（EnergyMax）まで回復して Draw。
+        // 規定値に満たなければ規定値まで回復し、規定値以上残っていればそのまま（2026-11-27）。
+        // EnergyMax は互換性のため名称を維持しているが、保有上限ではない（規定値を超えて持てる）。
         // Refresh every participant before any OnTurnStart relic or power
         // fires. Primary and secondary participants therefore share the same
         // base-energy/draw -> trigger ordering.
@@ -92,6 +96,8 @@ internal static class TurnStartProcessor
             s, rng, catalog, out var refreshShuffleEvents);
         foreach (var battleEvent in refreshShuffleEvents)
             events.Add(battleEvent with { Order = order++ });
+        foreach (var (actorId, delta) in pendingEnergy)
+            if (delta != 0) s = AddEnergyForActorOwner(s, actorId, delta);
 
         // 敵の先制行動: 最初の手札を配った直後、他の全処理の前に即時解決する。
         if (s.Turn == 1)
@@ -266,7 +272,8 @@ internal static class TurnStartProcessor
         List<BattleEvent> events,
         ref int order,
         IRng rng,
-        DataCatalog catalog)
+        DataCatalog catalog,
+        Dictionary<string, int> pendingEnergy)
     {
         var actorIds = state.Allies.OrderBy(actor => actor.SlotIndex)
             .Select(actor => actor.InstanceId)
@@ -384,7 +391,7 @@ internal static class TurnStartProcessor
                 {
                     actor = BattleStatusRules.Clear(actor, BattleStatusIds.Haste);
                     s = ReplaceActor(s, actorId, actor);
-                    s = AddEnergyForActorOwner(s, actorId, haste);
+                    pendingEnergy[actorId] = pendingEnergy.GetValueOrDefault(actorId) + haste;
                     events.Add(new BattleEvent(
                         BattleEventKind.GainEnergy, order++, actorId, actorId,
                         Amount: haste, Note: BattleStatusIds.Haste));
@@ -493,7 +500,7 @@ internal static class TurnStartProcessor
             {
                 actor = BattleStatusRules.Decrement(actor, BattleStatusIds.Exhaustion);
                 s = ReplaceActor(s, actorId, actor);
-                s = AddEnergyForActorOwner(s, actorId, -exhaustion);
+                pendingEnergy[actorId] = pendingEnergy.GetValueOrDefault(actorId) - exhaustion;
                 events.Add(new BattleEvent(
                     BattleEventKind.GainEnergy, order++, actorId, actorId,
                     Amount: -exhaustion, Note: BattleStatusIds.Exhaustion));

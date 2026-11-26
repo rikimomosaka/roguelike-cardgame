@@ -100,12 +100,14 @@ public class TurnStartProcessorTests
     }
 
     [Theory]
+    // 規定値に満たなければ規定値まで回復し、規定値以上ならそのまま（足し算はしない）。
     [InlineData(0, 3, 3)]
-    [InlineData(2, 3, 5)]
-    [InlineData(5, 4, 9)]
-    [InlineData(int.MaxValue - 1, 3, int.MaxValue)]
+    [InlineData(1, 3, 3)]
+    [InlineData(2, 3, 3)]
+    [InlineData(3, 3, 3)]
+    [InlineData(5, 4, 5)]
     [InlineData(int.MaxValue, 3, int.MaxValue)]
-    public void Adds_energy_per_turn_to_carried_energy_without_overflow(
+    public void Refills_energy_up_to_the_per_turn_amount(
         int currentEnergy, int energyPerTurn, int expected)
     {
         var s = MakeState(Deck(10), energy: currentEnergy, energyMax: energyPerTurn);

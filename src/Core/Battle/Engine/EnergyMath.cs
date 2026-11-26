@@ -13,4 +13,11 @@ internal static class EnergyMath
         if (result >= int.MaxValue) return int.MaxValue;
         return (int)result;
     }
+
+    /// <summary>
+    /// ターン開始時のエナジー回復: 規定値（target）に満たなければ規定値まで回復する。
+    /// 規定値以上残っている時は減らしも増やしもしない。
+    /// </summary>
+    public static int RefillTo(int current, int target) =>
+        System.Math.Max(System.Math.Max(0, current), System.Math.Max(0, target));
 }

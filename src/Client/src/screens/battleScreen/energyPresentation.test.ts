@@ -11,10 +11,10 @@ describe('formatEnergyOrbValue', () => {
     { current: 0, expectedCurrent: '0' },
     { current: 1, expectedCurrent: '1' },
     { current: 9, expectedCurrent: '9' },
-  ])('shows recovery beside one-digit current energy ($current)', ({ current, expectedCurrent }) => {
+  ])('shows the turn-start refill amount beside one-digit current energy ($current)', ({ current, expectedCurrent }) => {
     expect(formatEnergyOrbValue(current, 3)).toEqual({
       currentText: expectedCurrent,
-      recoveryText: '/+3',
+      recoveryText: '/3',
       capped: false,
     })
   })
@@ -39,13 +39,12 @@ describe('formatEnergyOrbValue', () => {
 describe('energy tooltip copy', () => {
   it('separates the name and small current/recovery status line', () => {
     expect(formatEnergyTooltipTitle()).toBe('エナジー')
-    expect(formatEnergyTooltipStatusLine(3, 3))
-      .toBe('(現在3 ターン開始時に3追加)')
+    expect(formatEnergyTooltipStatusLine(1, 3))
+      .toBe('(現在1 ターン開始時に3まで回復)')
   })
 
-  it('explains that unused energy carries over', () => {
-    expect(ENERGY_CARRYOVER_DESCRIPTION).toContain('次のターンへ持ち越され')
-    expect(ENERGY_CARRYOVER_DESCRIPTION).toContain('ターン開始時に追加分を得る')
-    expect(ENERGY_CARRYOVER_DESCRIPTION).not.toContain('最大値まで回復')
+  it('explains the refill-to-target rule', () => {
+    expect(ENERGY_CARRYOVER_DESCRIPTION).toBe(
+      'カードをプレイするのに必要なリソース。ターン開始時、規定値に満たなければ規定値まで回復する。規定値より多く残っている時は、増えも減りもせずそのまま持ち越される。')
   })
 })
