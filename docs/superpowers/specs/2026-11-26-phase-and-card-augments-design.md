@@ -1,7 +1,7 @@
 # 位相（静・動）と双極、カードの後付け能力 設計書
 
 作成: 2026-11-26
-状態: 提案（ユーザー承認待ち）。実装後、確定した部分を `docs/current-phase-spec.md` に移す。
+状態: 承認・実装済み（2026-11-26）。現行仕様は [docs/current-phase-spec.md](../../current-phase-spec.md)。
 
 ## 1. 目的
 
