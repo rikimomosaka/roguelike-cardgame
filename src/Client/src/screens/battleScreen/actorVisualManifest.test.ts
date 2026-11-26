@@ -47,6 +47,9 @@ describe('actorVisualManifest', () => {
     expect(sera?.animations?.cast).toMatchObject({
       src: '/assets/actors/heroes/default/cast.png', frameCount: 6, durationMs: 720, loop: false,
     })
+    expect(sera?.animations?.still).toMatchObject({
+      src: '/assets/actors/heroes/default/still.png', frameCount: 1, loop: true,
+    })
     expect(sera?.animations?.hurt).toMatchObject({ frameCount: 4, durationMs: 400 })
     expect(sera?.animations?.down).toMatchObject({ frameCount: 6, durationMs: 720, loop: false })
 

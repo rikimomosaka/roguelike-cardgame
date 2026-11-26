@@ -3098,6 +3098,81 @@ html[data-motion='off'] .slot-aura::after {
   }
 }
 
+/* 静: キャラは動かない。被弾の赤い点滅やブロックの火花は残し、のけぞりの横移動だけ止める。 */
+.battle__side--player .battle__slot.is-still,
+.battle__side--enemy .battle__slot.is-still {
+  --hit-recoil-x: 0px;
+  --hit-recoil-settle-x: 0px;
+  --static-hit-x: 0px;
+  --static-hit-rotation: 0deg;
+  --static-hit-settle-x: 0px;
+  --static-hit-settle-rotation: 0deg;
+  --static-hit-tail-x: 0px;
+}
+
+/* 足元の輪から、下から上へ噴き出すオーラ（揺らぐ炎の筋が昇って消える）。 */
+.slot-phase-plume {
+  position: absolute;
+  left: 50%;
+  z-index: 3;
+  transform: translateX(-50%);
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+/* 光の筋: 輪から上へ立ちのぼり、揺らぎながら上端で消える。 */
+.slot-phase-plume::before {
+  content: "";
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  bottom: 45%;
+  height: 380%;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 50% 30% at 50% 100%, var(--phase-color), transparent 80%),
+    repeating-linear-gradient(90deg, transparent 0 6px, var(--phase-color) 6px 9px, transparent 9px 15px);
+  -webkit-mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.55) 40%, transparent 92%);
+  mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.55) 40%, transparent 92%);
+  filter: blur(1.2px);
+  transform-origin: 50% 100%;
+  animation: slot-phase-rays var(--phase-period) ease-in-out infinite alternate;
+}
+
+/* 光の粒: 筋に沿って昇っていく。 */
+.slot-phase-plume::after {
+  content: "";
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  bottom: 45%;
+  height: 380%;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle 1.6px at 15% 80%, #fff, transparent),
+    radial-gradient(circle 1.4px at 42% 30%, #fff, transparent),
+    radial-gradient(circle 1.8px at 66% 65%, #fff, transparent),
+    radial-gradient(circle 1.4px at 88% 20%, #fff, transparent);
+  background-size: 100% 50%;
+  -webkit-mask-image: linear-gradient(to top, #000 0%, transparent 95%);
+  mask-image: linear-gradient(to top, #000 0%, transparent 95%);
+  animation: slot-phase-plume var(--phase-period) linear infinite;
+}
+
+@keyframes slot-phase-rays {
+  0%   { transform: scaleY(0.85); background-position: 0 0, 0 0; opacity: 0.75; }
+  50%  { transform: scaleY(1.05); background-position: 0 0, 4px 0; opacity: 1; }
+  100% { transform: scaleY(0.95); background-position: 0 0, 8px 0; opacity: 0.85; }
+}
+
+@keyframes slot-phase-plume {
+  from { background-position: 0 0; }
+  to { background-position: 0 -100%; }
+}
+
+html[data-motion='off'] .slot-phase-plume::after,
+html[data-motion='off'] .slot-phase-plume::before { animation: none; }
+
 /* 足元の輪。位置・幅・高さは PhaseMarks の phaseRingStyle がインラインで決める（ドットの下端・左右幅）。 */
 .slot-phase-aura {
   position: absolute;

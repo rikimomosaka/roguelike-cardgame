@@ -234,7 +234,7 @@ export type IntentDemo = {
 export type SpriteKind = 'hero' | 'ally' | 'enemy' | 'elite'
 
 /** Character animation state. New sprite sheets can be added without changing Slot markup. */
-export type CharacterMotion = 'idle' | 'attack' | 'attackAlt' | 'skill' | 'guard' | 'cast' | 'hurt' | 'down'
+export type CharacterMotion = 'idle' | 'attack' | 'attackAlt' | 'skill' | 'guard' | 'cast' | 'hurt' | 'down' | 'still'
 
 /** 攻撃時に使う攻撃モーション。attackAlt が無いキャラは常に attack を使う。 */
 export type AttackMotion = 'attack' | 'attackAlt'
@@ -872,6 +872,8 @@ type CharacterMotionFlags = {
   isHit: boolean
   isSkill: boolean
   cardMotion: SkillCardMotion | null
+  /** 静の位相: 待機・被弾・奥義の動きをせず、目を閉じたコマ（still）で止まる。 */
+  isStill: boolean
   /** HP 0 で倒れている（down シートを持つキャラだけ表示が残る）。 */
   isDown: boolean
 }
@@ -915,19 +917,44 @@ function readableMotionDuration(
  * Failed sheets are skipped so a lower-priority motion (ultimately the static image)
  * can take over without an interval or another network request loop.
  */
+/**
+ * 再生候補のモーション（優先順）。
+ * 優先度: ダウン > 被弾 > 奥義 > スキルカード（防御 / 発動）> 攻撃（指定の型 → 基本の attack）> 待機。
+ * 静の位相では被弾・奥義・待機の動きをせず、目を閉じたコマ（still）で止まる。
+ * 攻撃の実行・ダウン・静を解くカードのモーション（cardMotion は呼び出し側で絞り込み済み）は再生する。
+ */
+export function characterMotionCandidates(flags: CharacterMotionFlags): CharacterMotion[] {
+  const candidates: CharacterMotion[] = []
+  if (flags.isDown) candidates.push('down')
+  if (flags.isHit && !flags.isStill) candidates.push('hurt')
+  if (flags.isSkill && !flags.isStill) candidates.push('skill')
+  if (flags.cardMotion) candidates.push(flags.cardMotion)
+  if (flags.attack) candidates.push(flags.attack, 'attack')
+  candidates.push(flags.isStill ? 'still' : 'idle')
+  return candidates
+}
+
+/** 使ったカードの解決中（次のカード使用まで）に、使ったキャラの静が解けるか。 */
+export function playedCardReleasesCalm(
+  steps: ReadonlyArray<{ event: { kind: string; targetInstanceId: string | null; note: string | null } }>,
+  playCardIndex: number,
+  casterId: string,
+): boolean {
+  for (let j = playCardIndex + 1; j < steps.length; j++) {
+    const ev = steps[j].event
+    if (ev.kind === 'PlayCard') return false
+    if (ev.kind === 'PhaseChanged' && ev.targetInstanceId === casterId && (ev.note ?? '').startsWith('calm->')) return true
+  }
+  return false
+}
+
 function selectCharacterAnimation(
   animations: CharacterDemo['animations'],
   flags: CharacterMotionFlags,
   failedSources: ReadonlySet<string>,
 ): ActiveCharacterAnimation | null {
-  // 優先度: ダウン > 被弾 > 奥義 > スキルカード（防御 / 発動）> 攻撃（指定の型 → 基本の attack）> 待機。
-  const candidates: CharacterMotion[] = []
-  if (flags.isDown) candidates.push('down')
-  if (flags.isHit) candidates.push('hurt')
-  if (flags.isSkill) candidates.push('skill')
-  if (flags.cardMotion) candidates.push(flags.cardMotion)
-  if (flags.attack) candidates.push(flags.attack, 'attack')
-  candidates.push('idle')
+  // still が無いキャラは null（立ち絵の静止画）になる。
+  const candidates = characterMotionCandidates(flags)
 
   for (const motion of candidates) {
     const sheet = animations?.[motion]
@@ -986,6 +1013,7 @@ function Slot({
       isHit: isHit === true,
       isSkill,
       cardMotion,
+      isStill: char.phase === 'calm',
       isDown: char.hpCur <= 0,
     },
     failedAnimationSources,
@@ -1110,6 +1138,7 @@ function Slot({
     isDying ? 'is-dying' : '',
     aura ? `has-aura has-aura--${aura.kind}` : '',
     char.phase ? `has-phase has-phase--${char.phase}` : '',
+    char.phase === 'calm' ? 'is-still' : '',
   ].filter(Boolean).join(' ')
   // Why: スプレッドにすることで onClick が undefined のとき role/tabIndex 属性自体が
   // JSX に出ない。axe/aria リンターの "role must be valid ARIA role: {expression}"
@@ -2949,7 +2978,9 @@ export function BattleScreen({
             // 放つ瞬間（release、8 コマ中 5 コマ目）まで待ってから効果へ進み、残りは効果と並行して流す。
             const casterId = ev.casterInstanceId ?? undefined
             const skillSheet = actorAnimations(casterId)?.skill
-            if (casterId && skillSheet && effectiveMotionLevel !== 'off') {
+            // 静のキャラは奥義の動きもしない（カットインと効果はそのまま）。
+            if (casterId && skillSheet && effectiveMotionLevel !== 'off'
+              && baselineActor(casterId)?.phase !== 'calm') {
               const skillDurationMs = readableMotionDuration(skillSheet, 1)
               const releaseMs = Math.round(skillDurationMs * SKILL_RELEASE_RATIO)
               setSlotAnim({ skillCasterId: casterId, playbackSpeed })
@@ -2993,7 +3024,11 @@ export function BattleScreen({
           // スキルカードを使ったキャラは、防御効果があれば防御モーションで構えてからブロックを得る。
           // それ以外（強化・ドロー等）は発動モーションで力をためてから効果を出す。攻撃するスキルは攻撃モーションに任せる。
           const cardCasterId = ev.casterInstanceId ?? undefined
-          const cardMotion = cardCasterId && isSkillCard(ev.cardId)
+          // 静のキャラはカードを使っても動かない。そのカードで静が解ける時だけ動く。
+          const casterStill = !!cardCasterId
+            && baselineActor(cardCasterId)?.phase === 'calm'
+            && !playedCardReleasesCalm(steps, i, cardCasterId)
+          const cardMotion = cardCasterId && isSkillCard(ev.cardId) && !casterStill
             ? skillCardMotion(steps, i, cardCasterId)
             : null
           const cardMotionSheet = cardMotion ? actorAnimations(cardCasterId)?.[cardMotion] : undefined

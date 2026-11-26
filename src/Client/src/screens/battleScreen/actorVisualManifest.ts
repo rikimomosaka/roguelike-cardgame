@@ -82,6 +82,7 @@ const MOTION_FILES: Readonly<Record<string, CharacterMotion>> = {
   skill: 'skill',
   guard: 'guard',
   cast: 'cast',
+  still: 'still',
   hurt: 'hurt',
   down: 'down',
 }

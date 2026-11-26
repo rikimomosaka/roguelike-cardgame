@@ -74,6 +74,8 @@ export const HERO_MOTIONS = {
   skill: { frames: 8, durationMs: 800, loop: false },
   guard: { frames: 6, durationMs: 720, loop: false },
   cast: { frames: 6, durationMs: 720, loop: false },
+  // 静の位相で静止するときの 1 コマ（目を閉じた顔）。ループ扱いで止まって見える。
+  still: { frames: 1, durationMs: 1000, loop: true },
   hurt: { frames: 4, durationMs: 400, loop: false },
   down: { frames: 6, durationMs: 720, loop: false },
 }

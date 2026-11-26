@@ -60,5 +60,11 @@ export function phaseRingStyle(stage: { bodyWidth: number; footGap: number }): C
  */
 export function PhaseAura({ phase, style }: { phase?: ActorPhaseDemo; style?: CSSProperties }) {
   if (!phase) return null
-  return <span className={`slot-phase-aura slot-phase-aura--${phase}`} style={style} aria-hidden="true" />
+  return (
+    <>
+      <span className={`slot-phase-aura slot-phase-aura--${phase}`} style={style} aria-hidden="true" />
+      {/* 噴き出す光は体の手前に重ねる（輪は体の後ろ）。 */}
+      <span className={`slot-phase-plume slot-phase-plume--${phase}`} style={style} aria-hidden="true" />
+    </>
+  )
 }

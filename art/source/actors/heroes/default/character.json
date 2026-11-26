@@ -11,6 +11,7 @@
     "skill":      { "file": "skill.png",    "frameWidth": 128, "frameHeight": 96, "frames": 8, "footRow": 93, "anchorX": 63.5 },
     "guard":      { "file": "guard.png",    "frameWidth": 128, "frameHeight": 96, "frames": 6, "footRow": 93, "anchorX": 63.5 },
     "cast":       { "file": "cast.png",     "frameWidth": 128, "frameHeight": 96, "frames": 6, "footRow": 93, "anchorX": 63.5 },
+    "still":      { "file": "blink.png",    "frameWidth": 80,  "frameHeight": 80, "frames": 1, "footRow": 77, "anchorX": 39.5 },
     "hurt":       { "file": "hurt.png",     "frameWidth": 128, "frameHeight": 96, "frames": 4, "footRow": 93, "anchorX": 63.5, "colors": 48 },
     "down":       { "file": "down.png",     "frameWidth": 128, "frameHeight": 96, "frames": 6, "footRow": 93, "anchorX": 63.5 }
   },
