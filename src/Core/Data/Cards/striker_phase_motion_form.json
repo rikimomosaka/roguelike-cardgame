@@ -1,0 +1,52 @@
+{
+  "id": "striker_phase_motion_form",
+  "name": "動の型",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Striker",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-11-26T00:00:00Z",
+      "label": "phase-v1",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Skill",
+        "cost": 1,
+        "upgradedCost": 0,
+        "usesPerTurn": 1,
+        "upgradedUsesPerTurn": 1,
+        "effects": [
+          {
+            "action": "draw",
+            "scope": "self",
+            "amount": 1
+          },
+          {
+            "action": "setPhase",
+            "scope": "self",
+            "amount": 0,
+            "name": "motion"
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "draw",
+            "scope": "self",
+            "amount": 1
+          },
+          {
+            "action": "setPhase",
+            "scope": "self",
+            "amount": 0,
+            "name": "motion"
+          }
+        ]
+      }
+    }
+  ]
+}

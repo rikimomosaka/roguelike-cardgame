@@ -18,7 +18,8 @@ public class EmbeddedDataLoaderTests
         Assert.Equal(CharacterClass.Guardian, catalog.Characters["guardian_mireille"].CharacterClass);
         Assert.Equal(CharacterClass.Tactician, catalog.Characters["tactician_yuno"].CharacterClass);
         Assert.Equal(CharacterClass.Enhancer, catalog.Characters["enhancer_lyra"].CharacterClass);
-        Assert.Equal(60, catalog.Cards.Values.Count(CardPoolRules.IsReward));
+        // 60 枚 + 位相カード 8 枚。
+        Assert.Equal(68, catalog.Cards.Values.Count(CardPoolRules.IsReward));
         Assert.Equal(12, catalog.Cards.Values.Count(card =>
             CardPoolRules.IsReward(card) && card.PoolClass == CardPoolClass.Universal));
         foreach (var poolClass in new[]
@@ -29,7 +30,8 @@ public class EmbeddedDataLoaderTests
                      CardPoolClass.Enhancer,
                  })
         {
-            Assert.Equal(12, catalog.Cards.Values.Count(card =>
+            // ストライカーは位相カード 8 枚を足している。
+            Assert.Equal(poolClass == CardPoolClass.Striker ? 20 : 12, catalog.Cards.Values.Count(card =>
                 CardPoolRules.IsReward(card) && card.PoolClass == poolClass));
         }
         Assert.Equal(20, catalog.Cards.Values.Count(CardPoolRules.IsBasic));

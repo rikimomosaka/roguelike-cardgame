@@ -1,0 +1,51 @@
+{
+  "id": "striker_phase_quelling_shout",
+  "name": "鎮めの一喝",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Striker",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-11-26T00:00:00Z",
+      "label": "phase-v1",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "setPhase",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 0,
+            "name": "none"
+          },
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 2
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "setPhase",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 0,
+            "name": "none"
+          },
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 5
+          }
+        ]
+      }
+    }
+  ]
+}

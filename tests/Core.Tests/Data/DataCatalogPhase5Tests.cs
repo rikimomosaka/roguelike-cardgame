@@ -61,7 +61,8 @@ public class DataCatalogPhase5Tests
             CardPoolRules.IsReward(c) && c.Rarity == RoguelikeCardGame.Core.Cards.CardRarity.Rare);
         int epic = cat.Cards.Values.Count(c =>
             CardPoolRules.IsReward(c) && c.Rarity == RoguelikeCardGame.Core.Cards.CardRarity.Epic);
-        Assert.Equal(20, common);
+        // 位相カード 8 枚（ストライカー・コモン）を含む。
+        Assert.Equal(28, common);
         Assert.Equal(20, rare);
         Assert.Equal(20, epic);
     }

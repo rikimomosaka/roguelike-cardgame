@@ -1,0 +1,43 @@
+{
+  "id": "striker_phase_flowing_stance",
+  "name": "流転の構え",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Striker",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-11-26T00:00:00Z",
+      "label": "phase-v1",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Skill",
+        "cost": 0,
+        "upgradedUsesPerTurn": 1,
+        "effects": [
+          {
+            "action": "invertPhase",
+            "scope": "self",
+            "amount": 0
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "invertPhase",
+            "scope": "self",
+            "amount": 0
+          },
+          {
+            "action": "draw",
+            "scope": "self",
+            "amount": 1
+          }
+        ]
+      }
+    }
+  ]
+}

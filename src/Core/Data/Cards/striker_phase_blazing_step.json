@@ -1,0 +1,51 @@
+{
+  "id": "striker_phase_blazing_step",
+  "name": "烈火の踏み込み",
+  "displayName": null,
+  "poolKinds": [
+    "Reward"
+  ],
+  "poolClass": "Striker",
+  "eligibleCharacterIds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-11-26T00:00:00Z",
+      "label": "phase-v1",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 5
+          },
+          {
+            "action": "setPhase",
+            "scope": "self",
+            "amount": 0,
+            "name": "motion"
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "attack",
+            "scope": "single",
+            "side": "enemy",
+            "amount": 8
+          },
+          {
+            "action": "setPhase",
+            "scope": "self",
+            "amount": 0,
+            "name": "motion"
+          }
+        ]
+      }
+    }
+  ]
+}

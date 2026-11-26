@@ -34,6 +34,19 @@ public sealed class ExpandedRewardCardCatalogTests
         "enhancer_basic_afterglow_hymn",
     ];
 
+    // 2026-11-26: 位相（静・動）を使うストライカーの報酬カード。各クラス・レア度 4 枚の枠とは別に足している。
+    private static readonly string[] PhaseRewardIds =
+    [
+        "striker_phase_calm_form",
+        "striker_phase_motion_form",
+        "striker_phase_calm_blade",
+        "striker_phase_blazing_step",
+        "striker_phase_flowing_stance",
+        "striker_phase_return_edge",
+        "striker_phase_honing",
+        "striker_phase_quelling_shout",
+    ];
+
     private static readonly string[] ApprovedRewardIds =
     [
         "striker_common_step_in",
@@ -116,15 +129,15 @@ public sealed class ExpandedRewardCardCatalogTests
             .OrderBy(id => id, StringComparer.Ordinal);
 
         Assert.Equal(ApprovedBasicIds.OrderBy(id => id, StringComparer.Ordinal), basicIds);
-        Assert.Equal(ApprovedRewardIds.OrderBy(id => id, StringComparer.Ordinal), rewardIds);
+        Assert.Equal(ApprovedRewardIds.Concat(PhaseRewardIds).OrderBy(id => id, StringComparer.Ordinal), rewardIds);
 
-        var approved = ApprovedBasicIds.Concat(ApprovedRewardIds)
+        var approved = ApprovedBasicIds.Concat(ApprovedRewardIds).Concat(PhaseRewardIds)
             .Select(id => catalog.Cards[id])
             .ToArray();
-        Assert.Equal(80, approved.Length);
-        Assert.Equal(80, approved.Select(card => card.Id).Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(88, approved.Length);
+        Assert.Equal(88, approved.Select(card => card.Id).Distinct(StringComparer.Ordinal).Count());
         // 攻撃の基本・防御の基本はクラスごとに同名のカードがある（4 クラス × 2 種）。それ以外は名前が重複しない。
-        Assert.Equal(80 - 6, approved.Select(card => card.Name).Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(88 - 6, approved.Select(card => card.Name).Distinct(StringComparer.Ordinal).Count());
         Assert.All(approved, card =>
         {
             Assert.NotNull(card.UpgradedEffects);
@@ -150,7 +163,8 @@ public sealed class ExpandedRewardCardCatalogTests
                      })
             {
                 Assert.Equal(4, rewardCards.Count(card =>
-                    card.PoolClass == poolClass && card.Rarity == rarity));
+                    card.PoolClass == poolClass && card.Rarity == rarity
+                    && !PhaseRewardIds.Contains(card.Id)));
             }
         }
 
