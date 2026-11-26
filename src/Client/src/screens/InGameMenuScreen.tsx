@@ -82,6 +82,24 @@ export function InGameMenuScreen({ onClose, onExitToMenu, onAbandon, elapsedSeco
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, busy, accountId, requireExitConfirm])
 
+  // 右上の歯車（メニュー）ボタンの位置をクリックしても閉じる。
+  // メニューの背景が画面を覆っていてボタンにクリックが届かないので、座標で判定する。
+  // 歯車ボタン自身の開閉処理（トグル）と二重にならないよう、ここで止める。
+  useEffect(() => {
+    if (mode !== 'main') return
+    const onClick = (e: MouseEvent) => {
+      const gear = document.querySelector<HTMLElement>('.topbar__btn[aria-label="メニュー"]')
+      if (!gear) return
+      const r = gear.getBoundingClientRect()
+      if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return
+      e.preventDefault()
+      e.stopPropagation()
+      onClose()
+    }
+    window.addEventListener('click', onClick, true)
+    return () => window.removeEventListener('click', onClick, true)
+  }, [mode, onClose])
+
   if (mode === 'settings') {
     return (
       <Popup
@@ -186,6 +204,11 @@ export function InGameMenuScreen({ onClose, onExitToMenu, onAbandon, elapsedSeco
       width={420}
       onClose={onClose}
       closeOnEsc
+      headRight={
+        <button type="button" className="im-close" onClick={onClose} aria-label="メニューを閉じる">
+          ×
+        </button>
+      }
     >
       <ul className="im-items">
         <li>

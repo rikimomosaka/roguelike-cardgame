@@ -209,3 +209,23 @@
 .im-settings-wrap {
   margin: 0;
 }
+
+/* メニュー枠の右上の閉じるボタン。 */
+.im-close {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border-light, rgba(201, 152, 90, 0.6));
+  border-radius: 4px;
+  background: rgba(10, 6, 4, 0.6);
+  color: var(--fg, #f0e6d2);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.im-close:hover,
+.im-close:focus-visible {
+  border-color: var(--gold, #e6c068);
+  color: var(--gold, #e6c068);
+}

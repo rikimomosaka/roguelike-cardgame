@@ -45,6 +45,31 @@ describe('InGameMenuScreen', () => {
     expect(onClose).toHaveBeenCalled()
   })
 
+  it('closes from the close button in the top-right of the menu frame', () => {
+    const onClose = vi.fn()
+    render(<Wrapper onExitToMenu={() => {}} onAbandon={() => {}} onClose={onClose} />)
+    fireEvent.click(screen.getByRole('button', { name: 'メニューを閉じる' }))
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('closes when the gear (menu) button position is clicked, even under the backdrop', () => {
+    const onClose = vi.fn()
+    const gear = document.createElement('button')
+    gear.className = 'topbar__btn'
+    gear.setAttribute('aria-label', 'メニュー')
+    gear.getBoundingClientRect = () => ({ left: 900, right: 940, top: 10, bottom: 50, width: 40, height: 40, x: 900, y: 10, toJSON: () => ({}) })
+    document.body.appendChild(gear)
+    try {
+      render(<Wrapper onExitToMenu={() => {}} onAbandon={() => {}} onClose={onClose} />)
+      fireEvent.click(document.body, { clientX: 100, clientY: 100 })
+      expect(onClose).not.toHaveBeenCalled()
+      fireEvent.click(document.body, { clientX: 920, clientY: 30 })
+      expect(onClose).toHaveBeenCalledTimes(1)
+    } finally {
+      gear.remove()
+    }
+  })
+
   it('sends heartbeat and calls onExitToMenu when exit clicked', async () => {
     const onExit = vi.fn()
     render(<Wrapper onExitToMenu={onExit} onAbandon={() => {}} onClose={() => {}} />)
