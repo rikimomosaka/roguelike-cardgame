@@ -140,7 +140,8 @@ public static class AfterimageIntentProjector
                 foreach (var attack in attacks)
                 {
                     int adjusted = AttackDamageMath.AdjustForAttacker(
-                        attack.Amount, strength, weak, vigor);
+                        attack.Amount, strength, weak, vigor,
+                        virtualActor.Phase == ActorPhase.Motion);
                     switch (AttackScopeRules.Resolve(
                         attack.Scope, omnistrike, disruption))
                     {

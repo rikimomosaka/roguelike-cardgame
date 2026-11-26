@@ -98,9 +98,10 @@ public static class CombatIntentProjector
         int strength = actor.GetStatus("strength");
         int weak = actor.GetStatus("weak");
         int vigor = actor.GetStatus("vigor");
-        int single = Display(actor.AttackSingle, strength, weak, vigor);
-        int random = Display(actor.AttackRandom, strength, weak, vigor);
-        int all = Display(actor.AttackAll, strength, weak, vigor);
+        bool motion = actor.Phase == ActorPhase.Motion;
+        int single = Display(actor.AttackSingle, strength, weak, vigor, motion);
+        int random = Display(actor.AttackRandom, strength, weak, vigor, motion);
+        int all = Display(actor.AttackAll, strength, weak, vigor, motion);
         int singleHits = actor.AttackSingle.AddCount;
         int randomHits = actor.AttackRandom.AddCount;
         int allHits = actor.AttackAll.AddCount;
@@ -113,7 +114,7 @@ public static class CombatIntentProjector
         if (pursuit > 0)
         {
             all = unchecked(all + AttackDamageMath.AdjustForAttacker(
-                pursuit, strength, weak, vigor));
+                pursuit, strength, weak, vigor, motion));
             allHits++;
             hits++;
         }
@@ -191,6 +192,7 @@ public static class CombatIntentProjector
         int strength = actor.GetStatus("strength");
         int weak = actor.GetStatus("weak");
         int vigor = actor.GetStatus("vigor");
+        bool motion = actor.Phase == ActorPhase.Motion;
         int omnistrike = actor.GetStatus(BattleStatusIds.Omnistrike);
         int disruption = actor.GetStatus(BattleStatusIds.Disruption);
         int attackSingle = 0;
@@ -208,7 +210,7 @@ public static class CombatIntentProjector
         if (pursuit > 0 && move.Effects.Any(effect => effect.Action == "attack"))
         {
             int adjustedPursuit = AttackDamageMath.AdjustForAttacker(
-                pursuit, strength, weak, vigor);
+                pursuit, strength, weak, vigor, motion);
             switch (AttackScopeRules.Resolve(
                 EffectScope.All, omnistrike, disruption))
             {
@@ -231,7 +233,7 @@ public static class CombatIntentProjector
             {
                 case "attack":
                     int adjusted = AttackDamageMath.AdjustForAttacker(
-                        effect.Amount, strength, weak, vigor);
+                        effect.Amount, strength, weak, vigor, motion);
                     switch (AttackScopeRules.Resolve(
                         effect.Scope, omnistrike, disruption))
                     {
@@ -294,12 +296,12 @@ public static class CombatIntentProjector
             HasHeal: hasHeal);
     }
 
-    private static int Display(AttackPool pool, int strength, int weak, int vigor)
+    private static int Display(AttackPool pool, int strength, int weak, int vigor, bool motion)
     {
         int sum = 0;
         foreach (int amount in pool.HitAmounts)
             sum = unchecked(sum + AttackDamageMath.AdjustForAttacker(
-                amount, strength, weak, vigor));
+                amount, strength, weak, vigor, motion));
         return sum;
     }
 

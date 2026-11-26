@@ -45,7 +45,8 @@ internal static class DealDamageHelper
             baseAmount,
             attacker.GetStatus("strength"),
             attacker.GetStatus("weak"),
-            attacker.GetStatus("vigor"));
+            attacker.GetStatus("vigor"),
+            attacker.Phase == ActorPhase.Motion);
 
     /// <summary>Consumes ordinary Block before Vulnerable and Barrier.</summary>
     internal static AttackBlockResolution ApplyBlock(

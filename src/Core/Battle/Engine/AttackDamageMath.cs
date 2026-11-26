@@ -10,9 +10,13 @@ internal static class AttackDamageMath
         int baseAmount,
         int strength,
         int weak,
-        int vigor = 0)
+        int vigor = 0,
+        bool motion = false)
     {
         long boosted = (long)baseAmount + strength;
+        // 位相「動」: (基本値 + 筋力) × 1.5 を先に切り捨て、その後に脱力・元気を掛ける。
+        if (motion)
+            boosted = boosted * 3 / 2;
         long adjusted = weak > 0 ? boosted * 3 / 4 : boosted;
         if (vigor > 0)
             adjusted = adjusted * 3 / 2;
