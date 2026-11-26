@@ -61,6 +61,9 @@ internal static class EmbeddedDataCatalogValidator
         "recoverFromExhaust",
         "gainMaxEnergy",
         "modifyCardCost",
+        "setPhase",
+        "invertPhase",
+        "augmentCards",
     };
 
     // NonBattleRelicEffects handles exactly these actions.
@@ -242,6 +245,7 @@ internal static class EmbeddedDataCatalogValidator
                 RequireParticipantResourceTarget(location, effect);
                 break;
 
+            case "augmentCards":
             case "selfDamage":
             case "summon":
             case "addCard":
@@ -282,9 +286,14 @@ internal static class EmbeddedDataCatalogValidator
             Fail(location, "recoverFromExhaust requires pile hand|draw|discard.");
         }
 
+        if (DataCatalogIntegrityValidator.PhaseOrAugmentError(effect) is { } phaseError)
+            Fail(location, phaseError);
+        if (effect.Action == "augmentCards" && effect.Select == "choose")
+            Fail(location, "triggered augmentCards cannot use select 'choose'.");
+
         if (effect.Select is not null)
         {
-            if (effect.Action is not ("discard" or "exhaustCard" or "upgrade" or "recoverFromDiscard" or "recoverFromExhaust" or "modifyCardCost"))
+            if (effect.Action is not ("discard" or "exhaustCard" or "upgrade" or "recoverFromDiscard" or "recoverFromExhaust" or "modifyCardCost" or "augmentCards"))
                 Fail(location, $"action '{effect.Action}' does not support select.");
             if (effect.Select is not ("all" or "random" or "choose"))
                 Fail(location, "select must be all|random|choose.");

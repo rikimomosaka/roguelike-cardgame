@@ -329,7 +329,8 @@ public static class AfterimageIntentProjector
         or "exhaustPileCount";
 
     private static bool CanChangeProjectedCaster(string action) => action is
-        "block" or "heal" or "buff" or "debuff" or "gainEnergy";
+        "block" or "heal" or "buff" or "debuff" or "gainEnergy"
+            or "setPhase" or "invertPhase";
 
     private static ActorTargetRelation ActorTargetRelationFor(
         BattleState state,

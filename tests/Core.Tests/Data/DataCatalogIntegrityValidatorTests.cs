@@ -138,6 +138,50 @@ public sealed class DataCatalogIntegrityValidatorTests
         Assert.Contains(expectedMessage, error.Message, System.StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("setPhase", "rage", null, 0, "phase")]
+    [InlineData("augmentCards", "nonexistent", "hand", 1, "keyword")]
+    [InlineData("augmentCards", "bipolar", "hand", 0, "amount")]
+    [InlineData("augmentCards", "bipolar", "graveyard", 1, "pile")]
+    public void Phase_and_augment_effects_are_validated(
+        string action, string name, string? pile, int amount, string expectedMessage)
+    {
+        var catalog = EmbeddedDataLoader.LoadCatalog();
+        var card = catalog.Cards.Values.First() with
+        {
+            Effects = new[]
+            {
+                new CardEffect(action, EffectScope.Self, null, amount, Name: name, Pile: pile, Select: "all"),
+            },
+        };
+        var candidate = catalog with { Cards = Replace(catalog.Cards, card.Id, card) };
+
+        var error = Assert.Throws<DataCatalogException>(() =>
+            DataCatalogIntegrityValidator.Validate(candidate));
+
+        Assert.Contains(expectedMessage, error.Message, System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Augment_card_type_filter_is_validated()
+    {
+        var catalog = EmbeddedDataLoader.LoadCatalog();
+        var card = catalog.Cards.Values.First() with
+        {
+            Effects = new[]
+            {
+                new CardEffect("augmentCards", EffectScope.Self, null, 1, Name: "bipolar",
+                    Pile: "hand", Select: "all", CardTypeFilter: "Spell"),
+            },
+        };
+        var candidate = catalog with { Cards = Replace(catalog.Cards, card.Id, card) };
+
+        var error = Assert.Throws<DataCatalogException>(() =>
+            DataCatalogIntegrityValidator.Validate(candidate));
+
+        Assert.Contains("cardTypeFilter", error.Message, System.StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public void Card_cost_modifier_accepts_current_cost_amount_source()
     {

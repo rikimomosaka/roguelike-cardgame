@@ -189,6 +189,7 @@ public static class CardTextFormatter
         && a.Pile == b.Pile
         && a.CostDuration == b.CostDuration
         && a.CardCount == b.CardCount
+        && a.CardTypeFilter == b.CardTypeFilter
         && StatusChangesEqual(a.StatusChanges, b.StatusChanges);
 
     private static bool StatusChangesEqual(
@@ -414,6 +415,9 @@ public static class CardTextFormatter
         "recoverFromDiscard" => DescribeRecoverFromDiscard(e, context),
         "recoverFromExhaust" => DescribeRecoverFromExhaust(e, context),
         "modifyCardCost" => DescribeModifyCardCost(e),
+        "setPhase" => $"{PhaseOwnerPrefix(e)}位相を{PhaseJp(e.Name)}にする",
+        "invertPhase" => $"{PhaseOwnerPrefix(e)}位相を反転する",
+        "augmentCards" => DescribeAugmentCards(e),
         // Phase 10.5.L1: relic 固有 action の自動文章化。formatter は battle 用と
         // 共有のため、relic action もここに併記する。
         "gainMaxHp" => $"最大HP+{AmountToken(e, context)}",
@@ -567,6 +571,42 @@ public static class CardTextFormatter
         var selectJp = SelectJp(e.Select);
         var dest = ZoneJp(e.Pile);
         return $"除外から{selectJp}{AmountToken(e, context)}枚、{dest}に戻す";
+    }
+
+    /// <summary>位相の対象。自身は省略し、それ以外は「敵単体の」等。</summary>
+    private static string PhaseOwnerPrefix(CardEffect e)
+    {
+        if (e.Scope == EffectScope.Self) return string.Empty;
+        string target = TargetPrefix(e.Scope, e.Side);
+        return target.EndsWith("に", System.StringComparison.Ordinal)
+            ? target[..^1] + "の"
+            : target;
+    }
+
+    private static string PhaseJp(string? name) => name switch
+    {
+        "calm" => "静",
+        "motion" => "動",
+        _ => "なし",
+    };
+
+    private static string DescribeAugmentCards(CardEffect e)
+    {
+        string keyword = $"[K:{e.Name ?? "?"}]";
+        string amount = $"[N:{e.Amount}]";
+        if (e.Pile == "self") return $"このカードに{keyword}を{amount}付与する";
+        string zone = ZoneJp(e.Pile ?? "hand");
+        string kind = string.IsNullOrEmpty(e.CardTypeFilter)
+            || !System.Enum.TryParse<CardType>(e.CardTypeFilter, ignoreCase: true, out var type)
+            ? "カード"
+            : CardTypeJp(type);
+        int count = e.CardCount ?? 1;
+        return e.Select switch
+        {
+            "all" => $"{zone}の{kind}全てに{keyword}を{amount}付与する",
+            "random" => $"{zone}のランダムな{kind}[N:{count}]枚に{keyword}を{amount}付与する",
+            _ => $"{zone}の{kind}[N:{count}]枚を選び、{keyword}を{amount}付与する",
+        };
     }
 
     private static string DescribeModifyCardCost(CardEffect e)

@@ -66,6 +66,7 @@ public static class CardEffectParser
             throw makeException($"chancePercent must be between 0 and 100, got {chancePercent}");
         string? costDuration = GetOptionalString(el, "costDuration");
         int? cardCount = GetOptionalInt(el, "cardCount");
+        string? cardTypeFilter = GetOptionalString(el, "cardTypeFilter");
         int? amountScalePercent = GetOptionalInt(el, "amountScalePercent");
         if (amountScalePercent is <= 0)
             throw makeException($"amountScalePercent must be positive when specified, got {amountScalePercent}");
@@ -82,7 +83,7 @@ public static class CardEffectParser
             CardRefId: cardRefId, Select: select, AmountSource: amountSource, Trigger: trigger,
             ChancePercent: chancePercent, CostDuration: costDuration, CardCount: cardCount,
             StatusChanges: statusChanges, MaxComboMin: maxComboMin,
-            AmountScalePercent: amountScalePercent);
+            AmountScalePercent: amountScalePercent, CardTypeFilter: cardTypeFilter);
         return raw.Normalize();
     }
 

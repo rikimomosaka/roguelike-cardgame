@@ -64,7 +64,7 @@ public static class ContentAuthoringCatalog
             ["actions:upgrade"] = "カード強化", ["actions:summon"] = "召喚", ["actions:selfDamage"] = "自傷",
             ["actions:addCard"] = "カード追加", ["actions:recoverFromDiscard"] = "捨札回収",
             ["actions:recoverFromExhaust"] = "除外回収",
-            ["actions:modifyCardCost"] = "カードコスト変更", ["actions:gainMaxHp"] = "最大HP増加",
+            ["actions:modifyCardCost"] = "カードコスト変更", ["actions:setPhase"] = "位相変更", ["actions:invertPhase"] = "位相反転", ["actions:augmentCards"] = "カードに能力付与", ["actions:gainMaxHp"] = "最大HP増加",
             ["actions:gainGold"] = "ゴールド獲得", ["actions:healHp"] = "HP回復",
             ["actions:energyPerTurnBonus"] = "ターン開始エナジー補正",
             ["actions:cardsDrawnPerTurnBonus"] = "ターンドロー枚数補正",
@@ -124,7 +124,7 @@ public static class ContentAuthoringCatalog
     {
         "attack", "block", "buff", "debuff", "heal", "draw", "discard",
         "gainEnergy", "gainComboGauge", "gainMaxEnergy", "exhaustCard", "upgrade", "summon",
-        "selfDamage", "addCard", "recoverFromDiscard", "recoverFromExhaust", "modifyCardCost",
+        "selfDamage", "addCard", "recoverFromDiscard", "recoverFromExhaust", "modifyCardCost", "setPhase", "invertPhase", "augmentCards",
         "gainMaxHp", "gainGold", "healHp", "energyPerTurnBonus",
         "cardsDrawnPerTurnBonus", "goldRewardMultiplier", "shopPriceMultiplier",
         "rewardCardChoicesBonus", "rewardRerollAvailable", "unknownTileWeightDelta",

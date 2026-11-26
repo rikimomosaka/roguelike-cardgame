@@ -251,6 +251,34 @@ public static class DataCatalogIntegrityValidator
         }
     }
 
+    /// <summary>位相（setPhase）とカードの後付け能力（augmentCards）の項目チェック。</summary>
+    internal static string? PhaseOrAugmentError(CardEffect effect)
+    {
+        if (effect.Action == "setPhase" && effect.Name is not ("none" or "calm" or "motion"))
+            return $"setPhase requires phase name none|calm|motion, got '{effect.Name}'.";
+        if (effect.Action != "augmentCards") return null;
+        if (string.IsNullOrEmpty(effect.Name) || CardKeywords.Get(effect.Name) is null)
+            return $"augmentCards requires a known keyword name, got '{effect.Name}'.";
+        if (effect.Amount <= 0)
+            return "augmentCards amount must be positive.";
+        if (effect.Scope != EffectScope.Self)
+            return "augmentCards requires scope self.";
+        if ((effect.Pile ?? "hand") is not ("hand" or "draw" or "discard" or "exhaust" or "self"))
+            return "augmentCards requires pile hand|draw|discard|exhaust|self.";
+        if (effect.Pile != "self" && effect.Select is not ("all" or "random" or "choose"))
+            return "augmentCards requires select all|random|choose.";
+        if (!string.IsNullOrEmpty(effect.CardTypeFilter)
+            && !System.Enum.TryParse<CardType>(effect.CardTypeFilter, ignoreCase: true, out _))
+            return $"augmentCards cardTypeFilter '{effect.CardTypeFilter}' is not a card type.";
+        return null;
+    }
+
+    private static void ValidatePhaseAndAugment(string location, CardEffect effect)
+    {
+        var error = PhaseOrAugmentError(effect);
+        if (error is not null) Fail(location, error);
+    }
+
     private static void ValidateEffects(DataCatalog catalog, string location, IReadOnlyList<CardEffect> effects)
     {
         for (var index = 0; index < effects.Count; index++)
@@ -273,6 +301,7 @@ public static class DataCatalogIntegrityValidator
                 Fail(effectLocation,
                     "amountSource 'currentCost' is supported only by action 'modifyCardCost'.");
             }
+            ValidatePhaseAndAugment(effectLocation, effect);
             if (effect.Action is "buff" or "debuff")
             {
                 var changes = effect.EffectiveStatusChanges();

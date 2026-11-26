@@ -86,6 +86,10 @@ internal static class EffectApplier
             "modifyCardCost"    => ApplyModifyCardCost(
                 state, caster, resolved, rng, catalog, source,
                 playingCardInstanceId),
+            "setPhase"          => ApplySetPhase(state, caster, resolved, rng),
+            "invertPhase"       => ApplyInvertPhase(state, caster, resolved, rng),
+            "augmentCards"      => ApplyAugmentCards(
+                state, caster, resolved, rng, catalog, playingCardInstanceId),
             _        => (state, Array.Empty<BattleEvent>()),
         };
     }
@@ -1790,6 +1794,151 @@ internal static class EffectApplier
         return state;
     }
 
+    // ---- setPhase / invertPhase（位相） ----
+
+    private static (BattleState, IReadOnlyList<BattleEvent>) ApplySetPhase(
+        BattleState state, CombatActor caster, CardEffect effect, IRng rng)
+    {
+        var next = PhaseRules.Parse(effect.Name
+            ?? throw new InvalidOperationException("setPhase requires Name (none|calm|motion)"));
+        var events = new List<BattleEvent>();
+        int order = 0;
+        foreach (var target in ResolveTargets(state, caster, effect, rng))
+            state = PhaseRules.SetPhase(state, target.InstanceId, next, "effect", ref order, events);
+        return (state, events);
+    }
+
+    private static (BattleState, IReadOnlyList<BattleEvent>) ApplyInvertPhase(
+        BattleState state, CombatActor caster, CardEffect effect, IRng rng)
+    {
+        var events = new List<BattleEvent>();
+        int order = 0;
+        foreach (var target in ResolveTargets(state, caster, effect, rng))
+        {
+            var current = FindActor(state, target.InstanceId) ?? target;
+            state = PhaseRules.SetPhase(
+                state, current.InstanceId, PhaseRules.Invert(current.Phase), "effect", ref order, events);
+        }
+        return (state, events);
+    }
+
+    // ---- augmentCards（カードの後付け能力） ----
+
+    /// <summary>
+    /// 使用者のカードにキーワードを足す。Name = キーワード ID、Amount = 足す数、
+    /// Pile = hand|draw|discard|exhaust|self、Select = all|random|choose、CardTypeFilter = 種別の絞り込み。
+    /// 戦闘中の手札・山札は使用者の参加者ぶんが root に投影済みなので、Scope は Self のみ。
+    /// </summary>
+    private static (BattleState, IReadOnlyList<BattleEvent>) ApplyAugmentCards(
+        BattleState state, CombatActor caster, CardEffect effect, IRng rng,
+        DataCatalog catalog, string? playingCardInstanceId)
+    {
+        ValidateAugmentCards(effect);
+        string pile = effect.Pile ?? "hand";
+        if (pile == "self")
+        {
+            if (playingCardInstanceId is null) return (state, Array.Empty<BattleEvent>());
+            return AugmentSelected(state, caster, effect, FindPileOf(state, playingCardInstanceId),
+                new[] { playingCardInstanceId });
+        }
+
+        var candidates = AugmentCandidateIds(AugmentPile(state, pile), effect, catalog, playingCardInstanceId);
+        int count = effect.CardCount ?? 1;
+        IReadOnlyList<string> selected = effect.Select switch
+        {
+            "all" => candidates,
+            "random" => PickRandomCardInstanceIds(candidates, count, rng),
+            // 候補が選択数以下なら選ぶ必要が無い（それ以外は PlayCard 側が選択待ちにする）。
+            "choose" when candidates.Count <= count => candidates,
+            "choose" => throw new InvalidOperationException(
+                "augmentCards select='choose' requires a PendingCardPlay choice"),
+            _ => throw new InvalidOperationException(
+                $"augmentCards invalid Select '{effect.Select}', expected all|random|choose"),
+        };
+        return AugmentSelected(state, caster, effect, pile, selected);
+    }
+
+    private static void ValidateAugmentCards(CardEffect effect)
+    {
+        if (effect.Scope != EffectScope.Self)
+            throw new InvalidOperationException("augmentCards only supports Scope=Self");
+        if (string.IsNullOrEmpty(effect.Name) || CardKeywords.Get(effect.Name) is null)
+            throw new InvalidOperationException($"augmentCards requires a known keyword Name, got '{effect.Name}'");
+        if (effect.Amount <= 0)
+            throw new InvalidOperationException($"augmentCards Amount must be positive, got {effect.Amount}");
+    }
+
+    private static ImmutableArray<BattleCardInstance> AugmentPile(BattleState state, string? pile) =>
+        (pile ?? "hand") switch
+        {
+            "hand" => state.Hand,
+            "draw" => state.DrawPile,
+            "discard" => state.DiscardPile,
+            "exhaust" => state.ExhaustPile,
+            _ => throw new InvalidOperationException(
+                $"augmentCards invalid Pile '{pile}', expected hand|draw|discard|exhaust|self"),
+        };
+
+    private static List<string> AugmentCandidateIds(
+        ImmutableArray<BattleCardInstance> pile, CardEffect effect, DataCatalog catalog,
+        string? playingCardInstanceId)
+    {
+        CardType? filter = string.IsNullOrEmpty(effect.CardTypeFilter)
+            ? null
+            : Enum.Parse<CardType>(effect.CardTypeFilter!, ignoreCase: true);
+        var ids = new List<string>(pile.Length);
+        foreach (var card in pile)
+        {
+            if (card.InstanceId == playingCardInstanceId) continue;
+            if (filter is { } type
+                && (!catalog.TryGetCard(card.CardDefinitionId, out var def) || def.CardType != type))
+                continue;
+            ids.Add(card.InstanceId);
+        }
+        return ids;
+    }
+
+    private static string FindPileOf(BattleState state, string instanceId)
+    {
+        if (state.Hand.Any(c => c.InstanceId == instanceId)) return "hand";
+        if (state.DrawPile.Any(c => c.InstanceId == instanceId)) return "draw";
+        if (state.DiscardPile.Any(c => c.InstanceId == instanceId)) return "discard";
+        return "exhaust";
+    }
+
+    private static (BattleState, IReadOnlyList<BattleEvent>) AugmentSelected(
+        BattleState state, CombatActor caster, CardEffect effect, string pile,
+        IReadOnlyList<string> selectedInstanceIds)
+    {
+        if (selectedInstanceIds.Count == 0) return (state, Array.Empty<BattleEvent>());
+        var builder = AugmentPile(state, pile).ToBuilder();
+        var events = new List<BattleEvent>();
+        foreach (var id in selectedInstanceIds.Distinct(StringComparer.Ordinal))
+        {
+            int index = -1;
+            for (int i = 0; i < builder.Count; i++)
+                if (builder[i].InstanceId == id) { index = i; break; }
+            if (index < 0) continue;
+            var augmented = builder[index].AddKeyword(effect.Name!, effect.Amount);
+            builder[index] = augmented;
+            events.Add(new BattleEvent(
+                BattleEventKind.CardAugmented, events.Count,
+                CasterInstanceId: caster.InstanceId,
+                TargetInstanceId: id,
+                Amount: effect.Amount,
+                Note: $"{effect.Name}:{augmented.KeywordCount(effect.Name!)}"));
+        }
+        var cards = builder.ToImmutable();
+        var next = pile switch
+        {
+            "hand" => state with { Hand = cards },
+            "draw" => state with { DrawPile = cards },
+            "discard" => state with { DiscardPile = cards },
+            _ => state with { ExhaustPile = cards },
+        };
+        return (next, events);
+    }
+
     // ---- modifyCardCost ----
 
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyModifyCardCost(
@@ -2010,7 +2159,7 @@ internal static class EffectApplier
         effect.CardCount ?? 1;
 
     private static int ChooseSelectionCount(CardEffect effect) =>
-        effect.Action == "modifyCardCost"
+        effect.Action is "modifyCardCost" or "augmentCards"
             ? ModifyCardSelectionCount(effect)
             : effect.Amount;
 
@@ -2091,7 +2240,7 @@ internal static class EffectApplier
     private static bool IsChooseSupportedAction(string action)
         => action is "discard" or "exhaustCard" or "upgrade"
             or "recoverFromDiscard" or "recoverFromExhaust"
-            or "modifyCardCost";
+            or "modifyCardCost" or "augmentCards";
 
     /// <summary>
     /// 各 action の choose 候補 (BattleCardInstance.InstanceId 一覧) を返す。
@@ -2111,6 +2260,9 @@ internal static class EffectApplier
             ValidateModifyCardCost(effect);
         var pile = ResolveChoosePile(state, effect);
         if (pile.IsDefaultOrEmpty) return ImmutableArray<string>.Empty;
+
+        if (effect.Action == "augmentCards")
+            return AugmentCandidateIds(pile, effect, catalog, playingCardInstanceId).ToImmutableArray();
 
         if (effect.Action == "upgrade")
         {
@@ -2188,6 +2340,8 @@ internal static class EffectApplier
             ValidateRecoverFromExhaustDestination(effect.Pile);
             return state.ExhaustPile;
         }
+        if (effect.Action == "augmentCards")
+            return AugmentPile(state, effect.Pile);
         if (effect.Action == "modifyCardCost")
         {
             return effect.Pile switch
@@ -2268,6 +2422,8 @@ internal static class EffectApplier
                 state, caster, effect, selectedInstanceIds, rng, catalog),
             "modifyCardCost" => ApplyModifyCardCostChosen(
                 state, caster, effect, selectedInstanceIds, catalog, source),
+            "augmentCards" => AugmentSelected(
+                state, caster, effect, effect.Pile ?? "hand", selectedInstanceIds),
             _ => throw new InvalidOperationException(
                 $"ApplyChoseEffect: action '{effect.Action}' does not support choose"),
         };

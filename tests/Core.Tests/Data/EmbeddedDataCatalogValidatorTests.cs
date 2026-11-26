@@ -195,6 +195,24 @@ public sealed class EmbeddedDataCatalogValidatorTests
         Assert.Contains(expectedMessage, error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("{\"action\":\"setPhase\",\"scope\":\"self\",\"amount\":0,\"name\":\"calm\",\"trigger\":\"OnBattleStart\"}")]
+    [InlineData("{\"action\":\"invertPhase\",\"scope\":\"self\",\"amount\":0,\"trigger\":\"OnTurnStart\"}")]
+    [InlineData("{\"action\":\"augmentCards\",\"scope\":\"self\",\"amount\":1,\"name\":\"bipolar\",\"pile\":\"hand\",\"select\":\"all\",\"trigger\":\"OnTurnStart\"}")]
+    public void Validator_AcceptsPhaseAndAugmentRelicEffects(string effectJson) =>
+        EmbeddedDataCatalogValidator.ValidateRelics(new[] { RelicWith(effectJson) });
+
+    [Fact]
+    public void Validator_RejectsTriggeredChooseAugment()
+    {
+        var json = "{\"action\":\"augmentCards\",\"scope\":\"self\",\"amount\":1,\"name\":\"bipolar\",\"pile\":\"hand\",\"select\":\"choose\",\"trigger\":\"OnTurnStart\"}";
+
+        var error = Assert.Throws<DataCatalogException>(() =>
+            EmbeddedDataCatalogValidator.ValidateRelics(new[] { RelicWith(json) }));
+
+        Assert.Contains("choose", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public void Validator_SkipsPlaceholderRelicSemantics()
     {

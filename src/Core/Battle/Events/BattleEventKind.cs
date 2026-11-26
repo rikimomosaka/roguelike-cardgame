@@ -73,4 +73,6 @@ public enum BattleEventKind
     EnemyCardAction = 38,
     /// <summary>キャラの位相が変わった（Note = 前->後:理由）。</summary>
     PhaseChanged = 39,
+    /// <summary>カードに後付け能力が足された（TargetInstanceId = カード、Amount = 足した数、Note = キーワード:後の数）。</summary>
+    CardAugmented = 40,
 }

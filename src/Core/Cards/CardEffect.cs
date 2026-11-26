@@ -10,7 +10,7 @@ public sealed record StatusChange(string Name, int Amount);
 /// カード／敵 Move／召喚 Move／レリック／ポーション 共通の効果プリミティブ。
 /// Phase 10 設計書 (2026-04-25-phase10-battle-system-design.md) 第 2-1 章参照。
 /// </summary>
-/// <param name="Action">"attack"|"block"|"buff"|"debuff"|"summon"|"heal"|"draw"|"discard"|"upgrade"|"exhaustCard"|"exhaustSelf"|"retainSelf"|"gainEnergy"|"gainComboGauge" など</param>
+/// <param name="Action">"attack"|"block"|"buff"|"debuff"|"summon"|"heal"|"draw"|"discard"|"upgrade"|"exhaustCard"|"exhaustSelf"|"retainSelf"|"gainEnergy"|"gainComboGauge"|"setPhase"|"invertPhase"|"augmentCards" など</param>
 /// <param name="Scope">対象スコープ</param>
 /// <param name="Side">対象側（行動主体からの相対視点）。Self では null</param>
 /// <param name="Amount">効果量</param>
@@ -46,7 +46,8 @@ public sealed record CardEffect(
     int? CardCount = null,
     IReadOnlyList<StatusChange>? StatusChanges = null,
     int? MaxComboMin = null,
-    int? AmountScalePercent = null)
+    int? AmountScalePercent = null,
+    string? CardTypeFilter = null)
 {
     private static readonly IReadOnlyList<StatusChange> EmptyStatusChanges = Array.Empty<StatusChange>();
 
