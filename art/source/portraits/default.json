@@ -1,1 +1,1 @@
-{ "mode": "native", "note": "PixelLab pixen で生成したセラの立ち絵（128×160 を左右 4px ずつ切って 120×160）。docs/art/characters/striker_sera.md" }
+{ "mode": "native", "note": "ゲーム中のドット絵と同じ原画 art-work/sera/concept/concept_02_keyed.png（1024×1536）から (200,200) 660×880 を切り出し、fit.mjs で 120×160 に縮小、quantize.mjs で 48 色。docs/art/characters/striker_sera.md" }
