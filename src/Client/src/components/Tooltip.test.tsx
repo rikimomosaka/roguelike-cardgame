@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { TooltipHost, alignSidePanelTop, costPanelPosition, useTooltipTarget } from './Tooltip'
+import { TooltipHost, alignSidePanelTop, computePlacement, costPanelPosition, useTooltipTarget } from './Tooltip'
 
 vi.mock('../hooks/useCardCatalog', () => ({
   useCardCatalog: () => ({ names: {} }),
@@ -146,5 +146,13 @@ describe('tooltip side panels', () => {
   it('puts the cost panel above unless there is no room', () => {
     expect(costPanelPosition({ mainTop: 300, costHeight: 150 })).toBe('above')
     expect(costPanelPosition({ mainTop: 100, costHeight: 150 })).toBe('below')
+  })
+
+  it('places the description at the same height whether or not side panels exist', () => {
+    const measured = { baseWidth: 300, baseHeight: 100, panelWidth: 270, panelHeight: 0 }
+    const plain = computePlacement({ x: 20, y: 600 }, false, measured)
+    const withSide = computePlacement({ x: 20, y: 600 }, true, measured)
+    expect(withSide.top).toBe(plain.top)
+    expect(withSide.top).toBe(614)
   })
 })

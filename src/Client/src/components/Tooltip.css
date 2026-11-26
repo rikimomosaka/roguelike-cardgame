@@ -138,6 +138,12 @@
   line-height: 1.4;
 }
 
+/* 用語が複数あるときは点線で区切る（コスト変更の合計行・レリックのフレーバーと同じ点線）。 */
+.tip__ref + .tip__ref {
+  padding-top: 5px;
+  border-top: 1px dashed rgba(201, 152, 90, 0.4);
+}
+
 .tip__ref-name {
   font-weight: bold;
   display: inline;

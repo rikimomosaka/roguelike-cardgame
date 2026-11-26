@@ -106,7 +106,8 @@ export function TooltipHost({ children }: { children: ReactNode }) {
         baseWidth: el.offsetWidth,
         baseHeight: el.offsetHeight,
         panelWidth: side?.offsetWidth ?? 0,
-        panelHeight: 0,
+        // 横に並べるときは使わない（狭い画面で本文の下に積むときだけ使う）。
+        panelHeight: side?.offsetHeight ?? 0,
       },
     )
     if (costPanelSide) el.dataset.side = costPanelSide
@@ -399,7 +400,7 @@ function preferredCostPanelSide(
   return rightSpace >= leftSpace ? 'right' : 'left'
 }
 
-function computePlacement(
+export function computePlacement(
   { x, y }: Position,
   hasCostBreakdown = false,
   measured?: TooltipMeasurement,
@@ -413,13 +414,15 @@ function computePlacement(
   const baseWidth = measured?.baseWidth || TIP_W
   const baseHeight = measured?.baseHeight || TIP_H_EST
   const panelWidth = measured?.panelWidth || COST_PANEL_W
-  const panelHeight = measured?.panelHeight || 210
+  const panelHeight = measured?.panelHeight ?? 0
   const costPanelSide = preferredCostPanelSide(
     { x, y }, hasCostBreakdown, baseWidth, panelWidth,
   )
+  // 別枠（用語の説明・コスト変更）は本文に対して置くので、本文の位置は本文の高さだけで決める。
+  // 狭い画面で別枠を本文の下に積む場合だけ、その高さも足す。
   const estimatedHeight = stacked
     ? baseHeight + COST_PANEL_GAP + panelHeight
-    : Math.max(baseHeight, hasCostBreakdown ? panelHeight : 0)
+    : baseHeight
   const regularFlipX = x + OFFSET + baseWidth > vw - 8
   const rawLeft = costPanelSide === 'left' || (!costPanelSide && regularFlipX)
     ? x - OFFSET - baseWidth
