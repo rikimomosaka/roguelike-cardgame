@@ -47,11 +47,17 @@ describe('CardDesc', () => {
     const bipolar = refs.find(r => r.kind === 'keyword' && r.id === 'bipolar')
     expect(bipolar && 'desc' in bipolar ? bipolar.desc : '').toBe(
       '位相が[P:calm]の時、手札にある限り、次のターンに持ち越される。\n位相が[P:motion]の時、発動時にエナジーを+[N:2]し、双極が消滅する。')
-    expect(refs.map(r => r.id)).toEqual(['bipolar', 'phase:calm', 'enhance', 'invert'])
+    // 双極の説明に出てくる静・動も続けて補足する。
+    expect(refs.map(r => r.id)).toEqual(['bipolar', 'phase:calm', 'enhance', 'invert', 'phase:motion'])
     const calm = refs.find(r => r.id === 'phase:calm')
     expect(calm?.name).toBe('静')
     expect(refs.find(r => r.id === 'enhance')).toMatchObject({ name: 'エンハンス', desc: '【 】内の効果を与える。' })
     expect(refs.find(r => r.id === 'invert')).toMatchObject({ name: '反転', desc: '位相を持つ場合、対となる位相に変更する。' })
+  })
+
+  it('also explains keywords that appear inside another explanation', () => {
+    const refs = extractCardDescRefs('位相を[P:calm]にする。')
+    expect(refs.map(r => r.id)).toEqual(['phase:calm', 'enhance', 'bipolar', 'phase:motion'])
   })
 
   it('uses 1 for the bipolar count when the keyword has no count', () => {

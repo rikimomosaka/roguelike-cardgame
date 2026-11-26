@@ -189,7 +189,12 @@ export function extractCardDescRefs(
 ): CardDescRef[] {
   const seen = new Set<string>()
   const refs: CardDescRef[] = []
-  for (const m of text.matchAll(MARKER_RE)) {
+  // 補足説明の中に出てくる用語（静の説明のエンハンス・双極など）も、本文の後ろに続けて補足する。
+  const pending = [text]
+  while (pending.length > 0) {
+  const source = pending.shift()!
+  const before = refs.length
+  for (const m of source.matchAll(MARKER_RE)) {
     const [, kind, value, extra] = m
     const key = `${kind}:${value}`
     if (seen.has(key)) continue
@@ -211,6 +216,10 @@ export function extractCardDescRefs(
       refs.push({ kind: 'card', id: value, name })
     }
     // Phase 10.5.M6.9: unit ([U:..]) は intentional に補足対象から除外。
+  }
+  for (const ref of refs.slice(before)) {
+    if ('desc' in ref) pending.push(ref.desc)
+  }
   }
   return refs
 }
