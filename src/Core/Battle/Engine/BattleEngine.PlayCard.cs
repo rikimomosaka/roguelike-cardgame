@@ -276,6 +276,31 @@ public static partial class BattleEngine
 
         int order = events.Count;
 
+        // 位相: 使用時の位相で判定する（効果の実行より前）。
+        // 双極は動で使ったときにエナジーへ換わる。敵の予約（planEnemyEffects）では
+        // 戦場へ反映しないので、判定は再現実行時（EnemyAttackingResolver）に行い、双極もそのまま残す。
+        if (!planEnemyEffects)
+        {
+            var phaseActor = FindParticipantCaster(s, actingActor.InstanceId) ?? updatedActor;
+            var usedPhase = phaseActor.Phase;
+            int bipolar = playedCard.KeywordCount(CardKeywords.Bipolar);
+            if (usedPhase == ActorPhase.Motion && bipolar > 0)
+            {
+                playedCard = playedCard.RemoveKeyword(CardKeywords.Bipolar);
+                s = s with { Hand = s.Hand.SetItem(handIndex, playedCard) };
+                var (afterEnergy, energyEvents) = EffectApplier.Apply(
+                    s, phaseActor,
+                    new CardEffect("gainEnergy", EffectScope.Self, null, bipolar),
+                    rng, catalog, cardSource);
+                s = afterEnergy;
+                foreach (var energyEvent in energyEvents)
+                    events.Add(energyEvent with { Order = order++, Note = CardKeywords.Bipolar });
+            }
+            var judged = PhaseRules.AfterCardUsed(usedPhase, def.CardType);
+            if (judged != usedPhase)
+                s = PhaseRules.SetPhase(s, actingActor.InstanceId, judged, "used", ref order, events);
+        }
+
         if (planEnemyEffects)
         {
             var enemyCaster = FindParticipantCaster(s, actingActor.InstanceId)

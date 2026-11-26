@@ -174,6 +174,8 @@ internal static class EnemyAttackingResolver
                     continue;
             }
             string? announcedCardInstanceId = null;
+            // 位相の使用時判定は、予約したカードごとに最初の効果を実行する前に 1 回だけ行う。
+            var phaseJudgedCardKeys = new HashSet<string>(System.StringComparer.Ordinal);
             for (int effectIndex = 0; effectIndex < actionEffects.Count; effectIndex++)
             {
                 if (ResolutionShouldStop(state)) break;
@@ -188,6 +190,20 @@ internal static class EnemyAttackingResolver
                 {
                     var cardSource = plannedSources[effectIndex];
                     string cardKey = cardSource.InstanceId ?? cardSource.DefinitionId ?? "";
+                    if (phaseJudgedCardKeys.Add(cardKey)
+                        && cardSource.DefinitionId is { } usedCardId
+                        && catalog.TryGetCard(usedCardId, out var usedCard))
+                    {
+                        var judged = PhaseRules.AfterCardUsed(currentEnemyState.Phase, usedCard.CardType);
+                        if (judged != currentEnemyState.Phase)
+                        {
+                            var phaseEvents = new List<BattleEvent>();
+                            state = PhaseRules.SetPhase(
+                                state, currentEnemyState.InstanceId, judged, "used", ref order, phaseEvents);
+                            events.AddRange(phaseEvents);
+                            currentEnemyState = state.Enemies.First(e => e.InstanceId == currentEnemyState.InstanceId);
+                        }
+                    }
                     if (!string.Equals(cardKey, announcedCardInstanceId, System.StringComparison.Ordinal))
                     {
                         announcedCardInstanceId = cardKey;
