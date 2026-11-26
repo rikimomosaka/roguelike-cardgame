@@ -10,6 +10,17 @@ namespace RoguelikeCardGame.Core.Battle.Engine;
 /// </summary>
 public static class BattleCardRetention
 {
+    /// <summary>
+    /// 表示用の予測: このカードがターン終了時に手札に残るか。
+    /// 静の持ち主の手札のアタックは、ターン終了時に双極を得てから残るので、まだ双極が無くても残ると見なす。
+    /// </summary>
+    public static bool RetainsAtTurnEnd(
+        BattleCardInstance card,
+        CardDefinition definition,
+        ActorPhase ownerPhase) =>
+        ShouldRetain(card, definition, ownerPhase)
+        || (ownerPhase == ActorPhase.Calm && definition.CardType == CardType.Attack);
+
     /// <param name="ownerPhase">カードの持ち主の位相。静なら双極付きのカードも残る。</param>
     public static bool ShouldRetain(
         BattleCardInstance card,

@@ -8,8 +8,8 @@ public sealed class CardTextFormatterPhaseTests
     private static string Format(CardEffect effect) => CardTextFormatter.FormatEffects(new[] { effect });
 
     [Theory]
-    [InlineData("calm", "位相を静にする。")]
-    [InlineData("motion", "位相を動にする。")]
+    [InlineData("calm", "位相を[P:calm]にする。")]
+    [InlineData("motion", "位相を[P:motion]にする。")]
     [InlineData("none", "位相をなしにする。")]
     public void SetPhase_Self(string name, string expected) =>
         Assert.Equal(expected, Format(new CardEffect("setPhase", EffectScope.Self, null, 0, Name: name)));

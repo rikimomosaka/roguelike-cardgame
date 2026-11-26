@@ -610,10 +610,11 @@ public static class CardTextFormatter
             : target;
     }
 
+    /// <summary>静・動は [P:calm] / [P:motion]（クライアントで青・赤に色分け）、なしは文字のまま。</summary>
     private static string PhaseJp(string? name) => name switch
     {
-        "calm" => "静",
-        "motion" => "動",
+        "calm" => "[P:calm]",
+        "motion" => "[P:motion]",
         _ => "なし",
     };
 

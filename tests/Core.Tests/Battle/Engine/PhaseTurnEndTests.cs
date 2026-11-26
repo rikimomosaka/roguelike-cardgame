@@ -93,6 +93,17 @@ public sealed class PhaseTurnEndTests
     }
 
     [Fact]
+    public void RetainsAtTurnEnd_PredictsCalmAttacksBeforeBipolarIsGranted()
+    {
+        var strike = BattleFixtures.Strike();
+        var defend = BattleFixtures.Defend();
+
+        Assert.True(BattleCardRetention.RetainsAtTurnEnd(Card("strike", "s1"), strike, ActorPhase.Calm));
+        Assert.False(BattleCardRetention.RetainsAtTurnEnd(Card("defend", "d1"), defend, ActorPhase.Calm));
+        Assert.False(BattleCardRetention.RetainsAtTurnEnd(Card("strike", "s2"), strike, ActorPhase.Motion));
+    }
+
+    [Fact]
     public void ShouldRetain_RequiresCalmOwnerAndBipolar()
     {
         var strike = BattleFixtures.Strike();

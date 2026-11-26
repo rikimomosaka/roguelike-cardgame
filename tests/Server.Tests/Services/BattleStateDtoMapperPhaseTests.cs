@@ -60,6 +60,20 @@ public class BattleStateDtoMapperPhaseTests : IClassFixture<TempDataFactory>
     }
 
     [Fact]
+    public async Task HandAttack_RetainsAtTurnEnd_WhenOwnerCalm_EvenBeforeBipolar()
+    {
+        var (state, catalog, _) = await CalmHeroWithBipolarAsync("dto-phase-predict", ActorPhase.Calm, 1);
+
+        var dto = BattleStateDtoMapper.ToDto(state, catalog);
+
+        Assert.All(dto.Hand, card =>
+        {
+            bool isAttack = catalog.Cards[card.CardDefinitionId].CardType == CardType.Attack;
+            if (isAttack) Assert.True(card.RetainsAtTurnEnd, card.CardDefinitionId);
+        });
+    }
+
+    [Fact]
     public async Task HandCard_RetainsAtTurnEnd_WhenOwnerCalmAndBipolar()
     {
         var (state, catalog, cardId) = await CalmHeroWithBipolarAsync("dto-phase-retain", ActorPhase.Calm, 1);

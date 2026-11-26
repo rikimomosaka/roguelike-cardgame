@@ -40,7 +40,7 @@ public static class CardKeywords
         ["contingency"] = new("contingency", "伏策",
             "使用時は効果が実行されず、発動待ちとして除外する。伏策条件を満たした時に効果を実行し、捨札へ移動する。"),
         ["bipolar"] = new("bipolar", "双極",
-            "位相が静の時、ターン終了時に捨てられない。位相が動の時に使用すると、エナジーをこの数だけ得て、このカードの双極は全て消える。"),
+            "位相が[P:calm]の時、手札にある限り、次のターンに持ち越される。位相が[P:motion]の時に使用すると、エナジーをこの数だけ得て、このカードの双極は全て消える。"),
     };
 
     public static KeywordMeta? Get(string id) =>
