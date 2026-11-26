@@ -11,7 +11,7 @@ export const KEYWORD_DEFS: Record<string, { name: string; desc: string }> = {
   bipolar: {
     name: '双極',
     // X は表示する双極の数に置き換える（keywordDesc）。
-    desc: '位相が[P:calm]の時、手札にある限り、次のターンに持ち越される。\n位相が[P:motion]の時、発動時にエナジーを+[N:X]し、双極が消滅する。',
+    desc: '位相が[P:calm]の時、手札にある限り、次のターンに持ち越される。\n位相が[P:motion]の時、発動時にエナジーを+[N:X]する。\nこのカードの発動後、双極が消滅する。',
   },
   enhance: {
     name: 'エンハンス',

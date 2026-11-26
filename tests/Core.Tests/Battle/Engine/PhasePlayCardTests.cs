@@ -130,15 +130,28 @@ public sealed class PhasePlayCardTests
     }
 
     [Fact]
-    public void CalmHero_PlaysBipolarAttack_NoEnergy_KeepsBipolar_AndBecomesNone()
+    public void CalmHero_PlaysBipolarAttack_NoEnergy_LosesBipolar_AndBecomesNone()
     {
-        var state = WithHero(ActorPhase.Calm, Card("strike", "s1").AddKeyword("bipolar", 1)) with { Energy = 3 };
+        // 動以外で使っても双極は消える（エナジーは増えない）。
+        var state = WithHero(ActorPhase.Calm, Card("strike", "s1").AddKeyword("bipolar", 2)) with { Energy = 3 };
+
+        var (after, events) = BattleEngine.PlayCard(state, 0, 0, 0, Rng(), Catalog());
+
+        Assert.Equal(2, after.Energy);
+        Assert.Equal(ActorPhase.None, after.Allies[0].Phase);
+        Assert.Equal(0, Assert.Single(after.DiscardPile).KeywordCount("bipolar"));
+        Assert.DoesNotContain(events, e => e.Note == "bipolar");
+    }
+
+    [Fact]
+    public void NoPhaseHero_PlaysBipolarAttack_LosesBipolarWithoutEnergy()
+    {
+        var state = WithHero(ActorPhase.None, Card("strike", "s1").AddKeyword("bipolar", 1)) with { Energy = 3 };
 
         var (after, _) = BattleEngine.PlayCard(state, 0, 0, 0, Rng(), Catalog());
 
         Assert.Equal(2, after.Energy);
-        Assert.Equal(ActorPhase.None, after.Allies[0].Phase);
-        Assert.Equal(1, Assert.Single(after.DiscardPile).KeywordCount("bipolar"));
+        Assert.Equal(0, Assert.Single(after.DiscardPile).KeywordCount("bipolar"));
     }
 
     [Fact]

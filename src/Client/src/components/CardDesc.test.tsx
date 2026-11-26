@@ -46,7 +46,7 @@ describe('CardDesc', () => {
     const refs = extractCardDescRefs('[K:bipolar|+2]\n位相を[P:calm]にする。[K:enhance]【[K:bipolar]】[K:invert]')
     const bipolar = refs.find(r => r.kind === 'keyword' && r.id === 'bipolar')
     expect(bipolar && 'desc' in bipolar ? bipolar.desc : '').toBe(
-      '位相が[P:calm]の時、手札にある限り、次のターンに持ち越される。\n位相が[P:motion]の時、発動時にエナジーを+[N:2]し、双極が消滅する。')
+      '位相が[P:calm]の時、手札にある限り、次のターンに持ち越される。\n位相が[P:motion]の時、発動時にエナジーを+[N:2]する。\nこのカードの発動後、双極が消滅する。')
     // 双極の説明に出てくる静・動も続けて補足する。
     expect(refs.map(r => r.id)).toEqual(['bipolar', 'phase:calm', 'enhance', 'invert', 'phase:motion'])
     const calm = refs.find(r => r.id === 'phase:calm')
@@ -63,7 +63,7 @@ describe('CardDesc', () => {
   it('uses 1 for the bipolar count when the keyword has no count', () => {
     const refs = extractCardDescRefs('[K:bipolar]')
     const bipolar = refs[0]
-    expect('desc' in bipolar ? bipolar.desc : '').toContain('+[N:1]し')
+    expect('desc' in bipolar ? bipolar.desc : '').toContain('+[N:1]する')
   })
 
   it('colours phase words: 静 blue and 動 red', () => {
@@ -78,7 +78,7 @@ describe('CardDesc', () => {
   it('renders a single keyword without a count', () => {
     const { container } = render(<CardDesc text="[K:bipolar]" />)
     expect(container.querySelector('.card-desc-keyword')?.textContent).toBe('双極')
-    expect(KEYWORD_DEFS.bipolar.desc).toBe('位相が[P:calm]の時、手札にある限り、次のターンに持ち越される。\n位相が[P:motion]の時、発動時にエナジーを+[N:X]し、双極が消滅する。')
+    expect(KEYWORD_DEFS.bipolar.desc).toBe('位相が[P:calm]の時、手札にある限り、次のターンに持ち越される。\n位相が[P:motion]の時、発動時にエナジーを+[N:X]する。\nこのカードの発動後、双極が消滅する。')
   })
 
   it('marks a disabled Wild keyword with a strike-through label and red suffix', () => {

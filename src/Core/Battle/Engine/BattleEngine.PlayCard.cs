@@ -283,11 +283,15 @@ public static partial class BattleEngine
         {
             var phaseActor = FindParticipantCaster(s, actingActor.InstanceId) ?? updatedActor;
             var usedPhase = phaseActor.Phase;
+            // 双極は使えば位相に関係なく消える。エナジーを得るのは動で使ったときだけ。
             int bipolar = playedCard.KeywordCount(CardKeywords.Bipolar);
-            if (usedPhase == ActorPhase.Motion && bipolar > 0)
+            if (bipolar > 0)
             {
                 playedCard = playedCard.RemoveKeyword(CardKeywords.Bipolar);
                 s = s with { Hand = s.Hand.SetItem(handIndex, playedCard) };
+            }
+            if (usedPhase == ActorPhase.Motion && bipolar > 0)
+            {
                 var (afterEnergy, energyEvents) = EffectApplier.Apply(
                     s, phaseActor,
                     new CardEffect("gainEnergy", EffectScope.Self, null, bipolar),
