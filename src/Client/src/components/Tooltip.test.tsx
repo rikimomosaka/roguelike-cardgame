@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { TooltipHost, useTooltipTarget } from './Tooltip'
+import { TooltipHost, alignSidePanelTop, costPanelPosition, useTooltipTarget } from './Tooltip'
 
 vi.mock('../hooks/useCardCatalog', () => ({
   useCardCatalog: () => ({ names: {} }),
@@ -107,5 +107,44 @@ describe('Tooltip status line', () => {
 
     fireEvent.mouseEnter(screen.getByRole('button', { name: '説明を表示' }), { clientX: 20, clientY: 20 })
     expect(screen.getByRole('tooltip').querySelector('.tip__side')).toBeNull()
+  })
+
+  it('puts the cost breakdown above the description, not in the side panel', () => {
+    function CostTrigger() {
+      const tip = useTooltipTarget({
+        name: '斬撃',
+        desc: '[S:strength]を得る。',
+        costBreakdown: { originalCost: 2, currentCost: 1, changes: [{ kind: 'combo', value: -1, sourceId: null, sourceName: null }] },
+      })
+      return <button {...tip}>コスト付き</button>
+    }
+    render(
+      <TooltipHost>
+        <CostTrigger />
+      </TooltipHost>,
+    )
+
+    fireEvent.mouseEnter(screen.getByRole('button', { name: 'コスト付き' }), { clientX: 20, clientY: 400 })
+    const tooltip = screen.getByRole('tooltip')
+    expect(tooltip.querySelector('.tip__side .tip__cost-panel')).toBeNull()
+    expect(tooltip.querySelector(':scope > .tip__cost-panel')).toBeInTheDocument()
+    expect(tooltip.querySelector('.tip__side .tip__refs-panel')).toBeInTheDocument()
+  })
+})
+
+describe('tooltip side panels', () => {
+  it('aligns the side panel bottom with the description bottom', () => {
+    // 本文 100px・別枠 300px → 別枠は本文の上端より 200px 上から始まる。
+    expect(alignSidePanelTop({ mainTop: 500, mainHeight: 100, sideHeight: 300 })).toBe(-200)
+    expect(alignSidePanelTop({ mainTop: 500, mainHeight: 300, sideHeight: 100 })).toBe(200)
+  })
+
+  it('keeps the side panel inside the screen top', () => {
+    expect(alignSidePanelTop({ mainTop: 50, mainHeight: 100, sideHeight: 300 })).toBe(-42)
+  })
+
+  it('puts the cost panel above unless there is no room', () => {
+    expect(costPanelPosition({ mainTop: 300, costHeight: 150 })).toBe('above')
+    expect(costPanelPosition({ mainTop: 100, costHeight: 150 })).toBe('below')
   })
 })

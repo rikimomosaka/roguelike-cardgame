@@ -105,7 +105,8 @@
 .tip__side {
   position: absolute;
   left: calc(100% + 8px);
-  top: -1px;
+  /* 本文の下端にそろえる（Tooltip.tsx が --side-top を計算する）。 */
+  top: var(--side-top, -1px);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -159,9 +160,13 @@
 /* Phase 10.5.M6.7: unit ref ([U:wisp] 等)。cardref と同系統の紫。 */
 .tip__ref--unit .tip__ref-name { color: #d8b4ff; }
 
+/* コスト変更の内訳: 本文のすぐ上（入らなければ下）に、本文と同じ幅で出す。 */
 .tip__cost-panel {
+  position: absolute;
+  left: -1px;
+  bottom: calc(100% + 8px);
   box-sizing: border-box;
-  width: 100%;
+  width: calc(100% + 2px);
   padding: 10px 12px;
   background: rgba(10, 6, 4, 0.97);
   border: 1px solid var(--border-light);
@@ -174,6 +179,10 @@
 }
 
 /* 本文が常にカーソル側。左に出るときは別枠をさらに左に置く（.tip[data-side='left'] .tip__side）。 */
+.tip[data-cost-pos='below'] .tip__cost-panel {
+  bottom: auto;
+  top: calc(100% + 8px);
+}
 
 .tip__cost-title {
   margin-bottom: 6px;

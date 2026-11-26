@@ -90,12 +90,15 @@ export function TooltipHost({ children }: { children: ReactNode }) {
         ref => ref.kind !== content.selfReference?.kind || ref.id !== content.selfReference.id,
       )
     : []
-  const hasSide = !!content?.costBreakdown || refs.length > 0
+  // 横の別枠は用語の説明だけ。コスト変更の内訳は本文の上（.tip__cost-panel）に出す。
+  const hasSide = refs.length > 0
 
   useEffect(() => {
     const el = tipRef.current
     if (!el || !state.content) return
     const side = el.querySelector<HTMLElement>('.tip__side')
+    const cost = el.querySelector<HTMLElement>('.tip__cost-panel')
+    // 本文（.tip 自身。別枠は absolute なので高さに含まれない）を常にカーソル近くに置く。
     const { left, top, costPanelSide } = computePlacement(
       state.pos,
       !!side,
@@ -103,13 +106,22 @@ export function TooltipHost({ children }: { children: ReactNode }) {
         baseWidth: el.offsetWidth,
         baseHeight: el.offsetHeight,
         panelWidth: side?.offsetWidth ?? 0,
-        panelHeight: side?.offsetHeight ?? 0,
+        panelHeight: 0,
       },
     )
     if (costPanelSide) el.dataset.side = costPanelSide
     else delete el.dataset.side
     el.style.setProperty('--tip-left', `${left}px`)
     el.style.setProperty('--tip-top', `${top}px`)
+    // 用語の別枠は本文の下端にそろえる（画面の上にはみ出す場合だけ下げる）。
+    if (side) {
+      el.style.setProperty('--side-top', `${alignSidePanelTop({
+        mainTop: top, mainHeight: el.offsetHeight, sideHeight: side.offsetHeight,
+      })}px`)
+    }
+    // コスト変更の内訳は本文の上。上に入らなければ下。
+    if (cost) el.dataset.costPos = costPanelPosition({ mainTop: top, costHeight: cost.offsetHeight })
+    else delete el.dataset.costPos
   }, [state])
 
   return (
@@ -159,16 +171,14 @@ export function TooltipHost({ children }: { children: ReactNode }) {
           ) : null}
           {/* コスト変更の内訳と、本文中の keyword / status / cardref の説明は、本文の横の別枠に並べる。
               本文がカーソルの右に出るときはさらに右、左に出るときはさらに左（data-side）。 */}
+          {content.costBreakdown ? (
+            <CostBreakdownPanel breakdown={content.costBreakdown} />
+          ) : null}
           {hasSide ? (
             <div className="tip__side">
-              {content.costBreakdown ? (
-                <CostBreakdownPanel breakdown={content.costBreakdown} />
-              ) : null}
-              {refs.length > 0 ? (
-                <aside className="tip__refs-panel" aria-label="用語の説明">
-                  <TipRefs refs={refs} />
-                </aside>
-              ) : null}
+              <aside className="tip__refs-panel" aria-label="用語の説明">
+                <TipRefs refs={refs} />
+              </aside>
             </div>
           ) : null}
         </div>
@@ -342,6 +352,28 @@ const TIP_W = 300
 const TIP_H_EST = 120
 const COST_PANEL_W = 270
 const COST_PANEL_GAP = 8
+
+const SCREEN_MARGIN = 8
+
+/**
+ * 用語の別枠の top（本文の上端からの相対 px）。別枠の下端を本文の下端にそろえ、
+ * 画面の上端（8px）より上にはみ出す場合だけ下げる。
+ */
+export function alignSidePanelTop({ mainTop, mainHeight, sideHeight }: {
+  mainTop: number
+  mainHeight: number
+  sideHeight: number
+}): number {
+  return Math.max(SCREEN_MARGIN - mainTop, mainHeight - sideHeight)
+}
+
+/** コスト変更の内訳を本文の上に置けるか（入らなければ下）。 */
+export function costPanelPosition({ mainTop, costHeight }: {
+  mainTop: number
+  costHeight: number
+}): 'above' | 'below' {
+  return mainTop - COST_PANEL_GAP - costHeight >= SCREEN_MARGIN ? 'above' : 'below'
+}
 
 type TooltipMeasurement = {
   baseWidth: number
