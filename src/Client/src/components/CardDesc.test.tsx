@@ -29,10 +29,19 @@ describe('CardDesc', () => {
     expect(kw?.getAttribute('data-keyword')).toBe('bipolar')
   })
 
+  it('colours phase words: 静 blue and 動 red', () => {
+    const { container } = render(<CardDesc text="位相を[P:calm]にする。[P:motion]" />)
+    const calm = container.querySelector('.card-desc-phase--calm')
+    const motion = container.querySelector('.card-desc-phase--motion')
+    expect(calm?.textContent).toBe('静')
+    expect(motion?.textContent).toBe('動')
+    expect(container.textContent).toBe('位相を静にする。動')
+  })
+
   it('renders a single keyword without a count', () => {
     const { container } = render(<CardDesc text="[K:bipolar]" />)
     expect(container.querySelector('.card-desc-keyword')?.textContent).toBe('双極')
-    expect(KEYWORD_DEFS.bipolar.desc).toContain('位相が静の時')
+    expect(KEYWORD_DEFS.bipolar.desc).toBe('位相が[P:calm]の時、手札にある限り、次のターンに持ち越される。位相が[P:motion]の時に使用すると、エナジーをこの数だけ得て、このカードの双極は全て消える。')
   })
 
   it('marks a disabled Wild keyword with a strike-through label and red suffix', () => {

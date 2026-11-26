@@ -142,3 +142,8 @@
 .card-desc-unitref {
   color: #d8b4ff;
 }
+
+/* 位相の名前。静 = 青、動 = 赤。 */
+.card-desc-phase { font-weight: 700; }
+.card-desc-phase--calm { color: #6fb2ff; }
+.card-desc-phase--motion { color: #ff6b57; }

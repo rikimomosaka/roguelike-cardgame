@@ -21,15 +21,17 @@ describe('slotTooltipContent', () => {
     const tip = slotTooltipContent({ traitName: '残光', traitDescription: '特性の説明。', phase: 'calm' })
     expect(tip?.name).toBe('残光')
     expect(tip?.desc).toContain('特性の説明。')
-    expect(tip?.desc).toContain('位相：静')
+    expect(tip?.desc).toContain('位相：[P:calm]')
     expect(tip?.desc).toContain('[K:bipolar]')
   })
 
   it('uses the phase as the title when there is no trait', () => {
     const tip = slotTooltipContent({ phase: 'motion' })
-    expect(tip?.name).toBe('位相：動')
+    const title = render(<>{tip?.name}</>).container
+    expect(title.textContent).toBe('位相：動')
+    expect(title.querySelector('.card-desc-phase--motion')).toBeInTheDocument()
     expect(tip?.desc).toContain('1.5倍')
-    expect(tip?.desc).not.toContain('位相：動')
+    expect(tip?.desc).not.toContain('位相：')
   })
 
   it('keeps the trait-only tooltip and returns null without trait or phase', () => {

@@ -10,7 +10,7 @@ import './CardDesc.css'
 export const KEYWORD_DEFS: Record<string, { name: string; desc: string }> = {
   bipolar: {
     name: '双極',
-    desc: '位相が静の時、ターン終了時に捨てられない。位相が動の時に使用すると、エナジーをこの数だけ得て、このカードの双極は全て消える。',
+    desc: '位相が[P:calm]の時、手札にある限り、次のターンに持ち越される。位相が[P:motion]の時に使用すると、エナジーをこの数だけ得て、このカードの双極は全て消える。',
   },
   wild: {
     name: 'ワイルド',
@@ -196,7 +196,8 @@ type Props = {
 
 // [N:5] / [K:wild] / [S:strength] / [T:OnTurnStart] / [V:X|手札の数] / [C:strike] / [U:wisp]
 // [R:6|up:自身の攻撃力] = 戦闘中に解決済みの能力値参照（値|上振れ下振れ:参照ラベル）
-const MARKER_RE = /\[(N|K|S|T|V|C|U|R):([^\]|]+)(?:\|([^\]]+))?\]/g
+// [P:calm] / [P:motion] = 位相の名前（静 = 青、動 = 赤）
+const MARKER_RE = /\[(N|K|S|T|V|C|U|R|P):([^\]|]+)(?:\|([^\]]+))?\]/g
 
 /**
  * カード description のリッチテキスト描画。
@@ -407,6 +408,14 @@ function renderMarker(
       return (
         <span key={key} className={cls.join(' ')}>
           {value}
+        </span>
+      )
+    }
+    case 'P': {
+      const label = value === 'calm' ? '静' : value === 'motion' ? '動' : value
+      return (
+        <span key={key} className={`card-desc-phase card-desc-phase--${value}`}>
+          {label}
         </span>
       )
     }

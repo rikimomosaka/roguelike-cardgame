@@ -3130,3 +3130,18 @@ html[data-motion='off'] .battle__slot.has-phase:not(.has-aura):not(.is-targeted)
   animation: none;
   filter: drop-shadow(0 0 1px var(--phase-color)) drop-shadow(0 -2px 3px var(--phase-soft));
 }
+
+/* カードに能力（双極など）が付く瞬間: 一度白く強く光り、光の途中で付与後の見た目に差し替わる（BattleScreen の CardAugmented）。
+   位置は transform で並べているので、filter だけを動かす。 */
+.hand > .card.is-augmenting {
+  animation: card-augment-glow 800ms ease-in-out;
+}
+
+@keyframes card-augment-glow {
+  0%   { filter: brightness(1) drop-shadow(0 0 0 rgba(160, 200, 255, 0)); }
+  45%  { filter: brightness(1.9) drop-shadow(0 0 10px rgba(160, 200, 255, 1)) drop-shadow(0 0 18px rgba(255, 255, 255, 0.8)); }
+  60%  { filter: brightness(1.6) drop-shadow(0 0 8px rgba(160, 200, 255, 0.9)); }
+  100% { filter: brightness(1) drop-shadow(0 0 0 rgba(160, 200, 255, 0)); }
+}
+
+html[data-motion='reduced'] .hand > .card.is-augmenting { animation-duration: 400ms; }

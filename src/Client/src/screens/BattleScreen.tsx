@@ -393,6 +393,8 @@ function heroUiStyle(heroId: string | undefined): CSSProperties | undefined {
 const STAGE_CANVAS_BOTTOM_Y = 198
 /** 奥義モーションで技を放つ位置（8 コマ中 5 コマ目の頭）。 */
 const SKILL_RELEASE_RATIO = 5 / 8
+/** カードに能力（双極など）が付くときの光の長さ。半分の時点で付与後の見た目に差し替える。 */
+const CARD_AUGMENT_GLOW_MS = 800
 /**
  * スキルカードのモーションで、効果を出すまで待つ割合。
  * guard: 構えが固まる 2/6 コマ目でブロックを付ける。cast: 刀に力が宿る 3/6 コマ目で効果を出す。
@@ -1295,6 +1297,8 @@ function Slot({
 
 type HandCardProps = {
   card: HandCardDemo
+  /** 能力（双極など）が付く瞬間の光。 */
+  augmenting?: boolean
   fan: { x: number; y: number; r: number }
   onClick?: () => void
   /** Why: 直前まで hand にいたが手放されたカード (play / discard / exhaust /
@@ -1406,6 +1410,7 @@ function toReplayCardDemo(
 
 function HandCard({
   card,
+  augmenting = false,
   fan,
   onClick,
   leaving,
@@ -1617,6 +1622,7 @@ function HandCard({
           // M6.6: 喪失行きは別 class でその場回転縮小消滅アニメへ。
           leaving && leavingMode === 'exhaust' ? 'is-leaving-exhaust' : '',
           hidden ? 'is-playing-hidden' : '',
+          augmenting ? 'is-augmenting' : '',
         ].filter(Boolean).join(' ') || undefined}
         onClick={leaving ? undefined : handleCardClick}
       />
@@ -2274,6 +2280,8 @@ export function BattleScreen({
   //  - drawPileRef / discardPileRef / exhaustPileRef: 行先パイル中心の計測用
   //  - handWrapRef: パイル位置不明時の fallback (画面下中央)
   const handCardRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+  // 能力（双極など）が付く瞬間に光らせる手札のカード。
+  const [augmentingCardIds, setAugmentingCardIds] = useState<ReadonlySet<string>>(() => new Set())
   // Keep the last painted center even after React unmounts the hand node. The
   // state diff that identifies a random/chosen exhaust runs after that commit.
   const handCardVisuals = useRef<Map<string, { x: number; y: number; rot: number }>>(new Map())
@@ -3439,6 +3447,43 @@ export function BattleScreen({
         }
 
         // 位相が変わった瞬間は一時的な光を出す（続く間のオーラは state の phase で描く）。
+        // カードに能力（双極など）が付いた: 連続する付与をまとめて、手札のカードを光らせ、
+        // 光の途中で付与後の見た目（説明文）に差し替える。
+        if (ev.kind === 'CardAugmented') {
+          const augmentedIds: string[] = []
+          let j = i
+          while (j < steps.length && steps[j].event.kind === 'CardAugmented') {
+            const id = steps[j].event.targetInstanceId
+            if (id && !augmentedIds.includes(id)) augmentedIds.push(id)
+            j++
+          }
+          const inHand = augmentedIds.filter(id => handCardRefs.current.has(id))
+          if (inHand.length > 0 && !presentationOnly) {
+            if (effectiveMotionLevel !== 'off') {
+              setAugmentingCardIds(new Set(inHand))
+              window.setTimeout(() => setAugmentingCardIds(new Set()),
+                Math.round(CARD_AUGMENT_GLOW_MS * motionScale / playbackSpeed))
+              if (!await waitForPresentation(CARD_AUGMENT_GLOW_MS / 2)) {
+                clearTransientPresentation()
+                return
+              }
+            }
+            const updated = new Map(resp.state.hand
+              .filter(card => inHand.includes(card.instanceId))
+              .map(card => [card.instanceId, card] as const))
+            setState(current => current
+              ? { ...current, hand: current.hand.map(card => updated.get(card.instanceId) ?? card) }
+              : current)
+            if (effectiveMotionLevel !== 'off'
+              && !await waitForPresentation(CARD_AUGMENT_GLOW_MS / 2)) {
+              clearTransientPresentation()
+              return
+            }
+          }
+          i = j
+          continue
+        }
+
         if (ev.kind === 'PhaseChanged' && ev.targetInstanceId) {
           showSlotAura(ev.targetInstanceId, 'buff')
           i++
@@ -5069,6 +5114,7 @@ export function BattleScreen({
                   <HandCard
                     key={id}
                     card={c}
+                    augmenting={!!inst && augmentingCardIds.has(inst.instanceId)}
                     fan={fan[i]}
                     onClick={
                       interactionsDisabled || !c.playable || c.cardUsageLimitReached
