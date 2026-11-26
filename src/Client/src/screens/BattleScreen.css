@@ -3064,7 +3064,40 @@ html[data-motion='off'] .slot-aura::after {
   image-rendering: pixelated;
 }
 
-/* 位相（静・動）: 足元から立ちのぼり、位相が続くあいだ揺らめき続ける光。静 = 青くゆっくり、動 = 赤く速め。 */
+/* 位相（静・動）のオーラ。
+   体の輪郭に沿って揺らめく光（スプライトへの drop-shadow）と、足元の輪。静 = 青くゆっくり、動 = 赤く速め。 */
+.battle__slot.has-phase {
+  --phase-color: rgba(110, 170, 255, 0.9);
+  --phase-soft: rgba(110, 170, 255, 0.55);
+  --phase-period: 2400ms;
+}
+
+.battle__slot.has-phase--motion {
+  --phase-color: rgba(255, 90, 60, 0.95);
+  --phase-soft: rgba(255, 140, 70, 0.6);
+  --phase-period: 1100ms;
+}
+
+/* 一時的な発光（has-aura）と対象選択の光（is-targeted）の間はそちらを優先する。 */
+.battle__slot.has-phase:not(.has-aura):not(.is-targeted) .sprite {
+  animation: slot-phase-outline var(--phase-period) ease-in-out infinite;
+}
+
+@keyframes slot-phase-outline {
+  0%, 100% {
+    filter: drop-shadow(0 0 1px var(--phase-color)) drop-shadow(0 -2px 3px var(--phase-soft));
+  }
+  25% {
+    filter: drop-shadow(1px -1px 1px var(--phase-color)) drop-shadow(1px -5px 5px var(--phase-soft));
+  }
+  50% {
+    filter: drop-shadow(0 0 2px var(--phase-color)) drop-shadow(0 -3px 4px var(--phase-soft));
+  }
+  75% {
+    filter: drop-shadow(-1px -1px 1px var(--phase-color)) drop-shadow(-1px -6px 6px var(--phase-soft));
+  }
+}
+
 .slot-phase-aura {
   position: absolute;
   left: 50%;
@@ -3075,41 +3108,6 @@ html[data-motion='off'] .slot-aura::after {
   transform: translateX(-50%);
   pointer-events: none;
   mix-blend-mode: screen;
-  --phase-color: rgba(110, 170, 255, 0.55);
-  --phase-core: rgba(190, 220, 255, 0.5);
-  --phase-period: 2400ms;
-}
-
-.slot-phase-aura--motion {
-  --phase-color: rgba(255, 90, 70, 0.6);
-  --phase-core: rgba(255, 190, 120, 0.5);
-  --phase-period: 1100ms;
-}
-
-.slot-phase-aura::before,
-.slot-phase-aura__flame {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  border-radius: 50% 50% 45% 45% / 60% 60% 40% 40%;
-  transform-origin: 50% 100%;
-}
-
-.slot-phase-aura::before {
-  width: 120px;
-  height: 160px;
-  margin-left: -60px;
-  background: radial-gradient(ellipse at 50% 90%, var(--phase-color) 0%, transparent 65%);
-  animation: slot-phase-sway var(--phase-period) ease-in-out infinite;
-}
-
-.slot-phase-aura__flame {
-  width: 70px;
-  height: 120px;
-  margin-left: -35px;
-  background: radial-gradient(ellipse at 50% 85%, var(--phase-core) 0%, transparent 70%);
-  animation: slot-phase-rise var(--phase-period) ease-in-out infinite;
 }
 
 .slot-phase-aura::after {
@@ -3121,46 +3119,14 @@ html[data-motion='off'] .slot-aura::after {
   height: 22px;
   margin-left: -55px;
   border-radius: 50%;
-  border: 2px solid var(--phase-color);
-  box-shadow: 0 0 10px var(--phase-color);
-  opacity: 0.7;
+  border: 2px solid var(--phase-soft);
+  box-shadow: 0 0 10px var(--phase-soft);
+  opacity: 0.8;
 }
 
-@keyframes slot-phase-sway {
-  0%, 100% { transform: scale(1, 1) skewX(0deg); opacity: 0.85; }
-  25%      { transform: scale(0.94, 1.06) skewX(3deg); opacity: 1; }
-  50%      { transform: scale(1.04, 0.96) skewX(0deg); opacity: 0.8; }
-  75%      { transform: scale(0.96, 1.05) skewX(-3deg); opacity: 1; }
+html[data-motion='reduced'] .battle__slot.has-phase { --phase-period: 4800ms; }
+html[data-motion='reduced'] .battle__slot.has-phase--motion { --phase-period: 2200ms; }
+html[data-motion='off'] .battle__slot.has-phase:not(.has-aura):not(.is-targeted) .sprite {
+  animation: none;
+  filter: drop-shadow(0 0 1px var(--phase-color)) drop-shadow(0 -2px 3px var(--phase-soft));
 }
-
-@keyframes slot-phase-rise {
-  0%   { transform: translateY(0) scale(0.9, 0.85); opacity: 0.4; }
-  50%  { transform: translateY(-10px) scale(1, 1.08); opacity: 0.9; }
-  100% { transform: translateY(0) scale(0.9, 0.85); opacity: 0.4; }
-}
-
-html[data-motion='reduced'] .slot-phase-aura { --phase-period: 4800ms; }
-html[data-motion='reduced'] .slot-phase-aura--motion { --phase-period: 2200ms; }
-html[data-motion='off'] .slot-phase-aura::before,
-html[data-motion='off'] .slot-phase-aura__flame { animation: none; }
-
-/* 名前の近くの「静」「動」の札。 */
-.slot-phase-tag {
-  position: absolute;
-  /* 名前（.status-name: top 222px・幅 100px）の左隣。 */
-  left: -22px;
-  top: 220px;
-  z-index: 4;
-  min-width: 18px;
-  padding: 0 3px;
-  border-radius: 3px;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 16px;
-  text-align: center;
-  color: #fff;
-  pointer-events: none;
-}
-
-.slot-phase-tag--calm { background: #2f5fb3; box-shadow: 0 0 6px rgba(110, 170, 255, 0.8); }
-.slot-phase-tag--motion { background: #b3392f; box-shadow: 0 0 6px rgba(255, 90, 70, 0.8); }

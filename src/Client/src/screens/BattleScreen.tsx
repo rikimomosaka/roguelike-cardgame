@@ -92,7 +92,7 @@ import {
 } from './battleScreen/intentSummary'
 import { CardChoiceModal } from './battleScreen/CardChoiceModal'
 import { PlayHistoryModal } from './battleScreen/FinisherRecordModal'
-import { PhaseAura, PhaseTag, type ActorPhaseDemo } from './battleScreen/PhaseMarks'
+import { PhaseAura, slotTooltipContent, type ActorPhaseDemo } from './battleScreen/PhaseMarks'
 import { characterSkillCutinDurationMs } from './battleScreen/characterSkillCutinPresentation'
 import {
   formatComboDescription,
@@ -964,12 +964,8 @@ function Slot({
   actionLabel = null,
   aura = null,
 }: SlotProps) {
-  const traitTip = useTip(char.traitDescription
-    ? {
-        name: char.traitName ?? '特性',
-        desc: char.traitDescription,
-      }
-    : null)
+  // 特性と今の位相（名前と効果）をまとめて出す。
+  const traitTip = useTip(slotTooltipContent(char))
   // Why: 影の横幅は描画後の sprite 横幅と同じにしたい。silhouette は決定論的
   //  (tier-height × 0.55) で同期計算できる。画像は naturalWidth/Height が
   //  load 後にしか取れないので onLoad で aspect を State に保持し、それ以降
@@ -1271,7 +1267,6 @@ function Slot({
       </div>
       {char.blockValue > 0 && <StatusBlock value={char.blockValue} />}
       <StatusName name={char.name} />
-      <PhaseTag phase={char.phase} />
       {onViewActions ? (
         <button
           type="button"
