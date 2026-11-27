@@ -211,21 +211,21 @@
       "bottom": 123
     },
     "heroes/enhancer_lyra": {
-      "centerY": 0.688,
-      "footprint": 61,
-      "top": 52,
+      "centerY": 0.672,
+      "footprint": 54,
+      "top": 48,
       "bottom": 123
     },
     "heroes/guardian_mireille": {
-      "centerY": 0.688,
-      "footprint": 67,
-      "top": 52,
+      "centerY": 0.672,
+      "footprint": 52,
+      "top": 48,
       "bottom": 123
     },
     "heroes/tactician_yuno": {
-      "centerY": 0.684,
-      "footprint": 45,
-      "top": 51,
+      "centerY": 0.672,
+      "footprint": 44,
+      "top": 48,
       "bottom": 123
     },
     "units/wisp": {

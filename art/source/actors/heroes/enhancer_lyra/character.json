@@ -1,7 +1,7 @@
 {
   "id": "enhancer_lyra",
   "name": "調律師リラ",
-  "brief": "docs/art/characters/heroes-rebuild-2026-11-27.md",
+  "brief": "docs/art/characters/heroes-rebuild-2026-11-28.md",
   "mode": "native",
   "note": "原寸のドット絵（セラと同じ規格）。footRow は足元の行、anchorX は体の横中心（境界座標）。ビルドで 128×128 のコマ（足元 123 行・中心 64）へ並べ直す。",
   "motions": {

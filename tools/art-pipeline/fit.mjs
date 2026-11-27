@@ -22,7 +22,9 @@ for (let y = 0; y < th; y++) for (let x = 0; x < tw; x++) {
   const sx0 = b.minX + x / scale, sx1 = b.minX + (x + 1) / scale
   const sy0 = b.minY + y / scale, sy1 = b.minY + (y + 1) / scale
   let r = 0, g = 0, bl = 0, al = 0, n = 0
-  for (let sy = Math.floor(sy0); sy < Math.ceil(sy1); sy++) for (let sx = Math.floor(sx0); sx < Math.ceil(sx1); sx++) {
+  // 倍率が割り切れないと最後の行・列で範囲の外を読む（未定義値が黒になる）ので、内容の範囲で止める。
+  const syEnd = Math.min(Math.ceil(sy1), b.maxY + 1), sxEnd = Math.min(Math.ceil(sx1), b.maxX + 1)
+  for (let sy = Math.floor(sy0); sy < syEnd; sy++) for (let sx = Math.floor(sx0); sx < sxEnd; sx++) {
     const i = (sy * src.width + sx) * 4
     const alpha = src.data[i + 3] / 255
     r += src.data[i] * alpha; g += src.data[i + 1] * alpha; bl += src.data[i + 2] * alpha

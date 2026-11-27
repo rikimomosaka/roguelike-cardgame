@@ -178,7 +178,7 @@ node tools/art-pipeline/build-assets.mjs icons/relics   # 種類を指定
 | 1 | 規格・フォルダ・命名（この文書）、`assets.ts`、ビルドスクリプト | 済 |
 | 2 | 既存画像を `art/source/` へ移し、全種類を一括変換。コードの参照を `assets.ts` に切り替え | 済（約 45MB → 1.6MB） |
 | 3 | 変換結果を確認し、崩れたものを PixelLab で描き直す | 済（状態アイコン 3 つ: 混乱・呪縛・動揺。§8） |
-| 4 | 戦闘キャラを 128×128 共通キャンバスへ（敵 34 体・味方ユニット・主人公 4 人） | 済（主人公 4 人とも新規格。ミレイユ・ユノ・リラは 2026-11-27 に作り直し: [heroes-rebuild-2026-11-27.md](art/characters/heroes-rebuild-2026-11-27.md)） |
+| 4 | 戦闘キャラを 128×128 共通キャンバスへ（敵 34 体・味方ユニット・主人公 4 人） | 済（主人公 4 人とも新規格。ミレイユ・ユノ・リラは 2026-11-28 に作り直し: [heroes-rebuild-2026-11-28.md](art/characters/heroes-rebuild-2026-11-28.md)） |
 | 5 | セラ専用の戦闘UI、敵の汎用UI を作って組み込む | 済（§8） |
 | 6 | 表示側を整数倍表示にそろえる（CSS） | 主要部分は済（背景・戦闘キャラ・操作UI ×2、焚き火 ×4、行動予告・システム・レリック・マップのアイコンを等倍/×2）。ポーション・各画面の細部は未調整 |
 
@@ -197,5 +197,7 @@ node tools/art-pipeline/build-assets.mjs icons/relics   # 種類を指定
 - **セラの立ち絵**（`portraits/default.png`）: キャラ選択・カットイン用。PixelLab pixen の 128×160 を 120×160 に切り詰めた。
   旧キャラ（見習い冒険者）の立ち絵は `art/source/_archive/portraits/`。
   2026-11-27 に戦闘スプライトと同じ原画から作り直した（[striker_sera.md](art/characters/striker_sera.md)）。
-- **ミレイユ・ユノ・リラの立ち絵と戦闘スプライト**（2026-11-27）: セラと同じ規格で作り直した。PixelLab の見本画像つき生成で、
-  旧立ち絵をデザイン、セラの絵を画風の見本にした（[heroes-rebuild-2026-11-27.md](art/characters/heroes-rebuild-2026-11-27.md)）。
+- **ミレイユ・ユノ・リラの立ち絵と戦闘スプライト**（2026-11-28）: セラと同じ手順で作り直した。
+  ChatGPT の全身原画（約 3.5 頭身）を縮小・減色して戦闘スプライトとアイコンにし、モーションは PixelLab で付けた。
+  詳細は [heroes-rebuild-2026-11-28.md](art/characters/heroes-rebuild-2026-11-28.md)。
+  前日の PixelLab だけの版（[heroes-rebuild-2026-11-27.md](art/characters/heroes-rebuild-2026-11-27.md)）は、顔つきが違ったため置き換えた。

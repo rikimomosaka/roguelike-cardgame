@@ -1,5 +1,7 @@
 # ミレイユ・ユノ・リラ の戦闘スプライトとアイコンの作り直し（2026-11-27）
 
+> **置き換え済み（2026-11-28）:** 顔つきがセラと違ったため、ChatGPT の原画から作り直した。現行は [heroes-rebuild-2026-11-28.md](heroes-rebuild-2026-11-28.md)。この文書は経緯の記録。
+
 > 対象: 鉄衛騎士ミレイユ（`guardian_mireille`）、作戦参謀ユノ（`tactician_yuno`）、調律師リラ（`enhancer_lyra`）。
 > 規格はセラ（[striker_sera.md](striker_sera.md)）と同じ。旧素材（192×256 のコマを縮小した仮の絵）は置き換えた。
 > 作業ファイルは `art-work/heroes2/`（git 管理外）。
