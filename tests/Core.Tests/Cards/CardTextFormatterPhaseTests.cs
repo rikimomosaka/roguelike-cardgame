@@ -37,7 +37,8 @@ public sealed class CardTextFormatterPhaseTests
 
     [Fact]
     public void AugmentCards_RandomTwoStacks() =>
-        Assert.Equal("手札のランダムなアタック[N:1]枚に[K:enhance]【[K:bipolar|2]】する。",
+        // 双極は上限 1 なので、2 を付与する効果でも【双極】と書く。
+        Assert.Equal("手札のランダムなアタック[N:1]枚に[K:enhance]【[K:bipolar]】する。",
             Format(new CardEffect("augmentCards", EffectScope.Self, null, 2, Name: "bipolar",
                 Pile: "hand", Select: "random", CardCount: 1, CardTypeFilter: "Attack")));
 

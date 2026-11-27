@@ -133,6 +133,8 @@ public static class PhaseRules
             if (!catalog.TryGetCard(card.CardDefinitionId, out var def) || def.CardType != CardType.Attack)
                 continue;
             var augmented = card.AddKeyword(CardKeywords.Bipolar, 1);
+            if (augmented.KeywordCount(CardKeywords.Bipolar) == card.KeywordCount(CardKeywords.Bipolar))
+                continue;
             hand[i] = augmented;
             events?.Add(new BattleEvent(
                 BattleEventKind.CardAugmented, order++,

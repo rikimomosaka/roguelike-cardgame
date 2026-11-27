@@ -625,7 +625,9 @@ public static class CardTextFormatter
     /// </summary>
     private static string DescribeAugmentCards(CardEffect e)
     {
-        string keyword = e.Amount >= 2 ? $"[K:{e.Name ?? "?"}|{e.Amount}]" : $"[K:{e.Name ?? "?"}]";
+        // 上限のあるキーワード（双極は 1）は、上限を超える数を書かない。
+        int shown = CardKeywords.MaxCount(e.Name ?? "") is { } max ? System.Math.Min(e.Amount, max) : e.Amount;
+        string keyword = shown >= 2 ? $"[K:{e.Name ?? "?"}|{shown}]" : $"[K:{e.Name ?? "?"}]";
         string enhance = $"[K:enhance]【{keyword}】する";
         if (e.Pile == "self") return $"このカードに{enhance}";
         string zone = ZoneJp(e.Pile ?? "hand");

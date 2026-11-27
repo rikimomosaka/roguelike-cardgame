@@ -36,13 +36,14 @@ public sealed class PhaseTurnEndTests
     }
 
     [Fact]
-    public void CalmTwoTurns_StacksToBipolar2()
+    public void CalmTwoTurns_StaysAtOneBipolar_WithoutAnotherAugmentEvent()
     {
         var catalog = BattleFixtures.MinimalCatalog();
         var (once, _) = TurnEndProcessor.Process(WithHero(ActorPhase.Calm, Card("strike", "s1")), Rng(), catalog);
-        var (twice, _) = TurnEndProcessor.Process(once, Rng(), catalog);
+        var (twice, events) = TurnEndProcessor.Process(once, Rng(), catalog);
 
-        Assert.Equal(2, Assert.Single(twice.Hand).KeywordCount("bipolar"));
+        Assert.Equal(1, Assert.Single(twice.Hand).KeywordCount("bipolar"));
+        Assert.DoesNotContain(events, e => e.Kind == BattleEventKind.CardAugmented);
     }
 
     [Fact]

@@ -60,26 +60,37 @@ public sealed record BattleCardInstance(
             ? augments
             : ImmutableArray<CardAugment>.Empty;
 
-    /// <summary>キーワードを足す。同じキーワードは数を加算して 1 件にまとめる。</summary>
+    /// <summary>
+    /// キーワードを足す。同じキーワードは数を加算して 1 件にまとめる。
+    /// キーワードに上限（CardKeywords.MaxCount）があれば、それを超えない。
+    /// </summary>
     public BattleCardInstance AddKeyword(string keywordId, int count)
     {
         if (count <= 0)
             throw new ArgumentOutOfRangeException(nameof(count), count, "count must be positive");
+        int? max = CardKeywords.MaxCount(keywordId);
         var current = EffectiveAugments;
         for (int i = 0; i < current.Length; i++)
         {
             var augment = current[i];
             if (augment.Kind == CardAugment.KeywordKind && augment.KeywordId == keywordId)
-                return this with { Augments = current.SetItem(i, augment with { Count = augment.Count + count }) };
+            {
+                int total = Cap(augment.Count + count, max);
+                return total == augment.Count
+                    ? this
+                    : this with { Augments = current.SetItem(i, augment with { Count = total }) };
+            }
         }
-        return this with { Augments = current.Add(new CardAugment(CardAugment.KeywordKind, keywordId, count)) };
+        return this with { Augments = current.Add(new CardAugment(CardAugment.KeywordKind, keywordId, Cap(count, max))) };
     }
 
-    /// <summary>後から足されたキーワードの数（無ければ 0）。</summary>
+    private static int Cap(int count, int? max) => max is { } limit ? Math.Min(count, limit) : count;
+
+    /// <summary>後から足されたキーワードの数（無ければ 0）。上限があるキーワードは上限までで数える。</summary>
     public int KeywordCount(string keywordId) =>
-        EffectiveAugments
+        Cap(EffectiveAugments
             .Where(augment => augment.Kind == CardAugment.KeywordKind && augment.KeywordId == keywordId)
-            .Sum(augment => augment.Count);
+            .Sum(augment => augment.Count), CardKeywords.MaxCount(keywordId));
 
     /// <summary>後から足されたキーワードをすべて取り除く。</summary>
     public BattleCardInstance RemoveKeyword(string keywordId)
@@ -97,7 +108,7 @@ public sealed record BattleCardInstance(
     public IReadOnlyList<(string Id, int Count)> AugmentedKeywords() =>
         EffectiveAugments
             .Where(augment => augment.Kind == CardAugment.KeywordKind)
-            .Select(augment => (augment.KeywordId, augment.Count))
+            .Select(augment => (augment.KeywordId, Cap(augment.Count, CardKeywords.MaxCount(augment.KeywordId))))
             .ToArray();
 
     public BattleCardInstance AddCostModifier(CardCostModifier modifier)

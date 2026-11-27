@@ -1919,13 +1919,16 @@ internal static class EffectApplier
             for (int i = 0; i < builder.Count; i++)
                 if (builder[i].InstanceId == id) { index = i; break; }
             if (index < 0) continue;
-            var augmented = builder[index].AddKeyword(effect.Name!, effect.Amount);
+            var before = builder[index];
+            var augmented = before.AddKeyword(effect.Name!, effect.Amount);
+            int added = augmented.KeywordCount(effect.Name!) - before.KeywordCount(effect.Name!);
+            if (added <= 0) continue;
             builder[index] = augmented;
             events.Add(new BattleEvent(
                 BattleEventKind.CardAugmented, events.Count,
                 CasterInstanceId: caster.InstanceId,
                 TargetInstanceId: id,
-                Amount: effect.Amount,
+                Amount: added,
                 Note: $"{effect.Name}:{augmented.KeywordCount(effect.Name!)}"));
         }
         var cards = builder.ToImmutable();

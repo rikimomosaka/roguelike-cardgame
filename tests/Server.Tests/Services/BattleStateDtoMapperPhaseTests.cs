@@ -57,7 +57,9 @@ public class BattleStateDtoMapperPhaseTests : IClassFixture<TempDataFactory>
 
         var card = dto.Hand.Single(c => c.InstanceId == cardId);
         // 後付け（エンハンス）のキーワードは "+" 付きで、数があれば続ける。
-        Assert.Contains("[K:bipolar|+2]", card.AdjustedDescription);
+        // 双極は上限 1 なので数は付かない。
+        Assert.Contains("[K:bipolar|+]", card.AdjustedDescription);
+        Assert.DoesNotContain("[K:bipolar|+2]", card.AdjustedDescription);
     }
 
     [Fact]

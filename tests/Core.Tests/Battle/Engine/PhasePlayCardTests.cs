@@ -116,17 +116,18 @@ public sealed class PhasePlayCardTests
     }
 
     [Fact]
-    public void MotionHero_PlaysBipolar2Attack_GainsTwoEnergy_AndClearsBipolar()
+    public void MotionHero_PlaysBipolarAttack_GainsOneEnergy_AndClearsBipolar()
     {
+        // 何度付いても双極は 1 つ（エナジーも 1）。
         var state = WithHero(ActorPhase.Motion, Card("strike", "s1").AddKeyword("bipolar", 2)) with { Energy = 3 };
 
         var (after, events) = BattleEngine.PlayCard(state, 0, 0, 0, Rng(), Catalog());
 
-        Assert.Equal(3 - 1 + 2, after.Energy);
+        Assert.Equal(3 - 1 + 1, after.Energy);
         Assert.Equal(ActorPhase.Motion, after.Allies[0].Phase);
         var played = Assert.Single(after.DiscardPile);
         Assert.Equal(0, played.KeywordCount("bipolar"));
-        Assert.Contains(events, e => e.Note == "bipolar" && e.Amount == 2);
+        Assert.Contains(events, e => e.Note == "bipolar" && e.Amount == 1);
     }
 
     [Fact]

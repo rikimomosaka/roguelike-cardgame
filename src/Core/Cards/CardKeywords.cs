@@ -48,6 +48,18 @@ public static class CardKeywords
             "位相を持つ場合、対となる位相に変更する。"),
     };
 
+    /// <summary>
+    /// カードに後から付くキーワードの最大数。null は上限なし（重ねると数が増える）。
+    /// 双極は 2026-11-27 から 1（何度付いても双極 1 つ、エナジーも 1）。重ねる仕組み自体は残している。
+    /// </summary>
+    private static readonly Dictionary<string, int> _maxCount = new()
+    {
+        [Bipolar] = 1,
+    };
+
+    public static int? MaxCount(string id) =>
+        _maxCount.TryGetValue(id, out var max) ? max : null;
+
     public static KeywordMeta? Get(string id) =>
         _map.TryGetValue(id, out var meta) ? meta : null;
 

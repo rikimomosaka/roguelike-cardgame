@@ -17,6 +17,7 @@
         "rarity": 1,
         "cardType": "Skill",
         "cost": 1,
+        "upgradedCost": 0,
         "effects": [
           {
             "action": "augmentCards",
@@ -33,7 +34,7 @@
           {
             "action": "augmentCards",
             "scope": "self",
-            "amount": 2,
+            "amount": 1,
             "name": "bipolar",
             "pile": "hand",
             "select": "choose",

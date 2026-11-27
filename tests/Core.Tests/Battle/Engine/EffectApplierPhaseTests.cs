@@ -119,7 +119,7 @@ public sealed class EffectApplierPhaseTests
 
         var (next, _) = Apply(state, Augment("all", amount: 2, filter: null, pile: "self"), playing: "playing");
 
-        Assert.Equal(new[] { 2, 0 }, next.Hand.Select(c => c.KeywordCount("bipolar")));
+        Assert.Equal(new[] { 1, 0 }, next.Hand.Select(c => c.KeywordCount("bipolar")));
     }
 
     [Fact]

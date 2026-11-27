@@ -12,13 +12,25 @@ public sealed class CardAugmentTests
     private static BattleCardInstance Strike() => new("c1", "strike", false, null);
 
     [Fact]
-    public void AddKeyword_Stacks()
+    public void AddKeyword_Stacks_ForKeywordsWithoutACap()
     {
-        var card = Strike().AddKeyword(CardKeywords.Bipolar, 1).AddKeyword(CardKeywords.Bipolar, 1);
+        // 重ねる仕組み自体は残す（上限の無いキーワードは数が増える）。
+        var card = Strike().AddKeyword("wild", 1).AddKeyword("wild", 1);
 
-        Assert.Equal(2, card.KeywordCount(CardKeywords.Bipolar));
+        Assert.Equal(2, card.KeywordCount("wild"));
         var augment = Assert.Single(card.EffectiveAugments);
-        Assert.Equal(new CardAugment(CardAugment.KeywordKind, "bipolar", 2), augment);
+        Assert.Equal(new CardAugment(CardAugment.KeywordKind, "wild", 2), augment);
+    }
+
+    [Fact]
+    public void Bipolar_IsCappedAtOne_EvenWhenAddedRepeatedly()
+    {
+        var card = Strike().AddKeyword(CardKeywords.Bipolar, 1).AddKeyword(CardKeywords.Bipolar, 2);
+
+        Assert.Equal(1, card.KeywordCount(CardKeywords.Bipolar));
+        Assert.Equal(new[] { ("bipolar", 1) }, card.AugmentedKeywords());
+        Assert.Equal(1, CardKeywords.MaxCount(CardKeywords.Bipolar));
+        Assert.Null(CardKeywords.MaxCount("wild"));
     }
 
     [Fact]
@@ -37,9 +49,9 @@ public sealed class CardAugmentTests
     [Fact]
     public void AugmentedKeywords_KeepsAddOrder()
     {
-        var card = Strike().AddKeyword("bipolar", 2).AddKeyword("wild", 1);
+        var card = Strike().AddKeyword("bipolar", 1).AddKeyword("wild", 2);
 
-        Assert.Equal(new[] { ("bipolar", 2), ("wild", 1) }, card.AugmentedKeywords());
+        Assert.Equal(new[] { ("bipolar", 1), ("wild", 2) }, card.AugmentedKeywords());
     }
 
     [Fact]
@@ -56,9 +68,9 @@ public sealed class CardAugmentTests
     [Fact]
     public void ConsumeCostChangesOnPlay_KeepsAugments()
     {
-        var card = Strike().AddKeyword(CardKeywords.Bipolar, 2).ConsumeCostChangesOnPlay();
+        var card = Strike().AddKeyword(CardKeywords.Bipolar, 1).ConsumeCostChangesOnPlay();
 
-        Assert.Equal(2, card.KeywordCount(CardKeywords.Bipolar));
+        Assert.Equal(1, card.KeywordCount(CardKeywords.Bipolar));
     }
 
     [Fact]
