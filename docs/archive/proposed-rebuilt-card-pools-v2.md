@@ -1,5 +1,9 @@
 # 全カードプール再編案
 
+> **アーカイブ（2026-11-27 移動）:** 2026-08-21 に承認・実装された。その後の変更: クラス別の基本カード（2026-11-25）、位相カード 8 枚の追加（2026-11-26）。現行は [current-characters-and-class-cards.md](../current-characters-and-class-cards.md) と [current-character-class-card-pool-spec.md](../current-character-class-card-pool-spec.md)。
+> 現行仕様は `docs/current-*.md` が正本。この文書は経緯の記録として残している。
+
+
 更新日: 2026-08-21
 
 状態: **2026-08-21承認済み。通常Basic 14種／Reward 60種の組込データへ反映済み。**

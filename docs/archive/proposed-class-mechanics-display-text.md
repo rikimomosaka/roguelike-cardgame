@@ -1,5 +1,9 @@
 # クラス能力・表示文言 確認仕様
 
+> **アーカイブ（2026-11-27 移動）:** 表示文言は確定・実装済み。ゲーム内の文言はカード定義（CardKeywords / BattleStatusTextCatalog）が正。現行の要約は [current-class-card-abilities-spec.md](../current-class-card-abilities-spec.md)。
+> 現行仕様は `docs/current-*.md` が正本。この文書は経緯の記録として残している。
+
+
 最終更新: 2026-08-21
 
 この文書は、クラスカード作成前に、新規実装する用語とゲーム内表示文言を確定するための一覧である。

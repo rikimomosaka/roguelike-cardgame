@@ -1,7 +1,8 @@
 # 残光剣士セラ（Striker）
 
 > キャラクター設定とデザイン指示。ゲーム内 ID は従来どおり `default`（セーブ互換のため変更しない）。
-> 出典: クラス設計 [current-striker-class-concept-v2.md](../../current-striker-class-concept-v2.md) の案「残光剣士セラ」。
+> 出典: 初期のクラス設計 [archive/current-striker-class-concept-v2.md](../../archive/current-striker-class-concept-v2.md) の案「残光剣士セラ」。
+> 能力（特性・戦技・奥義）とカードの現行は [current-characters-and-class-cards.md](../../current-characters-and-class-cards.md)。
 
 ## 設定
 

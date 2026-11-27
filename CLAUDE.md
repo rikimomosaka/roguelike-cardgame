@@ -74,7 +74,12 @@ roguelike-cardgame/
   - 提案書 §5 の未決事項は、ユーザーの回答なしに仕様化しない。実装した部分は `current-*` 仕様書へ移す。
 - **位相（静・動）・双極・カードの後付け能力**（2026-11-26 実装）: [docs/current-phase-spec.md](docs/current-phase-spec.md)。
   位相を踏み倒す効果（動のまま非アタックを使える等）は作らない。
+- **キャラクター・カードの現行一覧**: [docs/current-characters-and-class-cards.md](docs/current-characters-and-class-cards.md)（組込データから作成）。
+  キーワード能力（乗勢・終撃・再演・伏策など）は [docs/current-class-card-abilities-spec.md](docs/current-class-card-abilities-spec.md)。
+- **ストライカーのキャラ構成・カードプール**（2026-11-27 相談開始、未承認）: [docs/proposed-striker-roster.md](docs/proposed-striker-roster.md)。カードは当面設計だけ。
+- **エナジー**: ターン開始時は規定値まで回復（足し算ではない、2026-11-27〜）。[docs/current-energy-spec.md](docs/current-energy-spec.md)。
 - `docs/current-*.md` が現行仕様の正本。`proposed-*.md` は未承認・未実装の提案。
+  初期設計や実装済みの提案は `docs/archive/` に移してある（経緯の記録。現行仕様としては読まない）。
 
 ## コーディング規約
 
