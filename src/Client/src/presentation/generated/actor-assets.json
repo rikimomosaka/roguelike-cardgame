@@ -211,20 +211,20 @@
       "bottom": 123
     },
     "heroes/enhancer_lyra": {
-      "centerY": 0.684,
-      "footprint": 54,
-      "top": 51,
+      "centerY": 0.688,
+      "footprint": 61,
+      "top": 52,
       "bottom": 123
     },
     "heroes/guardian_mireille": {
-      "centerY": 0.684,
-      "footprint": 49,
-      "top": 51,
+      "centerY": 0.688,
+      "footprint": 67,
+      "top": 52,
       "bottom": 123
     },
     "heroes/tactician_yuno": {
       "centerY": 0.684,
-      "footprint": 46,
+      "footprint": 45,
       "top": 51,
       "bottom": 123
     },
@@ -289,68 +289,158 @@
       }
     },
     "enhancer_lyra": {
-      "stand": {
-        "frames": 1,
-        "durationMs": 0,
-        "loop": false
-      },
       "idle": {
         "frames": 8,
-        "durationMs": 1600,
+        "durationMs": 1200,
         "loop": true
       },
       "attack": {
-        "frames": 4,
-        "durationMs": 480,
+        "frames": 6,
+        "durationMs": 600,
         "loop": false
+      },
+      "attack_alt": {
+        "frames": 6,
+        "durationMs": 600,
+        "loop": false
+      },
+      "skill": {
+        "frames": 8,
+        "durationMs": 800,
+        "loop": false
+      },
+      "guard": {
+        "frames": 6,
+        "durationMs": 720,
+        "loop": false
+      },
+      "cast": {
+        "frames": 6,
+        "durationMs": 720,
+        "loop": false
+      },
+      "still": {
+        "frames": 1,
+        "durationMs": 1000,
+        "loop": true
       },
       "hurt": {
         "frames": 4,
-        "durationMs": 440,
+        "durationMs": 400,
+        "loop": false
+      },
+      "down": {
+        "frames": 6,
+        "durationMs": 720,
+        "loop": false
+      },
+      "stand": {
+        "frames": 1,
+        "durationMs": 0,
         "loop": false
       }
     },
     "guardian_mireille": {
-      "stand": {
-        "frames": 1,
-        "durationMs": 0,
-        "loop": false
-      },
       "idle": {
         "frames": 8,
-        "durationMs": 1600,
+        "durationMs": 1200,
         "loop": true
       },
       "attack": {
-        "frames": 4,
-        "durationMs": 480,
+        "frames": 6,
+        "durationMs": 600,
         "loop": false
+      },
+      "attack_alt": {
+        "frames": 6,
+        "durationMs": 600,
+        "loop": false
+      },
+      "skill": {
+        "frames": 8,
+        "durationMs": 800,
+        "loop": false
+      },
+      "guard": {
+        "frames": 6,
+        "durationMs": 720,
+        "loop": false
+      },
+      "cast": {
+        "frames": 6,
+        "durationMs": 720,
+        "loop": false
+      },
+      "still": {
+        "frames": 1,
+        "durationMs": 1000,
+        "loop": true
       },
       "hurt": {
         "frames": 4,
-        "durationMs": 440,
+        "durationMs": 400,
+        "loop": false
+      },
+      "down": {
+        "frames": 6,
+        "durationMs": 720,
+        "loop": false
+      },
+      "stand": {
+        "frames": 1,
+        "durationMs": 0,
         "loop": false
       }
     },
     "tactician_yuno": {
-      "stand": {
-        "frames": 1,
-        "durationMs": 0,
-        "loop": false
-      },
       "idle": {
         "frames": 8,
-        "durationMs": 1600,
+        "durationMs": 1200,
         "loop": true
       },
       "attack": {
-        "frames": 4,
-        "durationMs": 480,
+        "frames": 6,
+        "durationMs": 600,
         "loop": false
+      },
+      "attack_alt": {
+        "frames": 6,
+        "durationMs": 600,
+        "loop": false
+      },
+      "skill": {
+        "frames": 8,
+        "durationMs": 800,
+        "loop": false
+      },
+      "guard": {
+        "frames": 6,
+        "durationMs": 720,
+        "loop": false
+      },
+      "cast": {
+        "frames": 6,
+        "durationMs": 720,
+        "loop": false
+      },
+      "still": {
+        "frames": 1,
+        "durationMs": 1000,
+        "loop": true
       },
       "hurt": {
         "frames": 4,
-        "durationMs": 440,
+        "durationMs": 400,
+        "loop": false
+      },
+      "down": {
+        "frames": 6,
+        "durationMs": 720,
+        "loop": false
+      },
+      "stand": {
+        "frames": 1,
+        "durationMs": 0,
         "loop": false
       }
     }

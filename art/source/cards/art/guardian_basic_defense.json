@@ -4,7 +4,7 @@
   "seed": 2,
   "actor": {
     "hero": "guardian_mireille",
-    "sheet": "stand",
-    "frame": 0
+    "sheet": "guard",
+    "frame": 3
   }
 }

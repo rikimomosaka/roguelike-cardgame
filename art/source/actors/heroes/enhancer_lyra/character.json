@@ -1,12 +1,19 @@
 {
   "id": "enhancer_lyra",
-  "mode": "legacy",
-  "note": "旧素材（192×256 のコマ）を縮小した仮の素材。新規格で作り直すまでの代用。height は身長（ドット）。",
-  "height": 72,
+  "name": "調律師リラ",
+  "brief": "docs/art/characters/heroes-rebuild-2026-11-27.md",
+  "mode": "native",
+  "note": "原寸のドット絵（セラと同じ規格）。footRow は足元の行、anchorX は体の横中心（境界座標）。ビルドで 128×128 のコマ（足元 123 行・中心 64）へ並べ直す。",
   "motions": {
-    "stand":  { "file": "stand.png",  "frameWidth": 192, "frames": 1 },
-    "idle":   { "file": "idle.png",   "frameWidth": 192, "frames": 8, "durationMs": 1600 },
-    "attack": { "file": "attack.png", "frameWidth": 384, "frames": 4, "durationMs": 480 },
-    "hurt":   { "file": "hurt.png",   "frameWidth": 192, "frames": 4, "durationMs": 440 }
-  }
+    "idle": {"file": "idle.png", "frameWidth": 80, "frameHeight": 80, "frames": 8, "footRow": 77, "anchorX": 39.5},
+    "attack": {"file": "attack_a.png", "frameWidth": 128, "frameHeight": 96, "frames": 6, "footRow": 93, "anchorX": 63.5},
+    "attack_alt": {"file": "attack_b.png", "frameWidth": 128, "frameHeight": 96, "frames": 6, "footRow": 93, "anchorX": 63.5},
+    "skill": {"file": "skill.png", "frameWidth": 128, "frameHeight": 96, "frames": 8, "footRow": 93, "anchorX": 63.5},
+    "guard": {"file": "guard.png", "frameWidth": 128, "frameHeight": 96, "frames": 6, "footRow": 93, "anchorX": 63.5},
+    "cast": {"file": "cast.png", "frameWidth": 128, "frameHeight": 96, "frames": 6, "footRow": 93, "anchorX": 63.5},
+    "still": {"file": "blink.png", "frameWidth": 80, "frameHeight": 80, "frames": 1, "footRow": 77, "anchorX": 39.5},
+    "hurt": {"file": "hurt.png", "frameWidth": 128, "frameHeight": 96, "frames": 4, "footRow": 93, "anchorX": 63.5, "colors": 48},
+    "down": {"file": "down.png", "frameWidth": 128, "frameHeight": 96, "frames": 6, "footRow": 93, "anchorX": 63.5}
+  },
+  "base": { "file": "base.png", "blink": "blink.png", "colors": 24 }
 }

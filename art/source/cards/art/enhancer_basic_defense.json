@@ -4,7 +4,7 @@
   "seed": 2,
   "actor": {
     "hero": "enhancer_lyra",
-    "sheet": "attack",
-    "frame": 1
+    "sheet": "guard",
+    "frame": 3
   }
 }

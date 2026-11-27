@@ -6,6 +6,7 @@
 //   node tools/art-pipeline/pixellab.mjs balance
 //   node tools/art-pipeline/pixellab.mjs image --desc "..." --w 128 --h 160 --out art-work/x.png [--seed 1] [--engine pixflux|pixen|bitforge] [--no-bg] [--view side] [--direction east]
 //   node tools/art-pipeline/pixellab.mjs animate --first art-work/base.png --action "..." --frames 6 --out art-work/attack_a [--last art-work/base.png] [--seed 1]
+//   node tools/art-pipeline/pixellab.mjs gen2 --desc "..." --w 80 --h 80 --ref "a.png::用途;;b.png::用途" --style "s.png::用途" [--colors 24] --out art-work/x.png
 //   node tools/art-pipeline/pixellab.mjs edit --image art-work/base.png --desc "eyes closed" --out art-work/blink.png
 import fs from 'node:fs'
 import path from 'node:path'
@@ -132,6 +133,31 @@ const commands = {
     console.log(`saved ${images.length} frames to ${a.out} usage=${JSON.stringify(job.usage)}`)
   },
 
+  // 見本画像つき生成（generate-image-v2）。--ref は「画像パス::使い方」を ;; 区切りで最大 4 つ。
+  async gen2(a) {
+    const ref = (spec) => {
+      const [file, usage] = spec.split('::')
+      return { image: b64(file), size: pngSize(file), ...(usage ? { usage_description: usage } : {}) }
+    }
+    const body = {
+      description: a.desc,
+      image_size: { width: Number(a.w), height: Number(a.h) },
+      no_background: true,
+      ...(a.ref ? { reference_images: String(a.ref).split(';;').map(ref) } : {}),
+      ...(a.style ? { style_image: ref(a.style) } : {}),
+      ...(a.colors ? { target_palette: { max_colors: Number(a.colors) } } : {}),
+      ...(a.seed ? { seed: Number(a.seed) } : {}),
+    }
+    const res = await request('POST', '/generate-image-v2', body)
+    const job = res.background_job_id ? await waitJob(res.background_job_id, 3000) : { last_response: res }
+    const lr = job.last_response ?? {}
+    const imgs = lr.images ?? (lr.image ? [lr.image] : [])
+    if (!imgs.length) throw new Error('gen2: image not found: ' + JSON.stringify(lr).slice(0, 300))
+    const files = imgs.map((img, i) => savePng(img.base64, imgs.length === 1 ? a.out : a.out.replace(/\.png$/, `_${i}.png`)))
+    log({ cmd: 'gen2', desc: a.desc, size: body.image_size, ref: a.ref, style: a.style, seed: a.seed, out: files, usage: job.usage ?? res.usage })
+    console.log(`saved ${files.join(', ')} usage=${JSON.stringify(job.usage ?? res.usage)}`)
+  },
+
   async edit(a) {
     const size = pngSize(a.image)
     const body = {
@@ -157,7 +183,7 @@ const commands = {
 const a = args(process.argv.slice(2))
 const cmd = a._[0]
 if (!commands[cmd]) {
-  console.error('commands: balance | image | animate | edit')
+  console.error('commands: balance | image | gen2 | animate | edit')
   process.exit(1)
 }
 commands[cmd](a).catch(err => {

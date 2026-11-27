@@ -33,7 +33,7 @@ describe('actorVisualManifest', () => {
     expect(visual?.stage?.displayHeight).toBe(256)
   })
 
-  it('uses the remade standard motions for Sera and the converted legacy timing for others', () => {
+  it('uses the standard motions for every hero (Sera and the 2026-11-27 remakes)', () => {
     const sera = resolveActorVisual({ isHero: true, characterId: 'default', side: 'Ally' })
     expect(sera?.animations?.idle).toMatchObject({ frameCount: 8, durationMs: 1200 })
     expect(sera?.animations?.attack).toMatchObject({ frameCount: 6, durationMs: 600 })
@@ -53,13 +53,18 @@ describe('actorVisualManifest', () => {
     expect(sera?.animations?.hurt).toMatchObject({ frameCount: 4, durationMs: 400 })
     expect(sera?.animations?.down).toMatchObject({ frameCount: 6, durationMs: 720, loop: false })
 
-    const mireille = resolveActorVisual({ isHero: true, characterId: 'guardian_mireille', side: 'Ally' })
-    expect(mireille?.animations?.idle).toMatchObject({ frameCount: 8, durationMs: 1600 })
-    expect(mireille?.animations?.attack).toMatchObject({ frameCount: 4, durationMs: 480 })
-    expect(mireille?.animations?.attackAlt).toBeUndefined()
-    expect(mireille?.animations?.skill).toBeUndefined()
-    expect(mireille?.animations?.guard).toBeUndefined()
-    expect(mireille?.animations?.down).toBeUndefined()
+    for (const id of ['guardian_mireille', 'tactician_yuno', 'enhancer_lyra']) {
+      const hero = resolveActorVisual({ isHero: true, characterId: id, side: 'Ally' })
+      expect(hero?.animations?.idle).toMatchObject({ frameCount: 8, durationMs: 1200 })
+      expect(hero?.animations?.attack).toMatchObject({ frameCount: 6, durationMs: 600 })
+      expect(hero?.animations?.attackAlt).toMatchObject({ frameCount: 6, durationMs: 600 })
+      expect(hero?.animations?.skill).toMatchObject({ frameCount: 8, durationMs: 800 })
+      expect(hero?.animations?.guard).toMatchObject({ frameCount: 6, durationMs: 720 })
+      expect(hero?.animations?.cast).toMatchObject({ frameCount: 6, durationMs: 720 })
+      expect(hero?.animations?.still).toMatchObject({ src: `/assets/actors/heroes/${id}/still.png`, frameCount: 1 })
+      expect(hero?.animations?.hurt).toMatchObject({ frameCount: 4, durationMs: 400 })
+      expect(hero?.animations?.down).toMatchObject({ frameCount: 6, durationMs: 720 })
+    }
   })
 
   it('routes enemy and summon art to separate asset namespaces', () => {

@@ -41,9 +41,9 @@ export const CARD_ART_ACTORS = {
   striker_basic_attack: { hero: 'default', sheet: 'attack', frame: 2 },
   striker_basic_defense: { hero: 'default', sheet: 'guard', frame: 3 },
   guardian_basic_attack: { hero: 'guardian_mireille', sheet: 'attack', frame: 2 },
-  guardian_basic_defense: { hero: 'guardian_mireille', sheet: 'stand', frame: 0 },
+  guardian_basic_defense: { hero: 'guardian_mireille', sheet: 'guard', frame: 3 },
   tactician_basic_attack: { hero: 'tactician_yuno', sheet: 'attack', frame: 2 },
-  tactician_basic_defense: { hero: 'tactician_yuno', sheet: 'stand', frame: 0 },
+  tactician_basic_defense: { hero: 'tactician_yuno', sheet: 'guard', frame: 3 },
   enhancer_basic_attack: { hero: 'enhancer_lyra', sheet: 'attack', frame: 2 },
-  enhancer_basic_defense: { hero: 'enhancer_lyra', sheet: 'attack', frame: 1 },
+  enhancer_basic_defense: { hero: 'enhancer_lyra', sheet: 'guard', frame: 3 },
 }
