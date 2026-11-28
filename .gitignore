@@ -47,3 +47,7 @@ playwright-report/
 
 # 素材制作の作業フォルダ（生成した下書き・ログ。採用分だけ public へ移す）
 /art-work/
+
+# dotnet test の出力先（--artifacts-path）。誤ってコミットしないように。
+**/artifacts/
+!art/
