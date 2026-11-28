@@ -49,6 +49,8 @@ node tools/art-pipeline/pixellab.mjs gen2 --bg --w 480 --h 320 --colors 64 --see
   最後に「Full-bleed scene to all four edges, nothing transparent. No text, no letters, no UI, no buttons, no frame, no border, no vignette.」を付ける。
 - 出来た画像は `art/source/backgrounds/events/<id>.png` にそのまま置き、横の `<id>.json` に `"mode": "native"` を書く（縮め直さない）。
 - 戦闘・マップ（640×360）も同じ方法で作れる（generate-image-v2 は横 792・縦 688 まで）。
+- 水や光など「どこから来るか」を具体的に書く（泉は「岩壁の魚の形の吐水口から水が弧を描いて落ちる」と書いて直った）。
+- 気に入った案の構図を残して直したい時は、その画像を `--ref "<画像>::composition, layout and mood to keep"` で渡す。
 
 ## Gemini で作る時のこと（2026-11-28）
 

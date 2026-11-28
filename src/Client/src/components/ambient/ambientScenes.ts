@@ -189,19 +189,21 @@ export const AMBIENT_SCENES: Readonly<Record<string, AmbientScene>> = {
   // ---------------- イベント（480×320） ----------------
   event_blessing_fountain: {
     src: EVENT('blessing_fountain'), width: 480, height: 320,
-    // 2026-11-28 描き直し（PixelLab）。上の切れ間（x 290、y 0）から左下の泉へ差す木漏れ日。
+    // 2026-11-28 描き直し（PixelLab）。上の切れ間（x 280、y 0）から左下の泉へ差す木漏れ日。
+    // 水は岩壁の魚の吐水口（x 161、y 132）から水盤（中心 x 170、y 184）へ落ちる。
     rays: [
-      { x: 292, y: 0, w: 74, h: 200, angle: 32, color: 'rgba(226, 246, 196, 1)', min: 0.06, max: 0.18, period: 11 },
-      { x: 318, y: 0, w: 40, h: 180, angle: 36, color: 'rgba(226, 246, 196, 1)', min: 0.04, max: 0.13, period: 9, delay: -4 },
+      { x: 282, y: 0, w: 76, h: 200, angle: 26, color: 'rgba(226, 246, 196, 1)', min: 0.06, max: 0.18, period: 11 },
+      { x: 312, y: 0, w: 42, h: 180, angle: 30, color: 'rgba(226, 246, 196, 1)', min: 0.04, max: 0.13, period: 9, delay: -4 },
     ],
     glows: [
-      { x: 182, y: 183, r: 62, ry: 18, color: '#7fe8ff', min: 0.08, max: 0.2, period: 6, style: 'pulse' },
-      { x: 172, y: 140, r: 8, ry: 40, color: '#b6f4ff', min: 0.06, max: 0.16, period: 2.4, style: 'pulse' },
+      { x: 172, y: 184, r: 66, ry: 12, color: '#7fe8ff', min: 0.08, max: 0.2, period: 6, style: 'pulse' },
+      { x: 163, y: 156, r: 7, ry: 24, color: '#b6f4ff', min: 0.06, max: 0.18, period: 2.4, style: 'pulse' },
     ],
     particles: [
-      { kind: 'mote', count: 16, area: { x: 170, y: 30, w: 140, h: 140 }, colors: ['#f5ffd2', '#e2f5b6'], duration: 11, opacity: 0.7 },
-      { kind: 'sparkle', count: 8, area: { x: 125, y: 172, w: 115, h: 22 }, colors: ['#d4fdff'], duration: 4.5, opacity: 0.8 },
-      { kind: 'sparkle', count: 5, area: { x: 70, y: 265, w: 330, h: 50 }, colors: ['#8ec8ff'], duration: 6, opacity: 0.6 },
+      { kind: 'mote', count: 16, area: { x: 180, y: 40, w: 140, h: 130 }, colors: ['#f5ffd2', '#e2f5b6'], duration: 11, opacity: 0.7 },
+      { kind: 'sparkle', count: 8, area: { x: 115, y: 176, w: 125, h: 16 }, colors: ['#d4fdff'], duration: 4.5, opacity: 0.8 },
+      { kind: 'sparkle', count: 4, area: { x: 150, y: 172, w: 24, h: 10 }, colors: ['#ffffff'], duration: 2.5, opacity: 0.7 },
+      { kind: 'sparkle', count: 5, area: { x: 60, y: 265, w: 340, h: 50 }, colors: ['#8ec8ff'], duration: 6, opacity: 0.6 },
     ],
   },
   event_forgotten_forge: {
