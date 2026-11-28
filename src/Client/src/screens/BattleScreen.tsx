@@ -369,7 +369,7 @@ const ENEMY_CARD_ACTION_READ_MS = 650
 /** 攪乱で行動が失敗したときに「失敗！」を読ませる間。 */
 const ACTION_FAILED_READ_MS = 700
 /** 毒のダメージ（緑の数字と光）を見せる間。 */
-const POISON_TICK_READ_MS = 520
+const POISON_TICK_READ_MS = 800
 /** 敵によるバフ・デバフ・ブロック・回復は発光が見えるまで少し待つ。 */
 const ENEMY_SUPPORT_EFFECT_MS = 320
 // Readability floors used when an actor has no authored motion duration.
