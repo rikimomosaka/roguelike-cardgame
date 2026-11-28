@@ -43,7 +43,12 @@ export function EventScreen({ event, onChoose, onClose }: Props) {
       width={720}
     >
       <div className="ev-frame" data-event={event.eventId} data-state={phase} aria-busy={pendingChoice !== null}>
-        <div className="ev-bg" aria-hidden="true" />
+        {/* 背景はイベント ID から決める（public/assets/backgrounds/events/<id>.png）。CSS の追加は不要。 */}
+        <div
+          className="ev-bg"
+          aria-hidden="true"
+          style={{ backgroundImage: `url('/assets/backgrounds/events/${event.eventId}.png')` }}
+        />
         {/* 背景の控えめな演出（灯りのゆらぎ・漂う粒など）。背景と同じ範囲に重ねる。 */}
         <AmbientScene className="ev-ambient" scene={`event_${event.eventId}`} />
         <div className="ev-narrative-wrap">

@@ -1,0 +1,42 @@
+{
+  "id": "travelers_camp",
+  "name": "旅人の野営地",
+  "tiers": [
+    1,
+    2,
+    3
+  ],
+  "rarity": "common",
+  "startMessage": "焚き火を囲む小さな野営地に、行商帰りの旅人たちが腰を下ろしている。「一緒にどうだい、温まっていけよ」",
+  "choices": [
+    {
+      "label": "焚き火で休む（HP +12）",
+      "effects": [
+        {
+          "type": "heal",
+          "amount": 12
+        }
+      ],
+      "resultMessage": "火のはぜる音を聞きながら、久しぶりに肩の力を抜いた。"
+    },
+    {
+      "label": "旅の話を交わす（カードを得る）",
+      "effects": [
+        {
+          "type": "grantCardReward"
+        }
+      ],
+      "resultMessage": "歴戦の旅人の武勇伝に、思わぬ戦い方の手がかりを得た。"
+    },
+    {
+      "label": "持ち物を売る（ゴールド +30）",
+      "effects": [
+        {
+          "type": "gainGold",
+          "amount": 30
+        }
+      ],
+      "resultMessage": "余っていた道具を旅人に譲り、いくらかの路銀を得た。"
+    }
+  ]
+}

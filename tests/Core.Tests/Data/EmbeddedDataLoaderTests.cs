@@ -264,7 +264,7 @@ public class EmbeddedDataLoaderTests
     {
         var catalog = EmbeddedDataLoader.LoadCatalog();
 
-        Assert.Equal(7, catalog.Events.Count);
+        Assert.Equal(17, catalog.Events.Count);
         foreach (var id in new[] { "forgotten_forge", "moonlit_garden", "sealed_vault", "lost_caravan" })
         {
             var definition = catalog.Events[id];

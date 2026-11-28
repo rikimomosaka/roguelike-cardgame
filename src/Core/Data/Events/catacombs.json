@@ -1,0 +1,41 @@
+{
+  "id": "catacombs",
+  "name": "地下墓地",
+  "tiers": [
+    2,
+    3
+  ],
+  "rarity": "uncommon",
+  "startMessage": "石の棺が並ぶ回廊に、青白い鬼火がゆらゆらと漂っている。棺の一つは、蓋がわずかにずれていた。",
+  "choices": [
+    {
+      "label": "棺を開ける（最大HP -4、ランダムなレリック）",
+      "effects": [
+        {
+          "type": "loseMaxHp",
+          "amount": 4
+        },
+        {
+          "type": "gainRelicRandom",
+          "rarity": 2
+        }
+      ],
+      "resultMessage": "冷気とともに鬼火がまとわりつき、体から何かが抜けていった。棺の中には、古い副葬品が残っていた。"
+    },
+    {
+      "label": "死者に祈る（HP +10）",
+      "effects": [
+        {
+          "type": "heal",
+          "amount": 10
+        }
+      ],
+      "resultMessage": "静かに祈りを捧げると、鬼火は穏やかに揺れ、回廊に安らぎが満ちた。"
+    },
+    {
+      "label": "立ち去る",
+      "effects": [],
+      "resultMessage": "眠る者を起こさぬよう、足音を忍ばせて通り抜けた。"
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "id": "fortune_teller",
+  "name": "占い師の天幕",
+  "tiers": [
+    1,
+    2,
+    3
+  ],
+  "rarity": "rare",
+  "startMessage": "色褪せた天幕の奥で、老婆が水晶玉を撫でている。「おや、迷える者よ。運命を覗いていくかい？」",
+  "choices": [
+    {
+      "label": "運命を占ってもらう（50 ゴールド支払い、ランダムなレリック）",
+      "condition": {
+        "type": "minGold",
+        "amount": 50
+      },
+      "effects": [
+        {
+          "type": "payGold",
+          "amount": 50
+        },
+        {
+          "type": "gainRelicRandom",
+          "rarity": 2
+        }
+      ],
+      "resultMessage": "水晶玉の奥に何かが映ると、老婆は黙ってひとつの品を差し出した。「これがお前を導くだろう」"
+    },
+    {
+      "label": "手相を見てもらう（最大HP +3）",
+      "effects": [
+        {
+          "type": "gainMaxHp",
+          "amount": 3
+        }
+      ],
+      "resultMessage": "「生命線が長い。まだ倒れる時ではないよ」。不思議と体に力が満ちた。"
+    },
+    {
+      "label": "立ち去る",
+      "effects": [],
+      "resultMessage": "運命は自分で切り開くものだ。天幕を後にした。"
+    }
+  ]
+}

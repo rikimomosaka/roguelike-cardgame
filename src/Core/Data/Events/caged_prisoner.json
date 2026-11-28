@@ -1,0 +1,47 @@
+{
+  "id": "caged_prisoner",
+  "name": "囚われの檻",
+  "tiers": [
+    3
+  ],
+  "rarity": "common",
+  "startMessage": "鎖で吊られた檻の中に、やつれた旅人が閉じ込められている。「頼む、ここから出してくれ……」",
+  "choices": [
+    {
+      "label": "鍵を壊して助け出す（HP -10、カードを得る）",
+      "condition": {
+        "type": "minHp",
+        "amount": 11
+      },
+      "effects": [
+        {
+          "type": "takeDamage",
+          "amount": 10
+        },
+        {
+          "type": "grantCardReward"
+        }
+      ],
+      "resultMessage": "焼けた鎖を素手で引きちぎった。旅人は涙ながらに、身につけた技を教えてくれた。"
+    },
+    {
+      "label": "食料を分け与える（HP +8、ゴールド +30）",
+      "effects": [
+        {
+          "type": "heal",
+          "amount": 8
+        },
+        {
+          "type": "gainGold",
+          "amount": 30
+        }
+      ],
+      "resultMessage": "檻越しに食料を渡すと、旅人は隠し持っていた硬貨と薬草を分けてくれた。"
+    },
+    {
+      "label": "立ち去る",
+      "effects": [],
+      "resultMessage": "罠かもしれない。檻から目をそらして先へ進んだ。"
+    }
+  ]
+}

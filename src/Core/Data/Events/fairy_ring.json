@@ -1,0 +1,44 @@
+{
+  "id": "fairy_ring",
+  "name": "妖精の輪",
+  "tiers": [
+    1
+  ],
+  "rarity": "uncommon",
+  "startMessage": "森の空き地に、淡く光る茸が輪になって生えている。輪の中から、かすかな笑い声が聞こえた気がした。",
+  "choices": [
+    {
+      "label": "輪の中に踏み入る（HP -8、ランダムなレリック）",
+      "condition": {
+        "type": "minHp",
+        "amount": 9
+      },
+      "effects": [
+        {
+          "type": "takeDamage",
+          "amount": 8
+        },
+        {
+          "type": "gainRelicRandom",
+          "rarity": 1
+        }
+      ],
+      "resultMessage": "足を踏み入れた瞬間、目が回り膝をついた。気づくと、手の中に見知らぬ品が握られていた。"
+    },
+    {
+      "label": "光る茸を摘む（ゴールド +35）",
+      "effects": [
+        {
+          "type": "gainGold",
+          "amount": 35
+        }
+      ],
+      "resultMessage": "珍しい茸は高く売れそうだ。輪の外から慎重に摘み取った。"
+    },
+    {
+      "label": "立ち去る",
+      "effects": [],
+      "resultMessage": "妖精の悪戯に付き合うのはやめておこう。"
+    }
+  ]
+}

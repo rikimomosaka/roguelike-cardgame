@@ -1,0 +1,48 @@
+{
+  "id": "lava_altar",
+  "name": "溶岩の祭壇",
+  "tiers": [
+    3
+  ],
+  "rarity": "uncommon",
+  "startMessage": "黒曜石の祭壇に赤い紋様が脈打っている。祭壇の前に立つと、熱とともに声のない問いかけが頭に響いた。「血を捧げよ。さすれば与えん」",
+  "choices": [
+    {
+      "label": "血を捧げる（最大HP -6、ランダムなレリック）",
+      "effects": [
+        {
+          "type": "loseMaxHp",
+          "amount": 6
+        },
+        {
+          "type": "gainRelicRandom",
+          "rarity": 3
+        }
+      ],
+      "resultMessage": "掌を紋様に当てると、焼けるような痛みとともに、祭壇の上に禍々しい品が現れた。"
+    },
+    {
+      "label": "祭壇の黄金を剥ぎ取る（HP -15、ゴールド +110）",
+      "condition": {
+        "type": "minHp",
+        "amount": 16
+      },
+      "effects": [
+        {
+          "type": "takeDamage",
+          "amount": 15
+        },
+        {
+          "type": "gainGold",
+          "amount": 110
+        }
+      ],
+      "resultMessage": "灼けた金細工を力ずくで引き剥がした。両手がひどく焼けただれている。"
+    },
+    {
+      "label": "立ち去る",
+      "effects": [],
+      "resultMessage": "祭壇の囁きを振り払い、熱気の中を抜けた。"
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "id": "underground_lake",
+  "name": "地底湖",
+  "tiers": [
+    2
+  ],
+  "rarity": "common",
+  "startMessage": "洞窟の奥に、静まり返った地底湖が広がっている。天井の小さな穴から一筋の光が落ち、水面がかすかにきらめいている。",
+  "choices": [
+    {
+      "label": "冷たい水で体を清める（HP +14）",
+      "effects": [
+        {
+          "type": "heal",
+          "amount": 14
+        }
+      ],
+      "resultMessage": "澄んだ水に手を浸すと、傷の痛みが静かに引いていった。"
+    },
+    {
+      "label": "湖の底を探る（HP -10、ゴールド +70）",
+      "condition": {
+        "type": "minHp",
+        "amount": 11
+      },
+      "effects": [
+        {
+          "type": "takeDamage",
+          "amount": 10
+        },
+        {
+          "type": "gainGold",
+          "amount": 70
+        }
+      ],
+      "resultMessage": "凍えるような水に潜り、沈んでいた古い財布を拾い上げた。体の芯まで冷え切った。"
+    },
+    {
+      "label": "立ち去る",
+      "effects": [],
+      "resultMessage": "水面に映る自分の顔を一度だけ見て、湖を後にした。"
+    }
+  ]
+}

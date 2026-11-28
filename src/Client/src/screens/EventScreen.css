@@ -36,27 +36,6 @@
   pointer-events: none;
 }
 
-.ev-frame[data-event='blessing_fountain'] .ev-bg {
-  background-image: url('/assets/backgrounds/events/blessing_fountain.png');
-}
-.ev-frame[data-event='old_library'] .ev-bg {
-  background-image: url('/assets/backgrounds/events/old_library.png');
-}
-.ev-frame[data-event='shady_merchant'] .ev-bg {
-  background-image: url('/assets/backgrounds/events/shady_merchant.png');
-}
-.ev-frame[data-event='forgotten_forge'] .ev-bg {
-  background-image: url('/assets/backgrounds/events/forgotten_forge.png');
-}
-.ev-frame[data-event='moonlit_garden'] .ev-bg {
-  background-image: url('/assets/backgrounds/events/moonlit_garden.png');
-}
-.ev-frame[data-event='sealed_vault'] .ev-bg {
-  background-image: url('/assets/backgrounds/events/sealed_vault.png');
-}
-.ev-frame[data-event='lost_caravan'] .ev-bg {
-  background-image: url('/assets/backgrounds/events/lost_caravan.png');
-}
 
 /* 背景の演出（AmbientScene）は背景画像のすぐ上、本文や選択肢より下。 */
 .ev-ambient { z-index: -1; }

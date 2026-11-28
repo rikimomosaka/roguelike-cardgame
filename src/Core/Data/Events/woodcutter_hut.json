@@ -1,0 +1,49 @@
+{
+  "id": "woodcutter_hut",
+  "name": "木こりの小屋",
+  "tiers": [
+    1,
+    2
+  ],
+  "rarity": "common",
+  "startMessage": "煙突から細い煙の上がる小屋がある。年老いた木こりが、斧を研ぎながらこちらを見た。「旅の人か。少し休んでいくといい」",
+  "choices": [
+    {
+      "label": "休ませてもらう（HP +18）",
+      "effects": [
+        {
+          "type": "heal",
+          "amount": 18
+        }
+      ],
+      "resultMessage": "暖炉の前で温かいスープをもらい、ぐっすりと眠った。"
+    },
+    {
+      "label": "薪割りを手伝う（HP -5、ゴールド +45）",
+      "condition": {
+        "type": "minHp",
+        "amount": 6
+      },
+      "effects": [
+        {
+          "type": "takeDamage",
+          "amount": 5
+        },
+        {
+          "type": "gainGold",
+          "amount": 45
+        }
+      ],
+      "resultMessage": "汗だくで薪を割り終えると、木こりは礼だと言って小袋を渡してくれた。"
+    },
+    {
+      "label": "斧の扱いを教わる（カードを得る）",
+      "effects": [
+        {
+          "type": "grantCardReward"
+        }
+      ],
+      "resultMessage": "「力じゃない、重さで割るんだ」。老人の言葉に、戦い方の新しい形が見えた。"
+    }
+  ]
+}

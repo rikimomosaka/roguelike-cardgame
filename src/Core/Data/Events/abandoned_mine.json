@@ -1,0 +1,44 @@
+{
+  "id": "abandoned_mine",
+  "name": "廃坑",
+  "tiers": [
+    2
+  ],
+  "rarity": "uncommon",
+  "startMessage": "崩れかけた坑道の入り口に、錆びたトロッコが置き去りにされている。奥から、時折小石の落ちる音がする。",
+  "choices": [
+    {
+      "label": "奥まで掘り進む（HP -12、ランダムなレリック）",
+      "condition": {
+        "type": "minHp",
+        "amount": 13
+      },
+      "effects": [
+        {
+          "type": "takeDamage",
+          "amount": 12
+        },
+        {
+          "type": "gainRelicRandom",
+          "rarity": 2
+        }
+      ],
+      "resultMessage": "落石を避けながら奥へ進み、岩に埋もれた古い品を掘り出した。体は傷だらけだ。"
+    },
+    {
+      "label": "トロッコの残り物を漁る（ゴールド +40）",
+      "effects": [
+        {
+          "type": "gainGold",
+          "amount": 40
+        }
+      ],
+      "resultMessage": "トロッコの底に、掘り残しの鉱石が少し転がっていた。"
+    },
+    {
+      "label": "立ち去る",
+      "effects": [],
+      "resultMessage": "崩落に巻き込まれる前に、引き返した。"
+    }
+  ]
+}

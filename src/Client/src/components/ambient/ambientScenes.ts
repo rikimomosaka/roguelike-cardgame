@@ -283,4 +283,109 @@ export const AMBIENT_SCENES: Readonly<Record<string, AmbientScene>> = {
       { kind: 'mote', count: 10, area: { x: 200, y: 90, w: 200, h: 120 }, colors: ['#ffe2a8'], duration: 13, opacity: 0.45 },
     ],
   },
+  // ---------------- イベント（2026-11-28 追加。PixelLab で直接生成） ----------------
+  event_forest_shrine: {
+    src: EVENT('forest_shrine'), width: 480, height: 320,
+    rays: [{ x: 175, y: -6, w: 70, h: 200, angle: -30, color: 'rgba(240, 236, 190, 1)', min: 0.06, max: 0.17, period: 11 }],
+    glows: [
+      { x: 259, y: 176, r: 12, color: '#ffd27a', min: 0.12, max: 0.26, period: 2.6 },
+      { x: 369, y: 180, r: 12, color: '#ffd27a', min: 0.12, max: 0.26, period: 3, delay: -1 },
+      { x: 320, y: 150, r: 60, ry: 40, color: '#f2f0b8', min: 0.04, max: 0.1, period: 11, style: 'pulse' },
+    ],
+    particles: [
+      { kind: 'firefly', count: 10, area: { x: 40, y: 120, w: 400, h: 150 }, colors: ['#e8ff7d', '#d2f56a'], duration: 9, opacity: 0.85 },
+      { kind: 'mote', count: 10, area: { x: 170, y: 30, w: 150, h: 130 }, colors: ['#f5ffd2'], duration: 12, opacity: 0.6 },
+    ],
+  },
+  event_fairy_ring: {
+    src: EVENT('fairy_ring'), width: 480, height: 320,
+    glows: [
+      { x: 239, y: 224, r: 120, ry: 30, color: '#8fe8ff', min: 0.04, max: 0.2, period: 7, style: 'pulse' },
+      { x: 239, y: 224, r: 70, ry: 18, color: '#c49cff', min: 0.04, max: 0.16, period: 5.5, delay: -2, style: 'pulse' },
+      { x: 266, y: 36, r: 22, color: '#e6f0ff', min: 0.06, max: 0.16, period: 9, style: 'pulse' },
+    ],
+    particles: [
+      { kind: 'sparkle', count: 12, area: { x: 130, y: 180, w: 220, h: 60 }, colors: ['#c8f6ff', '#e2ccff'], duration: 4.5, opacity: 0.85 },
+      { kind: 'mote', count: 14, area: { x: 140, y: 120, w: 200, h: 100 }, colors: ['#c8f6ff', '#e2ccff'], duration: 10, opacity: 0.65 },
+    ],
+    mist: [{ y: 190, h: 60, color: '#9fc4c8', opacity: 0.12, period: 80 }],
+  },
+  event_woodcutter_hut: {
+    src: EVENT('woodcutter_hut'), width: 480, height: 320,
+    glows: [
+      { x: 346, y: 166, r: 22, color: '#ffb44a', min: 0.14, max: 0.28, period: 2.7 },
+      { x: 300, y: 220, r: 70, ry: 18, color: '#ffb44a', min: 0.04, max: 0.1, period: 3.2, delay: -1 },
+    ],
+    particles: [
+      { kind: 'mote', count: 8, area: { x: 345, y: 20, w: 30, h: 40 }, colors: ['#c8c8d0'], duration: 8, opacity: 0.45 },
+    ],
+  },
+  event_underground_lake: {
+    src: EVENT('underground_lake'), width: 480, height: 320,
+    rays: [{ x: 158, y: 30, w: 60, h: 190, angle: -6, color: 'rgba(220, 240, 255, 1)', min: 0.06, max: 0.18, period: 12 }],
+    glows: [
+      { x: 196, y: 207, r: 80, ry: 14, color: '#d8f0ff', min: 0.06, max: 0.18, period: 12, style: 'pulse' },
+      { x: 101, y: 222, r: 16, color: '#7fd8ff', min: 0.06, max: 0.22, period: 6, style: 'pulse' },
+      { x: 331, y: 222, r: 16, color: '#7fd8ff', min: 0.06, max: 0.22, period: 6.8, delay: -2, style: 'pulse' },
+      { x: 281, y: 166, r: 10, color: '#7fd8ff', min: 0.06, max: 0.2, period: 5.4, delay: -3, style: 'pulse' },
+    ],
+    particles: [
+      { kind: 'sparkle', count: 8, area: { x: 130, y: 196, w: 140, h: 22 }, colors: ['#ffffff', '#d4f4ff'], duration: 4.5, opacity: 0.75 },
+      { kind: 'mote', count: 10, area: { x: 130, y: 40, w: 70, h: 160 }, colors: ['#e2f2ff'], duration: 12, opacity: 0.55 },
+      { kind: 'drip', count: 3, area: { x: 60, y: 20, w: 360, h: 30 }, colors: ['#93a9dc'], duration: 6, opacity: 0.55 },
+    ],
+  },
+  event_abandoned_mine: {
+    src: EVENT('abandoned_mine'), width: 480, height: 320,
+    glows: [
+      { x: 380, y: 104, r: 26, color: '#ffb44a', min: 0.16, max: 0.3, period: 2.5 },
+      { x: 330, y: 170, r: 90, ry: 50, color: '#ff9a3a', min: 0.03, max: 0.08, period: 3.5, delay: -1 },
+    ],
+    particles: [{ kind: 'mote', count: 14, area: { x: 280, y: 70, w: 140, h: 140 }, colors: ['#ffe0b0', '#d8c4a0'], duration: 12, opacity: 0.6 }],
+  },
+  event_catacombs: {
+    src: EVENT('catacombs'), width: 480, height: 320,
+    glows: [
+      { x: 109, y: 62, r: 22, color: '#8fc8ff', min: 0.08, max: 0.26, period: 5, style: 'pulse' },
+      { x: 213, y: 129, r: 22, color: '#8fc8ff', min: 0.08, max: 0.26, period: 5.8, delay: -2, style: 'pulse' },
+      { x: 341, y: 100, r: 22, color: '#8fc8ff', min: 0.08, max: 0.26, period: 6.4, delay: -4, style: 'pulse' },
+      { x: 141, y: 99, r: 12, color: '#ffb44a', min: 0.1, max: 0.22, period: 2.6 },
+    ],
+    particles: [{ kind: 'mote', count: 10, area: { x: 80, y: 40, w: 300, h: 130 }, colors: ['#b8dcff'], duration: 13, opacity: 0.5 }],
+  },
+  event_lava_altar: {
+    src: EVENT('lava_altar'), width: 480, height: 320,
+    glows: [
+      { x: 346, y: 161, r: 46, ry: 26, color: '#ff3a2a', min: 0.08, max: 0.26, period: 4.5, style: 'pulse' },
+      { x: 101, y: 246, r: 60, ry: 22, color: '#ff7a2a', min: 0.12, max: 0.24, period: 3.4 },
+    ],
+    particles: [{ kind: 'ember', count: 20, area: { x: 40, y: 160, w: 420, h: 140 }, colors: ['#ffe6b0', '#ffd08a', '#fff0c8'], duration: 9, opacity: 0.8 }],
+  },
+  event_caged_prisoner: {
+    src: EVENT('caged_prisoner'), width: 480, height: 320,
+    glows: [{ x: 280, y: 300, r: 200, ry: 70, color: '#ff4a1e', min: 0.06, max: 0.16, period: 6, style: 'pulse' }],
+    particles: [{ kind: 'ember', count: 18, area: { x: 100, y: 200, w: 340, h: 110 }, colors: ['#ffe6b0', '#ffd08a'], duration: 9, opacity: 0.75 }],
+  },
+  event_travelers_camp: {
+    src: EVENT('travelers_camp'), width: 480, height: 320,
+    glows: [
+      { x: 174, y: 201, r: 30, color: '#ffb44a', min: 0.18, max: 0.32, period: 2 },
+      { x: 174, y: 215, r: 110, ry: 40, color: '#ff9a3a', min: 0.05, max: 0.12, period: 2.7, delay: -0.7 },
+    ],
+    particles: [
+      { kind: 'ember', count: 12, area: { x: 160, y: 185, w: 28, h: 20 }, colors: ['#ffe6b0', '#ffd08a'], duration: 6, opacity: 0.85 },
+      { kind: 'sparkle', count: 6, area: { x: 20, y: 10, w: 440, h: 80 }, colors: ['#e6eeff'], duration: 6, opacity: 0.6 },
+    ],
+  },
+  event_fortune_teller: {
+    src: EVENT('fortune_teller'), width: 480, height: 320,
+    glows: [
+      { x: 342, y: 170, r: 30, color: '#a86cff', min: 0.1, max: 0.3, period: 5, style: 'pulse' },
+      { x: 204, y: 168, r: 30, color: '#ffb44a', min: 0.14, max: 0.28, period: 2.4 },
+    ],
+    particles: [
+      { kind: 'sparkle', count: 6, area: { x: 325, y: 152, w: 34, h: 34 }, colors: ['#e2ccff'], duration: 4, opacity: 0.8 },
+      { kind: 'mote', count: 8, area: { x: 150, y: 60, w: 260, h: 140 }, colors: ['#ffe2a8'], duration: 13, opacity: 0.4 },
+    ],
+  },
 }

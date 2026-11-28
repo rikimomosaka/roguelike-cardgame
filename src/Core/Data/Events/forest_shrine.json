@@ -1,0 +1,44 @@
+{
+  "id": "forest_shrine",
+  "name": "森の祠",
+  "tiers": [
+    1
+  ],
+  "rarity": "common",
+  "startMessage": "苔むした小さな石の祠が、木漏れ日の中にひっそりと佇んでいる。供え物の皿は空のままだ。",
+  "choices": [
+    {
+      "label": "祈りを捧げる（HP +10）",
+      "effects": [
+        {
+          "type": "heal",
+          "amount": 10
+        }
+      ],
+      "resultMessage": "目を閉じて手を合わせると、柔らかな光が体を包み、疲れがすっと引いていった。"
+    },
+    {
+      "label": "ゴールドを供える（25 ゴールド支払い、最大HP +4）",
+      "condition": {
+        "type": "minGold",
+        "amount": 25
+      },
+      "effects": [
+        {
+          "type": "payGold",
+          "amount": 25
+        },
+        {
+          "type": "gainMaxHp",
+          "amount": 4
+        }
+      ],
+      "resultMessage": "皿に硬貨を置くと、祠の奥で何かが小さく鳴った。体の芯に力が宿るのを感じる。"
+    },
+    {
+      "label": "立ち去る",
+      "effects": [],
+      "resultMessage": "祠に一礼して、先を急いだ。"
+    }
+  ]
+}
