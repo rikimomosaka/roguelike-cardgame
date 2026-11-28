@@ -9,6 +9,8 @@ export type CombatFeedbackKind =
   | 'heal'
   | 'buff'
   | 'debuff'
+  /** 毒のダメージ（緑の数字）。 */
+  | 'poison'
   /** 攪乱で行動が失敗した（「失敗！」）。 */
   | 'fail'
 

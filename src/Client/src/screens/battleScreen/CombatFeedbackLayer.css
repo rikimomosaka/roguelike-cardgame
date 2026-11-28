@@ -55,6 +55,8 @@
 .combat-feedback__item--block  { --feedback-color: #83d8ff; }
 .combat-feedback__item--guard  { --feedback-color: #ffe58b; font-size: 15px; }
 .combat-feedback__item--heal   { --feedback-color: #82f0ae; }
+/* 毒のダメージ: 被ダメージと同じ大きさで、濃い緑。 */
+.combat-feedback__item--poison { --feedback-color: #7fe04f; font-size: 21px; }
 .combat-feedback__item--buff,
 .combat-feedback__item--debuff {
   font-size: 15px;

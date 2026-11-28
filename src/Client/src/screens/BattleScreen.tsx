@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, KeyboardEvent, MouseEventHandler, ReactNode } from 'react'
 import { Card } from '../components/Card'
+import { CardDesc } from '../components/CardDesc'
 import type { CardRarity, CardType } from '../components/Card'
 import { rarityCodeFromName, rarityCodeFromNumber } from '../components/rarity'
 import { useTooltipTarget } from '../components/Tooltip'
@@ -723,7 +724,7 @@ type SlotProps = {
   aura?: { id: number; kind: SlotAuraKind } | null
 }
 
-type SlotAuraKind = 'buff' | 'debuff' | 'block' | 'heal'
+type SlotAuraKind = 'buff' | 'debuff' | 'block' | 'heal' | 'poison'
 
 /**
  * 敵の行動再生用の参加者表現。敵の手札の中身は公開しないため、
@@ -813,6 +814,15 @@ type ReenactCardState = {
   toY?: number
   /** 伏策の発動: 判子の下に出す発動条件（例: 相手の攻撃時）。空文字なら条件は出さない。 */
   contingencyTrigger?: string
+  /** 伏策の発動: 判子に転記する、発動した効果の説明文（伏策条件の行より後）。 */
+  contingencyEffect?: string
+}
+
+/** カードの説明文から、伏策条件の行より後（発動した時に実行される効果）を取り出す。 */
+export function contingencyEffectText(description: string | null | undefined): string {
+  const lines = (description ?? '').replace(/\\n/g, '\n').split('\n')
+  const at = lines.findIndex(line => line.includes('[K:contingency]'))
+  return (at >= 0 ? lines.slice(at + 1) : lines).filter(line => line.trim() !== '').join('\n')
 }
 
 type PendingContingencyCard = {
@@ -3432,6 +3442,7 @@ export function BattleScreen({
               fromX: exhaustCenter.x,
               fromY: exhaustCenter.y,
               contingencyTrigger: CONTINGENCY_TIMING_LABEL[ev.note ?? ''] ?? '',
+              contingencyEffect: contingencyEffectText(ev.card.description),
             })
             if (!await waitForPresentation(16)) {
               clearTransientPresentation()
@@ -3546,7 +3557,10 @@ export function BattleScreen({
           if (blocked > 0) {
             pushCombatFeedback(ev.targetInstanceId, 'block', `BLOCK -${blocked}`)
           }
-          if (hpLoss > 0) {
+          if (hpLoss > 0 && ev.damageType === 'Poison') {
+            pushCombatFeedback(ev.targetInstanceId, 'poison', `-${hpLoss}`)
+            showSlotAura(ev.targetInstanceId, 'poison')
+          } else if (hpLoss > 0) {
             pushCombatFeedback(ev.targetInstanceId, 'damage', `-${hpLoss}`)
           } else if (blocked > 0) {
             pushCombatFeedback(ev.targetInstanceId, 'guard', '完全防御')
@@ -5553,6 +5567,11 @@ export function BattleScreen({
               <span className="reenact-card__stamp">
                 <b>伏策発動</b>
                 {reenactCard.contingencyTrigger ? <small>{reenactCard.contingencyTrigger}</small> : null}
+                {reenactCard.contingencyEffect ? (
+                  <span className="reenact-card__stamp-effect">
+                    <CardDesc text={reenactCard.contingencyEffect} compress={false} />
+                  </span>
+                ) : null}
               </span>
             </>
           ) : null}

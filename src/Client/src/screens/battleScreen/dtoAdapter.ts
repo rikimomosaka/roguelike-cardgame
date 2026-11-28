@@ -338,10 +338,11 @@ function formatStatusDescription(id: string, amount: number, fallback: string): 
     return `アタックで与えるダメージが[N:${-amount}]減少する。`
   if (id === 'dexterity' && amount < 0)
     return `得るブロックが[N:${-amount}]減少する。`
-  // 攪乱: キャラに付いている時は、一般説明の「一定の確率」を実際の失敗率（数×10%、最大50%）にする。
+  // 攪乱: キャラに付いている時は、一般説明の「X％…(Xは…)」を実際の失敗率（数×10%、最大50%）にする。
   if (id === 'disruption' && amount > 0)
     return (STATUS_DEFS.disruption?.desc ?? fallback)
-      .replace('一定の確率', `[N:${disruptionFailurePercent(amount)}]%の確率`)
+      .replace('X％の確率で失敗する(Xは攪乱の数×10、最大50％)',
+        `[N:${disruptionFailurePercent(amount)}]％の確率で失敗する`)
   const template = STATUS_DEFS[id]?.desc
   return template ? template.replaceAll('[N:X]', `[N:${Math.abs(amount)}]`) : fallback
 }
