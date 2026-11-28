@@ -17,6 +17,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { CSSProperties, KeyboardEvent, MouseEventHandler, ReactNode } from 'react'
 import { Card } from '../components/Card'
 import { CardDesc } from '../components/CardDesc'
+import { AmbientScene } from '../components/ambient/AmbientScene'
 import type { CardRarity, CardType } from '../components/Card'
 import { rarityCodeFromName, rarityCodeFromNumber } from '../components/rarity'
 import { useTooltipTarget } from '../components/Tooltip'
@@ -382,6 +383,12 @@ type Props = {
 const STEP_DELAY_MS = 80         // 既存 fallback (汎用 event)
 /** 敵が使ったカード名を読ませる間。 */
 const ENEMY_CARD_ACTION_READ_MS = 650
+/** 幕 → 戦闘背景の演出（背景画像は BattleScreen.css の .battle[data-act]）。 */
+const BATTLE_AMBIENT_SCENES: Readonly<Record<number, string>> = {
+  1: 'battle_forest',
+  2: 'battle_cave',
+  3: 'battle_hell',
+}
 /** 攪乱で行動が失敗したときに「失敗！」を読ませる間。 */
 const ACTION_FAILED_READ_MS = 700
 /** 毒のダメージ（緑の数字と光）を見せる間。 */
@@ -5010,6 +5017,8 @@ export function BattleScreen({
         data-ui-owner={replayView?.actor.side === 'Enemy' ? 'enemy' : undefined}
       >
         <div className="battle__pattern" />
+        {/* 背景の控えめな演出（揺れる草木・差し込む光・漂う粒など）。背景と同じ範囲に重ねる。 */}
+        <AmbientScene scene={BATTLE_AMBIENT_SCENES[snapshot.run.currentAct]} />
         <div className="battle__content" data-presentation="shake">
         {/* Stage */}
         <div className="battle__stage">

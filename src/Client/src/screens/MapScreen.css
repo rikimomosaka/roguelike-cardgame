@@ -62,6 +62,9 @@ main.map-screen {
   background-image: url('/assets/backgrounds/map/act3.png');
 }
 
+/* 背景の演出（AmbientScene）。背景画像のすぐ上、地図より下。 */
+.map-screen__ambient { z-index: 0; }
+
 /* ---------- Stage (the scrollable/pannable map viewport) ---------- */
 .map-screen__stage {
   position: absolute;

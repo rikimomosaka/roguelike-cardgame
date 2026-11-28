@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { AmbientScene } from '../components/ambient/AmbientScene'
 import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react'
 import { getCurrentRun, heartbeat, moveToNode } from '../api/runs'
 import {
@@ -719,6 +720,8 @@ export function MapScreen({ snapshot, onExitToMenu, onAbandon, onDebugDamage, on
         <div className="map-screen__body" data-act={snap.run.currentAct}>
           <div className="map-screen__pattern" aria-hidden="true" />
           <div className="map-screen__bg" aria-hidden="true" />
+          {/* 背景の控えめな演出（揺れる草木・蛍・灯りのゆらぎなど）。背景と同じ範囲に重ねる（地図の拡大・移動には付いていかない）。 */}
+          <AmbientScene className="map-screen__ambient" scene={`map_act${snap.run.currentAct}`} />
 
         <div
           className="map-screen__stage"

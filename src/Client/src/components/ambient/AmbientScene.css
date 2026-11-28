@@ -1,0 +1,206 @@
+/*
+ * 背景の控えめな演出（AmbientScene.tsx）。
+ * .ambient は背景と同じ範囲に重なり、.ambient__stage は背景の center / cover と同じ大きさ・位置になる。
+ * 子要素の長さは --px（元の絵の 1 ドットの表示上の長さ）の倍数で書く。
+ */
+.ambient {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  container-type: size;
+  /* モーション設定 reduced で周期を 2 倍にする係数。 */
+  --ambient-slow: 1;
+}
+html[data-motion='reduced'] .ambient { --ambient-slow: 2; }
+@media (prefers-reduced-motion: reduce) {
+  .ambient { --ambient-slow: 2; }
+}
+
+.ambient__stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100cqw, calc(100cqh * var(--w) / var(--h)));
+  aspect-ratio: var(--ar);
+  transform: translate(-50%, -50%);
+  container-type: inline-size;
+  --px: calc(100cqw / var(--w));
+}
+.ambient__stage > * {
+  position: absolute;
+  --px: calc(100cqw / var(--w));
+}
+
+/* ---- 揺れ: 元の絵の一部を 1 ドットだけ往復させる（風の草木・流れる水）。境目はぼかして馴染ませる。 ---- */
+.ambient__sway {
+  background-image: var(--src);
+  background-repeat: no-repeat;
+  background-size: calc(var(--w) * var(--px)) calc(var(--h) * var(--px));
+  background-position: calc(var(--bx) * var(--px)) calc(var(--by) * var(--px));
+  image-rendering: pixelated;
+  -webkit-mask-image:
+    linear-gradient(to bottom, transparent, #000 22%, #000 78%, transparent),
+    linear-gradient(to right, transparent, #000 18%, #000 82%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to bottom, transparent, #000 22%, #000 78%, transparent),
+    linear-gradient(to right, transparent, #000 18%, #000 82%, transparent);
+  mask-composite: intersect;
+  animation: ambient-sway-x calc(var(--dur) * var(--ambient-slow)) steps(1, end) var(--delay) infinite;
+}
+.ambient__sway--y { animation-name: ambient-sway-y; }
+@keyframes ambient-sway-x {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(var(--px)); }
+}
+@keyframes ambient-sway-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(var(--px)); }
+}
+
+/* ---- 差し込む光: 上が明るく下へ消える筋。ゆっくり明滅。 ---- */
+.ambient__ray {
+  transform-origin: 50% 0;
+  transform: rotate(var(--angle));
+  background: linear-gradient(to bottom, var(--ray-color), transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 35%, #000 65%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 35%, #000 65%, transparent);
+  mix-blend-mode: screen;
+  opacity: var(--min);
+  animation: ambient-breathe calc(var(--dur) * var(--ambient-slow)) ease-in-out var(--delay) infinite;
+}
+
+/* ---- 灯り・結晶の光: 火は不規則にゆらぎ、結晶や月はゆっくり呼吸する。 ---- */
+.ambient__glow {
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--glow-color) 0%, transparent 70%);
+  mix-blend-mode: screen;
+  opacity: var(--min);
+}
+.ambient__glow--pulse { animation: ambient-breathe calc(var(--dur) * var(--ambient-slow)) ease-in-out var(--delay) infinite; }
+.ambient__glow--flicker { animation: ambient-flicker calc(var(--dur) * var(--ambient-slow)) ease-in-out var(--delay) infinite; }
+@keyframes ambient-breathe {
+  0%, 100% { opacity: var(--min); }
+  50% { opacity: var(--max); }
+}
+@keyframes ambient-flicker {
+  0%, 100% { opacity: var(--min); }
+  18% { opacity: var(--max); }
+  34% { opacity: calc((var(--min) + var(--max)) / 2); }
+  52% { opacity: var(--max); }
+  68% { opacity: var(--min); }
+  84% { opacity: calc(var(--max) * 0.9); }
+}
+
+/* ---- 霧: 低い位置を横へゆっくり流れる。 ---- */
+.ambient__mist {
+  left: 0;
+  width: 100%;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 40%, #000 60%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 40%, #000 60%, transparent);
+}
+.ambient__mist > i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 200%;
+  background:
+    radial-gradient(ellipse 14% 60% at 12% 50%, var(--mist-color), transparent 70%),
+    radial-gradient(ellipse 18% 70% at 38% 45%, var(--mist-color), transparent 70%),
+    radial-gradient(ellipse 12% 55% at 62% 55%, var(--mist-color), transparent 70%),
+    radial-gradient(ellipse 16% 65% at 88% 50%, var(--mist-color), transparent 70%);
+  background-size: 50% 100%;
+  background-repeat: repeat-x;
+  animation: ambient-mist calc(var(--dur) * var(--ambient-slow)) linear infinite;
+}
+@keyframes ambient-mist {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* ---- 粒: 1 ドットの四角（落ち葉は 2×1、しずくは 1×2）。色は場面ごと。光らせすぎない。 ---- */
+.ambient__particle {
+  width: var(--px);
+  height: var(--px);
+  background: var(--color);
+  opacity: 0;
+  animation-duration: calc(var(--dur) * var(--ambient-slow));
+  animation-delay: var(--delay);
+  animation-iteration-count: infinite;
+}
+.ambient__particle--mote { animation-name: ambient-mote; animation-timing-function: ease-in-out; }
+.ambient__particle--firefly {
+  box-shadow: 0 0 calc(var(--px) * 2) var(--color);
+  animation-name: ambient-firefly;
+  animation-timing-function: ease-in-out;
+}
+.ambient__particle--ember {
+  /* 芯は淡い黄色、周りを橙にぼかす（橙の背景でも見分けられるように）。 */
+  box-shadow: 0 0 calc(var(--px) * 1.5) #ff7a2a;
+  animation-name: ambient-ember;
+  animation-timing-function: ease-out;
+}
+.ambient__particle--leaf {
+  width: calc(var(--px) * 3);
+  height: calc(var(--px) * 2);
+  animation-name: ambient-leaf;
+  animation-timing-function: linear;
+}
+.ambient__particle--sparkle {
+  box-shadow:
+    var(--px) 0 var(--color),
+    calc(var(--px) * -1) 0 var(--color),
+    0 var(--px) var(--color),
+    0 calc(var(--px) * -1) var(--color);
+  animation-name: ambient-sparkle;
+  animation-timing-function: ease-in-out;
+}
+.ambient__particle--drip {
+  height: calc(var(--px) * 2);
+  animation-name: ambient-drip;
+  animation-timing-function: ease-in;
+}
+
+@keyframes ambient-mote {
+  0% { opacity: 0; transform: translate(0, 0); }
+  25%, 75% { opacity: var(--op); }
+  100% { opacity: 0; transform: translate(calc(var(--dx) * var(--px)), calc(var(--dy) * var(--px))); }
+}
+@keyframes ambient-firefly {
+  0% { opacity: 0; transform: translate(0, 0); }
+  20% { opacity: var(--op); }
+  40% { opacity: calc(var(--op) * 0.25); transform: translate(calc(var(--dx) * 0.4 * var(--px)), calc(var(--dy) * 0.5 * var(--px))); }
+  60% { opacity: var(--op); }
+  100% { opacity: 0; transform: translate(calc(var(--dx) * var(--px)), calc(var(--dy) * var(--px))); }
+}
+@keyframes ambient-ember {
+  0% { opacity: 0; transform: translate(0, 0); }
+  12% { opacity: var(--op); }
+  100% { opacity: 0; transform: translate(calc(var(--dx) * var(--px)), calc(var(--dy) * var(--px))); }
+}
+@keyframes ambient-leaf {
+  0% { opacity: 0; transform: translate(0, 0); }
+  10% { opacity: var(--op); }
+  25% { transform: translate(calc((var(--dx) * 0.25 + 6) * var(--px)), calc(var(--dy) * 0.25 * var(--px))); }
+  50% { transform: translate(calc((var(--dx) * 0.5 - 6) * var(--px)), calc(var(--dy) * 0.5 * var(--px))); }
+  75% { transform: translate(calc((var(--dx) * 0.75 + 6) * var(--px)), calc(var(--dy) * 0.75 * var(--px))); }
+  90% { opacity: var(--op); }
+  100% { opacity: 0; transform: translate(calc(var(--dx) * var(--px)), calc(var(--dy) * var(--px))); }
+}
+@keyframes ambient-sparkle {
+  0%, 38%, 62%, 100% { opacity: 0; }
+  50% { opacity: var(--op); }
+}
+@keyframes ambient-drip {
+  0%, 55% { opacity: var(--op); transform: translate(0, 0); }
+  100% { opacity: 0; transform: translate(0, calc(var(--dy) * var(--px))); }
+}
+
+/* モーション設定 off: 動きを止め、粒は出さない（光は弱い方で止める）。 */
+html[data-motion='off'] .ambient *,
+html[data-motion='off'] .ambient *::before,
+html[data-motion='off'] .ambient > .ambient__stage > .ambient__mist > i {
+  animation: none !important;
+}
+html[data-motion='off'] .ambient__particle { display: none; }

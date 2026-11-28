@@ -1,0 +1,293 @@
+/**
+ * 背景の控えめな演出（風に揺れる草木・差し込む光・灯りのゆらぎ・漂う粒・霧）の定義。
+ * 座標・大きさはすべて元の背景画像のドット単位（戦闘・マップ 640×360、イベント 480×320）。
+ * 動きは小さく遅く、光は薄く（最大でも 0.25 程度）して、戦闘や読み物の邪魔をしない。
+ * 規格: docs/current-art-asset-spec.md「背景の演出」。
+ */
+
+export type AmbientRect = { x: number; y: number; w: number; h: number }
+
+/** 元の絵の一部を 1 ドットだけ往復させる（風に揺れる草木・流れる水）。 */
+export type AmbientSway = AmbientRect & {
+  /** 'x' = 横に揺れる（草木・水面）、'y' = 縦に揺れる（滝・溶岩の流れ）。 */
+  axis?: 'x' | 'y'
+  /** 往復の周期（秒）。 */
+  period: number
+  /** 開始のずれ（秒）。隣の帯とずらして、風が渡っていくように見せる。 */
+  delay?: number
+}
+
+/** 差し込む光の筋（ゆっくり明滅）。 */
+export type AmbientRay = {
+  /** 光の上端の中心。 */
+  x: number
+  y: number
+  w: number
+  h: number
+  /** 傾き（度。正 = 下へ行くほど左）。 */
+  angle: number
+  color: string
+  /** 明るさの下限と上限（0〜1）。 */
+  min: number
+  max: number
+  period: number
+  delay?: number
+}
+
+/** 灯り・結晶などの光（ゆらぐ）。 */
+export type AmbientGlow = {
+  x: number
+  y: number
+  /** 半径。 */
+  r: number
+  color: string
+  min: number
+  max: number
+  period: number
+  delay?: number
+  /** 'flicker' = 火のように不規則に、'pulse' = ゆっくり呼吸するように。 */
+  style?: 'flicker' | 'pulse'
+}
+
+/** 漂う粒。 */
+export type AmbientParticles = {
+  kind: 'mote' | 'firefly' | 'ember' | 'leaf' | 'sparkle' | 'drip'
+  count: number
+  area: AmbientRect
+  colors: string[]
+  /** 1 回の動きの長さ（秒）。粒ごとに ±20% ばらつかせる。 */
+  duration: number
+  /** 不透明度の上限。 */
+  opacity: number
+}
+
+/** 低く流れる霧。 */
+export type AmbientMist = { y: number; h: number; color: string; opacity: number; period: number }
+
+export type AmbientScene = {
+  /** 元の背景画像（揺れの帯で同じ絵を使う）。 */
+  src: string
+  width: number
+  height: number
+  sway?: AmbientSway[]
+  rays?: AmbientRay[]
+  glows?: AmbientGlow[]
+  particles?: AmbientParticles[]
+  mist?: AmbientMist[]
+}
+
+const BATTLE = (id: string) => `/assets/backgrounds/battle/${id}.png`
+const MAP = (id: string) => `/assets/backgrounds/map/${id}.png`
+const EVENT = (id: string) => `/assets/backgrounds/events/${id}.png`
+
+/** 横長の帯を n 本に分け、周期を少しずつずらした揺れにする（風が渡っていくように）。 */
+function swayBand(x: number, y: number, w: number, h: number, parts: number, period: number): AmbientSway[] {
+  const step = w / parts
+  return Array.from({ length: parts }, (_, i) => ({
+    x: Math.round(x + step * i),
+    y,
+    w: Math.round(step),
+    h,
+    period,
+    delay: -(period / parts) * i,
+  }))
+}
+
+export const AMBIENT_SCENES: Readonly<Record<string, AmbientScene>> = {
+  // ---------------- 戦闘（640×360） ----------------
+  battle_forest: {
+    src: BATTLE('battle_forest'), width: 640, height: 360,
+    sway: [
+      ...swayBand(0, 140, 640, 54, 5, 3.2),
+      ...swayBand(140, 0, 360, 70, 3, 4.4),
+    ],
+    rays: [
+      { x: 340, y: -10, w: 46, h: 240, angle: 18, color: 'rgba(214, 240, 196, 1)', min: 0.08, max: 0.21, period: 11 },
+      { x: 392, y: -10, w: 30, h: 220, angle: 22, color: 'rgba(214, 240, 196, 1)', min: 0.06, max: 0.16, period: 9, delay: -4 },
+      { x: 296, y: -10, w: 26, h: 200, angle: 14, color: 'rgba(214, 240, 196, 1)', min: 0.05, max: 0.14, period: 13, delay: -7 },
+    ],
+    particles: [
+      { kind: 'mote', count: 16, area: { x: 220, y: 30, w: 250, h: 170 }, colors: ['#eef7cf', '#dfeebb'], duration: 11, opacity: 0.74 },
+      { kind: 'leaf', count: 5, area: { x: 80, y: 0, w: 520, h: 50 }, colors: ['#7f9a45', '#a2b65b', '#5f7a35'], duration: 16, opacity: 0.85 },
+    ],
+    mist: [{ y: 158, h: 48, color: '#a4c8b8', opacity: 0.12, period: 70 }],
+  },
+  battle_cave: {
+    src: BATTLE('battle_cave'), width: 640, height: 360,
+    glows: [
+      { x: 45, y: 135, r: 58, color: '#3d8cff', min: 0.12, max: 0.24, period: 5.5, style: 'pulse' },
+      { x: 128, y: 96, r: 42, color: '#6cbcff', min: 0.1, max: 0.2, period: 7, delay: -2, style: 'pulse' },
+      { x: 590, y: 160, r: 58, color: '#a35cff', min: 0.12, max: 0.24, period: 6, delay: -3, style: 'pulse' },
+    ],
+    particles: [
+      { kind: 'sparkle', count: 7, area: { x: 20, y: 80, w: 100, h: 110 }, colors: ['#a6dcff'], duration: 5, opacity: 0.8 },
+      { kind: 'sparkle', count: 6, area: { x: 540, y: 120, w: 95, h: 70 }, colors: ['#dcb0ff'], duration: 5.5, opacity: 0.8 },
+      { kind: 'drip', count: 4, area: { x: 200, y: 20, w: 300, h: 30 }, colors: ['#93a9dc'], duration: 6, opacity: 0.6 },
+      { kind: 'mote', count: 10, area: { x: 100, y: 60, w: 110, h: 120 }, colors: ['#a3ccff'], duration: 12, opacity: 0.61 },
+    ],
+    mist: [{ y: 150, h: 52, color: '#7480c0', opacity: 0.14, period: 80 }],
+  },
+  battle_hell: {
+    src: BATTLE('battle_hell'), width: 640, height: 360,
+    sway: [
+      { x: 88, y: 20, w: 16, h: 92, axis: 'y', period: 0.9 },
+      { x: 558, y: 76, w: 16, h: 76, axis: 'y', period: 1.1, delay: -0.4 },
+      { x: 270, y: 96, w: 12, h: 40, axis: 'y', period: 1, delay: -0.2 },
+    ],
+    glows: [
+      { x: 95, y: 64, r: 40, color: '#ff6a2a', min: 0.12, max: 0.24, period: 3.2 },
+      { x: 565, y: 112, r: 40, color: '#ff6a2a', min: 0.12, max: 0.24, period: 3.8, delay: -1 },
+      { x: 320, y: 168, r: 150, color: '#ff5a1e', min: 0.06, max: 0.14, period: 6, style: 'pulse' },
+    ],
+    particles: [
+      { kind: 'ember', count: 22, area: { x: 0, y: 150, w: 640, h: 50 }, colors: ['#ffe6b0', '#ffd08a', '#fff0c8'], duration: 9, opacity: 0.8 },
+    ],
+  },
+
+  // ---------------- マップ（640×360） ----------------
+  map_act1: {
+    src: MAP('act1'), width: 640, height: 360,
+    sway: [
+      ...swayBand(0, 110, 220, 250, 2, 3.6),
+      ...swayBand(420, 110, 220, 250, 2, 3.6),
+    ],
+    rays: [
+      { x: 300, y: -10, w: 70, h: 260, angle: 8, color: 'rgba(228, 250, 210, 1)', min: 0.08, max: 0.19, period: 12 },
+      { x: 365, y: -10, w: 40, h: 230, angle: 12, color: 'rgba(228, 250, 210, 1)', min: 0.06, max: 0.16, period: 10, delay: -5 },
+    ],
+    particles: [
+      { kind: 'firefly', count: 14, area: { x: 0, y: 20, w: 640, h: 290 }, colors: ['#e8ff7d', '#d2f56a'], duration: 9, opacity: 0.85 },
+      { kind: 'mote', count: 10, area: { x: 250, y: 20, w: 180, h: 200 }, colors: ['#f2ffd6'], duration: 12, opacity: 0.61 },
+    ],
+  },
+  map_act2: {
+    src: MAP('act2'), width: 640, height: 360,
+    glows: [
+      { x: 195, y: 160, r: 30, color: '#ffc04a', min: 0.14, max: 0.26, period: 2.6 },
+      { x: 95, y: 250, r: 30, color: '#ffc04a', min: 0.14, max: 0.26, period: 3.1, delay: -1 },
+      { x: 535, y: 215, r: 36, color: '#ffc04a', min: 0.14, max: 0.26, period: 2.8, delay: -0.5 },
+      { x: 485, y: 130, r: 26, color: '#ffc04a', min: 0.12, max: 0.22, period: 3.4, delay: -2 },
+      { x: 355, y: 100, r: 85, color: '#6fd2e2', min: 0.06, max: 0.14, period: 8, style: 'pulse' },
+      { x: 620, y: 300, r: 32, color: '#9a7bff', min: 0.1, max: 0.2, period: 6, style: 'pulse' },
+    ],
+    particles: [
+      { kind: 'sparkle', count: 8, area: { x: 20, y: 170, w: 600, h: 140 }, colors: ['#9fe4ff', '#c8a8ff'], duration: 5, opacity: 0.75 },
+      { kind: 'mote', count: 12, area: { x: 290, y: 50, w: 140, h: 160 }, colors: ['#bdf0ff'], duration: 12, opacity: 0.61 },
+    ],
+  },
+  map_act3: {
+    src: MAP('act3'), width: 640, height: 360,
+    glows: [
+      { x: 30, y: 220, r: 40, color: '#ff7a2a', min: 0.14, max: 0.26, period: 2.8 },
+      { x: 540, y: 225, r: 40, color: '#ff7a2a', min: 0.14, max: 0.26, period: 3.3, delay: -1 },
+      { x: 325, y: 155, r: 75, color: '#ff5a1e', min: 0.08, max: 0.16, period: 6, style: 'pulse' },
+    ],
+    particles: [
+      { kind: 'ember', count: 24, area: { x: 0, y: 200, w: 640, h: 120 }, colors: ['#ffe6b0', '#ffd08a', '#fff0c8'], duration: 9, opacity: 0.8 },
+    ],
+  },
+
+  // ---------------- イベント（480×320） ----------------
+  event_blessing_fountain: {
+    src: EVENT('blessing_fountain'), width: 480, height: 320,
+    sway: [
+      { x: 0, y: 0, w: 90, h: 170, period: 3.8 },
+      { x: 395, y: 0, w: 85, h: 200, period: 4.2, delay: -1.5 },
+      { x: 246, y: 146, w: 20, h: 54, axis: 'y', period: 0.7 },
+      ...swayBand(110, 196, 270, 44, 3, 2.4),
+    ],
+    rays: [
+      { x: 248, y: -10, w: 50, h: 200, angle: -10, color: 'rgba(236, 255, 214, 1)', min: 0.08, max: 0.21, period: 11 },
+      { x: 212, y: -10, w: 30, h: 170, angle: -18, color: 'rgba(236, 255, 214, 1)', min: 0.06, max: 0.16, period: 9, delay: -4 },
+    ],
+    glows: [{ x: 240, y: 215, r: 120, color: '#5fd4ff', min: 0.06, max: 0.13, period: 7, style: 'pulse' }],
+    particles: [
+      { kind: 'sparkle', count: 10, area: { x: 115, y: 190, w: 260, h: 55 }, colors: ['#d4fdff'], duration: 4.5, opacity: 0.8 },
+      { kind: 'mote', count: 10, area: { x: 180, y: 20, w: 140, h: 160 }, colors: ['#f5ffd2'], duration: 11, opacity: 0.68 },
+      { kind: 'sparkle', count: 6, area: { x: 0, y: 170, w: 60, h: 150 }, colors: ['#8ec8ff'], duration: 6, opacity: 0.6 },
+    ],
+  },
+  event_forgotten_forge: {
+    src: EVENT('forgotten_forge'), width: 480, height: 320,
+    rays: [{ x: 196, y: 10, w: 42, h: 200, angle: -20, color: 'rgba(190, 210, 236, 1)', min: 0.06, max: 0.16, period: 12 }],
+    glows: [
+      { x: 380, y: 170, r: 58, color: '#ff7a2a', min: 0.16, max: 0.3, period: 2.4 },
+      { x: 380, y: 175, r: 26, color: '#ffb04a', min: 0.14, max: 0.26, period: 1.8, delay: -0.6 },
+    ],
+    particles: [
+      { kind: 'ember', count: 12, area: { x: 355, y: 150, w: 45, h: 35 }, colors: ['#ffe6b0', '#ffd08a'], duration: 6, opacity: 0.8 },
+      { kind: 'mote', count: 9, area: { x: 170, y: 30, w: 70, h: 170 }, colors: ['#c4d4ec'], duration: 12, opacity: 0.61 },
+    ],
+  },
+  event_lost_caravan: {
+    src: EVENT('lost_caravan'), width: 480, height: 320,
+    sway: [...swayBand(0, 0, 220, 100, 2, 4.4)],
+    glows: [
+      { x: 318, y: 120, r: 36, color: '#ffb04a', min: 0.16, max: 0.3, period: 2.6 },
+      { x: 318, y: 120, r: 14, color: '#ffd98a', min: 0.18, max: 0.3, period: 1.9, delay: -0.7 },
+    ],
+    particles: [
+      { kind: 'firefly', count: 10, area: { x: 30, y: 70, w: 260, h: 120 }, colors: ['#ddff7d'], duration: 9, opacity: 0.85 },
+      { kind: 'sparkle', count: 3, area: { x: 285, y: 252, w: 55, h: 26 }, colors: ['#d2b4ff'], duration: 5, opacity: 0.6 },
+    ],
+  },
+  event_moonlit_garden: {
+    src: EVENT('moonlit_garden'), width: 480, height: 320,
+    sway: [
+      { x: 288, y: 220, w: 50, h: 28, period: 2.2 },
+      { x: 305, y: 180, w: 14, h: 32, axis: 'y', period: 0.8 },
+      ...swayBand(360, 0, 120, 140, 2, 4.8),
+    ],
+    glows: [
+      { x: 335, y: 55, r: 48, color: '#cfe3ff', min: 0.08, max: 0.16, period: 9, style: 'pulse' },
+      { x: 35, y: 250, r: 20, color: '#6fa8ff', min: 0.12, max: 0.24, period: 5, style: 'pulse' },
+      { x: 90, y: 215, r: 18, color: '#6fa8ff', min: 0.12, max: 0.24, period: 5.6, delay: -2, style: 'pulse' },
+      { x: 195, y: 205, r: 14, color: '#6fa8ff', min: 0.1, max: 0.2, period: 6, delay: -1, style: 'pulse' },
+      { x: 255, y: 190, r: 14, color: '#6fa8ff', min: 0.1, max: 0.2, period: 5.2, delay: -3, style: 'pulse' },
+      { x: 392, y: 190, r: 18, color: '#6fa8ff', min: 0.12, max: 0.24, period: 5.8, delay: -4, style: 'pulse' },
+    ],
+    particles: [
+      { kind: 'firefly', count: 8, area: { x: 50, y: 170, w: 400, h: 130 }, colors: ['#c9ff9c', '#a8d8ff'], duration: 10, opacity: 0.8 },
+      { kind: 'sparkle', count: 5, area: { x: 290, y: 222, w: 45, h: 26 }, colors: ['#e6f0ff'], duration: 4.5, opacity: 0.7 },
+    ],
+  },
+  event_old_library: {
+    src: EVENT('old_library'), width: 480, height: 320,
+    rays: [{ x: 245, y: 40, w: 54, h: 200, angle: 0, color: 'rgba(170, 214, 255, 1)', min: 0.08, max: 0.19, period: 12 }],
+    glows: [
+      { x: 100, y: 80, r: 16, color: '#ffc66a', min: 0.18, max: 0.32, period: 2.2 },
+      { x: 385, y: 80, r: 16, color: '#ffc66a', min: 0.18, max: 0.32, period: 2.6, delay: -1 },
+      { x: 40, y: 165, r: 16, color: '#ffc66a', min: 0.18, max: 0.32, period: 2.4, delay: -0.5 },
+      { x: 195, y: 185, r: 14, color: '#ffc66a', min: 0.16, max: 0.3, period: 2.9, delay: -1.6 },
+      { x: 415, y: 175, r: 16, color: '#ffc66a', min: 0.18, max: 0.32, period: 2.1, delay: -0.8 },
+      { x: 193, y: 228, r: 14, color: '#ffc66a', min: 0.16, max: 0.3, period: 2.7, delay: -1.2 },
+    ],
+    particles: [
+      { kind: 'mote', count: 18, area: { x: 190, y: 40, w: 110, h: 200 }, colors: ['#ffeab4', '#d6ecff'], duration: 13, opacity: 0.74 },
+    ],
+  },
+  event_sealed_vault: {
+    src: EVENT('sealed_vault'), width: 480, height: 320,
+    glows: [{ x: 320, y: 150, r: 115, color: '#3cff9a', min: 0.05, max: 0.13, period: 7, style: 'pulse' }],
+    particles: [
+      { kind: 'sparkle', count: 8, area: { x: 140, y: 250, w: 270, h: 55 }, colors: ['#ffe08a'], duration: 5.5, opacity: 0.75 },
+      { kind: 'mote', count: 8, area: { x: 180, y: 40, w: 260, h: 200 }, colors: ['#a8f0c8'], duration: 13, opacity: 0.47 },
+    ],
+  },
+  event_shady_merchant: {
+    src: EVENT('shady_merchant'), width: 480, height: 320,
+    glows: [
+      { x: 37, y: 128, r: 28, color: '#ffb44a', min: 0.16, max: 0.3, period: 2.5 },
+      { x: 262, y: 52, r: 28, color: '#ffb44a', min: 0.16, max: 0.3, period: 2.9, delay: -1 },
+      { x: 425, y: 122, r: 28, color: '#ffb44a', min: 0.16, max: 0.3, period: 2.2, delay: -0.4 },
+      { x: 130, y: 105, r: 14, color: '#ffc66a', min: 0.16, max: 0.28, period: 2.4, delay: -1.3 },
+      { x: 173, y: 120, r: 16, color: '#6fb8ff', min: 0.14, max: 0.26, period: 4.5, style: 'pulse' },
+      { x: 350, y: 175, r: 20, color: '#b46cff', min: 0.14, max: 0.26, period: 5, delay: -2, style: 'pulse' },
+    ],
+    particles: [
+      { kind: 'sparkle', count: 3, area: { x: 163, y: 110, w: 20, h: 20 }, colors: ['#bfe2ff'], duration: 4, opacity: 0.8 },
+      { kind: 'sparkle', count: 3, area: { x: 340, y: 165, w: 20, h: 20 }, colors: ['#e2bfff'], duration: 4.5, opacity: 0.8 },
+      { kind: 'mote', count: 8, area: { x: 60, y: 40, w: 360, h: 200 }, colors: ['#ffe2a8'], duration: 13, opacity: 0.47 },
+    ],
+  },
+}

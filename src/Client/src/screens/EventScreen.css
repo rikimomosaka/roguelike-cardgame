@@ -58,6 +58,9 @@
   background-image: url('/assets/backgrounds/events/lost_caravan.png');
 }
 
+/* 背景の演出（AmbientScene）は背景画像のすぐ上、本文や選択肢より下。 */
+.ev-ambient { z-index: -1; }
+
 /* Top half: narrative window (semi-opaque scroll-style box) */
 .ev-narrative-wrap {
   flex: 0 0 auto;

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { AmbientScene } from '../components/ambient/AmbientScene'
 import type { EventInstanceDto } from '../api/types'
 import { Button } from '../components/Button'
 import { Popup } from '../components/Popup'
@@ -43,6 +44,8 @@ export function EventScreen({ event, onChoose, onClose }: Props) {
     >
       <div className="ev-frame" data-event={event.eventId} data-state={phase} aria-busy={pendingChoice !== null}>
         <div className="ev-bg" aria-hidden="true" />
+        {/* 背景の控えめな演出（灯りのゆらぎ・漂う粒など）。背景と同じ範囲に重ねる。 */}
+        <AmbientScene className="ev-ambient" scene={`event_${event.eventId}`} />
         <div className="ev-narrative-wrap">
           <span className="ev-phase" aria-live="polite">
             {phase === 'pending' ? '運命を確定中…' : phase === 'resolved' ? '選択の結果' : '選択してください'}
