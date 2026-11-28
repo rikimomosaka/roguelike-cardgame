@@ -3184,3 +3184,114 @@ html[data-motion='off'] .battle__slot.has-phase:not(.has-aura):not(.is-targeted)
 }
 
 html[data-motion='reduced'] .hand > .card.is-augmenting { animation-duration: 400ms; }
+
+/* 攪乱: 頭上で回る混乱の輪。輪（楕円の線）の上を星が 3 つ回る。位置と大きさは disruptionHaloStyle。
+   星は「横の往復」と「縦の往復」を半周期ずらして重ねて楕円を描く（i が横、b が縦）。 */
+.slot-disruption-halo {
+  position: absolute;
+  left: 50%;
+  z-index: 11;
+  transform: translateX(-50%);
+  border: 2px solid rgba(255, 226, 120, .55);
+  border-radius: 50%;
+  pointer-events: none;
+  filter: drop-shadow(0 0 3px rgba(255, 210, 90, .5));
+  --halo-period: 1.6s;
+}
+.slot-disruption-halo > i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  animation: disruption-orbit-x calc(var(--halo-period) / 2) ease-in-out infinite alternate;
+}
+.slot-disruption-halo > i > b {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  background: #ffe27a;
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  animation: disruption-orbit-y calc(var(--halo-period) / 2) ease-in-out infinite alternate;
+  animation-delay: calc(var(--halo-period) / -4);
+}
+.slot-disruption-halo > i:nth-child(2),
+.slot-disruption-halo > i:nth-child(2) > b { animation-delay: calc(var(--halo-period) / -3); }
+.slot-disruption-halo > i:nth-child(2) > b { animation-delay: calc(var(--halo-period) / -3 - var(--halo-period) / 4); }
+.slot-disruption-halo > i:nth-child(3) { animation-delay: calc(var(--halo-period) / -1.5); }
+.slot-disruption-halo > i:nth-child(3) > b { animation-delay: calc(var(--halo-period) / -1.5 - var(--halo-period) / 4); }
+@keyframes disruption-orbit-x {
+  from { transform: translateX(calc(var(--halo-rx, 30px) * -1)); }
+  to   { transform: translateX(var(--halo-rx, 30px)); }
+}
+@keyframes disruption-orbit-y {
+  from { transform: translateY(calc(var(--halo-ry, 9px) * -1)); }
+  to   { transform: translateY(var(--halo-ry, 9px)); }
+}
+html[data-motion='off'] .slot-disruption-halo > i,
+html[data-motion='off'] .slot-disruption-halo > i > b { animation: none; }
+html[data-motion='reduced'] .slot-disruption-halo { --halo-period: 3.2s; }
+
+/* 伏策の発動: 中央のカードの縁が光り、輪が広がり、「伏策発動」の判子が押される。 */
+.reenact-card[data-reenact-movement^="contingency-"][data-reenact-stage="holding"] > .battle-card-visual,
+.reenact-card[data-reenact-movement^="contingency-"][data-reenact-stage="holding"] > :first-child {
+  filter: drop-shadow(0 0 4px #b9ff8a) drop-shadow(0 0 10px rgba(120, 230, 150, .85));
+  animation: contingency-card-glow 900ms ease-in-out infinite alternate;
+}
+@keyframes contingency-card-glow {
+  from { filter: drop-shadow(0 0 3px #b9ff8a) drop-shadow(0 0 8px rgba(120, 230, 150, .7)); }
+  to   { filter: drop-shadow(0 0 6px #e6ffb8) drop-shadow(0 0 16px rgba(150, 255, 170, .95)); }
+}
+.reenact-card__burst {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 120%;
+  aspect-ratio: 1;
+  border: 3px solid rgba(190, 255, 150, .9);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(.2);
+  opacity: 0;
+  pointer-events: none;
+}
+.reenact-card[data-reenact-stage="holding"] > .reenact-card__burst {
+  animation: contingency-burst 640ms ease-out 60ms both;
+}
+@keyframes contingency-burst {
+  0%   { opacity: 1; transform: translate(-50%, -50%) scale(.2); border-width: 6px; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.6); border-width: 1px; }
+}
+.reenact-card__stamp {
+  position: absolute;
+  left: 50%;
+  bottom: 6%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 3px 10px 4px;
+  border: 2px solid #c8ff9a;
+  border-radius: 4px;
+  background: rgba(18, 48, 28, .92);
+  box-shadow: 0 0 10px rgba(140, 255, 160, .6);
+  color: #eaffd8;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateX(-50%) scale(2.2) rotate(-8deg);
+  pointer-events: none;
+}
+.reenact-card__stamp > b { font-size: 13px; letter-spacing: .12em; }
+.reenact-card__stamp > small { font-size: 8px; color: #bfe8a8; }
+.reenact-card[data-reenact-stage="holding"] > .reenact-card__stamp {
+  animation: contingency-stamp 260ms cubic-bezier(.2, 1.4, .4, 1) 180ms both;
+}
+.reenact-card[data-reenact-stage="leaving"] > .reenact-card__stamp { opacity: 0; }
+@keyframes contingency-stamp {
+  0%   { opacity: 0; transform: translateX(-50%) scale(2.2) rotate(-8deg); }
+  100% { opacity: 1; transform: translateX(-50%) scale(1) rotate(-8deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reenact-card__burst { display: none; }
+  .reenact-card[data-reenact-stage="holding"] > .reenact-card__stamp { animation: none; opacity: 1; transform: translateX(-50%) rotate(-8deg); }
+}

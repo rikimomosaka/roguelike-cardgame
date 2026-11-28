@@ -190,6 +190,7 @@ export function toCharacterDemo(
     intents,
     buffs: toBuffs(actor),
     phase: actor.phase === 'calm' || actor.phase === 'motion' ? actor.phase : undefined,
+    disruption: Math.max(0, actor.statuses?.disruption ?? 0),
   }
 }
 
@@ -327,11 +328,20 @@ export function toBuffs(actor: CombatActorDto): BuffDemo[] {
   return buffs
 }
 
+/** 攪乱の失敗率（%）。Core の DisruptionRules.FailurePercent と同じ（数×10、最大50）。 */
+export function disruptionFailurePercent(disruption: number): number {
+  return disruption <= 0 ? 0 : Math.min(50, disruption * 10)
+}
+
 function formatStatusDescription(id: string, amount: number, fallback: string): string {
   if (id === 'strength' && amount < 0)
     return `アタックで与えるダメージが[N:${-amount}]減少する。`
   if (id === 'dexterity' && amount < 0)
     return `得るブロックが[N:${-amount}]減少する。`
+  // 攪乱: キャラに付いている時は、一般説明の「一定の確率」を実際の失敗率（数×10%、最大50%）にする。
+  if (id === 'disruption' && amount > 0)
+    return (STATUS_DEFS.disruption?.desc ?? fallback)
+      .replace('一定の確率', `[N:${disruptionFailurePercent(amount)}]%の確率`)
   const template = STATUS_DEFS[id]?.desc
   return template ? template.replaceAll('[N:X]', `[N:${Math.abs(amount)}]`) : fallback
 }

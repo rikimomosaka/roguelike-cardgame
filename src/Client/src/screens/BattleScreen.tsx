@@ -92,7 +92,15 @@ import {
 } from './battleScreen/intentSummary'
 import { CardChoiceModal } from './battleScreen/CardChoiceModal'
 import { PlayHistoryModal } from './battleScreen/FinisherRecordModal'
-import { PhaseAura, phaseRingStyle, slotTooltipContent, type ActorPhaseDemo } from './battleScreen/PhaseMarks'
+import { pickTargetAtPoint, readTargetRegions } from './battleScreen/targetHitTest'
+import {
+  DisruptionHalo,
+  disruptionHaloStyle,
+  PhaseAura,
+  phaseRingStyle,
+  slotTooltipContent,
+  type ActorPhaseDemo,
+} from './battleScreen/PhaseMarks'
 import { characterSkillCutinDurationMs } from './battleScreen/characterSkillCutinPresentation'
 import {
   formatComboDescription,
@@ -269,6 +277,8 @@ export type CharacterDemo = {
   animations?: Partial<Record<CharacterMotion, SpriteSheetDemo>>
   /** 位相（静・動）。位相なしは undefined。 */
   phase?: ActorPhaseDemo
+  /** 攪乱の数（0 = なし）。頭上の混乱の輪と、行動失敗の表示に使う。 */
+  disruption?: number
   /** キャラのサイズ段階 (1 〜 10)。1 = スライム級の小型、5 = 標準、10 = 巨大ボス級。
    *  立ち絵 image 表示時は heightTier に応じて高さが決定される (縦横比は維持)。 */
   heightTier?: number
@@ -355,6 +365,8 @@ type Props = {
 const STEP_DELAY_MS = 80         // 既存 fallback (汎用 event)
 /** 敵が使ったカード名を読ませる間。 */
 const ENEMY_CARD_ACTION_READ_MS = 650
+/** 攪乱で行動が失敗したときに「失敗！」を読ませる間。 */
+const ACTION_FAILED_READ_MS = 700
 /** 敵によるバフ・デバフ・ブロック・回復は発光が見えるまで少し待つ。 */
 const ENEMY_SUPPORT_EFFECT_MS = 320
 // Readability floors used when an actor has no authored motion duration.
@@ -399,9 +411,18 @@ const CARD_AUGMENT_GLOW_MS = 800
  * スキルカードのモーションで、効果を出すまで待つ割合。
  * guard: 構えが固まる 2/6 コマ目でブロックを付ける。cast: 刀に力が宿る 3/6 コマ目で効果を出す。
  */
-const SKILL_CARD_MOTION_RELEASE_RATIO: Readonly<Record<SkillCardMotion, number>> = {
+const SKILL_CARD_MOTION_RELEASE_RATIO: Readonly<Record<CardMotion, number>> = {
   guard: 2 / 6,
   cast: 3 / 6,
+  attack: 3 / 6,
+}
+/** 伏策が発動したときに、中央のカードを見せる追加の時間（判子と光を読ませる）。 */
+const CONTINGENCY_TRIGGER_EXTRA_MS = 420
+/** 伏策の発動条件（Core の ContingencyTriggerTiming）→ 判子の下に出す言葉。 */
+const CONTINGENCY_TIMING_LABEL: Readonly<Record<string, string>> = {
+  TurnStart: 'ターン開始時',
+  BeforeEnemyAttack: '相手の攻撃時',
+  ComboReached: 'コンボ達成時',
 }
 /** ダウンモーションの後、敗北処理へ進む前に倒れた姿を見せる時間。 */
 const DOWN_HOLD_MS = 500
@@ -427,7 +448,7 @@ type SlotAnim = {
   /** 戦技・奥義の発動モーションを再生中のキャラ。 */
   skillCasterId?: string
   /** スキルカードを使い、そのモーション（防御 / それ以外）を再生中のキャラ。 */
-  cardMotion?: { casterId: string; motion: SkillCardMotion }
+  cardMotion?: { casterId: string; motion: CardMotion }
   hitIds?: ReadonlyArray<string>
   blockedIds?: ReadonlyArray<string>
   playbackSpeed?: number
@@ -683,7 +704,7 @@ type SlotProps = {
   /** 戦技・奥義の発動モーション中。 */
   isSkill?: boolean
   /** スキルカードのモーション中（防御効果あり = guard、それ以外 = cast）。 */
-  cardMotion?: SkillCardMotion | null
+  cardMotion?: CardMotion | null
   isHit?: boolean
   isBlocked?: boolean
   /** 撃破された直後（点滅して消える）。 */
@@ -790,6 +811,8 @@ type ReenactCardState = {
   fromY?: number
   toX?: number
   toY?: number
+  /** 伏策の発動: 判子の下に出す発動条件（例: 相手の攻撃時）。空文字なら条件は出さない。 */
+  contingencyTrigger?: string
 }
 
 type PendingContingencyCard = {
@@ -871,7 +894,7 @@ type CharacterMotionFlags = {
   attack: AttackMotion | null
   isHit: boolean
   isSkill: boolean
-  cardMotion: SkillCardMotion | null
+  cardMotion: CardMotion | null
   /** 静の位相: 待機・被弾・奥義の動きをせず、目を閉じたコマ（still）で止まる。 */
   isStill: boolean
   /** HP 0 で倒れている（down シートを持つキャラだけ表示が残る）。 */
@@ -880,6 +903,46 @@ type CharacterMotionFlags = {
 
 /** スキルカードを使ったときのモーション。 */
 export type SkillCardMotion = 'guard' | 'cast'
+/** カードの使用・伏策の発動で再生するモーション（伏策の発動で攻撃を得たときは attack）。 */
+export type CardMotion = SkillCardMotion | 'attack'
+
+/** このカード使用（次のカード使用まで）で、使ったキャラが伏策を仕込んだか。 */
+export function playedCardArmsContingency(
+  steps: ReadonlyArray<{ event: { kind: string; casterInstanceId: string | null } }>,
+  playCardIndex: number,
+  casterId: string,
+): boolean {
+  for (let j = playCardIndex + 1; j < steps.length; j++) {
+    const ev = steps[j].event
+    if (ev.kind === 'PlayCard') return false
+    if (ev.kind === 'ContingencyArmed' && ev.casterInstanceId === casterId) return true
+  }
+  return false
+}
+
+/**
+ * 伏策が発動したときのモーションを、発動から解決までの出来事で決める。
+ * - その場で攻撃が当たる: null（攻撃モーションに任せる）
+ * - 攻撃を得る: attack
+ * - ブロックを得る: guard
+ * - それ以外: cast
+ */
+export function contingencyEffectMotion(
+  steps: ReadonlyArray<{ event: { kind: string; casterInstanceId: string | null; amount: number | null } }>,
+  triggerIndex: number,
+  casterId: string,
+): CardMotion | null {
+  let gainsAttack = false
+  let gainsBlock = false
+  for (let j = triggerIndex + 1; j < steps.length; j++) {
+    const ev = steps[j].event
+    if (ev.kind === 'ContingencyResolved' || ev.kind === 'ContingencyTriggered' || ev.kind === 'PlayCard') break
+    if (ev.kind === 'AttackFire' && ev.casterInstanceId === casterId) return null
+    if (ev.kind === 'GainAttack' && ev.casterInstanceId === casterId && (ev.amount ?? 0) > 0) gainsAttack = true
+    if (ev.kind === 'GainBlock' && ev.casterInstanceId === casterId && (ev.amount ?? 0) > 0) gainsBlock = true
+  }
+  return gainsAttack ? 'attack' : gainsBlock ? 'guard' : 'cast'
+}
 
 /**
  * スキルカードの解決中（次のカード使用まで）の出来事から、使ったキャラのモーションを決める。
@@ -1143,9 +1206,10 @@ function Slot({
   // Why: スプレッドにすることで onClick が undefined のとき role/tabIndex 属性自体が
   // JSX に出ない。axe/aria リンターの "role must be valid ARIA role: {expression}"
   // 誤検出（条件式値の静的解析不可）を回避する目的。
+  // マウスのクリックは側（味方・敵）の枠でまとめて判定する（隣と重なった所は今の対象でない方）。
+  // ここでは Enter / Space だけを受ける。
   const interactiveProps = onClick
     ? {
-        onClick,
         onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => {
           if (event.key !== 'Enter' && event.key !== ' ') return
           event.preventDefault()
@@ -1162,6 +1226,8 @@ function Slot({
       className={cls}
       data-occupied="1"
       data-actor-id={char.instanceId}
+      data-targetable={onClick ? '1' : undefined}
+      data-body-width={char.stage ? Math.round(char.stage.bodyWidth) : undefined}
       data-size-class={actorSizeClass}
       data-airborne={stageProfile.airborne ? 'true' : 'false'}
       style={slotMotionStyle}
@@ -1173,6 +1239,11 @@ function Slot({
         style={char.stage
           ? phaseRingStyle(char.stage)
           : phaseRingStyle({ bodyWidth: (shadowWidth ?? 78) / 0.8, footGap: 8 })}
+      />
+      <DisruptionHalo
+        stacks={char.disruption}
+        style={disruptionHaloStyle(char.stage
+          ?? { bodyWidth: (shadowWidth ?? 78) / 0.8, displayHeight, headTop: 40 })}
       />
       {actionLabel ? (
         <div key={actionLabel.id} className="slot-action-label" role="status">
@@ -2720,6 +2791,26 @@ export function BattleScreen({
       }
       // スキルカードのモーションが終わる時刻。最後の片付けで途中のコマが消えないよう、ここまで待つ。
       let cardMotionEndsAt = 0
+      /**
+       * カードの使用・伏策の発動のモーションを再生し、効果を出す位置（release）まで待つ。
+       * 残りのコマは並行して流す。中断されたら false。シートが無い・モーション off なら何もしない。
+       */
+      const playCardMotion = async (casterId: string, motion: CardMotion): Promise<boolean> => {
+        const sheet = actorAnimations(casterId)?.[motion]
+        if (!sheet || effectiveMotionLevel === 'off') return true
+        const motionDurationMs = readableMotionDuration(sheet, 1)
+        const releaseMs = Math.round(motionDurationMs * SKILL_CARD_MOTION_RELEASE_RATIO[motion])
+        setSlotAnim({ cardMotion: { casterId, motion }, playbackSpeed })
+        if (!await waitForPresentation(releaseMs)) return false
+        const restMs = Math.round((motionDurationMs - releaseMs) * motionScale / playbackSpeed)
+        cardMotionEndsAt = performance.now() + restMs
+        window.setTimeout(() => {
+          setSlotAnim(current => current.cardMotion?.casterId === casterId
+            ? { ...current, cardMotion: undefined }
+            : current)
+        }, restMs)
+        return true
+      }
       const finishCardMotion = async () => {
         const restMs = cardMotionEndsAt - performance.now()
         if (restMs > 0) await sleep(restMs)
@@ -3028,25 +3119,18 @@ export function BattleScreen({
           const casterStill = !!cardCasterId
             && baselineActor(cardCasterId)?.phase === 'calm'
             && !playedCardReleasesCalm(steps, i, cardCasterId)
-          const cardMotion = cardCasterId && isSkillCard(ev.cardId) && !casterStill
-            ? skillCardMotion(steps, i, cardCasterId)
-            : null
-          const cardMotionSheet = cardMotion ? actorAnimations(cardCasterId)?.[cardMotion] : undefined
-          if (cardCasterId && cardMotion && cardMotionSheet && effectiveMotionLevel !== 'off') {
-            const motionDurationMs = readableMotionDuration(cardMotionSheet, 1)
-            const releaseMs = Math.round(motionDurationMs * SKILL_CARD_MOTION_RELEASE_RATIO[cardMotion])
-            setSlotAnim({ cardMotion: { casterId: cardCasterId, motion: cardMotion }, playbackSpeed })
-            if (!await waitForPresentation(releaseMs)) {
-              clearTransientPresentation()
-              return
-            }
-            const restMs = Math.round((motionDurationMs - releaseMs) * motionScale / playbackSpeed)
-            cardMotionEndsAt = performance.now() + restMs
-            window.setTimeout(() => {
-              setSlotAnim(current => current.cardMotion?.casterId === cardCasterId
-                ? { ...current, cardMotion: undefined }
-                : current)
-            }, restMs)
+          // 伏策を仕込むカードは、種類に関わらず発動モーション（効果は発動した時に改めて見せる）。
+          const armsContingency = !!cardCasterId && playedCardArmsContingency(steps, i, cardCasterId)
+          const cardMotion: CardMotion | null = !cardCasterId || casterStill
+            ? null
+            : armsContingency
+              ? 'cast'
+              : isSkillCard(ev.cardId)
+                ? skillCardMotion(steps, i, cardCasterId)
+                : null
+          if (cardCasterId && cardMotion && !await playCardMotion(cardCasterId, cardMotion)) {
+            clearTransientPresentation()
+            return
           }
         }
 
@@ -3347,6 +3431,7 @@ export function BattleScreen({
                 : 'contingency-discard',
               fromX: exhaustCenter.x,
               fromY: exhaustCenter.y,
+              contingencyTrigger: CONTINGENCY_TIMING_LABEL[ev.note ?? ''] ?? '',
             })
             if (!await waitForPresentation(16)) {
               clearTransientPresentation()
@@ -3355,7 +3440,20 @@ export function BattleScreen({
             setReenactCard(current => current?.id === reenactId
               ? { ...current, stage: 'holding' }
               : current)
-            if (!await waitForPresentation(REENACT_APPEAR_MS + REENACT_HOLD_MS)) {
+            if (!await waitForPresentation(
+              REENACT_APPEAR_MS + REENACT_HOLD_MS + CONTINGENCY_TRIGGER_EXTRA_MS)) {
+              clearTransientPresentation()
+              return
+            }
+            // 仕込んだキャラが、発動した効果に合わせて動く（攻撃が当たる場合は攻撃の演出に任せる）。
+            const triggerCasterId = ev.casterInstanceId
+            const triggerCasterStill = !!triggerCasterId
+              && baselineActor(triggerCasterId)?.phase === 'calm'
+            const triggerMotion = triggerCasterId && !triggerCasterStill
+              ? contingencyEffectMotion(steps, i, triggerCasterId)
+              : null
+            if (triggerCasterId && triggerMotion
+                && !await playCardMotion(triggerCasterId, triggerMotion)) {
               clearTransientPresentation()
               return
             }
@@ -3479,6 +3577,17 @@ export function BattleScreen({
           const readMs = Math.round(ENEMY_CARD_ACTION_READ_MS * motionScale / playbackSpeed)
           showActionLabel(ev.casterInstanceId, cardName, Math.max(readMs + 900, 1200))
           if (!await waitForPresentation(ENEMY_CARD_ACTION_READ_MS)) {
+            clearTransientPresentation()
+            return
+          }
+          i++
+          continue
+        }
+
+        // 攪乱で行動が失敗した: 頭上に「失敗！」を出して、読める間を取る。
+        if (ev.kind === 'ActionFailed' && ev.casterInstanceId) {
+          pushCombatFeedback(ev.casterInstanceId, 'fail', '失敗！')
+          if (!await waitForPresentation(ACTION_FAILED_READ_MS)) {
             clearTransientPresentation()
             return
           }
@@ -4458,6 +4567,31 @@ export function BattleScreen({
     })
   }
 
+  /**
+   * 側（味方・敵）の枠のクリック。押した位置にいるキャラを対象にする。
+   * キャラの領域は隣と重なってよく、重なった所は今の対象でない方を選ぶ。
+   * 位置で決まらない時（テスト環境など）は、押した要素が属するキャラ。
+   */
+  function handleSideTargetClick(side: ActorSide, event: React.MouseEvent<HTMLDivElement>) {
+    if (interactionsDisabled) return
+    const clicked = event.target as HTMLElement
+    // スロット内のボタン（行動の再生など）は、それぞれの操作に任せる。
+    if (clicked.closest('button, a, [data-no-target]')) return
+    const actors = side === 'Enemy' ? displayedState.enemies : displayedState.allies
+    const currentIndex = side === 'Enemy' ? displayedState.targetEnemyIndex : displayedState.targetAllyIndex
+    const currentId = currentIndex !== null && currentIndex !== undefined
+      ? actors[currentIndex]?.instanceId ?? null
+      : null
+    const picked = pickTargetAtPoint(
+      readTargetRegions(event.currentTarget), event.clientX, event.clientY, currentId)
+      ?? clicked.closest<HTMLElement>('.battle__slot[data-targetable="1"]')?.dataset.actorId
+      ?? null
+    if (!picked) return
+    const index = actors.findIndex(actor => actor.instanceId === picked)
+    if (index < 0) return
+    void handleSetTarget(side, index)
+  }
+
   async function handleSetTarget(side: ActorSide, slotIndex: number) {
     const commandParticipant = state ? findPrimaryParticipant(state) : null
     const newState = await withBusy(() =>
@@ -4806,7 +4940,10 @@ export function BattleScreen({
             </div>
           ) : null}
           <div className="battle__chars">
-            <div className="battle__side battle__side--player">
+            <div
+              className="battle__side battle__side--player"
+              onClick={event => handleSideTargetClick('Ally', event)}
+            >
               {playerSlots.map((c, i) => {
                 // Visual placement uses stable SlotIndex; command targeting
                 // below resolves the actor back to its DTO array index.
@@ -4886,7 +5023,10 @@ export function BattleScreen({
                 )
               })}
             </div>
-            <div className="battle__side battle__side--enemy">
+            <div
+              className="battle__side battle__side--enemy"
+              onClick={event => handleSideTargetClick('Enemy', event)}
+            >
               {enemySlots.map((c, i) => {
                 const actor = enemyActorsBySlot[i] ?? undefined
                 const actorArrayIndex = actor
@@ -5407,6 +5547,15 @@ export function BattleScreen({
           aria-hidden="true"
         >
           <BattleCardVisual card={reenactCard.demo} detailsDisabled ariaHidden />
+          {reenactCard.contingencyTrigger !== undefined ? (
+            <>
+              <span className="reenact-card__burst" />
+              <span className="reenact-card__stamp">
+                <b>伏策発動</b>
+                {reenactCard.contingencyTrigger ? <small>{reenactCard.contingencyTrigger}</small> : null}
+              </span>
+            </>
+          ) : null}
         </div>
       )}
       {/* Why: 山札補充 (discard → draw) の弧アーチ演出。fixed overlay で

@@ -9,6 +9,8 @@ export type CombatFeedbackKind =
   | 'heal'
   | 'buff'
   | 'debuff'
+  /** 攪乱で行動が失敗した（「失敗！」）。 */
+  | 'fail'
 
 export type CombatFeedbackItem = {
   id: number

@@ -75,4 +75,9 @@ public enum BattleEventKind
     PhaseChanged = 39,
     /// <summary>カードに後付け能力が足された（TargetInstanceId = カード、Amount = 足した数、Note = キーワード:後の数）。</summary>
     CardAugmented = 40,
+    /// <summary>
+    /// 攪乱で行動（カード 1 枚の使用）が失敗した（CasterInstanceId = 行動したキャラ、CardId = カード、Amount = 失敗率%）。
+    /// そのカードの効果は出ない。
+    /// </summary>
+    ActionFailed = 41,
 }

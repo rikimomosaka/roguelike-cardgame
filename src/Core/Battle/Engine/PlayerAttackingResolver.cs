@@ -341,7 +341,18 @@ internal static class PlayerAttackingResolver
             .FirstOrDefault()
             ?? state.Allies.OrderBy(a => a.SlotIndex).FirstOrDefault();
 
-        for (int effectIndex = 0; effectIndex < move.Effects.Count; effectIndex++)
+        // 攪乱: ユニットの行動（技 1 回）も失敗しうる。失敗しても次の技へは進む。
+        bool moveFailed = DisruptionRules.RollActionFailure(ally, rng);
+        if (moveFailed)
+        {
+            events.Add(new BattleEvent(
+                BattleEventKind.ActionFailed, Order: order++,
+                CasterInstanceId: ally.InstanceId,
+                Amount: DisruptionRules.FailurePercent(
+                    ally.GetStatus(BattleStatusIds.Disruption))));
+        }
+
+        for (int effectIndex = 0; !moveFailed && effectIndex < move.Effects.Count; effectIndex++)
         {
             if (ResolutionShouldStop(state)) break;
             var effect = move.Effects[effectIndex];

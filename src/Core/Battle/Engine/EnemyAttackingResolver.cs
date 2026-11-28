@@ -176,9 +176,22 @@ internal static class EnemyAttackingResolver
             string? announcedCardInstanceId = null;
             // 位相の使用時判定は、予約したカードごとに最初の効果を実行する前に 1 回だけ行う。
             var phaseJudgedCardKeys = new HashSet<string>(System.StringComparer.Ordinal);
+            // 攪乱の失敗判定も予約したカードごとに 1 回（非攻撃と攻撃に分かれて並んでも同じ結果を使う）。
+            var failedCardKeys = new HashSet<string>(System.StringComparer.Ordinal);
+            bool moveFailed = false;
+            if (move is not null && DisruptionRules.RollActionFailure(currentEnemyState, rng))
+            {
+                moveFailed = true;
+                events.Add(new BattleEvent(
+                    BattleEventKind.ActionFailed, Order: order++,
+                    CasterInstanceId: currentEnemyState.InstanceId,
+                    Amount: DisruptionRules.FailurePercent(
+                        currentEnemyState.GetStatus(BattleStatusIds.Disruption))));
+            }
             for (int effectIndex = 0; effectIndex < actionEffects.Count; effectIndex++)
             {
                 if (ResolutionShouldStop(state)) break;
+                if (moveFailed) break;
                 var eff = actionEffects[effectIndex];
                 var refreshedAtEffectStart = state.Enemies.FirstOrDefault(
                     e => e.InstanceId == currentEnemyState.InstanceId);
@@ -190,7 +203,8 @@ internal static class EnemyAttackingResolver
                 {
                     var cardSource = plannedSources[effectIndex];
                     string cardKey = cardSource.InstanceId ?? cardSource.DefinitionId ?? "";
-                    if (phaseJudgedCardKeys.Add(cardKey)
+                    bool isFirstJudgement = phaseJudgedCardKeys.Add(cardKey);
+                    if (isFirstJudgement
                         && cardSource.DefinitionId is { } usedCardId
                         && catalog.TryGetCard(usedCardId, out var usedCard))
                     {
@@ -198,7 +212,11 @@ internal static class EnemyAttackingResolver
                         state = PhaseRules.MarkExitOnUse(state, currentEnemyState.InstanceId, usedCard.CardType);
                         currentEnemyState = state.Enemies.First(e => e.InstanceId == currentEnemyState.InstanceId);
                     }
-                    if (!string.Equals(cardKey, announcedCardInstanceId, System.StringComparison.Ordinal))
+                    bool firstEffectOfCard = !string.Equals(
+                        cardKey, announcedCardInstanceId, System.StringComparison.Ordinal);
+                    bool alreadyFailed = failedCardKeys.Contains(cardKey);
+                    if (alreadyFailed) continue;
+                    if (firstEffectOfCard)
                     {
                         announcedCardInstanceId = cardKey;
                         events.Add(new BattleEvent(
@@ -206,6 +224,18 @@ internal static class EnemyAttackingResolver
                             CasterInstanceId: currentEnemyState.InstanceId,
                             CardId: cardSource.DefinitionId,
                             Source: cardSource));
+                    }
+                    if (isFirstJudgement && DisruptionRules.RollActionFailure(currentEnemyState, rng))
+                    {
+                        failedCardKeys.Add(cardKey);
+                        events.Add(new BattleEvent(
+                            BattleEventKind.ActionFailed, Order: order++,
+                            CasterInstanceId: currentEnemyState.InstanceId,
+                            CardId: cardSource.DefinitionId,
+                            Amount: DisruptionRules.FailurePercent(
+                                currentEnemyState.GetStatus(BattleStatusIds.Disruption)),
+                            Source: cardSource));
+                        continue;
                     }
                 }
                 // 能力値参照（攻撃力・守備力）は実行時点の有効値で確定する。

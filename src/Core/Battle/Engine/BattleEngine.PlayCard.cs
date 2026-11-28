@@ -341,6 +341,23 @@ public static partial class BattleEngine
         var caster = FindParticipantCaster(s, actingActor.InstanceId)
             ?? updatedActor;
 
+        // 攪乱: カードの使用（コスト・コンボ・使用回数）は成立したまま、効果だけが出ない。
+        // 伏策の仕込み・再演・終撃も行わない（カードは通常の行き先へ移る）。
+        if (DisruptionRules.RollActionFailure(caster, rng))
+        {
+            events.Add(new BattleEvent(
+                BattleEventKind.ActionFailed, Order: order++,
+                CasterInstanceId: actingActor.InstanceId,
+                CardId: def.Id,
+                Amount: DisruptionRules.FailurePercent(
+                    caster.GetStatus(BattleStatusIds.Disruption)),
+                Source: cardSource));
+            return FinalizeCardPlay(
+                s, actingActor.InstanceId, playedCard, def,
+                ImmutableArray<string>.Empty, events, ref order, rng, catalog,
+                actionFailed: true);
+        }
+
         var contingency = FindAbility<ContingencyAbilityDefinition>(
             def, playedCard.IsUpgraded);
         var (afterEffects, effectEvents, summonedActorInstanceIds, _) =
@@ -391,7 +408,8 @@ public static partial class BattleEngine
         BattleCardInstance card, CardDefinition def,
         ImmutableArray<string> summonedActorInstanceIds,
         List<BattleEvent> events, ref int order,
-        IRng rng, DataCatalog catalog)
+        IRng rng, DataCatalog catalog,
+        bool actionFailed = false)
     {
         var s = state;
 
@@ -402,13 +420,15 @@ public static partial class BattleEngine
         // Contingency is armed before OnPlayCard triggers.  Its normal effect
         // list is deliberately skipped by the caller, and this destination
         // takes precedence over both Wait and Exhaust.
-        var contingency = FindAbility<ContingencyAbilityDefinition>(
-            def, card.IsUpgraded);
+        // 攪乱で失敗したカードは伏策として仕込まない（通常の行き先へ移る）。
+        var contingency = actionFailed
+            ? null
+            : FindAbility<ContingencyAbilityDefinition>(def, card.IsUpgraded);
         // Reprise itself has already completed before FinalizeCardPlay is
         // entered (including a resumed Reprise choice).  A normal Attack or
         // Skill therefore becomes eligible now.  Merely arming a Contingency
         // is not a resolved effect and is deliberately excluded here.
-        if (contingency is null)
+        if (contingency is null && !actionFailed)
             s = RecordActualCardResolutionForReprise(s, card.InstanceId);
         if (contingency is not null)
         {
@@ -505,8 +525,10 @@ public static partial class BattleEngine
             return (s, events);
         }
 
-        s = ApplyFinisher(
-            s, casterActorInstanceId, card, def, events, ref order);
+        // 失敗したカードは効果が出ていないので終撃も行わない。
+        if (!actionFailed)
+            s = ApplyFinisher(
+                s, casterActorInstanceId, card, def, events, ref order);
 
         return (s, events);
     }

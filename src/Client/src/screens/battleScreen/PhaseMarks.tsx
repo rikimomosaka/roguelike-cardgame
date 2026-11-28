@@ -56,6 +56,34 @@ export function phaseRingStyle(stage: { bodyWidth: number; footGap: number }): C
 }
 
 /**
+ * 攪乱の混乱の輪（頭上で回る星と輪）の位置。頭頂より少し上に、体の幅より狭く置く。
+ */
+export function disruptionHaloStyle(
+  stage: { bodyWidth: number; displayHeight: number; headTop: number },
+): CSSProperties {
+  const width = Math.round(Math.max(40, Math.min(84, stage.bodyWidth * 0.62)))
+  const height = Math.max(10, Math.round(width * 0.3))
+  const headY = STAGE_CANVAS_BOTTOM_Y - stage.displayHeight + stage.headTop
+  return {
+    width: `${width}px`,
+    height: `${height}px`,
+    top: `${Math.round(headY - height * 0.9)}px`,
+    '--halo-rx': `${Math.round(width / 2)}px`,
+    '--halo-ry': `${Math.round(height / 2)}px`,
+  } as CSSProperties
+}
+
+/** 攪乱を持つ間、頭上で回る混乱の輪（輪の上を星が 3 つ回る）。 */
+export function DisruptionHalo({ stacks, style }: { stacks?: number; style?: CSSProperties }) {
+  if (!stacks || stacks <= 0) return null
+  return (
+    <span className="slot-disruption-halo" style={style} aria-hidden="true">
+      <i><b /></i><i><b /></i><i><b /></i>
+    </span>
+  )
+}
+
+/**
  * 位相のオーラの足元の輪（静 = 青、動 = 赤）。位置と大きさは phaseRingStyle で決める。
  * 体の輪郭に沿って揺らめく光は、スロットの has-phase--* クラスでスプライトに付ける（BattleScreen.css）。
  */

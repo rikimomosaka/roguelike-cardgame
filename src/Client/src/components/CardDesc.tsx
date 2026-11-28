@@ -113,7 +113,7 @@ export const STATUS_DEFS: Record<string, { name: string; desc: string }> = {
   comboCarryover: { name: '連環', desc: 'ターン終了時、現在コンボを次のターンへ持ち越し、[S:comboCarryover]が1減少する。次のターンに最初に使用するカードは条件を問わずコンボを継続するが、コンボによるコスト軽減を受けない。' },
   afterglow: { name: '余韻', desc: 'ターン終了時に減少または消滅する自身の他のバフが[N:1]つ以上ある時、それらを全て維持し、[S:afterglow]が消滅する。' },
   resonance: { name: '共鳴', desc: '自身のみに[S:resonance]以外のバフが付与された時、付与された全てのバフを他の全ての味方に付与し、[S:resonance]が1減少する。' },
-  disruption: { name: '攪乱', desc: '自身の全てのアタックをランダム攻撃に変更する。ターン終了時に[S:disruption]が1減少する。' },
+  disruption: { name: '攪乱', desc: '自身の全てのアタックをランダム攻撃に変更し、全ての行動が一定の確率で失敗する。ターン終了時に[S:disruption]が1減少する。' },
 }
 
 // Why: relic / power カード共通の発火タイミング ID → 日本語表示。

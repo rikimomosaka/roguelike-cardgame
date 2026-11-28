@@ -25,6 +25,8 @@ export type ActorStage = {
   bodyWidth: number
   /** ドットの下端からキャンバス下端までの隙間（px）。足元の位置を出すのに使う。 */
   footGap: number
+  /** キャンバス上端からドットの上端（頭頂）までの距離（px）。頭上の演出の位置に使う。 */
+  headTop: number
 }
 
 export type ActorVisual = {
@@ -71,6 +73,7 @@ function stageFor(kind: ActorKind, id: string): ActorStage | undefined {
     airborne: ACTOR_CANVAS.footRow - m.bottom >= 4,
     bodyWidth: m.footprint * ACTOR_CANVAS.scale,
     footGap: (ACTOR_CANVAS.size - 1 - m.bottom) * ACTOR_CANVAS.scale,
+    headTop: m.top * ACTOR_CANVAS.scale,
   }
 }
 

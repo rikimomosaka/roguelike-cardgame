@@ -300,6 +300,8 @@ export type BattleEventKind =
   | 'PhaseChanged'
   /** カードに後付け能力が足された（targetInstanceId = カード、note = キーワード:後の数）。 */
   | 'CardAugmented'
+  /** 攪乱で行動（カード 1 枚・技 1 回）が失敗した（casterInstanceId、cardId、amount = 失敗率%）。 */
+  | 'ActionFailed'
 
 export type IntentDto = {
   /** 通常攻撃 (single) の予定ダメージ。 */

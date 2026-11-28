@@ -107,7 +107,7 @@ public sealed class DisruptionRuntimeTests
 
         var (after, events) = EnemyAttackingResolver.Resolve(
             state,
-            new FakeRng([1], []),
+            new FakeRng([99, 1], []),
             catalog);
 
         Assert.Equal(hero.MaxHp, after.Allies[0].CurrentHp);
@@ -152,7 +152,7 @@ public sealed class DisruptionRuntimeTests
 
         var (after, events) = PlayerAttackingResolver.Resolve(
             state,
-            new FakeRng([1], []),
+            new FakeRng([99, 1], []),
             catalog);
 
         Assert.Equal(20, after.Enemies[0].CurrentHp);
@@ -208,6 +208,99 @@ public sealed class DisruptionRuntimeTests
         Assert.Null(allIntent!.AttackRandom);
         Assert.Equal(7, allIntent.AttackAll);
         Assert.Equal(2, allIntent.AttackAllHits);
+    }
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(1, 10)]
+    [InlineData(3, 30)]
+    [InlineData(5, 50)]
+    [InlineData(6, 50)]
+    [InlineData(99, 50)]
+    public void Failure_percent_is_ten_per_stack_capped_at_fifty(int disruption, int expected)
+    {
+        Assert.Equal(expected, DisruptionRules.FailurePercent(disruption));
+    }
+
+    [Fact]
+    public void Disrupted_card_play_can_fail_and_keeps_cost_but_skips_effects()
+    {
+        var hero = WithStatus(BattleFixtures.Hero(), BattleStatusIds.Disruption, 3);
+        var state = BattleFixtures.MinimalState(
+            allies: [hero],
+            hand: [BattleFixtures.MakeBattleCard("defend", "c1")]);
+
+        // 0 < 30% → 失敗
+        var (after, events) = BattleEngine.PlayCard(
+            state, 0, null, null, new FakeRng([0], []), BattleFixtures.MinimalCatalog());
+
+        Assert.Equal(0, after.Allies[0].Block.Display(0));
+        Assert.Equal(2, after.Energy);
+        Assert.Empty(after.Hand);
+        Assert.Single(after.DiscardPile);
+        var failed = Assert.Single(events, e => e.Kind == BattleEventKind.ActionFailed);
+        Assert.Equal(hero.InstanceId, failed.CasterInstanceId);
+        Assert.Equal("defend", failed.CardId);
+        Assert.Equal(30, failed.Amount);
+        Assert.DoesNotContain(events, e => e.Kind == BattleEventKind.GainBlock);
+    }
+
+    [Fact]
+    public void Disrupted_card_play_succeeds_when_roll_is_at_or_above_the_rate()
+    {
+        var hero = WithStatus(BattleFixtures.Hero(), BattleStatusIds.Disruption, 3);
+        var state = BattleFixtures.MinimalState(
+            allies: [hero],
+            hand: [BattleFixtures.MakeBattleCard("defend", "c1")]);
+
+        var (after, events) = BattleEngine.PlayCard(
+            state, 0, null, null, new FakeRng([30], []), BattleFixtures.MinimalCatalog());
+
+        Assert.True(after.Allies[0].Block.Display(0) > 0);
+        Assert.DoesNotContain(events, e => e.Kind == BattleEventKind.ActionFailed);
+    }
+
+    [Fact]
+    public void Card_play_without_disruption_draws_no_random_number()
+    {
+        var state = BattleFixtures.MinimalState(
+            hand: [BattleFixtures.MakeBattleCard("defend", "c1")]);
+
+        // 乱数を 1 つでも引くと FakeRng が例外を投げる。
+        var (after, _) = BattleEngine.PlayCard(
+            state, 0, null, null, new FakeRng([], []), BattleFixtures.MinimalCatalog());
+
+        Assert.True(after.Allies[0].Block.Display(0) > 0);
+    }
+
+    [Fact]
+    public void Disrupted_enemy_move_can_fail_entirely()
+    {
+        var move = new MoveDefinition(
+            "swing",
+            MoveKind.Attack,
+            [new CardEffect("attack", EffectScope.All, EffectSide.Enemy, 5)],
+            "swing");
+        var definition = new EnemyDefinition(
+            "disrupted_enemy", "Disrupted", "disrupted_enemy", 30,
+            new EnemyPool(1, EnemyTier.Weak), move.Id, [move]);
+        var enemy = WithStatus(
+            BattleFixtures.Goblin(moveId: move.Id) with { DefinitionId = definition.Id },
+            BattleStatusIds.Disruption,
+            6);
+        var hero = BattleFixtures.Hero();
+        var state = BattleFixtures.MinimalState(
+            allies: [hero], enemies: [enemy], phase: BattlePhase.EnemyAttacking);
+
+        // 攪乱 6 でも失敗率は 50%。49 < 50 → 失敗。
+        var (after, events) = EnemyAttackingResolver.Resolve(
+            state, new FakeRng([49], []), BattleFixtures.MinimalCatalog(enemies: [definition]));
+
+        Assert.Equal(hero.MaxHp, after.Allies[0].CurrentHp);
+        var failed = Assert.Single(events, e => e.Kind == BattleEventKind.ActionFailed);
+        Assert.Equal(enemy.InstanceId, failed.CasterInstanceId);
+        Assert.Equal(50, failed.Amount);
+        Assert.DoesNotContain(events, e => e.Kind == BattleEventKind.AttackFire);
     }
 
     private static CombatActor WithStatus(

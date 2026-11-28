@@ -53,7 +53,7 @@ public static class BattleStatusTextCatalog
             [BattleStatusIds.Seal] = new("封印", "戦技・奥義を使用できない。ターン終了時に[S:seal]が1減少する。"),
             [BattleStatusIds.Exhaustion] = new("消耗", "ターン開始時にエナジーを[N:X]失い、[S:exhaustion]が1減少する。"),
             [BattleStatusIds.Distress] = new("動揺", "カードを使用することでコンボが途切れた時、エナジーとコンボゲージを0にする。ターン終了時に[S:distress]が1減少する。"),
-            [BattleStatusIds.Disruption] = new("攪乱", "自身の全てのアタックをランダム攻撃に変更する。ターン終了時に[S:disruption]が1減少する。"),
+            [BattleStatusIds.Disruption] = new("攪乱", "自身の全てのアタックをランダム攻撃に変更し、全ての行動が一定の確率で失敗する。ターン終了時に[S:disruption]が1減少する。"),
         };
 
     public static BattleStatusText Get(string id) => All[id];

@@ -62,6 +62,24 @@
 }
 .combat-feedback__item--buff   { --feedback-color: #ffd86d; }
 .combat-feedback__item--debuff { --feedback-color: #d795ff; }
+/* 攪乱で行動が失敗: 大きめの灰白の文字が揺れてから落ちる。 */
+.combat-feedback__item--fail {
+  --feedback-color: #e8e2f2;
+  font-size: 20px;
+  animation: combat-feedback-fail 1300ms ease-out forwards;
+}
+@keyframes combat-feedback-fail {
+  0%   { opacity: 0; transform: translate(-50%, 6px) scale(.7) rotate(0deg); }
+  12%  { opacity: 1; transform: translate(-50%, -6px) scale(1.2) rotate(-6deg); }
+  20%  { transform: translate(-50%, -6px) scale(1.05) rotate(5deg); }
+  28%  { transform: translate(-50%, -6px) scale(1.05) rotate(-4deg); }
+  36%  { transform: translate(-50%, -6px) scale(1) rotate(2deg); }
+  80%  { opacity: 1; transform: translate(-50%, -8px) scale(1) rotate(0deg); }
+  100% { opacity: 0; transform: translate(-50%, 6px) scale(.96) rotate(0deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .combat-feedback__item--fail { animation-duration: 1300ms; animation-name: combat-feedback-status; }
+}
 
 @keyframes combat-feedback-rise {
   0%   { opacity: 0; transform: translate(-50%, 10px) scale(.78); }

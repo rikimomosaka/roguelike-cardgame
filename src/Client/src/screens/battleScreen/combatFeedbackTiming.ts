@@ -8,7 +8,7 @@ export const STATUS_FEEDBACK_LIFETIME_MS = 1500
  * Keep them mounted long enough to read after their entrance has completed.
  */
 export function combatFeedbackLifetimeMs(kind: CombatFeedbackKind): number {
-  return kind === 'buff' || kind === 'debuff'
+  return kind === 'buff' || kind === 'debuff' || kind === 'fail'
     ? STATUS_FEEDBACK_LIFETIME_MS
     : DEFAULT_FEEDBACK_LIFETIME_MS
 }
@@ -18,7 +18,7 @@ export function blockGainFeedbackText(amount: number): string {
 }
 
 function isStatusFeedback(item: CombatFeedbackItem): boolean {
-  return item.kind === 'buff' || item.kind === 'debuff'
+  return item.kind === 'buff' || item.kind === 'debuff' || item.kind === 'fail'
 }
 
 /**
