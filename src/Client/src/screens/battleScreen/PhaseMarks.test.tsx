@@ -76,9 +76,14 @@ describe('slotTooltipContent', () => {
     const tip = slotTooltipContent({
       ...base,
       traitDescription: '特性の説明。',
-      openingActionNames: ['詠唱', '強防御'],
+      openingActions: [
+        { name: '詠唱', description: '自身に[S:strength][N:2]を付与。' },
+        { name: '強防御', description: '' },
+      ],
     })
-    expect(tip.desc.split('\n')).toEqual(['特性の説明。', '', '先制行動：詠唱、強防御'])
+    expect(tip.desc.split('\n')).toEqual([
+      '特性の説明。', '', '先制行動：詠唱', '自身に[S:strength][N:2]を付与。', '', '先制行動：強防御',
+    ])
   })
 
   it('has an empty body without a trait or phase', () => {

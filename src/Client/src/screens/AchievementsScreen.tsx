@@ -929,7 +929,8 @@ function MonstersTab({ allIds, discovered }: { allIds: string[]; discovered: Set
   const [query, setQuery] = useState('')
   const [discoveryFilter, setDiscoveryFilter] = useState<DiscoveryFilter>('all')
   const [tierFilter, setTierFilter] = useState<EnemyTierFilter>('all')
-  const [deckPreview, setDeckPreview] = useState<EnemyCatalogEntryDto | null>(null)
+  // 行動デッキ・初期行動のどちらをカードで一覧するか。
+  const [deckPreview, setDeckPreview] = useState<{ enemy: EnemyCatalogEntryDto; kind: 'deck' | 'opening' } | null>(null)
 
   const normalizedQuery = query.trim().toLocaleLowerCase('ja')
   const monsters = allIds
@@ -987,19 +988,24 @@ function MonstersTab({ allIds, discovered }: { allIds: string[]; discovered: Set
               isDiscovered={entry.isDiscovered}
               cardNames={cardNames}
               cardCatalog={cardCatalog}
-              onOpenDeck={() => { if (entry.enemy) setDeckPreview(entry.enemy) }}
+              onOpenDeck={() => { if (entry.enemy) setDeckPreview({ enemy: entry.enemy, kind: 'deck' }) }}
+              onOpenOpening={() => { if (entry.enemy) setDeckPreview({ enemy: entry.enemy, kind: 'opening' }) }}
             />
           ))}
         </div>
       </div>
       {deckPreview ? (
         // 行動デッキのカード（専用イラストの無い敵カード）は、この敵のドット絵で表示する。
-        <CardArtOwnerProvider owner={deckPreview.imageId ? { kind: 'enemies', imageId: deckPreview.imageId } : null}>
+        <CardArtOwnerProvider owner={deckPreview.enemy.imageId ? { kind: 'enemies', imageId: deckPreview.enemy.imageId } : null}>
         <DeckListModal
-          title={`${deckPreview.name}の行動デッキ (${expandEnemyDeck(deckPreview).length}枚)`}
-          cardIds={expandEnemyDeck(deckPreview)}
+          title={deckPreview.kind === 'opening'
+            ? `${deckPreview.enemy.name}の初期行動 (${deckPreview.enemy.openingActions?.length ?? 0}枚)`
+            : `${deckPreview.enemy.name}の行動デッキ (${expandEnemyDeck(deckPreview.enemy).length}枚)`}
+          cardIds={deckPreview.kind === 'opening'
+            ? deckPreview.enemy.openingActions ?? []
+            : expandEnemyDeck(deckPreview.enemy)}
           catalog={cardCatalog}
-          emptyText="行動デッキは空です。"
+          emptyText={deckPreview.kind === 'opening' ? '初期行動はありません。' : '行動デッキは空です。'}
           onClose={() => setDeckPreview(null)}
         />
         </CardArtOwnerProvider>
@@ -1008,13 +1014,14 @@ function MonstersTab({ allIds, discovered }: { allIds: string[]; discovered: Set
   )
 }
 
-function MonsterTile({ id, enemy, isDiscovered, cardNames, cardCatalog, onOpenDeck }: {
+function MonsterTile({ id, enemy, isDiscovered, cardNames, cardCatalog, onOpenDeck, onOpenOpening }: {
   id: string
   enemy: EnemyCatalogEntryDto | null
   isDiscovered: boolean
   cardNames: Record<string, string>
   cardCatalog: ReturnType<typeof useCardCatalog>['catalog']
   onOpenDeck: () => void
+  onOpenOpening: () => void
 }) {
   const shown = isDiscovered && enemy !== null ? enemy : null
   const image = shown?.imageId ? actorSheet('enemies', shown.imageId) : null
@@ -1074,14 +1081,27 @@ function MonsterTile({ id, enemy, isDiscovered, cardNames, cardCatalog, onOpenDe
           <CharacterTextSection label="キャラクター説明">
             <p>{shown.description?.trim() || 'キャラクター説明は未設定です。'}</p>
           </CharacterTextSection>
-          <CharacterTextSection label="初期行動（先制行動）">
-            {openingActions.length === 0 ? <p>なし</p> : openingActions.map((cardId, index) => (
-              <div key={`${cardId}-${index}`} className="achievements__character-action">
-                <strong>{cardCatalog?.[cardId]?.displayName ?? cardCatalog?.[cardId]?.name ?? cardId}</strong>
-                <CharacterAbilityDescription text={cardCatalog?.[cardId]?.description ?? ''} />
-              </div>
-            ))}
-          </CharacterTextSection>
+          {openingActions.length === 0 ? (
+            <CharacterTextSection label="初期行動（先制行動）">
+              <p>なし</p>
+            </CharacterTextSection>
+          ) : (
+            // 初期行動があれば、行動デッキと同じく「カードを確認」でカードの一覧を開ける。
+            <section className="achievements__character-section achievements__character-deck">
+              <DeckHeading
+                label={`初期行動（先制行動） ${openingActions.length}枚`}
+                ariaLabel={`${shown.name}の初期行動（${openingActions.length}枚）を表示`}
+                disabled={false}
+                onOpen={onOpenOpening}
+              />
+              {openingActions.map((cardId, index) => (
+                <div key={`${cardId}-${index}`} className="achievements__character-action">
+                  <strong>{cardCatalog?.[cardId]?.displayName ?? cardCatalog?.[cardId]?.name ?? cardId}</strong>
+                  <CharacterAbilityDescription text={cardCatalog?.[cardId]?.description ?? ''} />
+                </div>
+              ))}
+            </section>
+          )}
           <section className="achievements__character-section achievements__character-deck">
             <DeckHeading
               label={`行動デッキ ${deckIds.length}枚`}

@@ -1098,10 +1098,13 @@ function Slot({
   aura = null,
 }: SlotProps) {
   // 特性・先制行動と今の位相（名前と効果）をまとめて出す。
-  const { names: cardNames } = useCardCatalog()
+  const { catalog: tipCardCatalog } = useCardCatalog()
   const traitTip = useTip(slotTooltipContent({
     ...char,
-    openingActionNames: char.openingActions?.map(cardId => cardNames[cardId] ?? cardId),
+    openingActions: char.openingActions?.map(cardId => ({
+      name: tipCardCatalog?.[cardId]?.displayName ?? tipCardCatalog?.[cardId]?.name ?? cardId,
+      description: tipCardCatalog?.[cardId]?.description ?? '',
+    })),
   }))
   // Why: 影の横幅は描画後の sprite 横幅と同じにしたい。silhouette は決定論的
   //  (tier-height × 0.55) で同期計算できる。画像は naturalWidth/Height が

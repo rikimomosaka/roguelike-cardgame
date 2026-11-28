@@ -45,8 +45,8 @@ export function slotTooltipContent(char: {
   }
   traitName?: string
   traitDescription?: string
-  /** 先制行動のカード名（記載順）。 */
-  openingActionNames?: string[]
+  /** 先制行動のカード（記載順）。名前と効果テキスト。 */
+  openingActions?: readonly { name: string; description: string }[]
   phase?: ActorPhaseDemo
 }): { name: ReactNode; statusLine: ReactNode; desc: string } {
   const title = `${char.charName ?? char.name}${char.controllerLabel ? `(${char.controllerLabel})` : ''}`
@@ -64,9 +64,10 @@ export function slotTooltipContent(char: {
   const desc: string[] = []
   if (char.traitDescription) desc.push(char.traitDescription)
   // 先制行動は戦闘開始時に一度だけなので、後から何をしたか分かるよう説明に残す。
-  if (char.openingActionNames && char.openingActionNames.length > 0) {
+  for (const action of char.openingActions ?? []) {
     if (desc.length > 0) desc.push('')
-    desc.push(`先制行動：${char.openingActionNames.join('、')}`)
+    desc.push(`先制行動：${action.name}`)
+    if (action.description.trim()) desc.push(action.description.trim())
   }
   const phase = char.phase ? PHASE_INFO[char.phase] : null
   if (phase) {

@@ -314,6 +314,27 @@ describe('AchievementsScreen', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'アギトムシの行動デッキ（2枚）を表示' }))
     expect(screen.getByRole('dialog', { name: 'アギトムシの行動デッキ (2枚)' })).toBeInTheDocument()
+    // 初期行動なしの時は、カードを確認するボタンを出さない。
+    expect(screen.queryByRole('button', { name: /初期行動/ })).not.toBeInTheDocument()
+  })
+
+  it('opens opening actions as a card list when the monster has them', async () => {
+    vi.spyOn(bestiaryApi, 'getBestiary').mockResolvedValueOnce({
+      ...emptyBestiary,
+      encounteredEnemyIds: ['jaw_worm'],
+    })
+    const enemies = await catalogApi.fetchEnemyCatalog()
+    vi.spyOn(catalogApi, 'fetchEnemyCatalog').mockResolvedValue({
+      jaw_worm: { ...enemies.jaw_worm, openingActions: ['strike'] },
+    })
+    render(
+      <TooltipHost>
+        <AchievementsScreen accountId="a" onBack={() => { }} />
+      </TooltipHost>,
+    )
+    fireEvent.click(await screen.findByRole('tab', { name: /^モンスター/ }))
+    fireEvent.click(await screen.findByRole('button', { name: 'アギトムシの初期行動（1枚）を表示' }))
+    expect(screen.getByRole('dialog', { name: 'アギトムシの初期行動 (1枚)' })).toBeInTheDocument()
   })
 
   it('does not expose an undiscovered enemy name or image', async () => {
