@@ -5,7 +5,7 @@
 > 細かい処理順・境界のケースは、採用されて実装済みの提案書 [archive/proposed-class-exclusive-abilities-v2.md](archive/proposed-class-exclusive-abilities-v2.md) の該当節を参照する。
 > 食い違いがあれば実装（テスト）が正。
 > バフ・デバフ（残光・堅持・護衛・守勢・攪乱・連環・余韻・共鳴など）は [current-battle-status-spec.md](current-battle-status-spec.md)。
-> 位相・双極・エンハンス・反転は [current-phase-spec.md](current-phase-spec.md)。
+> 位相・双極・刻印・反転は [current-phase-spec.md](current-phase-spec.md)。
 
 能力そのものはクラス制限なし（配布上の方針として、主に使うクラスを決めているだけ）。
 
@@ -76,5 +76,5 @@
 |---|---|---|
 | 召喚 | `summon` | 指定されたユニットを味方として呼び出す。 |
 | 双極 | `bipolar` | [current-phase-spec.md](current-phase-spec.md) |
-| エンハンス | `enhance` | 【 】内の効果を与える。（[current-phase-spec.md](current-phase-spec.md)） |
+| 刻印 | `enhance` | 【 】内の能力をカードに刻む。2026-11-28 に エンハンス から改名（[current-phase-spec.md](current-phase-spec.md)） |
 | 反転 | `invert` | 位相を持つ場合、対となる位相に変更する。（[current-phase-spec.md](current-phase-spec.md)） |

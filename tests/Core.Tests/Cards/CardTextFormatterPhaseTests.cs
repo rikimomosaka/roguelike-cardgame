@@ -50,8 +50,8 @@ public sealed class CardTextFormatterPhaseTests
     [Fact]
     public void Keywords_EnhanceAndInvert_HaveDescriptions()
     {
-        Assert.Equal("【 】内の効果を与える。", CardKeywords.Get("enhance")!.Description);
-        Assert.Equal("エンハンス", CardKeywords.Get("enhance")!.Name);
+        Assert.Equal("【 】内の能力をカードに刻む。", CardKeywords.Get("enhance")!.Description);
+        Assert.Equal("刻印", CardKeywords.Get("enhance")!.Name);
         Assert.Equal("位相を持つ場合、対となる位相に変更する。", CardKeywords.Get("invert")!.Description);
         Assert.Equal("反転", CardKeywords.Get("invert")!.Name);
     }

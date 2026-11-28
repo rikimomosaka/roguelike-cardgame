@@ -51,7 +51,7 @@ describe('CardDesc', () => {
     expect(refs.map(r => r.id)).toEqual(['bipolar', 'phase:calm', 'enhance', 'invert', 'phase:motion'])
     const calm = refs.find(r => r.id === 'phase:calm')
     expect(calm?.name).toBe('静')
-    expect(refs.find(r => r.id === 'enhance')).toMatchObject({ name: 'エンハンス', desc: '【 】内の効果を与える。' })
+    expect(refs.find(r => r.id === 'enhance')).toMatchObject({ name: '刻印', desc: '【 】内の能力をカードに刻む。' })
     expect(refs.find(r => r.id === 'invert')).toMatchObject({ name: '反転', desc: '位相を持つ場合、対となる位相に変更する。' })
   })
 

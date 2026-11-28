@@ -13,9 +13,10 @@ export const KEYWORD_DEFS: Record<string, { name: string; desc: string }> = {
     // X は表示する双極の数に置き換える（keywordDesc）。
     desc: '位相が[P:calm]の時、手札にある限り、次のターンに持ち越される。\n位相が[P:motion]の時、発動時にエナジーを+[N:X]する。\nこのカードの発動後、双極が消滅する。',
   },
+  // 表示名は「刻印」（2026-11-28 に エンハンス から改名）。ID は enhance のまま。
   enhance: {
-    name: 'エンハンス',
-    desc: '【 】内の効果を与える。',
+    name: '刻印',
+    desc: '【 】内の能力をカードに刻む。',
   },
   invert: {
     name: '反転',
@@ -168,7 +169,7 @@ export const PHASE_DEFS: Record<'calm' | 'motion', { name: string; desc: string 
   },
 }
 
-/** キーワードマーカーの付加情報（"+" = エンハンスで後から付いた、数字 = 数）。 */
+/** キーワードマーカーの付加情報（"+" = 刻印で後から付いた、数字 = 数）。 */
 function parseKeywordExtra(extra: string | undefined): { enhanced: boolean; count: number | null } {
   const raw = extra ?? ''
   const enhanced = raw.startsWith('+')
@@ -189,7 +190,7 @@ export function extractCardDescRefs(
 ): CardDescRef[] {
   const seen = new Set<string>()
   const refs: CardDescRef[] = []
-  // 補足説明の中に出てくる用語（静の説明のエンハンス・双極など）も、本文の後ろに続けて補足する。
+  // 補足説明の中に出てくる用語（静の説明の刻印・双極など）も、本文の後ろに続けて補足する。
   const pending = [text]
   while (pending.length > 0) {
   const source = pending.shift()!

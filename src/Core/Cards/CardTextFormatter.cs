@@ -102,7 +102,7 @@ public static class CardTextFormatter
 
     /// <summary>
     /// カード定義のキーワードの後ろに、カード個体へ後から足されたキーワードを並べる。
-    /// 後付けは "id|+" / "id|+数"（数は 2 以上のとき。表示は「双極」「双極2」で、エンハンスの印として背景色が付く）。
+    /// 後付けは "id|+" / "id|+数"（数は 2 以上のとき。表示は「双極」「双極2」で、刻印の印として背景色が付く）。
     /// 定義と同じ ID は数を合算して 1 つにする。
     /// </summary>
     private static IReadOnlyList<string>? MergeAugmentedKeywords(

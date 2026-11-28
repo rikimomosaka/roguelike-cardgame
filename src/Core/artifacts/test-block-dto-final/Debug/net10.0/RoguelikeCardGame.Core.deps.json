@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "RoguelikeCardGame.Core/1.0.0": {
+        "runtime": {
+          "RoguelikeCardGame.Core.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "RoguelikeCardGame.Core/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
