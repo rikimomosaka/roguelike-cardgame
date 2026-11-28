@@ -128,8 +128,52 @@ public static class CharacterJsonLoader
                 $"trait '{id}' effects must not be empty (character id={characterId})");
         }
 
+        // 追加の発動条件: "clauses": [ { "trigger": ..., "effects": [...], "threshold"?, "usesPerTurn"? } ]
+        List<CharacterTraitClause>? clauses = null;
+        if (traitEl.TryGetProperty("clauses", out var clausesEl) &&
+            clausesEl.ValueKind != JsonValueKind.Null)
+        {
+            if (clausesEl.ValueKind != JsonValueKind.Array)
+                throw new CharacterJsonException(
+                    $"trait '{id}' clauses must be an array (character id={characterId})");
+            clauses = new List<CharacterTraitClause>();
+            foreach (var clauseEl in clausesEl.EnumerateArray())
+            {
+                string rawClauseTrigger = GetRequiredNonEmptyString(
+                    clauseEl, "trigger", characterId, $"trait id={id} clause");
+                if (!Enum.TryParse<CharacterTraitTrigger>(
+                        rawClauseTrigger, ignoreCase: false, out var clauseTrigger) ||
+                    !Enum.IsDefined(clauseTrigger))
+                {
+                    throw new CharacterJsonException(
+                        $"trait '{id}' clause contains an unknown trigger '{rawClauseTrigger}' " +
+                        $"(character id={characterId})");
+                }
+                if (!clauseEl.TryGetProperty("effects", out var clauseEffectsEl) ||
+                    clauseEffectsEl.ValueKind != JsonValueKind.Array)
+                    throw new CharacterJsonException(
+                        $"trait '{id}' clause effects must be an array (character id={characterId})");
+                var clauseEffects = new List<CardEffect>();
+                foreach (var effectEl in clauseEffectsEl.EnumerateArray())
+                {
+                    clauseEffects.Add(CardEffectParser.ParseEffect(
+                        effectEl,
+                        message => new CharacterJsonException(
+                            $"{message} (character id={characterId}, trait id={id} clause)")));
+                }
+                if (clauseEffects.Count == 0)
+                    throw new CharacterJsonException(
+                        $"trait '{id}' clause effects must not be empty (character id={characterId})");
+                clauses.Add(new CharacterTraitClause(
+                    clauseTrigger,
+                    clauseEffects,
+                    ParseOptionalIntInRange(clauseEl, "threshold", 0, 0, int.MaxValue, characterId),
+                    ParseOptionalIntInRange(clauseEl, "usesPerTurn", 0, 0, int.MaxValue, characterId)));
+            }
+        }
+
         return new CharacterTraitDefinition(
-            id, name, trigger, effects, threshold, usesPerTurn, description);
+            id, name, trigger, effects, threshold, usesPerTurn, description, clauses);
     }
 
     private static CharacterClass ParseCharacterClass(JsonElement root, string characterId)
@@ -187,7 +231,31 @@ public static class CharacterJsonLoader
                 effects.Add(CardEffectParser.ParseEffect(
                     effectEl,
                     message => new CharacterJsonException($"{message} (character id={characterId}, skill id={id})")));
-            if (effects.Count == 0)
+            bool requiresPhase = skillEl.TryGetProperty("requiresPhase", out var phaseReqEl) &&
+                                 phaseReqEl.ValueKind == JsonValueKind.True;
+            // 位相ごとの効果: "phaseEffects": { "none": [...], "calm": [...], "motion": [...] }
+            Dictionary<string, IReadOnlyList<CardEffect>>? phaseEffects = null;
+            if (skillEl.TryGetProperty("phaseEffects", out var phaseEffectsEl) &&
+                phaseEffectsEl.ValueKind != JsonValueKind.Null)
+            {
+                if (phaseEffectsEl.ValueKind != JsonValueKind.Object)
+                    throw new CharacterJsonException($"skill '{id}' phaseEffects must be an object (character id={characterId})");
+                phaseEffects = new Dictionary<string, IReadOnlyList<CardEffect>>(StringComparer.Ordinal);
+                foreach (var phaseProp in phaseEffectsEl.EnumerateObject())
+                {
+                    if (phaseProp.Name is not ("none" or "calm" or "motion"))
+                        throw new CharacterJsonException($"skill '{id}' phaseEffects key '{phaseProp.Name}' must be none|calm|motion (character id={characterId})");
+                    if (phaseProp.Value.ValueKind != JsonValueKind.Array)
+                        throw new CharacterJsonException($"skill '{id}' phaseEffects.{phaseProp.Name} must be an array (character id={characterId})");
+                    var list = new List<CardEffect>();
+                    foreach (var effectEl in phaseProp.Value.EnumerateArray())
+                        list.Add(CardEffectParser.ParseEffect(
+                            effectEl,
+                            message => new CharacterJsonException($"{message} (character id={characterId}, skill id={id}, phase={phaseProp.Name})")));
+                    phaseEffects[phaseProp.Name] = list;
+                }
+            }
+            if (effects.Count == 0 && (phaseEffects is null || phaseEffects.Values.All(list => list.Count == 0)))
                 throw new CharacterJsonException($"skill '{id}' effects must not be empty (character id={characterId})");
 
             IReadOnlyList<string>? keywords = null;
@@ -208,7 +276,8 @@ public static class CharacterJsonLoader
 
             result.Add(new CharacterSkillDefinition(
                 id, name, new ResourceCost(energy, gauge), once, effects,
-                description, requiresHand, keywords, usesPerTurn));
+                description, requiresHand, keywords, usesPerTurn,
+                RequiresPhase: requiresPhase, PhaseEffects: phaseEffects));
         }
         return result;
     }

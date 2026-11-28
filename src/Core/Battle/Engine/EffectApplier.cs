@@ -86,8 +86,8 @@ internal static class EffectApplier
             "modifyCardCost"    => ApplyModifyCardCost(
                 state, caster, resolved, rng, catalog, source,
                 playingCardInstanceId),
-            "setPhase"          => ApplySetPhase(state, caster, resolved, rng),
-            "invertPhase"       => ApplyInvertPhase(state, caster, resolved, rng),
+            "setPhase"          => ApplySetPhase(state, caster, resolved, rng, catalog),
+            "invertPhase"       => ApplyInvertPhase(state, caster, resolved, rng, catalog),
             "augmentCards"      => ApplyAugmentCards(
                 state, caster, resolved, rng, catalog, playingCardInstanceId),
             _        => (state, Array.Empty<BattleEvent>()),
@@ -1797,27 +1797,35 @@ internal static class EffectApplier
     // ---- setPhase / invertPhase（位相） ----
 
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplySetPhase(
-        BattleState state, CombatActor caster, CardEffect effect, IRng rng)
+        BattleState state, CombatActor caster, CardEffect effect, IRng rng, DataCatalog catalog)
     {
         var next = PhaseRules.Parse(effect.Name
             ?? throw new InvalidOperationException("setPhase requires Name (none|calm|motion)"));
         var events = new List<BattleEvent>();
         int order = 0;
         foreach (var target in ResolveTargets(state, caster, effect, rng))
+        {
             state = PhaseRules.SetPhase(state, target.InstanceId, next, "effect", ref order, events);
+            // 動になった時の特性（動から動への上書きも含む）。
+            if (next == ActorPhase.Motion)
+                state = PhaseRules.ApplyMotionEntered(state, target.InstanceId, catalog, rng, ref order, events);
+        }
         return (state, events);
     }
 
     private static (BattleState, IReadOnlyList<BattleEvent>) ApplyInvertPhase(
-        BattleState state, CombatActor caster, CardEffect effect, IRng rng)
+        BattleState state, CombatActor caster, CardEffect effect, IRng rng, DataCatalog catalog)
     {
         var events = new List<BattleEvent>();
         int order = 0;
         foreach (var target in ResolveTargets(state, caster, effect, rng))
         {
             var current = FindActor(state, target.InstanceId) ?? target;
+            var inverted = PhaseRules.Invert(current.Phase);
             state = PhaseRules.SetPhase(
-                state, current.InstanceId, PhaseRules.Invert(current.Phase), "effect", ref order, events);
+                state, current.InstanceId, inverted, "effect", ref order, events);
+            if (inverted == ActorPhase.Motion)
+                state = PhaseRules.ApplyMotionEntered(state, current.InstanceId, catalog, rng, ref order, events);
         }
         return (state, events);
     }

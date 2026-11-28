@@ -829,4 +829,6 @@ export type CharacterSkillCatalogEntryDto = {
   usesPerTurn?: number
   description: string
   requiresCardsInHand: boolean
+  /** 使用者が位相（静・動）を持つ時だけ使える。旧サーバーでは省略。 */
+  requiresPhase?: boolean
 }

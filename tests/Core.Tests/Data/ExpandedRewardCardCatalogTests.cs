@@ -23,6 +23,9 @@ public sealed class ExpandedRewardCardCatalogTests
         "striker_basic_quickdraw",
         "striker_basic_step",
         "striker_basic_finishing_slash",
+        // 2026-11-28: 転相拳士シオンの初期カード（静の型・動の型）。
+        "striker_basic_calm_form",
+        "striker_basic_motion_form",
         "guardian_basic_foothold",
         "guardian_basic_defensive_form",
         "guardian_basic_cover_line",
@@ -134,10 +137,10 @@ public sealed class ExpandedRewardCardCatalogTests
         var approved = ApprovedBasicIds.Concat(ApprovedRewardIds).Concat(PhaseRewardIds)
             .Select(id => catalog.Cards[id])
             .ToArray();
-        Assert.Equal(88, approved.Length);
-        Assert.Equal(88, approved.Select(card => card.Id).Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(90, approved.Length);
+        Assert.Equal(90, approved.Select(card => card.Id).Distinct(StringComparer.Ordinal).Count());
         // 攻撃の基本・防御の基本はクラスごとに同名のカードがある（4 クラス × 2 種）。それ以外は名前が重複しない。
-        Assert.Equal(88 - 6, approved.Select(card => card.Name).Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(90 - 6, approved.Select(card => card.Name).Distinct(StringComparer.Ordinal).Count());
         Assert.All(approved, card =>
         {
             Assert.NotNull(card.UpgradedEffects);
@@ -272,7 +275,7 @@ public sealed class ExpandedRewardCardCatalogTests
     {
         var catalog = EmbeddedDataLoader.LoadCatalog();
 
-        Assert.Equal(4, catalog.Characters.Count);
+        Assert.Equal(5, catalog.Characters.Count);
         foreach (var character in catalog.Characters.Values)
         {
             Assert.Equal(3, character.EnergyPerTurn);

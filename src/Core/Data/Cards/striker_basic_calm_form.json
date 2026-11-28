@@ -1,0 +1,51 @@
+{
+  "id": "striker_basic_calm_form",
+  "name": "静の型",
+  "displayName": null,
+  "poolKinds": [
+    "Basic"
+  ],
+  "poolClass": "Striker",
+  "eligibleCharacterIds": [
+    "striker_shion"
+  ],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "createdAt": "2026-11-28T00:00:00Z",
+      "label": "shion-v1",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 4
+          },
+          {
+            "action": "setPhase",
+            "scope": "self",
+            "amount": 0,
+            "name": "calm"
+          }
+        ],
+        "upgradedEffects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 6
+          },
+          {
+            "action": "setPhase",
+            "scope": "self",
+            "amount": 0,
+            "name": "calm"
+          }
+        ]
+      }
+    }
+  ]
+}

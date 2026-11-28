@@ -37,7 +37,12 @@ public static class DataCatalogIntegrityValidator
             ValidateEffects(catalog, $"relic '{relic.Id}'", relic.Effects);
         foreach (var character in catalog.Characters.Values)
             foreach (var skill in character.EffectiveSkills)
+            {
                 ValidateEffects(catalog, $"character '{character.Id}' skill '{skill.Id}'", skill.Effects);
+                if (skill.PhaseEffects is not null)
+                    foreach (var (phase, phaseEffects) in skill.PhaseEffects)
+                        ValidateEffects(catalog, $"character '{character.Id}' skill '{skill.Id}' phase '{phase}'", phaseEffects);
+            }
         foreach (var enemy in catalog.Enemies.Values)
             ValidateEnemy(catalog, enemy);
         if (catalog.Units is not null)
@@ -208,7 +213,8 @@ public static class DataCatalogIntegrityValidator
                 Fail(skillLocation, "resource cost cannot be negative.");
             if (skill.UsesPerTurn < 0)
                 Fail(skillLocation, "usesPerTurn cannot be negative.");
-            if (skill.Effects.Count == 0)
+            if (skill.Effects.Count == 0
+                && (skill.PhaseEffects is null || skill.PhaseEffects.Values.All(list => list.Count == 0)))
                 Fail(skillLocation, "effects must not be empty.");
 
             ValidateKeywords(skillLocation, skill.Keywords);

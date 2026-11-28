@@ -56,8 +56,8 @@ describe('CardDesc', () => {
   })
 
   it('also explains keywords that appear inside another explanation', () => {
-    const refs = extractCardDescRefs('位相を[P:calm]にする。')
-    expect(refs.map(r => r.id)).toEqual(['phase:calm', 'enhance', 'bipolar', 'phase:motion'])
+    const refs = extractCardDescRefs('[K:bipolar]')
+    expect(refs.map(r => r.id)).toEqual(['bipolar', 'phase:calm', 'phase:motion'])
   })
 
   it('uses 1 for the bipolar count when the keyword has no count', () => {

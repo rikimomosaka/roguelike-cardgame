@@ -9,8 +9,8 @@ namespace RoguelikeCardGame.Core.Tests.Data;
 public sealed class StrikerPhaseCardsTests
 {
     [Theory]
-    [InlineData("striker_phase_calm_form", "静の型", CardType.Skill, 1, new[] { "block", "setPhase" })]
-    [InlineData("striker_phase_motion_form", "動の型", CardType.Skill, 1, new[] { "draw", "setPhase" })]
+    [InlineData("striker_phase_calm_form", "静水の構え", CardType.Skill, 1, new[] { "block", "setPhase" })]
+    [InlineData("striker_phase_motion_form", "奔流の構え", CardType.Skill, 1, new[] { "draw", "setPhase" })]
     [InlineData("striker_phase_calm_blade", "静の太刀", CardType.Attack, 1, new[] { "attack", "setPhase" })]
     [InlineData("striker_phase_blazing_step", "烈火の踏み込み", CardType.Attack, 1, new[] { "attack", "setPhase" })]
     [InlineData("striker_phase_flowing_stance", "流転の構え", CardType.Skill, 0, new[] { "invertPhase" })]

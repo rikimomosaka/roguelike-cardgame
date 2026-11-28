@@ -177,12 +177,14 @@ internal static class BattleActionJournalComposer
                     DefinitionId: skill.Id,
                     DisplayName: skill.Name,
                     Kind: "characterSkill",
-                    Description: CardTextFormatter.FormatUsableEffects(
-                        skill.Effects,
-                        skill.Keywords,
-                        context,
-                        skill.EffectiveUsesPerTurn,
-                        uses),
+                    Description: RoguelikeCardGame.Server.Controllers.CatalogController.AppendSkillPhaseLines(
+                        CardTextFormatter.FormatUsableEffects(
+                            skill.Effects,
+                            skill.Keywords,
+                            context,
+                            skill.EffectiveUsesPerTurn,
+                            uses),
+                        skill, context),
                     EnergyCost: skill.Cost.Energy,
                     ComboGaugeCost: skill.Cost.ComboGauge,
                     UsesBefore: uses,
@@ -191,7 +193,11 @@ internal static class BattleActionJournalComposer
                     after, participantId, out var committed)
                     ? committed
                     : participant;
-                targets = ResolveEffectTargets(after, participantAfter, skill.Effects);
+                // 位相ごとの効果は、使う前の位相で選ばれたものを対象の推定に使う。
+                var casterBefore = before.Allies.FirstOrDefault(actor =>
+                    actor.InstanceId == participant.ActorInstanceId);
+                targets = ResolveEffectTargets(after, participantAfter, skill.EffectsForPhase(
+                    PhaseRules.Name(casterBefore?.Phase ?? ActorPhase.None)));
             }
         }
 

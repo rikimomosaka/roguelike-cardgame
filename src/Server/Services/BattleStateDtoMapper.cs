@@ -521,7 +521,9 @@ internal static class BattleStateDtoMapper
                 : FormatContingencyTrigger(armedContingency.Trigger),
             RetainsAtTurnEnd: definition is not null
                 && BattleCardRetention.RetainsAtTurnEnd(
-                    card, definition, owner?.Phase ?? ActorPhase.None));
+                    card, definition, owner?.Phase ?? ActorPhase.None,
+                    ownerAugmentsAttacksInCalm: owner is not null && PhaseRules.OwnerHasTrait(
+                        battleState, data, CharacterTraitTrigger.OnCalmTurnEnd)));
     }
 
     private static string FormatContingencyTrigger(

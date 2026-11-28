@@ -166,7 +166,8 @@ export type CardDescTerm = Extract<CardDescRef, { kind: 'keyword' | 'status' }>
 export const PHASE_DEFS: Record<'calm' | 'motion', { name: string; desc: string }> = {
   calm: {
     name: '静',
-    desc: 'ターン終了時、手札の全アタックに[K:enhance]【[K:bipolar]】する。\nアタックカードを使用した時、この位相は消滅する。',
+    // 2026-11-28: 双極の付与は転相拳士シオンの特性へ移し、静は受けるダメージの軽減に変更。
+    desc: 'アタックで受けるダメージが0.75倍になる。\nアタックカードを使用した時、この位相は消滅する。',
   },
   motion: {
     name: '動',

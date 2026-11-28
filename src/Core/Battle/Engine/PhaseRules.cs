@@ -115,36 +115,69 @@ public static class PhaseRules
     }
 
     /// <summary>
-    /// 静のターン終了: 持ち主が静なら、手札のアタック全てに双極を 1 付ける（手札を捨てる前に呼ぶ）。
-    /// events が null でなければ CardAugmented を記録する。
+    /// 静のターン終了（手札を捨てる前に呼ぶ）。持ち主が静で、特性に「静でターンを終えた時」
+    /// （OnCalmTurnEnd）があればその効果を出す（転相拳士シオンの手札の全アタックへの双極など）。
+    /// 静の位相そのものはターン終了時に何もしない（2026-11-28 に受けるダメージ軽減へ変更）。
     /// </summary>
     public static BattleState ApplyCalmTurnEnd(
         BattleState projected,
         CombatActor? owner,
         RoguelikeCardGame.Core.Data.DataCatalog catalog,
+        RoguelikeCardGame.Core.Random.IRng rng,
         ref int order,
         List<BattleEvent>? events)
     {
         if (owner is null || owner.Phase != ActorPhase.Calm) return projected;
-        var hand = projected.Hand.ToBuilder();
-        for (int i = 0; i < hand.Count; i++)
+        if (!OwnerHasTrait(projected, catalog, RoguelikeCardGame.Core.Data.CharacterTraitTrigger.OnCalmTurnEnd))
+            return projected;
+        var (after, traitEvents) = CharacterTraitRuntime.TryTrigger(
+            projected, owner.InstanceId,
+            RoguelikeCardGame.Core.Data.CharacterTraitTrigger.OnCalmTurnEnd,
+            catalog, rng, orderStart: order);
+        foreach (var ev in traitEvents)
         {
-            var card = hand[i];
-            if (!catalog.TryGetCard(card.CardDefinitionId, out var def) || def.CardType != CardType.Attack)
-                continue;
-            var augmented = card.AddKeyword(CardKeywords.Bipolar, 1);
-            if (augmented.KeywordCount(CardKeywords.Bipolar) == card.KeywordCount(CardKeywords.Bipolar))
-                continue;
-            hand[i] = augmented;
-            events?.Add(new BattleEvent(
-                BattleEventKind.CardAugmented, order++,
-                CasterInstanceId: owner.InstanceId,
-                TargetInstanceId: card.InstanceId,
-                Amount: 1,
-                Note: $"{CardKeywords.Bipolar}:{augmented.KeywordCount(CardKeywords.Bipolar)}"));
+            var ordered = ev with { Order = order++ };
+            events?.Add(ordered);
         }
-        return projected with { Hand = hand.ToImmutable() };
+        return after;
     }
+
+    /// <summary>
+    /// 位相が動になった（動から動への上書きも含む）時の特性（OnMotionEntered）を出す。
+    /// 対象が参加者のキャラ（主人公・副参加者）の時だけ。
+    /// </summary>
+    public static BattleState ApplyMotionEntered(
+        BattleState state,
+        string actorInstanceId,
+        RoguelikeCardGame.Core.Data.DataCatalog catalog,
+        RoguelikeCardGame.Core.Random.IRng rng,
+        ref int order,
+        List<BattleEvent> events)
+    {
+        var actor = Find(state, actorInstanceId);
+        if (actor is null || actor.Phase != ActorPhase.Motion || actor.Side != ActorSide.Ally) return state;
+        if (!BattleParticipantAccess.TryGetByActor(state, actorInstanceId, out _)
+            && !state.Participants.IsDefaultOrEmpty)
+            return state;
+        if (!OwnerHasTrait(state, catalog, RoguelikeCardGame.Core.Data.CharacterTraitTrigger.OnMotionEntered))
+            return state;
+        var (after, traitEvents) = CharacterTraitRuntime.TryTrigger(
+            state, actorInstanceId,
+            RoguelikeCardGame.Core.Data.CharacterTraitTrigger.OnMotionEntered,
+            catalog, rng, orderStart: order);
+        foreach (var ev in traitEvents)
+            events.Add(ev with { Order = order++ });
+        return after;
+    }
+
+    /// <summary>投影中の参加者のキャラ（state.CharacterId）が、その発動条件の特性を持つか。</summary>
+    public static bool OwnerHasTrait(
+        BattleState state,
+        RoguelikeCardGame.Core.Data.DataCatalog catalog,
+        RoguelikeCardGame.Core.Data.CharacterTraitTrigger trigger) =>
+        catalog.TryGetCharacter(state.CharacterId, out var character)
+        && character.Trait is { } trait
+        && trait.HasTrigger(trigger);
 
     private static BattleEvent Changed(CombatActor actor, ActorPhase next, string reason, int order) =>
         new(BattleEventKind.PhaseChanged, order,

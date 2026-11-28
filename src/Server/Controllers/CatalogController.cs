@@ -117,7 +117,8 @@ public sealed class CatalogController : ControllerBase
         bool OncePerTurn,
         string Description,
         bool RequiresCardsInHand,
-        int UsesPerTurn = 0);
+        int UsesPerTurn = 0,
+        bool RequiresPhase = false);
 
     [HttpGet("cards")]
     public IActionResult GetCards()
@@ -226,12 +227,10 @@ public sealed class CatalogController : ControllerBase
                     // Keep catalog descriptions static. The battle DTO owns the live
                     // per-turn counter, so embedding an initial (0/N) header here would
                     // become stale and be rendered twice by the combat controls.
-                    CardTextFormatter.FormatEffectsWithKeywords(
-                        skill.Effects,
-                        skill.Keywords,
-                        CardActorContext.Empty),
+                    FormatSkillDescription(skill),
                     skill.RequiresCardsInHand,
-                    skill.EffectiveUsesPerTurn)).ToArray(),
+                    skill.EffectiveUsesPerTurn,
+                    skill.RequiresPhase)).ToArray(),
                 def.EffectiveOwnedRelicIds.ToArray(),
                 def.EffectivePotions.ToArray(),
                 def.Attack,
@@ -254,10 +253,10 @@ public sealed class CatalogController : ControllerBase
                     skill.Cost.Energy,
                     skill.Cost.ComboGauge,
                     skill.OncePerTurn,
-                    CardTextFormatter.FormatEffectsWithKeywords(
-                        skill.Effects, skill.Keywords, CardActorContext.Empty),
+                    FormatSkillDescription(skill),
                     skill.RequiresCardsInHand,
-                    skill.EffectiveUsesPerTurn)).ToList(),
+                    skill.EffectiveUsesPerTurn,
+                    skill.RequiresPhase)).ToList(),
                 def.CharacterClass.ToString(),
                 def.Deck.ToArray(),
                 def.Description,
@@ -348,27 +347,60 @@ public sealed class CatalogController : ControllerBase
     internal static string? FormatCharacterTraitEffects(CharacterTraitDefinition? trait)
     {
         if (trait is null) return null;
+        // 発動条件ごとに 1 行（主の条件 → 追加の条件）。
+        return string.Join("\n", trait.AllClauses().Select(part => FormatTraitClause(part.Clause)));
+    }
 
-        var triggerText = trait.Trigger switch
+    private static string FormatTraitClause(CharacterTraitClause clause)
+    {
+        var triggerText = clause.Trigger switch
         {
             CharacterTraitTrigger.OnTurnStart => "自身のターン開始時、",
             CharacterTraitTrigger.OnComboReached =>
-                $"自身の最大コンボが[N:{trait.Threshold}]以上になった時、",
+                $"自身の最大コンボが[N:{clause.Threshold}]以上になった時、",
             CharacterTraitTrigger.OnContingencyTriggered =>
                 "自身の除外状態の[K:contingency]が発動した時、",
             CharacterTraitTrigger.OnResonanceConsumed =>
                 "自身の[S:resonance]が発動した時、",
+            CharacterTraitTrigger.OnCalmTurnEnd =>
+                "自身の位相が[P:calm]の状態でターンを終えた時、",
+            CharacterTraitTrigger.OnMotionEntered =>
+                "自身の位相が[P:motion]になった時、",
             _ => string.Empty,
         };
         var effectText = CardTextFormatter.FormatEffectsWithKeywords(
-            trait.Effects,
+            clause.Effects,
             keywords: null,
             CardActorContext.Empty);
         var text = triggerText + effectText;
 
-        return trait.UsesPerTurn > 0
-            ? $"{text}\n1ターンに[N:{trait.UsesPerTurn}]度だけ発動する。"
+        return clause.UsesPerTurn > 0
+            ? $"{text}\n1ターンに[N:{clause.UsesPerTurn}]度だけ発動する。"
             : text;
+    }
+
+    /// <summary>
+    /// 戦技・奥義の説明。共通の効果の後に、位相ごとの効果を「位相なし：」「静：」「動：」の行で並べる。
+    /// </summary>
+    internal static string FormatSkillDescription(CharacterSkillDefinition skill)
+    {
+        var common = CardTextFormatter.FormatEffectsWithKeywords(
+            skill.Effects, skill.Keywords, CardActorContext.Empty);
+        return AppendSkillPhaseLines(common, skill, CardActorContext.Empty);
+    }
+
+    /// <summary>位相ごとの効果の行（位相なし：／静：／動：）を説明の後ろに足す。位相ごとの効果が無ければそのまま。</summary>
+    internal static string AppendSkillPhaseLines(string text, CharacterSkillDefinition skill, CardActorContext context)
+    {
+        if (skill.PhaseEffects is null) return text;
+        var lines = new List<string>();
+        if (!string.IsNullOrEmpty(text)) lines.Add(text);
+        foreach (var (key, label) in new[] { ("none", "位相なし"), ("calm", "[P:calm]"), ("motion", "[P:motion]") })
+        {
+            if (skill.PhaseEffects.TryGetValue(key, out var effects) && effects.Count > 0)
+                lines.Add($"{label}：{CardTextFormatter.FormatEffects(effects, context)}");
+        }
+        return string.Join("\n", lines);
     }
 
     private static string EffectLabel(EventEffect e) => e switch

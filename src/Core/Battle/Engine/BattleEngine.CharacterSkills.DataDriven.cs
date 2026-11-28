@@ -126,6 +126,11 @@ public static partial class BattleEngine
         if (hero.GetStatus(BattleStatusIds.Seal) > 0)
             throw new InvalidOperationException(
                 $"Character skill '{skill.Id}' is sealed");
+        if (skill.RequiresPhase && hero.Phase == ActorPhase.None)
+            throw new InvalidOperationException(
+                $"Character skill '{skill.Id}' requires a phase (calm or motion)");
+        // 位相ごとの効果は、使用を始めた時点の位相で選ぶ。
+        var skillEffects = skill.EffectsForPhase(PhaseRules.Name(hero.Phase));
         var source = CharacterSkillSource(hero, skill.Id);
         var remainingGauge = state.ComboGauge - skill.Cost.ComboGauge;
         var useState = MarkCharacterSkillUsed(state, skill.Id, skill.EffectiveUsesPerTurn);
@@ -140,7 +145,7 @@ public static partial class BattleEngine
             hero, skill.Id, skill.Cost.ComboGauge, remainingGauge, source).ToList();
 
         int order = events.Count;
-        foreach (var effect in skill.Effects)
+        foreach (var effect in skillEffects)
         {
             if (!string.IsNullOrEmpty(effect.Trigger))
                 continue;

@@ -29,7 +29,9 @@ public class BattleStateDtoMapperPhaseTests : IClassFixture<TempDataFactory>
         var catalog = _factory.Services.GetRequiredService<DataCatalog>();
         Assert.True(store.TryGet(account, out var session));
         var participant = BattleParticipantAccess.GetPrimary(session.State);
-        var card = participant.Hand.First().AddKeyword(CardKeywords.Bipolar, bipolar);
+        var card = bipolar > 0
+            ? participant.Hand.First().AddKeyword(CardKeywords.Bipolar, bipolar)
+            : participant.Hand.First();
         participant = participant with { Hand = participant.Hand.SetItem(0, card) };
         var state = BattleParticipantAccess.Replace(session.State, participant);
         int heroIndex = state.Allies.IndexOf(state.Allies.First(a => a.InstanceId == participant.ActorInstanceId));
@@ -63,9 +65,11 @@ public class BattleStateDtoMapperPhaseTests : IClassFixture<TempDataFactory>
     }
 
     [Fact]
-    public async Task HandAttack_RetainsAtTurnEnd_WhenOwnerCalm_EvenBeforeBipolar()
+    public async Task HandAttack_RetainsAtTurnEnd_WhenCalmOwnerHasCalmTurnEndTrait_EvenBeforeBipolar()
     {
-        var (state, catalog, _) = await CalmHeroWithBipolarAsync("dto-phase-predict", ActorPhase.Calm, 1);
+        var (state, catalog, _) = await CalmHeroWithBipolarAsync("dto-phase-predict", ActorPhase.Calm, 0);
+        // 転相拳士シオン（静でターンを終えると手札の全アタックに双極）として表示する。
+        state = state with { CharacterId = "striker_shion" };
 
         var dto = BattleStateDtoMapper.ToDto(state, catalog);
 
@@ -74,6 +78,17 @@ public class BattleStateDtoMapperPhaseTests : IClassFixture<TempDataFactory>
             bool isAttack = catalog.Cards[card.CardDefinitionId].CardType == CardType.Attack;
             if (isAttack) Assert.True(card.RetainsAtTurnEnd, card.CardDefinitionId);
         });
+    }
+
+    [Fact]
+    public async Task HandAttack_DoesNotRetain_WhenCalmOwnerLacksTheTrait()
+    {
+        // 静の位相そのものは、ターン終了時にアタックへ双極を付けない（2026-11-28）。
+        var (state, catalog, _) = await CalmHeroWithBipolarAsync("dto-phase-no-trait", ActorPhase.Calm, 0);
+
+        var dto = BattleStateDtoMapper.ToDto(state, catalog);
+
+        Assert.All(dto.Hand, card => Assert.False(card.RetainsAtTurnEnd, card.CardDefinitionId));
     }
 
     [Fact]

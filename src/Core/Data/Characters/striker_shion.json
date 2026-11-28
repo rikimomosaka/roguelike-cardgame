@@ -1,0 +1,125 @@
+{
+  "id": "striker_shion",
+  "name": "転相拳士シオン",
+  "characterClass": "Striker",
+  "description": "静に構えて攻撃を受け流し、動に転じて溜めた技を一気に放つ拳士。",
+  "traitDescription": "呼吸転換：自身の位相が静の状態でターンを終えた時、手札の全アタックに刻印【双極】する。自身の位相が動になった時、コンボゲージ+1。",
+  "maxHp": 76,
+  "startingGold": 99,
+  "potionSlotCount": 3,
+  "heightTier": 5,
+  "energyPerTurn": 3,
+  "drawPerTurn": 5,
+  "trait": {
+    "id": "breath_shift",
+    "name": "呼吸転換",
+    "trigger": "OnCalmTurnEnd",
+    "description": "自身の位相が静の状態でターンを終えた時、手札の全アタックに刻印【双極】する。自身の位相が動になった時、コンボゲージ+1。",
+    "effects": [
+      {
+        "action": "augmentCards",
+        "scope": "self",
+        "amount": 1,
+        "name": "bipolar",
+        "pile": "hand",
+        "select": "all",
+        "cardTypeFilter": "Attack"
+      }
+    ],
+    "clauses": [
+      {
+        "trigger": "OnMotionEntered",
+        "effects": [
+          {
+            "action": "gainComboGauge",
+            "scope": "self",
+            "amount": 1
+          }
+        ]
+      }
+    ]
+  },
+  "skills": [
+    {
+      "id": "tactical",
+      "name": "転身",
+      "comboGaugeCost": 2,
+      "oncePerTurn": true,
+      "usesPerTurn": 1,
+      "requiresPhase": true,
+      "description": "自身の位相を反転する。",
+      "effects": [
+        {
+          "action": "invertPhase",
+          "scope": "self",
+          "amount": 0
+        }
+      ]
+    },
+    {
+      "id": "ultimate",
+      "name": "両極拳",
+      "comboGaugeCost": 7,
+      "oncePerTurn": true,
+      "usesPerTurn": 1,
+      "description": "位相なし：自身に8ブロック。位相を静にする。静：自身に12ブロック。手札の全カードに刻印【双極】する。動：エナジー+2。3枚引く。",
+      "effects": [],
+      "phaseEffects": {
+        "none": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 8
+          },
+          {
+            "action": "setPhase",
+            "scope": "self",
+            "amount": 0,
+            "name": "calm"
+          }
+        ],
+        "calm": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 12
+          },
+          {
+            "action": "augmentCards",
+            "scope": "self",
+            "amount": 1,
+            "name": "bipolar",
+            "pile": "hand",
+            "select": "all"
+          }
+        ],
+        "motion": [
+          {
+            "action": "gainEnergy",
+            "scope": "self",
+            "amount": 2
+          },
+          {
+            "action": "draw",
+            "scope": "self",
+            "amount": 3
+          }
+        ]
+      }
+    }
+  ],
+  "deck": [
+    "striker_basic_attack",
+    "striker_basic_attack",
+    "striker_basic_defense",
+    "striker_basic_defense",
+    "striker_basic_quickdraw",
+    "striker_basic_quickdraw",
+    "striker_basic_calm_form",
+    "striker_basic_calm_form",
+    "striker_basic_motion_form",
+    "striker_basic_motion_form"
+  ],
+  "attack": 6,
+  "defense": 5
+}

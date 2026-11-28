@@ -607,6 +607,7 @@ public static class BattleCpuPlanningCoordinator
                     && projected.Energy >= skill.Cost.Energy
                     && projected.ComboGauge >= skill.Cost.ComboGauge
                     && (!skill.RequiresCardsInHand || !projected.Hand.IsEmpty)
+                    && (!skill.RequiresPhase || actor.Phase != ActorPhase.None)
                     && (skill.EffectiveUsesPerTurn <= 0
                         || uses < skill.EffectiveUsesPerTurn))
                 {

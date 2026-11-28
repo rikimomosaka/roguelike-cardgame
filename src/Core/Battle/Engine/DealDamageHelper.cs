@@ -85,6 +85,9 @@ internal static class DealDamageHelper
         int vulnerable = target.GetStatus("vulnerable");
         int rawDamage = System.Math.Max(0, remainingAttack);
         int damage = vulnerable > 0 ? (rawDamage * 3) / 2 : rawDamage;
+        // 静: アタックで受けるダメージを 0.75 倍（ブロックの後、脆弱の後に掛けて切り捨て）。
+        if (context.DamageType == DamageType.Attack && target.Phase == ActorPhase.Calm)
+            damage = (damage * 3) / 4;
         int hpBefore = System.Math.Max(0, target.CurrentHp);
         bool barrierConsumed = totalAttack > 0
             && target.GetStatus("barrier") > 0

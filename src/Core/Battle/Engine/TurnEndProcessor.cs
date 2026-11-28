@@ -53,11 +53,11 @@ internal static class TurnEndProcessor
         s = BattleCardCostModifierLifecycle.Remove(
             s, CardCostModifierDuration.UntilTurnEnd);
 
-        // Step 4.5: 静の持ち主は手札のアタックに双極を得る（手札を捨てる前）。
+        // Step 4.5: 静でターンを終えた時の特性（シオンの手札の全アタックに双極など。手札を捨てる前）。
         var phaseOwner = primaryActor is null
             ? null
             : s.Allies.FirstOrDefault(actor => actor.InstanceId == primaryActor.InstanceId) ?? primaryActor;
-        s = PhaseRules.ApplyCalmTurnEnd(s, phaseOwner, catalog, ref order, events);
+        s = PhaseRules.ApplyCalmTurnEnd(s, phaseOwner, catalog, rng, ref order, events);
 
         // Step 5: 手札整理 (retainSelf-aware, 10.2.D 既存)
         var keepInHand = ImmutableArray.CreateBuilder<BattleCardInstance>();

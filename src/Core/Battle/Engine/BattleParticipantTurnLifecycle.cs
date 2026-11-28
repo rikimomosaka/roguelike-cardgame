@@ -72,7 +72,8 @@ internal static class BattleParticipantTurnLifecycle
     internal static BattleState ApplyTurnEndToProjectedRoot(
         BattleState projected,
         CombatActor? participantActor,
-        DataCatalog catalog)
+        DataCatalog catalog,
+        IRng? rng = null)
     {
         projected = ComboTurnBoundaryRules.ResetAtTurnEnd(
             projected,
@@ -80,9 +81,10 @@ internal static class BattleParticipantTurnLifecycle
         projected = BattleCardCostModifierLifecycle.Remove(
             projected, CardCostModifierDuration.UntilTurnEnd);
 
-        // 静の持ち主は手札のアタックに双極を得る（手札を捨てる前）。
+        // 静でターンを終えた時の特性（手札を捨てる前）。乱数は使わない効果だけなので、無ければ固定の乱数で足りる。
         int phaseOrder = 0;
-        projected = PhaseRules.ApplyCalmTurnEnd(projected, participantActor, catalog, ref phaseOrder, events: null);
+        projected = PhaseRules.ApplyCalmTurnEnd(
+            projected, participantActor, catalog, rng ?? new SequentialRng(0), ref phaseOrder, events: null);
 
         var retained = ImmutableArray.CreateBuilder<BattleCardInstance>();
         var discard = projected.DiscardPile.ToBuilder();

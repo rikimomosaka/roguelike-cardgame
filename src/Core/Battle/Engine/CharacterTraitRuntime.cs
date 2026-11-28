@@ -44,18 +44,48 @@ public static class CharacterTraitRuntime
             return (state, Array.Empty<BattleEvent>());
         if (!catalog.TryGetCharacter(state.CharacterId, out var character) ||
             character.Trait is not { } trait ||
-            trait.Trigger != trigger)
+            !trait.HasTrigger(trigger))
             return (state, Array.Empty<BattleEvent>());
 
+        // 1 つの特性が複数の発動条件を持てる（clauses）。この契機に合う条件を順に発動する。
+        var next = state;
+        var allEvents = new List<BattleEvent>();
+        int nextOrder = orderStart;
+        foreach (var (key, clause) in trait.AllClauses())
+        {
+            if (clause.Trigger != trigger) continue;
+            var (afterClause, clauseEvents) = TryTriggerClause(
+                next, actorInstanceId, trait, key, clause, trigger, catalog, rng,
+                previousValue, currentValue, nextOrder);
+            next = afterClause;
+            allEvents.AddRange(clauseEvents);
+            nextOrder += clauseEvents.Count;
+        }
+        return (next, allEvents);
+    }
+
+    private static (BattleState State, IReadOnlyList<BattleEvent> Events) TryTriggerClause(
+        BattleState state,
+        string actorInstanceId,
+        CharacterTraitDefinition trait,
+        string usageKey,
+        CharacterTraitClause clause,
+        CharacterTraitTrigger trigger,
+        DataCatalog catalog,
+        IRng rng,
+        int previousValue,
+        int currentValue,
+        int orderStart)
+    {
         if (trigger == CharacterTraitTrigger.OnComboReached &&
-            !CrossedThreshold(previousValue, currentValue, trait.Threshold))
+            !CrossedThreshold(previousValue, currentValue, clause.Threshold))
             return (state, Array.Empty<BattleEvent>());
 
         int useCount = state.CharacterTraitUsesThisTurn.TryGetValue(
-            trait.Id, out var existingCount)
+            usageKey, out var existingCount)
             ? existingCount
             : 0;
-        if (trait.HasPerTurnLimit && useCount >= trait.UsesPerTurn)
+        if (clause.UsesPerTurn > 0 && useCount >= clause.UsesPerTurn)
             return (state, Array.Empty<BattleEvent>());
 
         var caster = state.Allies.FirstOrDefault(actor =>
@@ -67,7 +97,7 @@ public static class CharacterTraitRuntime
         var next = state with
         {
             CharacterTraitUsesThisTurn =
-                state.CharacterTraitUsesThisTurn.SetItem(trait.Id, useCount + 1),
+                state.CharacterTraitUsesThisTurn.SetItem(usageKey, useCount + 1),
         };
 
         var source = new CombatSource(
@@ -89,7 +119,7 @@ public static class CharacterTraitRuntime
         };
 
         int order = orderStart + 1;
-        foreach (var effect in trait.Effects)
+        foreach (var effect in clause.Effects)
         {
             // Triggered CardEffects belong to the card/relic/power trigger
             // systems. A trait activation executes only its immediate effects.

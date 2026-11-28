@@ -69,7 +69,7 @@ describe('slotTooltipContent', () => {
     expect(status.querySelector('.tip__name.tip-actor-trait')?.textContent).toBe('特性：策応')
     const lines = tip.desc.split('\n')
     expect(lines.slice(0, 3)).toEqual(['特性の説明。', '', '位相：[P:calm]'])
-    expect(lines.slice(3).join('\n')).toContain('[K:bipolar]')
+    expect(lines.slice(3).join('\n')).toContain('アタックで受けるダメージが0.75倍')
   })
 
   it('lists opening actions after the trait so they can be checked later', () => {

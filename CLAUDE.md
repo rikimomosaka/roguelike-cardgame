@@ -74,6 +74,7 @@ roguelike-cardgame/
   - 行動デッキは原則 10 枚・ドロー = エナジー・行動カードは 1 コスト（0 コストは臨戦態勢だけ）・固有行動は雑魚 1／強敵 2／ボス 3 種（2026-11-28）。
   - 提案書 §5 の未決事項は、ユーザーの回答なしに仕様化しない。実装した部分は `current-*` 仕様書へ移す。
 - **位相（静・動）・双極・カードの後付け能力**（2026-11-26 実装）: [docs/current-phase-spec.md](docs/current-phase-spec.md)。
+  静は「アタックで受けるダメージ 0.75 倍」（2026-11-28〜）。静のターン終了の双極付与は転相拳士シオン（`striker_shion`）の特性。
   位相を踏み倒す効果（動のまま非アタックを使える等）は作らない。
 - **キャラクター・カードの現行一覧**: [docs/current-characters-and-class-cards.md](docs/current-characters-and-class-cards.md)（組込データから作成）。
   キーワード能力（乗勢・終撃・再演・伏策など）は [docs/current-class-card-abilities-spec.md](docs/current-class-card-abilities-spec.md)。

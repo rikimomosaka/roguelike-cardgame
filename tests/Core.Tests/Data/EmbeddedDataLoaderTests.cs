@@ -13,8 +13,9 @@ public class EmbeddedDataLoaderTests
     {
         var catalog = EmbeddedDataLoader.LoadCatalog();
 
-        Assert.Equal(4, catalog.Characters.Count);
+        Assert.Equal(5, catalog.Characters.Count);
         Assert.Equal(CharacterClass.Striker, catalog.Characters["default"].CharacterClass);
+        Assert.Equal(CharacterClass.Striker, catalog.Characters["striker_shion"].CharacterClass);
         Assert.Equal(CharacterClass.Guardian, catalog.Characters["guardian_mireille"].CharacterClass);
         Assert.Equal(CharacterClass.Tactician, catalog.Characters["tactician_yuno"].CharacterClass);
         Assert.Equal(CharacterClass.Enhancer, catalog.Characters["enhancer_lyra"].CharacterClass);
@@ -34,7 +35,7 @@ public class EmbeddedDataLoaderTests
             Assert.Equal(poolClass == CardPoolClass.Striker ? 20 : 12, catalog.Cards.Values.Count(card =>
                 CardPoolRules.IsReward(card) && card.PoolClass == poolClass));
         }
-        Assert.Equal(20, catalog.Cards.Values.Count(CardPoolRules.IsBasic));
+        Assert.Equal(22, catalog.Cards.Values.Count(CardPoolRules.IsBasic));
         Assert.Equal(11, catalog.Cards.Values.Count(card =>
             card.EffectivePoolKinds.Count == 0 && !card.Id.StartsWith("enemy_", System.StringComparison.Ordinal)));
         // 敵の行動カードはトークンで、報酬・収集の対象外。

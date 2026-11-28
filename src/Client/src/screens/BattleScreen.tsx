@@ -4929,7 +4929,14 @@ export function BattleScreen({
     ?? []
   const tacticalSkill = characterSkills.find((skill) => skill.id === 'tactical')
   const ultimateSkill = characterSkills.find((skill) => skill.id === 'ultimate')
-  const comboSkillAvailability = getComboSkillAvailability({
+  // 位相が必要な戦技・奥義（転相拳士シオンの転身）は、使用者が位相なしの間は使えない。
+  const skillOwnerActorId = displayedParticipant?.actorInstanceId
+    ?? displayedState.allies.find(actor => actor.definitionId === 'hero')?.instanceId
+  const skillOwnerPhase = displayedState.allies
+    .find(actor => actor.instanceId === skillOwnerActorId)?.phase ?? 'none'
+  const tacticalNeedsPhase = tacticalSkill?.requiresPhase === true && skillOwnerPhase === 'none'
+  const ultimateNeedsPhase = ultimateSkill?.requiresPhase === true && skillOwnerPhase === 'none'
+  const rawComboSkillAvailability = getComboSkillAvailability({
     comboGauge: displayedState.comboGauge,
     energy: displayedState.energy,
     phase: displayedState.phase,
@@ -4950,6 +4957,11 @@ export function BattleScreen({
     ultimateEnergyCost: ultimateSkill?.energyCost,
     ultimateRequiresHand: false,
   })
+  const comboSkillAvailability = {
+    ...rawComboSkillAvailability,
+    tacticalDisabled: rawComboSkillAvailability.tacticalDisabled || tacticalNeedsPhase,
+    ultimateDisabled: rawComboSkillAvailability.ultimateDisabled || ultimateNeedsPhase,
+  }
   const sharedSkillDisabledReason = viewingReplay
     ? 'リプレイ表示中'
     : busy || animating
@@ -4982,6 +4994,7 @@ export function BattleScreen({
     if (displayedState.energy < (skill?.energyCost ?? 0)) {
       return `エナジー不足 ${displayedState.energy}/${skill?.energyCost ?? 0}`
     }
+    if (kind === 'tactical' ? tacticalNeedsPhase : ultimateNeedsPhase) return '位相がないため使用できません'
     return '現在使用できません'
   }
   const tacticalDisabledReason = skillDisabledReason(

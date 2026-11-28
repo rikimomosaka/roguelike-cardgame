@@ -73,9 +73,11 @@ public sealed class BestiaryController : ControllerBase
                         Category: skill.Id == "tactical" ? "戦技"
                             : skill.Id == "ultimate" ? "奥義" : "スキル",
                         skill.Name,
-                        CardTextFormatter.FormatUsableEffects(
-                            skill.Effects, skill.Keywords, CardActorContext.Empty,
-                            skill.EffectiveUsesPerTurn),
+                        CatalogController.AppendSkillPhaseLines(
+                            CardTextFormatter.FormatUsableEffects(
+                                skill.Effects, skill.Keywords, CardActorContext.Empty,
+                                skill.EffectiveUsesPerTurn),
+                            skill, CardActorContext.Empty),
                         skill.Cost.Energy,
                         skill.Cost.ComboGauge)).ToArray(),
                 SummonCards: Array.Empty<BestiarySummonCardDto>(),
@@ -167,9 +169,11 @@ public sealed class BestiaryController : ControllerBase
                 Category: skill.Id == "tactical" ? "戦技"
                     : skill.Id == "ultimate" ? "奥義" : "スキル",
                 skill.Name,
-                CardTextFormatter.FormatUsableEffects(
-                    skill.Effects, skill.Keywords, CardActorContext.Empty,
-                    skill.EffectiveUsesPerTurn),
+                CatalogController.AppendSkillPhaseLines(
+                    CardTextFormatter.FormatUsableEffects(
+                        skill.Effects, skill.Keywords, CardActorContext.Empty,
+                        skill.EffectiveUsesPerTurn),
+                    skill, CardActorContext.Empty),
                 skill.Cost.Energy,
                 skill.Cost.ComboGauge));
         var cards = unit.EffectiveDeck
