@@ -1,0 +1,10 @@
+{
+  "note": "tools/art-pipeline/compose-card-art.mjs が生成（指示文は card-art-prompts.mjs）",
+  "kind": "backdrop",
+  "seed": 1,
+  "actor": {
+    "hero": "striker_shion",
+    "sheet": "cast",
+    "frame": 3
+  }
+}

@@ -51,6 +51,7 @@ const HERO_IDS = [
   'guardian_mireille',
   'tactician_yuno',
   'enhancer_lyra',
+  'striker_shion',
 ] as const
 
 type HeroId = typeof HERO_IDS[number]

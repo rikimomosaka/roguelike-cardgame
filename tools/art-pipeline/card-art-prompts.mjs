@@ -17,6 +17,9 @@ export const CARD_ART = {
   tactician_basic_defense: { kind: 'backdrop', desc: `hidden forest camp with wooden palisade and tent, evening, lantern light, ${BACKDROP}` },
   enhancer_basic_attack: { kind: 'backdrop', desc: `arcane library hall with tall bookshelves, floating purple glowing runes, ${BACKDROP}` },
   enhancer_basic_defense: { kind: 'backdrop', desc: `starry night shrine terrace, large violet magic circle glowing on the floor, ${BACKDROP}` },
+  // 転相拳士シオンの初期カード（静の型 = 静かな青、動の型 = 激しい赤）。
+  striker_basic_calm_form: { kind: 'backdrop', desc: `tranquil mountain dojo veranda at dawn, perfectly still pond reflecting a pale blue sky, soft mist, calm blue light, ${BACKDROP}` },
+  striker_basic_motion_form: { kind: 'backdrop', desc: `stone training ground at sunset, red maple leaves swirling in a strong wind, blazing orange and crimson sky, ${BACKDROP}` },
 
   // ---- ストライカーのクラス固有カード（キャラに依存しない絵） ----
   striker_basic_quickdraw: { kind: 'scene', desc: `close-up of a katana being drawn fast from its black sheath, bright flash of steel, red spark, dark background, ${STYLE}` },
@@ -46,4 +49,6 @@ export const CARD_ART_ACTORS = {
   tactician_basic_defense: { hero: 'tactician_yuno', sheet: 'guard', frame: 3 },
   enhancer_basic_attack: { hero: 'enhancer_lyra', sheet: 'attack', frame: 2 },
   enhancer_basic_defense: { hero: 'enhancer_lyra', sheet: 'guard', frame: 3 },
+  striker_basic_calm_form: { hero: 'striker_shion', sheet: 'cast', frame: 3 },
+  striker_basic_motion_form: { hero: 'striker_shion', sheet: 'attack', frame: 3 },
 }

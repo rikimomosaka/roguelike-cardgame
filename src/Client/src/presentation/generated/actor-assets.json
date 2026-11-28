@@ -259,6 +259,13 @@
       "top": 48,
       "bottom": 123
     },
+    "heroes/striker_shion": {
+      "centerY": 0.672,
+      "footprint": 50,
+      "left": 39,
+      "top": 48,
+      "bottom": 123
+    },
     "heroes/tactician_yuno": {
       "centerY": 0.672,
       "footprint": 44,
@@ -431,6 +438,58 @@
         "loop": false
       }
     },
+    "striker_shion": {
+      "idle": {
+        "frames": 8,
+        "durationMs": 1200,
+        "loop": true
+      },
+      "attack": {
+        "frames": 6,
+        "durationMs": 600,
+        "loop": false
+      },
+      "attack_alt": {
+        "frames": 6,
+        "durationMs": 600,
+        "loop": false
+      },
+      "skill": {
+        "frames": 8,
+        "durationMs": 800,
+        "loop": false
+      },
+      "guard": {
+        "frames": 6,
+        "durationMs": 720,
+        "loop": false
+      },
+      "cast": {
+        "frames": 6,
+        "durationMs": 720,
+        "loop": false
+      },
+      "still": {
+        "frames": 1,
+        "durationMs": 1000,
+        "loop": true
+      },
+      "hurt": {
+        "frames": 4,
+        "durationMs": 400,
+        "loop": false
+      },
+      "down": {
+        "frames": 6,
+        "durationMs": 720,
+        "loop": false
+      },
+      "stand": {
+        "frames": 1,
+        "durationMs": 0,
+        "loop": false
+      }
+    },
     "tactician_yuno": {
       "idle": {
         "frames": 8,
@@ -490,8 +549,10 @@
     "guardian_basic_attack",
     "guardian_basic_defense",
     "striker_basic_attack",
+    "striker_basic_calm_form",
     "striker_basic_defense",
     "striker_basic_finishing_slash",
+    "striker_basic_motion_form",
     "striker_basic_quickdraw",
     "striker_basic_step",
     "striker_common_chain_fang",
