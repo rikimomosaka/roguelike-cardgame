@@ -368,6 +368,8 @@ const STEP_DELAY_MS = 80         // 既存 fallback (汎用 event)
 const ENEMY_CARD_ACTION_READ_MS = 650
 /** 攪乱で行動が失敗したときに「失敗！」を読ませる間。 */
 const ACTION_FAILED_READ_MS = 700
+/** 毒のダメージ（緑の数字と光）を見せる間。 */
+const POISON_TICK_READ_MS = 520
 /** 敵によるバフ・デバフ・ブロック・回復は発光が見えるまで少し待つ。 */
 const ENEMY_SUPPORT_EFFECT_MS = 320
 // Readability floors used when an actor has no authored motion duration.
@@ -3551,6 +3553,23 @@ export function BattleScreen({
         // State snapshots in the current action DTO are action-final, so show
         // actor resources from the event deltas until that final state commits.
         // Attack-associated deltas are handled as part of the logical hit above.
+        // 毒のダメージ（ターン開始時の PoisonTick）: 緑の数字と、体が緑に染まる光。HP の減りも反映する。
+        if (ev.kind === 'PoisonTick' && ev.targetInstanceId) {
+          const hpLoss = Math.max(0, ev.actualHpLoss ?? ev.amount ?? 0)
+          if (hpLoss > 0) {
+            pushCombatFeedback(ev.targetInstanceId, 'poison', `-${hpLoss}`)
+            showSlotAura(ev.targetInstanceId, 'poison')
+          }
+          dmg[ev.targetInstanceId] = (dmg[ev.targetInstanceId] ?? 0) + hpLoss
+          setDamageOverlay({ ...dmg })
+          if (!await waitForPresentation(POISON_TICK_READ_MS)) {
+            clearTransientPresentation()
+            return
+          }
+          i++
+          continue
+        }
+
         if (ev.kind === 'DealDamage' && ev.targetInstanceId) {
           const hpLoss = Math.max(0, ev.actualHpLoss ?? ev.amount ?? 0)
           const blocked = Math.max(0, ev.blockedAmount ?? 0)
