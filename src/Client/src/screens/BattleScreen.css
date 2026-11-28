@@ -3315,3 +3315,14 @@ html[data-motion='reduced'] .slot-disruption-halo { --halo-period: 3.2s; }
   white-space: normal;
   text-align: left;
 }
+
+/* 新規格のスプライトは画像全体が 256px 四方で大半が透明。カーソルの判定は当たり枠（.slot-hit-area）に任せ、
+   画像自体はマウスを受けない（隣のキャラの透明な部分で説明やクリックが奪われないように）。 */
+.battle__slot .sprite.sprite--stage { pointer-events: none; }
+.slot-hit-area {
+  position: absolute;
+  z-index: 6;
+  pointer-events: auto;
+  background: transparent;
+  outline: none;
+}

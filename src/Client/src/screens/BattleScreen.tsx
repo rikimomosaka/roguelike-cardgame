@@ -95,6 +95,7 @@ import { CardChoiceModal } from './battleScreen/CardChoiceModal'
 import { PlayHistoryModal } from './battleScreen/FinisherRecordModal'
 import { pickTargetAtPoint, readTargetRegions } from './battleScreen/targetHitTest'
 import {
+  bodyHitAreaStyle,
   DisruptionHalo,
   disruptionHaloStyle,
   PhaseAura,
@@ -1267,6 +1268,16 @@ function Slot({
           ? phaseRingStyle(char.stage)
           : phaseRingStyle({ bodyWidth: (shadowWidth ?? 78) / 0.8, footGap: 8 })}
       />
+      {char.stage ? (
+        // カーソルの当たり枠: ドットのある範囲だけで説明を出す（画像の透明な部分では反応しない）。
+        <span
+          className="slot-hit-area"
+          style={bodyHitAreaStyle(char.stage)}
+          tabIndex={0}
+          aria-label={`${char.charName ?? char.name}の状態`}
+          {...traitTip}
+        />
+      ) : null}
       <DisruptionHalo
         stacks={char.disruption}
         style={disruptionHaloStyle(char.stage
@@ -1317,11 +1328,13 @@ function Slot({
         <div
           className={`sprite sprite--image sprite--${char.spriteKind}${char.stage ? ' sprite--stage' : ''}`}
           data-motion={activeAnimation?.motion ?? 'idle'}
-          tabIndex={char.traitDescription ? 0 : undefined}
-          aria-label={char.traitDescription
-            ? `${char.name}の特性 ${char.traitName ?? '特性'}`
-            : undefined}
-          {...traitTip}
+          {...(char.stage ? {} : {
+            tabIndex: char.traitDescription ? 0 : undefined,
+            'aria-label': char.traitDescription
+              ? `${char.name}の特性 ${char.traitName ?? '特性'}`
+              : undefined,
+            ...traitTip,
+          })}
           style={
             ({
               '--tier-height': `${displayHeight}px`,

@@ -74,6 +74,8 @@ export type ActorMetrics = {
   centerY: number
   /** 横幅（ドット）。影の幅に使う。 */
   footprint: number
+  /** 一番左のドットの列（古い生成物には無い）。 */
+  left?: number
   /** 一番上のドットの行。 */
   top: number
   /** 一番下のドットの行（地面の線 123 より上なら空中にいる）。 */

@@ -27,6 +27,8 @@ export type ActorStage = {
   footGap: number
   /** キャンバス上端からドットの上端（頭頂）までの距離（px）。頭上の演出の位置に使う。 */
   headTop: number
+  /** キャンバス左端からドットの左端までの距離（px）。カーソルの当たり枠の位置に使う。 */
+  bodyLeft: number
 }
 
 export type ActorVisual = {
@@ -74,6 +76,8 @@ function stageFor(kind: ActorKind, id: string): ActorStage | undefined {
     bodyWidth: m.footprint * ACTOR_CANVAS.scale,
     footGap: (ACTOR_CANVAS.size - 1 - m.bottom) * ACTOR_CANVAS.scale,
     headTop: m.top * ACTOR_CANVAS.scale,
+    // 古い生成物（left 無し）はキャンバス中央に体の幅を置く。
+    bodyLeft: (m.left ?? Math.round((ACTOR_CANVAS.size - m.footprint) / 2)) * ACTOR_CANVAS.scale,
   }
 }
 

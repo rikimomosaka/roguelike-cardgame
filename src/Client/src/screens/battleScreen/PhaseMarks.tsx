@@ -90,6 +90,33 @@ export function phaseRingStyle(stage: { bodyWidth: number; footGap: number }): C
 }
 
 /**
+ * カーソルの当たり枠（説明の表示用）。スプライトの画像全体（大半が透明）ではなく、
+ * ドットのある範囲（体の左右幅 × 頭頂から足元）だけにする。隣のキャラの透明な部分で説明が切り替わらないように。
+ */
+/** 当たり枠の余白と最小の大きさ（px）。 */
+const HIT_AREA_PAD = 4
+const HIT_AREA_MIN = 56
+
+export function bodyHitAreaStyle(
+  stage: { bodyWidth: number; bodyLeft: number; displayHeight: number; headTop: number; footGap: number },
+): CSSProperties {
+  const canvasTop = STAGE_CANVAS_BOTTOM_Y - stage.displayHeight
+  const top = canvasTop + stage.headTop
+  const bottom = STAGE_CANVAS_BOTTOM_Y - stage.footGap
+  // 体の周りに少し余白。コウモリなど小さいキャラは、中心を保ったまま最小の大きさまで広げる（狙いやすく）。
+  const width = Math.max(HIT_AREA_MIN, Math.round(stage.bodyWidth) + HIT_AREA_PAD * 2)
+  const height = Math.max(HIT_AREA_MIN, bottom - top + HIT_AREA_PAD * 2)
+  const centerX = stage.bodyLeft + stage.bodyWidth / 2
+  const centerY = (top + bottom) / 2
+  return {
+    left: `calc(50% - ${stage.displayHeight / 2}px + ${Math.round(centerX - width / 2)}px)`,
+    top: `${Math.round(centerY - height / 2)}px`,
+    width: `${width}px`,
+    height: `${height}px`,
+  }
+}
+
+/**
  * 攪乱の混乱の輪（頭上で回る星と輪）の位置。頭頂より少し上に、体の幅より狭く置く。
  */
 export function disruptionHaloStyle(

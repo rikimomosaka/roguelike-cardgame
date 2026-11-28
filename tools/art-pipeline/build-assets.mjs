@@ -81,6 +81,7 @@ function recordActor(key, img) {
   generated.actors[key] = {
     centerY: +(((b.minY + b.maxY + 1) / 2) / ACTOR.size).toFixed(3),
     footprint: b.maxX - b.minX + 1,
+    left: b.minX,
     top: b.minY,
     bottom: b.maxY,
   }

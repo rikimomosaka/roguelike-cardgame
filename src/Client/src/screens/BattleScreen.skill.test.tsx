@@ -359,7 +359,8 @@ describe('BattleScreen character skill integration', () => {
     })
 
     renderBattle()
-    const sprite = await screen.findByLabelText(/の特性 積層装甲$/)
+    // 説明はドットの範囲の当たり枠（slot-hit-area）に付いている。
+    const sprite = await screen.findByLabelText(/守護騎士ミレイユの状態$/)
     fireEvent.focus(sprite)
 
     const tooltip = await screen.findByRole('tooltip')
