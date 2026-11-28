@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { render } from '@testing-library/react'
-import { PhaseAura, phaseRingStyle, slotTooltipContent } from './PhaseMarks'
+import { actorStatLines, PhaseAura, phaseRingStyle, slotTooltipContent } from './PhaseMarks'
 
 describe('PhaseMarks', () => {
   it('shows a calm aura ring for 静 and a motion ring for 動', () => {
@@ -42,31 +42,39 @@ describe('slotTooltipContent', () => {
     expect(slotTooltipContent({ ...base, charName: undefined, name: 'ダイア・ウルフ' }).name).toBe('ダイア・ウルフ')
   })
 
-  it('lists HP, attack/defense and draw/energy before the trait and phase', () => {
+  it('lists max HP, attack/defense and draw/energy-per-turn with highlighted numbers', () => {
+    expect(actorStatLines({
+      hpMax: 74,
+      stats: { attack: 6, defense: 5, drawPerTurn: 5, energyPerTurn: 3 },
+    })).toEqual([
+      'HP [N:74]',
+      '攻撃力 [N:6] / 守備力 [N:5]',
+      'ドロー [N:5] / エナジー [N:3]',
+    ])
+    // 分からない行は省き、片方だけ分からない値は「—」。
+    expect(actorStatLines({ hpMax: 40, stats: { attack: 6 } }))
+      .toEqual(['HP [N:40]', '攻撃力 [N:6] / 守備力 —'])
+  })
+
+  it('shows the trait name as a heading above the trait effect, then the phase', () => {
     const tip = slotTooltipContent({
       ...base,
-      stats: { attack: 6, defense: 5, drawPerTurn: 5, energy: 2, energyPerTurn: 3 },
+      stats: { attack: 6, defense: 5, drawPerTurn: 5, energyPerTurn: 3 },
       traitName: '策応',
       traitDescription: '特性の説明。',
       phase: 'calm',
     })
+    const status = render(<>{tip.statusLine}</>).container
+    expect(status.querySelector('.tip-actor-stats')?.textContent).toContain('HP 74')
+    expect(status.querySelector('.tip__name.tip-actor-trait')?.textContent).toBe('特性：策応')
     const lines = tip.desc.split('\n')
-    expect(lines.slice(0, 8)).toEqual([
-      'HP74/74',
-      '攻撃力6 / 守備力5',
-      'ドロー5 / エナジー2/3',
-      '',
-      '特性：策応',
-      '特性の説明。',
-      '',
-      '位相：[P:calm]',
-    ])
-    // 位相の効果（静の説明）が続く。
-    expect(lines.slice(8).join('\n')).toContain('[K:bipolar]')
+    expect(lines.slice(0, 3)).toEqual(['特性の説明。', '', '位相：[P:calm]'])
+    expect(lines.slice(3).join('\n')).toContain('[K:bipolar]')
   })
 
-  it('omits unknown stat rows and the phase when there is none', () => {
+  it('has an empty body without a trait or phase', () => {
     const tip = slotTooltipContent({ ...base, stats: { attack: 6, defense: 5 } })
-    expect(tip.desc).toBe('HP74/74\n攻撃力6 / 守備力5')
+    expect(tip.desc).toBe('')
+    expect(render(<>{tip.statusLine}</>).container.querySelector('.tip-actor-trait')).toBeNull()
   })
 })

@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
-import { PHASE_DEFS } from '../../components/CardDesc'
+import { CardDesc, PHASE_DEFS } from '../../components/CardDesc'
 
 /** 位相（静・動）。位相なしは undefined で表す。 */
 export type ActorPhaseDemo = 'calm' | 'motion'
@@ -10,45 +10,63 @@ const PHASE_INFO: Readonly<Record<ActorPhaseDemo, { name: string; effect: string
   motion: { name: PHASE_DEFS.motion.name, effect: PHASE_DEFS.motion.desc },
 }
 
-/** 能力値の 1 行。分からない値は「—」。 */
-const statText = (value: number | undefined) => typeof value === 'number' ? String(value) : '—'
+/** 能力値の数字（黄色の数字。分からない値は「—」）。 */
+const statText = (value: number | undefined) => typeof value === 'number' ? `[N:${value}]` : '—'
+
+/** ツールチップに出す能力値の行（HP は上限、エナジーはターン開始時に回復する数）。 */
+export function actorStatLines(char: {
+  hpMax: number
+  stats?: { attack?: number; defense?: number; drawPerTurn?: number; energyPerTurn?: number }
+}): string[] {
+  const stats = char.stats ?? {}
+  const lines = [`HP ${statText(char.hpMax)}`]
+  if (stats.attack !== undefined || stats.defense !== undefined)
+    lines.push(`攻撃力 ${statText(stats.attack)} / 守備力 ${statText(stats.defense)}`)
+  if (stats.drawPerTurn !== undefined || stats.energyPerTurn !== undefined)
+    lines.push(`ドロー ${statText(stats.drawPerTurn)} / エナジー ${statText(stats.energyPerTurn)}`)
+  return lines
+}
 
 /**
  * キャラにカーソルを合わせたときの説明。
- * 見出しは「キャラ名(操作アカウント)」。本文は現在の能力値（HP・攻撃力/守備力・ドロー/エナジー）、
- * 続けて特性（あれば）と位相（あれば）。
+ * 見出しは「キャラ名(操作アカウント)」。見出しの下に能力値（HP・攻撃力/守備力・ドロー/エナジー）と、
+ * 特性名（戦技・奥義の名前と同じ見出しの書式）。本文は特性の効果と位相（あれば）。
  */
 export function slotTooltipContent(char: {
   name: string
   charName?: string
   controllerLabel?: string
-  hpCur: number
   hpMax: number
   stats?: {
     attack?: number
     defense?: number
     drawPerTurn?: number
-    energy?: number
     energyPerTurn?: number
   }
   traitName?: string
   traitDescription?: string
   phase?: ActorPhaseDemo
-}): { name: ReactNode; desc: string } {
+}): { name: ReactNode; statusLine: ReactNode; desc: string } {
   const title = `${char.charName ?? char.name}${char.controllerLabel ? `(${char.controllerLabel})` : ''}`
-  const stats = char.stats ?? {}
-  const lines = [`HP${char.hpCur}/${char.hpMax}`]
-  if (stats.attack !== undefined || stats.defense !== undefined)
-    lines.push(`攻撃力${statText(stats.attack)} / 守備力${statText(stats.defense)}`)
-  if (stats.drawPerTurn !== undefined || stats.energy !== undefined)
-    lines.push(`ドロー${statText(stats.drawPerTurn)} / エナジー${statText(stats.energy)}/${statText(stats.energyPerTurn)}`)
-  if (char.traitDescription) {
-    // 戦技：技名・奥義：技名 と同じく「特性：名前」で出す。
-    lines.push('', char.traitName ? `特性：${char.traitName}` : '特性', char.traitDescription)
-  }
+  const traitTitle = char.traitDescription
+    ? (char.traitName ? `特性：${char.traitName}` : '特性')
+    : null
+  const statusLine = (
+    <>
+      <span className="tip-actor-stats">
+        <CardDesc text={actorStatLines(char).join('\n')} compress={false} />
+      </span>
+      {traitTitle ? <span className="tip__name tip-actor-trait">{traitTitle}</span> : null}
+    </>
+  )
+  const desc: string[] = []
+  if (char.traitDescription) desc.push(char.traitDescription)
   const phase = char.phase ? PHASE_INFO[char.phase] : null
-  if (phase) lines.push('', `位相：[P:${char.phase}]`, phase.effect)
-  return { name: title, desc: lines.join('\n') }
+  if (phase) {
+    if (desc.length > 0) desc.push('')
+    desc.push(`位相：[P:${char.phase}]`, phase.effect)
+  }
+  return { name: title, statusLine, desc: desc.join('\n') }
 }
 
 /** 新規格のキャラのキャンバス下端（スロット上端からの y）。BattleScreen の STAGE_CANVAS_BOTTOM_Y と同じ。 */

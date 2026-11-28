@@ -244,3 +244,16 @@
     width: min(270px, calc(100vw - 16px));
   }
 }
+
+/* キャラのツールチップ: 見出しの下の能力値（本文と同じ大きさ・色、数字は黄色）と特性名（戦技・奥義の名前と同じ見出し）。 */
+.tip-actor-stats {
+  display: block;
+  color: var(--fg-muted);
+  font-size: 15px;
+  line-height: 1.55;
+  font-variant-numeric: normal;
+}
+.tip-actor-trait {
+  display: block;
+  margin-top: 8px;
+}
