@@ -9,7 +9,7 @@
       "version": "v1",
       "label": "enemy mushroom_b unique (from move sporecoat)",
       "spec": {
-        "rarity": 5,
+        "rarity": 3,
         "cardType": "Skill",
         "cost": 1,
         "effects": [

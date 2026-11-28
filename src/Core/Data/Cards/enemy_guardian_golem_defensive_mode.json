@@ -9,7 +9,7 @@
       "version": "v1",
       "label": "enemy guardian_golem unique (from move defensive_mode)",
       "spec": {
-        "rarity": 5,
+        "rarity": 3,
         "cardType": "Skill",
         "cost": 1,
         "effects": [

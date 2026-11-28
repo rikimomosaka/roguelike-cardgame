@@ -9,7 +9,7 @@
       "version": "v1",
       "label": "enemy slime_spike_s unique (from move harden)",
       "spec": {
-        "rarity": 5,
+        "rarity": 3,
         "cardType": "Skill",
         "cost": 1,
         "effects": [

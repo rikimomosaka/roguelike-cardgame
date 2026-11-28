@@ -9,7 +9,7 @@
       "version": "v1",
       "label": "enemy cave_bat_a unique (from move screech)",
       "spec": {
-        "rarity": 5,
+        "rarity": 3,
         "cardType": "Skill",
         "cost": 1,
         "effects": [

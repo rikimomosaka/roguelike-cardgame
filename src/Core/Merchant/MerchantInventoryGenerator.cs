@@ -56,7 +56,7 @@ public static class MerchantInventoryGenerator
         // 追加された場合でも token カードが商人在庫に並ばないよう明示的に
         // 除外する防御フィルタ (Phase 10.5.G)。
         var pricedRewards = catalog.Cards.Values
-            .Where(c => c.Rarity != CardRarity.Token)
+            .Where(c => c.Rarity != CardRarity.Token && !c.IsEnemyCard)
             .Where(c => prices.Cards.ContainsKey(c.Rarity))
             .OrderBy(c => c.Id)
             .ToList();

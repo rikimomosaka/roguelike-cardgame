@@ -9,7 +9,7 @@
       "version": "v1",
       "label": "enemy act2_boss unique (from move charge)",
       "spec": {
-        "rarity": 5,
+        "rarity": 3,
         "cardType": "Attack",
         "cost": 1,
         "effects": [

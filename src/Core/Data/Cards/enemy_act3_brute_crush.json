@@ -9,7 +9,7 @@
       "version": "v1",
       "label": "enemy act3_brute unique (from move crush)",
       "spec": {
-        "rarity": 5,
+        "rarity": 3,
         "cardType": "Attack",
         "cost": 1,
         "effects": [

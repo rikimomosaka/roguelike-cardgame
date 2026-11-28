@@ -9,7 +9,7 @@
       "version": "v1",
       "label": "enemy blue_orc unique (from move war_cry)",
       "spec": {
-        "rarity": 5,
+        "rarity": 3,
         "cardType": "Skill",
         "cost": 1,
         "effects": [

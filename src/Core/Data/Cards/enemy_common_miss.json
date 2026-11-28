@@ -1,0 +1,20 @@
+{
+  "id": "enemy_common_miss",
+  "name": "ミス",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy common (common: does nothing)",
+      "spec": {
+        "rarity": 1,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [],
+        "description": "何も起こらない。"
+      }
+    }
+  ]
+}

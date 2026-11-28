@@ -9,7 +9,7 @@
       "version": "v1",
       "label": "enemy iron_golem_a unique (from move plating)",
       "spec": {
-        "rarity": 5,
+        "rarity": 3,
         "cardType": "Skill",
         "cost": 1,
         "effects": [

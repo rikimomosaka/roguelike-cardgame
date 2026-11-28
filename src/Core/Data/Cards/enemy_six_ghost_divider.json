@@ -9,7 +9,7 @@
       "version": "v1",
       "label": "enemy six_ghost unique (from move divider)",
       "spec": {
-        "rarity": 5,
+        "rarity": 3,
         "cardType": "Attack",
         "cost": 1,
         "effects": [

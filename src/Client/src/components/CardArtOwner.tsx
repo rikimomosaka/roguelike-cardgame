@@ -26,13 +26,19 @@ export function isEnemyCardId(cardId: string | null | undefined): boolean {
   return typeof cardId === 'string' && cardId.startsWith('enemy_')
 }
 
-/** 背景の色: 攻撃 = 赤、防御（ブロックを得る）= 青、それ以外 = 紫。 */
+/**
+ * 背景の色: 攻撃だけ = 赤、防御（ブロックを得る）だけ = 青、
+ * 両方を含む・どちらも含まない（ミス・強化・弱体化など）= 紫。
+ */
 export type OwnerArtTone = 'attack' | 'defense' | 'other'
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function ownerArtTone(type: string, description: string | null | undefined): OwnerArtTone {
-  if (type === 'attack') return 'attack'
-  if ((description ?? '').includes('ブロック')) return 'defense'
+  const text = description ?? ''
+  const attacks = type === 'attack' || text.includes('アタック')
+  const defends = text.includes('ブロック')
+  if (attacks && !defends) return 'attack'
+  if (defends && !attacks) return 'defense'
   return 'other'
 }
 

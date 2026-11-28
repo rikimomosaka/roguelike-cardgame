@@ -44,6 +44,12 @@ public sealed record CardDefinition(
     IReadOnlyList<CardAbilityDefinition>? UpgradedAbilities = null)
 {
     /// <summary>通常プール外のカードでは空。JSON 欠落時も空として後方互換に扱う。</summary>
+    /// <summary>
+    /// 敵が使うカード（ID が enemy_ で始まる）。レア度はコモン（基本行動）・レア（汎用の特殊行動）・
+    /// エピック（固有行動）の表示に使うだけで、報酬・お店・図鑑のカード収集には含めない。
+    /// </summary>
+    public bool IsEnemyCard => Id.StartsWith("enemy_", System.StringComparison.Ordinal);
+
     public IReadOnlyList<RoguelikeCardGame.Core.Data.CardPoolKind> EffectivePoolKinds =>
         PoolKinds ?? System.Array.Empty<RoguelikeCardGame.Core.Data.CardPoolKind>();
 

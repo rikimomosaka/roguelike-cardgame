@@ -9,7 +9,7 @@
       "version": "v1",
       "label": "enemy common action (2 cost, 1.5x attack)",
       "spec": {
-        "rarity": 5,
+        "rarity": 2,
         "cardType": "Attack",
         "cost": 2,
         "effects": [

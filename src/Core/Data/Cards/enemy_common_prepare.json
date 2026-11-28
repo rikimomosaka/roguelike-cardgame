@@ -9,7 +9,7 @@
       "version": "v1",
       "label": "enemy common action: draw two to act twice",
       "spec": {
-        "rarity": 5,
+        "rarity": 2,
         "cardType": "Skill",
         "cost": 0,
         "usesPerTurn": 1,

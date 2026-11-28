@@ -9,7 +9,7 @@
       "version": "v1",
       "label": "enemy act3_brute unique (from move wall)",
       "spec": {
-        "rarity": 5,
+        "rarity": 3,
         "cardType": "Skill",
         "cost": 1,
         "effects": [

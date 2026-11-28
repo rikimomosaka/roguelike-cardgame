@@ -41,7 +41,14 @@ public class EmbeddedDataLoaderTests
         foreach (var enemyCard in catalog.Cards.Values.Where(card =>
                      card.Id.StartsWith("enemy_", System.StringComparison.Ordinal)))
         {
-            Assert.Equal(RoguelikeCardGame.Core.Cards.CardRarity.Token, enemyCard.Rarity);
+            // 敵カードのレア度は表示用（基本行動 = コモン、汎用の特殊行動 = レア、固有行動 = エピック）。
+            Assert.Contains(enemyCard.Rarity, new[]
+            {
+                RoguelikeCardGame.Core.Cards.CardRarity.Common,
+                RoguelikeCardGame.Core.Cards.CardRarity.Rare,
+                RoguelikeCardGame.Core.Cards.CardRarity.Epic,
+            });
+            Assert.True(enemyCard.IsEnemyCard);
             Assert.Empty(enemyCard.EffectivePoolKinds);
         }
 

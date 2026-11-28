@@ -140,7 +140,11 @@
 - 敵カード（ID が `enemy_` で始まる。`src/Core/Data/Cards/enemy_*.json`）は、クラス・ユニバーサル・呪いとは別の **敵専用の枠**（`cards/frames/affiliations/enemy.png`・`costs/enemy.png`）を使う。
   黒鉄の縁に暗い血の赤、赤く光るひび、赤黒い地、灰色がかった骨色の本文欄。ユニバーサル枠の色を塗り替えて作った（`art-work/frames/make-enemy-frame.mjs`、git 管理外）。
 - 敵カードで専用のイラストが無いもの（通常攻撃・通常防御などの共通カードと、敵ごとの専用カードの大半）は、**持ち主の敵のドット絵** を自動で表示する。
-  背景の色は、アタック = 赤、ブロックを得るカード = 青、それ以外 = 紫。体が絵の枠に収まるよう拡大する。
+  背景の色は、攻撃だけ = 赤、ブロックを得るだけ = 青、両方を含む・どちらも含まない（ミス・強化・弱体化など）= 紫。体が絵の枠に収まるよう拡大する。
+- 敵カードのレア度（表示用。報酬・お店・図鑑のカード収集には含めない。`CardDefinition.IsEnemyCard`）:
+  - コモン: 基本行動（通常攻撃 `enemy_common_attack`・通常防御 `enemy_common_defend`・ミス `enemy_common_miss`）
+  - レア: 汎用の特殊行動（強攻撃 `enemy_common_heavy_attack`・強防御 `enemy_common_heavy_defend`・臨戦態勢 `enemy_common_prepare` = 0 コスト 2 ドロー）
+  - エピック: その敵の固有行動（`enemy_<敵>_*`、`enemy_act*_*`）
 - 持ち主は表示している画面が渡す（`CardArtOwnerProvider`）: 戦闘中の敵の行動再生、図鑑（モンスター）の行動デッキ。持ち主が分からない画面では従来どおり仮表示（ILLUST）。
 - 敵カードに専用のイラスト（`art/source/cards/art/<id>.png`）を置けば、そちらが優先される。
 

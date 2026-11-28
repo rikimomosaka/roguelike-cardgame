@@ -9,7 +9,7 @@
       "version": "v1",
       "label": "enemy bandit unique (from move mug)",
       "spec": {
-        "rarity": 5,
+        "rarity": 3,
         "cardType": "Attack",
         "cost": 1,
         "effects": [

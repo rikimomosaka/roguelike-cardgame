@@ -9,7 +9,7 @@
       "version": "v1",
       "label": "enemy goblin_b unique (from move hide)",
       "spec": {
-        "rarity": 5,
+        "rarity": 3,
         "cardType": "Skill",
         "cost": 1,
         "effects": [

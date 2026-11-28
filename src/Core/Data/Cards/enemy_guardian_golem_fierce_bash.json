@@ -9,7 +9,7 @@
       "version": "v1",
       "label": "enemy guardian_golem unique (from move fierce_bash)",
       "spec": {
-        "rarity": 5,
+        "rarity": 3,
         "cardType": "Attack",
         "cost": 1,
         "effects": [

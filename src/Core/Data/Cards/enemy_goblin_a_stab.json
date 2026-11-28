@@ -9,7 +9,7 @@
       "version": "v1",
       "label": "enemy goblin_a unique (from move stab)",
       "spec": {
-        "rarity": 5,
+        "rarity": 3,
         "cardType": "Attack",
         "cost": 1,
         "effects": [

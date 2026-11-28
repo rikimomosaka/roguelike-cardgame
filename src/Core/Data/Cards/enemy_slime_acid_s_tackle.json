@@ -9,7 +9,7 @@
       "version": "v1",
       "label": "enemy slime_acid_s unique (from move tackle)",
       "spec": {
-        "rarity": 5,
+        "rarity": 3,
         "cardType": "Attack",
         "cost": 1,
         "effects": [

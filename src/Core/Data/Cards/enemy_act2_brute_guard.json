@@ -9,7 +9,7 @@
       "version": "v1",
       "label": "enemy act2_brute unique (from move guard)",
       "spec": {
-        "rarity": 5,
+        "rarity": 3,
         "cardType": "Skill",
         "cost": 1,
         "effects": [

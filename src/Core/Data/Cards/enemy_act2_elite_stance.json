@@ -9,7 +9,7 @@
       "version": "v1",
       "label": "enemy act2_elite unique (from move stance)",
       "spec": {
-        "rarity": 5,
+        "rarity": 3,
         "cardType": "Skill",
         "cost": 1,
         "effects": [

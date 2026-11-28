@@ -9,7 +9,7 @@
       "version": "v1",
       "label": "enemy iron_golem_b unique (from move brace)",
       "spec": {
-        "rarity": 5,
+        "rarity": 3,
         "cardType": "Skill",
         "cost": 1,
         "effects": [

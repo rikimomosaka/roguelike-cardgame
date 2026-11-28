@@ -9,7 +9,7 @@
       "version": "v1",
       "label": "enemy common action",
       "spec": {
-        "rarity": 5,
+        "rarity": 1,
         "cardType": "Skill",
         "cost": 1,
         "effects": [

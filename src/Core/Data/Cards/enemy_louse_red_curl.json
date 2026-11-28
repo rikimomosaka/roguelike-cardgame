@@ -9,7 +9,7 @@
       "version": "v1",
       "label": "enemy louse_red unique (from move curl)",
       "spec": {
-        "rarity": 5,
+        "rarity": 3,
         "cardType": "Skill",
         "cost": 1,
         "effects": [

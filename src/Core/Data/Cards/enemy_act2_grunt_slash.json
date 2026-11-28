@@ -9,7 +9,7 @@
       "version": "v1",
       "label": "enemy act2_grunt unique (from move slash)",
       "spec": {
-        "rarity": 5,
+        "rarity": 3,
         "cardType": "Attack",
         "cost": 1,
         "effects": [

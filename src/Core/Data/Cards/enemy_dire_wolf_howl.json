@@ -9,7 +9,7 @@
       "version": "v1",
       "label": "enemy dire_wolf unique (from move howl)",
       "spec": {
-        "rarity": 5,
+        "rarity": 3,
         "cardType": "Skill",
         "cost": 1,
         "effects": [

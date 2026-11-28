@@ -9,7 +9,7 @@
       "version": "v1",
       "label": "enemy big_slime unique (from move body_slam)",
       "spec": {
-        "rarity": 5,
+        "rarity": 3,
         "cardType": "Attack",
         "cost": 1,
         "effects": [

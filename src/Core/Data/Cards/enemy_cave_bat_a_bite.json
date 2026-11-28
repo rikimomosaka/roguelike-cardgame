@@ -9,7 +9,7 @@
       "version": "v1",
       "label": "enemy cave_bat_a unique (from move bite)",
       "spec": {
-        "rarity": 5,
+        "rarity": 3,
         "cardType": "Attack",
         "cost": 1,
         "effects": [

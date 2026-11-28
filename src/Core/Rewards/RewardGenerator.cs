@@ -199,6 +199,7 @@ public static class RewardGenerator
 
         var available = data.Cards.Values
             .Where(c => c.Rarity is CardRarity.Common or CardRarity.Rare or CardRarity.Epic)
+            .Where(c => !c.IsEnemyCard)
             .Where(c => isEligible(c, character))
             .Where(c => !exclusions.Contains(c.Id))
             .OrderBy(c => c.Id, StringComparer.Ordinal)

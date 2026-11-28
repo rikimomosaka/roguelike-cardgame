@@ -9,7 +9,7 @@
       "version": "v1",
       "label": "enemy dark_cultist unique (from move dark_strike)",
       "spec": {
-        "rarity": 5,
+        "rarity": 3,
         "cardType": "Attack",
         "cost": 1,
         "effects": [

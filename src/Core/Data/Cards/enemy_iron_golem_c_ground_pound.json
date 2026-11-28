@@ -9,7 +9,7 @@
       "version": "v1",
       "label": "enemy iron_golem_c unique (from move ground_pound)",
       "spec": {
-        "rarity": 5,
+        "rarity": 3,
         "cardType": "Attack",
         "cost": 1,
         "effects": [

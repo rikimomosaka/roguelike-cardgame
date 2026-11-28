@@ -1,0 +1,27 @@
+{
+  "id": "enemy_common_heavy_defend",
+  "name": "強防御",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy common (rare: generic special action)",
+      "spec": {
+        "rarity": 2,
+        "cardType": "Skill",
+        "cost": 2,
+        "effects": [
+          {
+            "action": "block",
+            "scope": "self",
+            "amount": 0,
+            "amountSource": "selfDefense",
+            "amountScalePercent": 150
+          }
+        ]
+      }
+    }
+  ]
+}

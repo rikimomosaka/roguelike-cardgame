@@ -30,5 +30,9 @@ describe('enemy cards', () => {
     )
     expect(container.querySelector('.card-owner-art')).toBeNull()
     expect(ownerArtTone('skill', '筋力を得る')).toBe('other')
+    expect(ownerArtTone('skill', '何も起こらない。')).toBe('other')
+    // 攻撃とブロックの両方を含むカードは紫。
+    expect(ownerArtTone('attack', '敵全体に[N:7]アタック。自身に[N:5]ブロック。')).toBe('other')
+    expect(ownerArtTone('skill', '自身に[N:5]ブロック。')).toBe('defense')
   })
 })
