@@ -6,7 +6,7 @@
 //   node tools/art-pipeline/pixellab.mjs balance
 //   node tools/art-pipeline/pixellab.mjs image --desc "..." --w 128 --h 160 --out art-work/x.png [--seed 1] [--engine pixflux|pixen|bitforge] [--no-bg] [--view side] [--direction east]
 //   node tools/art-pipeline/pixellab.mjs animate --first art-work/base.png --action "..." --frames 6 --out art-work/attack_a [--last art-work/base.png] [--seed 1]
-//   node tools/art-pipeline/pixellab.mjs gen2 --desc "..." --w 80 --h 80 --ref "a.png::用途;;b.png::用途" --style "s.png::用途" [--colors 24] --out art-work/x.png
+//   node tools/art-pipeline/pixellab.mjs gen2 --desc "..." --w 80 --h 80 --ref "a.png::用途;;b.png::用途" --style "s.png::用途" [--colors 24] [--bg] --out art-work/x.png
 //   node tools/art-pipeline/pixellab.mjs edit --image art-work/base.png --desc "eyes closed" --out art-work/blink.png
 import fs from 'node:fs'
 import path from 'node:path'
@@ -142,7 +142,8 @@ const commands = {
     const body = {
       description: a.desc,
       image_size: { width: Number(a.w), height: Number(a.h) },
-      no_background: true,
+      // --bg を付けると背景も描く（背景画など）。既定は透明（キャラ・物）。
+      no_background: !a.bg,
       ...(a.ref ? { reference_images: String(a.ref).split(';;').map(ref) } : {}),
       ...(a.style ? { style_image: ref(a.style) } : {}),
       ...(a.colors ? { target_palette: { max_colors: Number(a.colors) } } : {}),

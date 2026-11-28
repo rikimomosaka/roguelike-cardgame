@@ -35,6 +35,21 @@
 第 1 幕（森）・第 2 幕（洞窟）・第 3 幕（地獄）。本文は会話ログのとおり。要点:
 場面（道と両脇の木・岩）、雰囲気、色（コントラスト低め）、【画風】、構図（16:9、中央下から奥へ道）、人物・文字なし。
 
+## PixelLab で直接作る（2026-11-28 から、イベント背景はこれが標準）
+
+Gemini・ChatGPT の「ドット絵風の画像」は格子がそろわず、縮めるとざらつく。描写もチープになりやすかった。
+PixelLab の generate-image-v2 で、最初から 480×320 のドット絵として作ると、格子がそろい描き込みも豊かになった（泉・図書館・商人で採用）。
+
+```
+node tools/art-pipeline/pixellab.mjs gen2 --bg --w 480 --h 320 --colors 64 --seed 1   --style "src/Client/public/assets/backgrounds/battle/battle_forest.png::pixel art style, palette mood, level of detail and lighting to match"   --desc "（英語の指示文）" --out art-work/events/pl/<id>_s1.png
+```
+
+- `--bg` を必ず付ける（付けないと空や背景が透明に抜ける）。1 枚 25 回分。
+- 指示文は英語。中身は下の日本語版と同じ（場面・古さの描写・光源 2 つ・非対称の構図・手前の暗い物・禁止事項）。
+  最後に「Full-bleed scene to all four edges, nothing transparent. No text, no letters, no UI, no buttons, no frame, no border, no vignette.」を付ける。
+- 出来た画像は `art/source/backgrounds/events/<id>.png` にそのまま置き、横の `<id>.json` に `"mode": "native"` を書く（縮め直さない）。
+- 戦闘・マップ（640×360）も同じ方法で作れる（generate-image-v2 は横 792・縦 688 まで）。
+
 ## Gemini で作る時のこと（2026-11-28）
 
 - 画面下の比率は 3:2 が無ければ 16:9 で作る（こちらで上下を切って 3:2 にする。主役が中央にあれば問題ない）。

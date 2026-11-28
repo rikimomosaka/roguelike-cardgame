@@ -2,7 +2,8 @@
   display: grid;
   grid-template-columns: 240px 1fr;
   gap: 16px;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   padding: 16px;
   box-sizing: border-box;
   background: #120e0b;
@@ -26,7 +27,9 @@
 .scene-lab__note { margin-top: 16px; font-size: 12px; color: #a8987e; line-height: 1.5; }
 .scene-lab__note code { font-size: 11px; word-break: break-all; }
 .scene-lab__back { margin-top: 12px; }
-.scene-lab__main { min-width: 0; }
+/* 一覧と表示はそれぞれでスクロールする（ページ全体は動かさない）。 */
+.scene-lab__list,
+.scene-lab__main { min-width: 0; overflow: auto; }
 .scene-lab__controls { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 10px; }
 .scene-lab__controls label { display: flex; align-items: center; gap: 6px; }
 .scene-lab__frame {

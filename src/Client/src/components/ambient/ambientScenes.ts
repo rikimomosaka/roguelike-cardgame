@@ -189,15 +189,19 @@ export const AMBIENT_SCENES: Readonly<Record<string, AmbientScene>> = {
   // ---------------- イベント（480×320） ----------------
   event_blessing_fountain: {
     src: EVENT('blessing_fountain'), width: 480, height: 320,
+    // 2026-11-28 描き直し（PixelLab）。上の切れ間（x 290、y 0）から左下の泉へ差す木漏れ日。
     rays: [
-      { x: 248, y: -10, w: 50, h: 200, angle: -10, color: 'rgba(236, 255, 214, 1)', min: 0.08, max: 0.21, period: 11 },
-      { x: 212, y: -10, w: 30, h: 170, angle: -18, color: 'rgba(236, 255, 214, 1)', min: 0.06, max: 0.16, period: 9, delay: -4 },
+      { x: 292, y: 0, w: 74, h: 200, angle: 32, color: 'rgba(226, 246, 196, 1)', min: 0.06, max: 0.18, period: 11 },
+      { x: 318, y: 0, w: 40, h: 180, angle: 36, color: 'rgba(226, 246, 196, 1)', min: 0.04, max: 0.13, period: 9, delay: -4 },
     ],
-    glows: [{ x: 240, y: 215, r: 120, color: '#5fd4ff', min: 0.06, max: 0.13, period: 7, style: 'pulse' }],
+    glows: [
+      { x: 182, y: 183, r: 62, ry: 18, color: '#7fe8ff', min: 0.08, max: 0.2, period: 6, style: 'pulse' },
+      { x: 172, y: 140, r: 8, ry: 40, color: '#b6f4ff', min: 0.06, max: 0.16, period: 2.4, style: 'pulse' },
+    ],
     particles: [
-      { kind: 'sparkle', count: 10, area: { x: 115, y: 190, w: 260, h: 55 }, colors: ['#d4fdff'], duration: 4.5, opacity: 0.8 },
-      { kind: 'mote', count: 10, area: { x: 180, y: 20, w: 140, h: 160 }, colors: ['#f5ffd2'], duration: 11, opacity: 0.68 },
-      { kind: 'sparkle', count: 6, area: { x: 0, y: 170, w: 60, h: 150 }, colors: ['#8ec8ff'], duration: 6, opacity: 0.6 },
+      { kind: 'mote', count: 16, area: { x: 170, y: 30, w: 140, h: 140 }, colors: ['#f5ffd2', '#e2f5b6'], duration: 11, opacity: 0.7 },
+      { kind: 'sparkle', count: 8, area: { x: 125, y: 172, w: 115, h: 22 }, colors: ['#d4fdff'], duration: 4.5, opacity: 0.8 },
+      { kind: 'sparkle', count: 5, area: { x: 70, y: 265, w: 330, h: 50 }, colors: ['#8ec8ff'], duration: 6, opacity: 0.6 },
     ],
   },
   event_forgotten_forge: {
@@ -241,17 +245,16 @@ export const AMBIENT_SCENES: Readonly<Record<string, AmbientScene>> = {
   },
   event_old_library: {
     src: EVENT('old_library'), width: 480, height: 320,
-    rays: [{ x: 245, y: 40, w: 54, h: 200, angle: 0, color: 'rgba(170, 214, 255, 1)', min: 0.08, max: 0.19, period: 12 }],
+    // 2026-11-28 描き直し（PixelLab）。窓（x 300、y 30〜160）から左下の床の光だまりへ月明かり。机のろうそく。
+    rays: [{ x: 292, y: 100, w: 70, h: 150, angle: 33, color: 'rgba(170, 214, 255, 1)', min: 0.06, max: 0.18, period: 12 }],
     glows: [
-      { x: 100, y: 80, r: 16, color: '#ffc66a', min: 0.18, max: 0.32, period: 2.2 },
-      { x: 385, y: 80, r: 16, color: '#ffc66a', min: 0.18, max: 0.32, period: 2.6, delay: -1 },
-      { x: 40, y: 165, r: 16, color: '#ffc66a', min: 0.18, max: 0.32, period: 2.4, delay: -0.5 },
-      { x: 195, y: 185, r: 14, color: '#ffc66a', min: 0.16, max: 0.3, period: 2.9, delay: -1.6 },
-      { x: 415, y: 175, r: 16, color: '#ffc66a', min: 0.18, max: 0.32, period: 2.1, delay: -0.8 },
-      { x: 193, y: 228, r: 14, color: '#ffc66a', min: 0.16, max: 0.3, period: 2.7, delay: -1.2 },
+      { x: 300, y: 85, r: 34, ry: 70, color: '#a8d4ff', min: 0.06, max: 0.16, period: 12, style: 'pulse' },
+      { x: 198, y: 232, r: 58, ry: 18, color: '#a8d4ff', min: 0.06, max: 0.16, period: 12, style: 'pulse' },
+      { x: 362, y: 177, r: 24, color: '#ffc66a', min: 0.18, max: 0.32, period: 2.3 },
+      { x: 362, y: 190, r: 46, ry: 22, color: '#ffb44a', min: 0.06, max: 0.14, period: 2.9, delay: -0.8 },
     ],
     particles: [
-      { kind: 'mote', count: 18, area: { x: 190, y: 40, w: 110, h: 200 }, colors: ['#ffeab4', '#d6ecff'], duration: 13, opacity: 0.74 },
+      { kind: 'mote', count: 20, area: { x: 200, y: 100, w: 100, h: 140 }, colors: ['#dcefff', '#c4e0ff'], duration: 13, opacity: 0.7 },
     ],
   },
   event_sealed_vault: {
@@ -264,18 +267,18 @@ export const AMBIENT_SCENES: Readonly<Record<string, AmbientScene>> = {
   },
   event_shady_merchant: {
     src: EVENT('shady_merchant'), width: 480, height: 320,
+    // 2026-11-28 描き直し（PixelLab）。ランタン 3 つと、台の上の青い宝玉・小瓶。
     glows: [
-      { x: 37, y: 128, r: 28, color: '#ffb44a', min: 0.16, max: 0.3, period: 2.5 },
-      { x: 262, y: 52, r: 28, color: '#ffb44a', min: 0.16, max: 0.3, period: 2.9, delay: -1 },
-      { x: 425, y: 122, r: 28, color: '#ffb44a', min: 0.16, max: 0.3, period: 2.2, delay: -0.4 },
-      { x: 130, y: 105, r: 14, color: '#ffc66a', min: 0.16, max: 0.28, period: 2.4, delay: -1.3 },
-      { x: 173, y: 120, r: 16, color: '#6fb8ff', min: 0.14, max: 0.26, period: 4.5, style: 'pulse' },
-      { x: 350, y: 175, r: 20, color: '#b46cff', min: 0.14, max: 0.26, period: 5, delay: -2, style: 'pulse' },
+      { x: 215, y: 128, r: 26, color: '#ffb44a', min: 0.16, max: 0.3, period: 2.5 },
+      { x: 362, y: 115, r: 24, color: '#ffb44a', min: 0.16, max: 0.3, period: 2.9, delay: -1 },
+      { x: 383, y: 135, r: 22, color: '#ffb44a', min: 0.16, max: 0.3, period: 2.2, delay: -0.4 },
+      { x: 287, y: 182, r: 22, color: '#6f9cff', min: 0.12, max: 0.28, period: 5, style: 'pulse' },
+      { x: 255, y: 185, r: 12, color: '#d46cff', min: 0.08, max: 0.2, period: 4.2, delay: -2, style: 'pulse' },
+      { x: 187, y: 194, r: 10, color: '#8f7cff', min: 0.08, max: 0.2, period: 4.8, delay: -1, style: 'pulse' },
     ],
     particles: [
-      { kind: 'sparkle', count: 3, area: { x: 163, y: 110, w: 20, h: 20 }, colors: ['#bfe2ff'], duration: 4, opacity: 0.8 },
-      { kind: 'sparkle', count: 3, area: { x: 340, y: 165, w: 20, h: 20 }, colors: ['#e2bfff'], duration: 4.5, opacity: 0.8 },
-      { kind: 'mote', count: 8, area: { x: 60, y: 40, w: 360, h: 200 }, colors: ['#ffe2a8'], duration: 13, opacity: 0.47 },
+      { kind: 'sparkle', count: 4, area: { x: 277, y: 170, w: 20, h: 20 }, colors: ['#bfd8ff'], duration: 4, opacity: 0.8 },
+      { kind: 'mote', count: 10, area: { x: 200, y: 90, w: 200, h: 120 }, colors: ['#ffe2a8'], duration: 13, opacity: 0.45 },
     ],
   },
 }
