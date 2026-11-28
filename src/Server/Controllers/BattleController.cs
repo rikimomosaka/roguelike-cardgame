@@ -998,6 +998,14 @@ public sealed class BattleController : ControllerBase
                     stateBeforeCpuPlanning, _data),
             },
         };
+        // 選択待ちだったターン処理がこのコマンドで再開して次のターンに進んだ時は、
+        // その途中で行われた敵の計画も記録する（READY の時と同じく、味方CPU計画より先）。
+        if (commandState.Turn > before.Turn)
+        {
+            drafts.AddRange(BattleActionJournalComposer.EnemyPlanning(
+                stateBeforeCpuPlanning, _data, $"{commandId}:next-turn",
+                minRevision: drafts[^1].RevisionAfter));
+        }
         drafts.AddRange(BattleActionJournalComposer.CpuPlanning(
             stateBeforeCpuPlanning, planning, _data, commandId));
         var journal = session.ActionJournal.AppendSuccessfulCommands(drafts);
@@ -1085,8 +1093,10 @@ public sealed class BattleController : ControllerBase
         if (afterResolution.Turn > before.Turn)
         {
             // 次ターン開始時に敵が計画したカード使用（味方CPU計画より先）。
+            // ターン開始の途中で選択待ちになった時は計画がまだ無い（前のターンの計画は記録しない）。
             journalDrafts.AddRange(BattleActionJournalComposer.EnemyPlanning(
-                afterResolution, _data, $"{commandId}:next-turn"));
+                afterResolution, _data, $"{commandId}:next-turn",
+                minRevision: journalDrafts.Count > 0 ? journalDrafts[^1].RevisionAfter : 0));
         }
 
         if (transition.NextTurnCpuPlanning is { } nextTurnPlanning)

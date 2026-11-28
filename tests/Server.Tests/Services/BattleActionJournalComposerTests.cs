@@ -629,6 +629,59 @@ public sealed class BattleActionJournalComposerTests
             effect => effect.Kind == BattleEventKind.ActorDeath.ToString());
     }
 
+    /// <summary>敵の計画 1 件を持つ state（計画した時点の state は turn / revision を指定）。</summary>
+    private static BattleState WithEnemyPlan(int planTurn, long planRevision, int currentTurn, long currentRevision)
+    {
+        var planBefore = State(
+            [Actor("hero-1", ActorSide.Ally, 0)],
+            [Actor("enemy-1", ActorSide.Enemy, 0)],
+            [Participant("p1", "hero-1", handCard: null, targetEnemyIndex: 0)])
+            with { Turn = planTurn, ActionRevision = planRevision };
+        var action = new CpuCommittedAction(
+            "enemy:enemy-1", "enemy-1", "enemy-card", "strike", 0,
+            null, 0, "enemy plan",
+            [new BattleEvent(BattleEventKind.PlayCard, 0, "enemy-1", CardId: "strike", ComboCountAfter: 1)])
+        {
+            Turn = planTurn,
+            CardSnapshot = new BattleCardInstance("enemy-card", "strike", false, null),
+            RevisionBefore = planRevision,
+            RevisionAfter = planRevision,
+            StateBefore = planBefore,
+            StateAfter = planBefore,
+        };
+        return planBefore with
+        {
+            Turn = currentTurn,
+            ActionRevision = currentRevision,
+            EnemyPlanningActions = [action],
+        };
+    }
+
+    [Fact]
+    public void EnemyPlanning_skips_a_previous_turn_plan()
+    {
+        // ターン開始の途中で選択待ちになり、まだ今のターンの計画が無い（前のターンの計画が残っている）。
+        var state = WithEnemyPlan(planTurn: 8, planRevision: 54, currentTurn: 9, currentRevision: 55);
+
+        Assert.Empty(BattleActionJournalComposer.EnemyPlanning(state, Catalog, "ready", minRevision: 55));
+    }
+
+    [Fact]
+    public void EnemyPlanning_never_records_an_older_revision_than_the_previous_entry()
+    {
+        // 選択待ちから再開したコマンドの途中（版番号を進める前）で計画された。
+        var state = WithEnemyPlan(planTurn: 9, planRevision: 54, currentTurn: 9, currentRevision: 55);
+
+        var drafts = BattleActionJournalComposer.EnemyPlanning(state, Catalog, "choice", minRevision: 55);
+
+        Assert.NotEmpty(drafts);
+        Assert.All(drafts, draft => Assert.True(draft.RevisionBefore >= 55 && draft.RevisionAfter >= draft.RevisionBefore));
+        var journal = BattleActionJournal.Empty.AppendSuccessfulCommand(new BattleActionDraft(
+            9, "choice", "resolveCardChoice", "p1", "hero-1", 54, 55));
+        journal = journal.AppendSuccessfulCommands(drafts);
+        Assert.Equal(1 + drafts.Count, journal.Entries.Length);
+    }
+
     private static BattleState State(
         ImmutableArray<CombatActor> allies,
         ImmutableArray<CombatActor> enemies,

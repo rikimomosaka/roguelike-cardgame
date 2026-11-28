@@ -252,15 +252,24 @@ internal static class BattleActionJournalComposer
     /// ターン開始時に敵が計画したカード使用を、味方CPUと同じ形式の行動記録にする。
     /// 敵の予約は予測のみなので、記録の「予定」は戦場へまだ反映されていない。
     /// </summary>
+    /// <param name="minRevision">
+    /// この記録の直前の記録の RevisionAfter。敵の計画はコマンドの途中（版番号を進める前）で行われることがあるので、
+    /// 記録の版番号がこれより古くならないようにそろえる。
+    /// </param>
     public static IReadOnlyList<BattleActionDraft> EnemyPlanning(
         BattleState stateAfterEnemyPlanning,
         DataCatalog catalog,
-        string commandPrefix)
+        string commandPrefix,
+        long minRevision = 0)
     {
         var actions = stateAfterEnemyPlanning.EnemyPlanningActions;
         if (actions.IsDefaultOrEmpty)
             return Array.Empty<BattleActionDraft>();
         var before = actions[0].StateBefore ?? stateAfterEnemyPlanning;
+        // 計画は毎ターンの開始時に作り直される。今のターンの計画でなければ（ターン開始の途中で
+        // 選択待ちになり、まだ計画していない時など）、前のターンの記録済みの計画なので記録しない。
+        if (before.Turn != stateAfterEnemyPlanning.Turn)
+            return Array.Empty<BattleActionDraft>();
         var planning = new BattleCpuPlanningResult(
             stateAfterEnemyPlanning,
             actions,
@@ -269,7 +278,17 @@ internal static class BattleActionJournalComposer
         {
             StateBeforePlanning = before,
         };
-        var drafts = CpuPlanning(before, planning, catalog, $"{commandPrefix}:enemy").ToList();
+        var drafts = CpuPlanning(before, planning, catalog, $"{commandPrefix}:enemy")
+            .Select(draft =>
+            {
+                long revisionBefore = Math.Max(draft.RevisionBefore, minRevision);
+                return draft with
+                {
+                    RevisionBefore = revisionBefore,
+                    RevisionAfter = Math.Max(draft.RevisionAfter, revisionBefore),
+                };
+            })
+            .ToList();
 
         // 敵の計画はターン開始時に完結しているため、各敵の最後の記録で
         // 再生フィードを完了（READY + COMPLETE）にする。これが無いと
