@@ -81,7 +81,7 @@ public enum BattleEventKind
     /// </summary>
     ActionFailed = 41,
     /// <summary>
-    /// 初期行動のカードを使った（CasterInstanceId = 使ったキャラ、CardId = カード、ReenactedCard = 表示用のカードの写し）。
+    /// 先制行動のカードを使った（CasterInstanceId = 使ったキャラ、CardId = カード、ReenactedCard = 表示用のカードの写し）。
     /// この後にそのカードの効果のイベントが続く。画面では中央にカードを出す。
     /// </summary>
     OpeningAction = 42,

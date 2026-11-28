@@ -23,7 +23,7 @@ public sealed record CharacterDefinition(
     IReadOnlyList<string>? OpeningActions = null)
 {
     /// <summary>
-    /// 初期行動（戦闘開始時、敵の初期行動の後・プレイヤーの操作の前に使うカード ID。記載順）。
+    /// 先制行動（戦闘開始時、敵の先制行動の後・プレイヤーの操作の前に使うカード ID。記載順）。
     /// 今はどのキャラにも設定していないが、設定すれば動く。
     /// </summary>
     public IReadOnlyList<string> EffectiveOpeningActions =>

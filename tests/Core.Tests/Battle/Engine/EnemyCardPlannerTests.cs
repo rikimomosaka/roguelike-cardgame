@@ -408,7 +408,7 @@ public class EnemyCardPlannerTests
     [Fact]
     public void Opening_actions_can_attack_and_never_enter_any_pile()
     {
-        // 初期行動は通常の敵の行動と同じ処理で実行するので、攻撃も使える（2026-11-28）。
+        // 先制行動は通常の敵の行動と同じ処理で実行するので、攻撃も使える（2026-11-28）。
         var enemy = CardGoblin() with { OpeningActions = new[] { "e_strike", "e_open_ward" } };
         var catalog = StatCatalog(enemy);
 
@@ -420,7 +420,7 @@ public class EnemyCardPlannerTests
         // 実行後も、1 ターン目の行動予約は別に作られる。
         Assert.NotEmpty(started.Enemies[0].PlannedEffects);
         Assert.Contains(events, e => e.Kind == BattleEventKind.EnemyCardAction && e.CardId == "e_strike");
-        // 画面で中央にカードを出すための、写し付きの初期行動イベント。
+        // 画面で中央にカードを出すための、写し付きの先制行動イベント。
         Assert.Equal(new[] { "e_strike", "e_open_ward" }, events
             .Where(e => e.Kind == BattleEventKind.OpeningAction && e.ReenactedCard is not null)
             .Select(e => e.CardId));
@@ -433,7 +433,7 @@ public class EnemyCardPlannerTests
     [Fact]
     public void Start_reports_the_state_right_before_opening_actions()
     {
-        // 画面は初期行動の直前の状態を先に出し、演出の後で最終状態に切り替える（バフが演出より先に見えないように）。
+        // 画面は先制行動の直前の状態を先に出し、演出の後で最終状態に切り替える（バフが演出より先に見えないように）。
         var enemy = CardGoblin() with { OpeningActions = new[] { "e_open_ward" } };
         var catalog = StatCatalog(enemy);
 

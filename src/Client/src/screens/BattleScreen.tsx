@@ -2841,7 +2841,7 @@ export function BattleScreen({
   const playSteps = useCallback(
     async (resp: BattleActionResponseDto, options: PlayStepsOptions = {}) => {
       const presentationOnly = options.presentationOnly === true
-      // 戦闘開始（state === null）で初期行動がある時は、その直前の状態を基準に演出する。
+      // 戦闘開始（state === null）で先制行動がある時は、その直前の状態を基準に演出する。
       const openingBaseline = !presentationOnly && state === null ? resp.initialState ?? null : null
       const baselineState = options.baselineState ?? state ?? openingBaseline
       const playbackSpeed = Math.max(0.25, options.speed ?? 1)
@@ -2894,7 +2894,7 @@ export function BattleScreen({
       // 初回は最初に resp.state を設定して battle UI を出してから演出に入る。
       // 初回 response (battle start) に DealDamage は含まれないため、
       // setState(resp.state) しても progressive HP は問題にならない。
-      // 初期行動がある時は、その直前の状態を出しておき、初期行動の演出の後（最後）で最終状態に切り替える。
+      // 先制行動がある時は、その直前の状態を出しておき、先制行動の演出の後（最後）で最終状態に切り替える。
       if (!presentationOnly && state === null) {
         setState(openingBaseline ?? resp.state)
       }
@@ -3079,7 +3079,7 @@ export function BattleScreen({
 
       // Why: 「敵のターン」 banner は 1 turn につき 1 回 (味方攻撃終了 → 初の
       // 敵 caster AttackFire の前) で出す。表示済フラグでガードする。
-      // 戦闘開始時の敵の初期行動（BattleStart と同じ応答で届く）は、「敵のターン」の帯を出さずに見せる。
+      // 戦闘開始時の敵の先制行動（BattleStart と同じ応答で届く）は、「敵のターン」の帯を出さずに見せる。
       let shownEnemyTurnBanner = steps.some(step => step.event.kind === 'BattleStart')
 
       let i = 0
@@ -3441,7 +3441,7 @@ export function BattleScreen({
           continue
         }
 
-        // 再演・初期行動: カードを中央にポップさせてから効果へ進む。
+        // 再演・先制行動: カードを中央にポップさせてから効果へ進む。
         if (ev.kind === 'ReenactCardEffects' || ev.kind === 'OpeningAction') {
           if (ev.card) {
             const reenactId = [
@@ -3664,7 +3664,7 @@ export function BattleScreen({
 
         // 敵が予約したカードの実行開始: カード名を頭上に札で見せ、読める間を取る。
         if (ev.kind === 'EnemyCardAction' && ev.casterInstanceId) {
-          // カタログの取得前（戦闘開始時の初期行動など）でも ID ではなく名前を出す。
+          // カタログの取得前（戦闘開始時の先制行動など）でも ID ではなく名前を出す。
           const cardName = ev.cardId ? await resolveCardName(ev.cardId) : '行動'
           const readMs = Math.round(ENEMY_CARD_ACTION_READ_MS * motionScale / playbackSpeed)
           showActionLabel(ev.casterInstanceId, cardName, Math.max(readMs + 900, 1200))

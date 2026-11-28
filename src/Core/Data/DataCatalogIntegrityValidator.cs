@@ -76,7 +76,7 @@ public static class DataCatalogIntegrityValidator
             Fail(location, "attack and defense must be non-negative.");
         foreach (var openingCardId in enemy.EffectiveOpeningActions)
         {
-            // 初期行動はどの効果のカードでも使える（2026-11-28 から攻撃も可）。
+            // 先制行動はどの効果のカードでも使える（2026-11-28 から攻撃も可）。
             if (!catalog.Cards.ContainsKey(openingCardId))
                 Fail(location, $"openingActions references unknown card '{openingCardId}'.");
         }

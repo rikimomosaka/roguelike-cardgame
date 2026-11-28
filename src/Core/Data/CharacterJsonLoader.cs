@@ -48,7 +48,7 @@ public static class CharacterJsonLoader
             // 基礎攻撃力・守備力（筋力・敏捷とは別の能力値）。
             int attack = ParseOptionalIntInRange(r, "attack", 0, 0, int.MaxValue, id);
             int defense = ParseOptionalIntInRange(r, "defense", 0, 0, int.MaxValue, id);
-            // 初期行動: "openingActions": ["cardId", ...]（記載順に使う）。
+            // 先制行動: "openingActions": ["cardId", ...]（記載順に使う）。
             List<string>? openingActions = null;
             if (r.TryGetProperty("openingActions", out var openingEl) && openingEl.ValueKind == JsonValueKind.Array)
             {

@@ -18,10 +18,10 @@ export const KEYWORD_DEFS: Record<string, { name: string; desc: string }> = {
     name: '刻印',
     desc: '【 】内の能力をカードに刻む。',
   },
-  // 初期行動として使ったカードの説明の一行目に付く（サーバーが付ける）。
+  // 先制行動として使ったカードの説明の一行目に付く（サーバーが付ける）。
   opening: {
-    name: '初期行動',
-    desc: '戦闘開始時、行動を始める前に使う。デッキの外から使い、使った後もどの山にも入らない。',
+    name: '先制行動',
+    desc: '山札に含まれず、バトル開始時にコストを支払わず自動的に実行される。使用後は消滅する。',
   },
   invert: {
     name: '反転',
@@ -227,6 +227,9 @@ export function extractCardDescRefs(
     if ('desc' in ref) pending.push(ref.desc)
   }
   }
+  // 先制行動は、そのカードがどう使われるかの説明なので、補足の一番上に出す。
+  const openingIndex = refs.findIndex(ref => ref.kind === 'keyword' && ref.id === 'opening')
+  if (openingIndex > 0) refs.unshift(...refs.splice(openingIndex, 1))
   return refs
 }
 

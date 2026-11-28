@@ -310,12 +310,12 @@ describe('AchievementsScreen', () => {
     expect(cell).toHaveTextContent('生息地：Act 1')
     expect(cell).toHaveTextContent('ポジション：通常（弱）')
     expect(cell).toHaveTextContent('顎で噛みつく虫。')
-    expect(cell).toHaveTextContent('初期行動（先制行動）')
+    expect(cell).toHaveTextContent('先制行動')
 
     fireEvent.click(screen.getByRole('button', { name: 'アギトムシの行動デッキ（2枚）を表示' }))
     expect(screen.getByRole('dialog', { name: 'アギトムシの行動デッキ (2枚)' })).toBeInTheDocument()
-    // 初期行動なしの時は、カードを確認するボタンを出さない。
-    expect(screen.queryByRole('button', { name: /初期行動/ })).not.toBeInTheDocument()
+    // 先制行動なしの時は、カードを確認するボタンを出さない。
+    expect(screen.queryByRole('button', { name: /先制行動/ })).not.toBeInTheDocument()
   })
 
   it('opens opening actions as a card list when the monster has them', async () => {
@@ -333,8 +333,8 @@ describe('AchievementsScreen', () => {
       </TooltipHost>,
     )
     fireEvent.click(await screen.findByRole('tab', { name: /^モンスター/ }))
-    fireEvent.click(await screen.findByRole('button', { name: 'アギトムシの初期行動（1枚）を表示' }))
-    expect(screen.getByRole('dialog', { name: 'アギトムシの初期行動 (1枚)' })).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: 'アギトムシの先制行動（1枚）を表示' }))
+    expect(screen.getByRole('dialog', { name: 'アギトムシの先制行動 (1枚)' })).toBeInTheDocument()
   })
 
   it('does not expose an undiscovered enemy name or image', async () => {

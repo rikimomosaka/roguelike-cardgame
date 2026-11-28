@@ -395,3 +395,12 @@ describe('CardDesc', () => {
     expect(container.querySelector('.card-desc-num')?.textContent).toBe('9')
   })
 })
+
+describe('先制行動のキーワード', () => {
+  it('補足の一番上に出し、説明は先制行動の定義どおり', () => {
+    const refs = extractCardDescRefs('[K:wild]自身に[S:strength][N:2]を付与。\n[K:opening]')
+    expect(refs[0]).toMatchObject({ kind: 'keyword', id: 'opening', name: '先制行動' })
+    expect(KEYWORD_DEFS.opening.desc)
+      .toBe('山札に含まれず、バトル開始時にコストを支払わず自動的に実行される。使用後は消滅する。')
+  })
+})

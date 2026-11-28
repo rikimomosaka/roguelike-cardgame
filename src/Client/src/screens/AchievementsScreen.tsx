@@ -8,7 +8,7 @@ import { ActorStats, formatActorStats } from '../components/ActorStats'
 import { CardDesc, type CardDescTerm } from '../components/CardDesc'
 import { DeckListModal } from '../components/DeckListModal'
 import { cardDisplay } from '../components/cardDisplay'
-import type { CardPoolClass, CharacterClass } from '../api/catalog'
+import type { CardCatalog, CardPoolClass, CharacterClass } from '../api/catalog'
 import { optionalRarityCodeFromNumber, rarityCodeFromName, rarityCodeFromNumber } from '../components/rarity'
 import { useTooltipTarget } from '../components/Tooltip'
 import type { TooltipContent } from '../components/Tooltip'
@@ -630,6 +630,18 @@ function DeckHeading({ label, ariaLabel, disabled, onOpen }: {
   )
 }
 
+/** 先制行動として見せるカードは、説明の一行目にキーワード「先制行動」を付ける（戦闘中の表示と同じ）。 */
+function withOpeningKeyword(catalog: CardCatalog | null): CardCatalog | null {
+  if (!catalog) return catalog
+  const prefix = (text: string) => text ? `[K:opening]
+${text}` : '[K:opening]'
+  return Object.fromEntries(Object.entries(catalog).map(([id, entry]) => [id, {
+    ...entry,
+    description: prefix(entry.description),
+    upgradedDescription: entry.upgradedDescription === null ? null : prefix(entry.upgradedDescription),
+  }]))
+}
+
 function aggregateDeck(ids: readonly string[], cardNames: Record<string, string>) {
   const counts = new Map<string, number>()
   for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1)
@@ -896,7 +908,7 @@ function BestiaryTile({ kind, id, isDiscovered, displayName, description, rarity
 
 /* ------------------------------------------------------------------
    Monsters tab — プレイヤーキャラと同じ枠で、能力値・生息地・ポジション・
-   説明・初期行動（先制行動）・行動デッキを表示する。
+   説明・先制行動・行動デッキを表示する。
    ------------------------------------------------------------------ */
 type EnemyTierFilter = 'all' | EnemyTier
 
@@ -929,7 +941,7 @@ function MonstersTab({ allIds, discovered }: { allIds: string[]; discovered: Set
   const [query, setQuery] = useState('')
   const [discoveryFilter, setDiscoveryFilter] = useState<DiscoveryFilter>('all')
   const [tierFilter, setTierFilter] = useState<EnemyTierFilter>('all')
-  // 行動デッキ・初期行動のどちらをカードで一覧するか。
+  // 行動デッキ・先制行動のどちらをカードで一覧するか。
   const [deckPreview, setDeckPreview] = useState<{ enemy: EnemyCatalogEntryDto; kind: 'deck' | 'opening' } | null>(null)
 
   const normalizedQuery = query.trim().toLocaleLowerCase('ja')
@@ -999,13 +1011,13 @@ function MonstersTab({ allIds, discovered }: { allIds: string[]; discovered: Set
         <CardArtOwnerProvider owner={deckPreview.enemy.imageId ? { kind: 'enemies', imageId: deckPreview.enemy.imageId } : null}>
         <DeckListModal
           title={deckPreview.kind === 'opening'
-            ? `${deckPreview.enemy.name}の初期行動 (${deckPreview.enemy.openingActions?.length ?? 0}枚)`
+            ? `${deckPreview.enemy.name}の先制行動 (${deckPreview.enemy.openingActions?.length ?? 0}枚)`
             : `${deckPreview.enemy.name}の行動デッキ (${expandEnemyDeck(deckPreview.enemy).length}枚)`}
           cardIds={deckPreview.kind === 'opening'
             ? deckPreview.enemy.openingActions ?? []
             : expandEnemyDeck(deckPreview.enemy)}
-          catalog={cardCatalog}
-          emptyText={deckPreview.kind === 'opening' ? '初期行動はありません。' : '行動デッキは空です。'}
+          catalog={deckPreview.kind === 'opening' ? withOpeningKeyword(cardCatalog) : cardCatalog}
+          emptyText={deckPreview.kind === 'opening' ? '先制行動はありません。' : '行動デッキは空です。'}
           onClose={() => setDeckPreview(null)}
         />
         </CardArtOwnerProvider>
@@ -1082,15 +1094,15 @@ function MonsterTile({ id, enemy, isDiscovered, cardNames, cardCatalog, onOpenDe
             <p>{shown.description?.trim() || 'キャラクター説明は未設定です。'}</p>
           </CharacterTextSection>
           {openingActions.length === 0 ? (
-            <CharacterTextSection label="初期行動（先制行動）">
+            <CharacterTextSection label="先制行動">
               <p>なし</p>
             </CharacterTextSection>
           ) : (
-            // 初期行動があれば、行動デッキと同じく「カードを確認」でカードの一覧を開ける。
+            // 先制行動があれば、行動デッキと同じく「カードを確認」でカードの一覧を開ける。
             <section className="achievements__character-section achievements__character-deck">
               <DeckHeading
-                label={`初期行動（先制行動） ${openingActions.length}枚`}
-                ariaLabel={`${shown.name}の初期行動（${openingActions.length}枚）を表示`}
+                label={`先制行動 ${openingActions.length}枚`}
+                ariaLabel={`${shown.name}の先制行動（${openingActions.length}枚）を表示`}
                 disabled={false}
                 onOpen={onOpenOpening}
               />

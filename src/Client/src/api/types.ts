@@ -302,7 +302,7 @@ export type BattleEventKind =
   | 'CardAugmented'
   /** 攪乱で行動（カード 1 枚・技 1 回）が失敗した（casterInstanceId、cardId、amount = 失敗率%）。 */
   | 'ActionFailed'
-  /** 初期行動のカードを使った（casterInstanceId、card = 表示用の写し。説明の一行目に [K:opening]）。 */
+  /** 先制行動のカードを使った（casterInstanceId、card = 表示用の写し。説明の一行目に [K:opening]）。 */
   | 'OpeningAction'
 
 export type IntentDto = {
@@ -737,7 +737,7 @@ export type BattleEventStepDto = {
 export type BattleActionResponseDto = {
   state: BattleStateDto
   steps: BattleEventStepDto[]
-  /** 戦闘開始の応答だけ: 初期行動を使う直前の状態。画面はこれを先に出し、演出の後で state に切り替える。 */
+  /** 戦闘開始の応答だけ: 先制行動を使う直前の状態。画面はこれを先に出し、演出の後で state に切り替える。 */
   initialState?: BattleStateDto | null
 }
 

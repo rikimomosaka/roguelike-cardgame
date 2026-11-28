@@ -10,8 +10,8 @@ using RoguelikeCardGame.Core.Random;
 namespace RoguelikeCardGame.Core.Battle.Engine;
 
 /// <summary>
-/// 初期行動（2026-11-28 改訂）。戦闘開始時、ターン開始の処理（特性・有事・レリック・パワー・戦闘開始時のレリック）が
-/// すべて終わり、手札が配られた後、プレイヤーが操作を始める直前に使う。順番は「敵の初期行動 → 味方の初期行動」。
+/// 先制行動（2026-11-28 改訂）。戦闘開始時、ターン開始の処理（特性・有事・レリック・パワー・戦闘開始時のレリック）が
+/// すべて終わり、手札が配られた後、プレイヤーが操作を始める直前に使う。順番は「敵の先制行動 → 味方の先制行動」。
 /// - 敵: 定義の openingActions のカードを、通常の行動と同じ処理（EnemyAttackingResolver）でその場で実行する。
 ///   攻撃・ブロック・バフ・デバフなど、どの効果のカードでも使える。敵の 1 ターン目の行動予約はこの後に行う。
 /// - 味方（プレイヤーキャラ）: キャラ定義の openingActions のカードの効果を、そのキャラが使ったものとしてその場で実行する。
@@ -46,7 +46,7 @@ internal static class EnemyOpeningActions
             if (!catalog.TryGetEnemy(enemy.DefinitionId, out var def)) continue;
             if (def.EffectiveOpeningActions.Count == 0) continue;
 
-            // 初期行動のカードを 1 枚ずつ、その敵の予約として置き、通常の敵の行動と同じ処理で実行する。
+            // 先制行動のカードを 1 枚ずつ、その敵の予約として置き、通常の敵の行動と同じ処理で実行する。
             // 実行の処理は予約を空にするので、本来の予約（1 ターン目の行動）はこの後で作る。
             int ordinal = 0;
             foreach (var cardId in def.EffectiveOpeningActions)
@@ -69,7 +69,7 @@ internal static class EnemyOpeningActions
                 result = result with { Enemies = result.Enemies.SetItem(index, caster with { PlannedEffects = planned }) };
                 var (after, actionEvents) = EnemyAttackingResolver.ResolveRemaining(
                     result, new[] { enemyId }, rng, catalog,
-                    // 1 ターン目の初期行動の前に、ブロックを消す処理は要らない（まだ何も持っていない）。
+                    // 1 ターン目の先制行動の前に、ブロックを消す処理は要らない（まだ何も持っていない）。
                     firstEnemyBlockAlreadyReset: true,
                     firstEnemySingleTargetActorInstanceId: result.Allies
                         .Where(a => a.IsAlive).OrderBy(a => a.SlotIndex)
@@ -126,7 +126,7 @@ internal static class EnemyOpeningActions
         return result;
     }
 
-    /// <summary>初期行動を使ったことを示すイベント（画面で中央にカードを出すための写し付き）。</summary>
+    /// <summary>先制行動を使ったことを示すイベント（画面で中央にカードを出すための写し付き）。</summary>
     private static BattleEvent OpeningEvent(string actorId, Cards.CardDefinition card, string instanceId, ref int order) =>
         new(BattleEventKind.OpeningAction, Order: order++,
             CasterInstanceId: actorId,

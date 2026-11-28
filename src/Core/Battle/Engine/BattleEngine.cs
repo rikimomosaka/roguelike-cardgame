@@ -23,8 +23,8 @@ public static partial class BattleEngine
         Start(run, encounterId, rng, catalog, out _);
 
     /// <summary>
-    /// 戦闘開始。preOpeningState には、初期行動を使う直前（手札が配られ、プレイヤーの操作の直前）の状態が入る。
-    /// 初期行動を誰も使わなかった時は null。画面はこの状態を先に出し、初期行動の演出の後で最終状態に切り替える。
+    /// 戦闘開始。preOpeningState には、先制行動を使う直前（手札が配られ、プレイヤーの操作の直前）の状態が入る。
+    /// 先制行動を誰も使わなかった時は null。画面はこの状態を先に出し、先制行動の演出の後で最終状態に切り替える。
     /// </summary>
     public static (BattleState, IReadOnlyList<BattleEvent>) Start(
         RunState run, string encounterId, IRng rng, DataCatalog catalog, out BattleState? preOpeningState)
@@ -179,7 +179,7 @@ public static partial class BattleEngine
         if (withPrimaryParticipant.Outcome ==
             RoguelikeCardGame.Core.Battle.State.BattleOutcome.Pending)
         {
-            // 初期行動: ターン開始の処理と戦闘開始時のレリックがすべて終わった後、プレイヤーの操作の直前に、
+            // 先制行動: ターン開始の処理と戦闘開始時のレリックがすべて終わった後、プレイヤーの操作の直前に、
             // 敵 → 味方の順で使う（2026-11-28）。使ったカードはどの山にも入らない。
             var beforeOpening = withPrimaryParticipant;
             int eventsBeforeOpening = events.Count;

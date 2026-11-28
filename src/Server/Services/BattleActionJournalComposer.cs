@@ -705,7 +705,7 @@ internal static class BattleActionJournalComposer
             return null;
 
         var card = SnapshotReenactedCard(snapshot, catalog);
-        // 初期行動として使ったカードは、説明の一行目にキーワード「初期行動」を付ける。
+        // 先制行動として使ったカードは、説明の一行目にキーワード「先制行動」を付ける。
         return battleEvent.Kind == BattleEventKind.OpeningAction
             ? card with { Description = string.IsNullOrEmpty(card.Description) ? "[K:opening]" : $"[K:opening]\n{card.Description}" }
             : card;
