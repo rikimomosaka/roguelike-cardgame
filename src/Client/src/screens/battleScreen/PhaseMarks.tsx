@@ -10,29 +10,45 @@ const PHASE_INFO: Readonly<Record<ActorPhaseDemo, { name: string; effect: string
   motion: { name: PHASE_DEFS.motion.name, effect: PHASE_DEFS.motion.desc },
 }
 
+/** 能力値の 1 行。分からない値は「—」。 */
+const statText = (value: number | undefined) => typeof value === 'number' ? String(value) : '—'
+
 /**
- * キャラにカーソルを合わせたときの説明。特性があれば特性の後ろに今の位相と効果を足す。
- * 特性が無ければ位相を見出しにする。どちらも無ければ null（説明を出さない）。
+ * キャラにカーソルを合わせたときの説明。
+ * 見出しは「キャラ名(操作アカウント)」。本文は現在の能力値（HP・攻撃力/守備力・ドロー/エナジー）、
+ * 続けて特性（あれば）と位相（あれば）。
  */
 export function slotTooltipContent(char: {
+  name: string
+  charName?: string
+  controllerLabel?: string
+  hpCur: number
+  hpMax: number
+  stats?: {
+    attack?: number
+    defense?: number
+    drawPerTurn?: number
+    energy?: number
+    energyPerTurn?: number
+  }
   traitName?: string
   traitDescription?: string
   phase?: ActorPhaseDemo
-}): { name: ReactNode; desc: string } | null {
-  const phase = char.phase ? PHASE_INFO[char.phase] : null
+}): { name: ReactNode; desc: string } {
+  const title = `${char.charName ?? char.name}${char.controllerLabel ? `(${char.controllerLabel})` : ''}`
+  const stats = char.stats ?? {}
+  const lines = [`HP${char.hpCur}/${char.hpMax}`]
+  if (stats.attack !== undefined || stats.defense !== undefined)
+    lines.push(`攻撃力${statText(stats.attack)} / 守備力${statText(stats.defense)}`)
+  if (stats.drawPerTurn !== undefined || stats.energy !== undefined)
+    lines.push(`ドロー${statText(stats.drawPerTurn)} / エナジー${statText(stats.energy)}/${statText(stats.energyPerTurn)}`)
   if (char.traitDescription) {
     // 戦技：技名・奥義：技名 と同じく「特性：名前」で出す。
-    const name = char.traitName ? `特性：${char.traitName}` : '特性'
-    return phase
-      ? { name, desc: `${char.traitDescription}\n\n位相：[P:${char.phase}]\n${phase.effect}` }
-      : { name, desc: char.traitDescription }
+    lines.push('', char.traitName ? `特性：${char.traitName}` : '特性', char.traitDescription)
   }
-  return phase && char.phase
-    ? {
-        name: <>位相：<span className={`card-desc-phase card-desc-phase--${char.phase}`}>{phase.name}</span></>,
-        desc: phase.effect,
-      }
-    : null
+  const phase = char.phase ? PHASE_INFO[char.phase] : null
+  if (phase) lines.push('', `位相：[P:${char.phase}]`, phase.effect)
+  return { name: title, desc: lines.join('\n') }
 }
 
 /** 新規格のキャラのキャンバス下端（スロット上端からの y）。BattleScreen の STAGE_CANVAS_BOTTOM_Y と同じ。 */

@@ -280,6 +280,12 @@ export type CharacterDemo = {
   phase?: ActorPhaseDemo
   /** 攪乱の数（0 = なし）。頭上の混乱の輪と、行動失敗の表示に使う。 */
   disruption?: number
+  /** ツールチップの見出しに使うキャラ名（主人公はキャラクター名。頭上の名前とは別）。 */
+  charName?: string
+  /** 操作しているアカウント（人が操作する主人公だけ）。ツールチップの見出しの括弧に出す。 */
+  controllerLabel?: string
+  /** 現在の能力値（ツールチップ用）。分からない値は undefined。 */
+  stats?: ActorCurrentStats
   /** キャラのサイズ段階 (1 〜 10)。1 = スライム級の小型、5 = 標準、10 = 巨大ボス級。
    *  立ち絵 image 表示時は heightTier に応じて高さが決定される (縦横比は維持)。 */
   heightTier?: number
@@ -305,6 +311,15 @@ export type CharacterDemo = {
   /** 複数チップ表示 (hero の通常/ランダム/全体予定攻撃を分けて表示する用)。 */
   intents?: IntentDemo[]
   buffs: BuffDemo[]
+}
+
+/** キャラにカーソルを合わせた時に見せる、現在の能力値。 */
+export type ActorCurrentStats = {
+  attack?: number
+  defense?: number
+  drawPerTurn?: number
+  energy?: number
+  energyPerTurn?: number
 }
 
 export type HandCardDemo = {
@@ -4785,24 +4800,51 @@ export function BattleScreen({
   const playerSlots = padSlots(
     playerActorsBySlot
       .map(actor => actor
-        ? toCharacterDemo(
-            actor,
-            { enemies: enemyCatalog, units: unitCatalog, characters: characterCatalog },
-            accountId,
-            findParticipantForActor(displayedState, actor.instanceId)?.characterId
-              ?? snapshot.run.characterId,
-          )
+        ? (() => {
+            const participant = findParticipantForActor(displayedState, actor.instanceId)
+            return toCharacterDemo(
+              actor,
+              { enemies: enemyCatalog, units: unitCatalog, characters: characterCatalog },
+              accountId,
+              participant?.characterId ?? snapshot.run.characterId,
+              participant
+                ? {
+                    energy: participant.energy,
+                    energyPerTurn: participant.energyPerTurn,
+                    drawPerTurn: participant.drawPerTurn,
+                    // 人が操作するキャラだけ操作アカウントを出す（自分以外の人は P2 などの席番号）。
+                    controllerLabel: participant.controllerKind !== 'Human'
+                      ? undefined
+                      : participant.participantId === primaryParticipant?.participantId
+                        ? accountId
+                        : `P${(participant.ownerPlayerSlot ?? 0) + 1}`,
+                  }
+                : undefined,
+            )
+          })()
         : null),
     4,
   )
   const enemySlots = padSlots(
     enemyActorsBySlot
       .map(actor => actor
-        ? toCharacterDemo(
-            actor,
-            { enemies: enemyCatalog, units: unitCatalog, characters: characterCatalog },
-            accountId,
-          )
+        ? (() => {
+            const enemyParticipant = displayedState.enemyParticipants?.find(candidate =>
+              candidate.actorInstanceId === actor.instanceId)
+            return toCharacterDemo(
+              actor,
+              { enemies: enemyCatalog, units: unitCatalog, characters: characterCatalog },
+              accountId,
+              undefined,
+              enemyParticipant
+                ? {
+                    energy: enemyParticipant.energy,
+                    energyPerTurn: enemyParticipant.energyPerTurn,
+                    drawPerTurn: enemyParticipant.drawPerTurn,
+                  }
+                : undefined,
+            )
+          })()
         : null),
     4,
   )

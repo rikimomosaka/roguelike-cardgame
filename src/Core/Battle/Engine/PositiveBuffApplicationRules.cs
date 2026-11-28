@@ -20,8 +20,9 @@ namespace RoguelikeCardGame.Core.Battle.Engine;
 internal static class PositiveBuffApplicationRules
 {
     /// <summary>
-    /// Copies the positive buffs that the owner actually received to every
-    /// other living actor on the same side, then consumes one Resonance.
+    /// 共鳴: 自身が実際に受けたバフを、自身を含む同じ側の生存者全員にもう一度付与し、共鳴を 1 消費する。
+    /// 自身にも重ねて付くので、ソロ（味方がいない）でもバフを増やす効果として働く（2026-11-28 変更。
+    /// 以前は自身以外の味方にだけ写していた）。
     /// <paramref name="resonanceAmountBeforeApplication"/> snapshots the state
     /// before the grouped self-buff began, so gaining Resonance in that same
     /// group cannot make it trigger itself.
@@ -58,11 +59,7 @@ internal static class PositiveBuffApplicationRules
         string[] targetIds = (owner.Side == ActorSide.Ally
                 ? state.Allies
                 : state.Enemies)
-            .Where(actor => actor.IsAlive
-                && !string.Equals(
-                    actor.InstanceId,
-                    ownerInstanceId,
-                    StringComparison.Ordinal))
+            .Where(actor => actor.IsAlive)
             .OrderBy(actor => actor.SlotIndex)
             .Select(actor => actor.InstanceId)
             .ToArray();

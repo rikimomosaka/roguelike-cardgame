@@ -116,7 +116,9 @@ internal static class BattleStateDtoMapper
                         participant.Hand.Length,
                         participant.DrawPile.Length,
                         participant.DiscardPile.Length,
-                        participant.ExhaustPile.Length))
+                        participant.ExhaustPile.Length,
+                        participant.EnergyPerTurn,
+                        participant.DrawPerTurn))
                     .ToList(),
             PlayHistoryThisTurn: ToPlayHistoryDto(primary, hero, data));
     }
@@ -367,7 +369,9 @@ internal static class BattleStateDtoMapper
             StatusOrder: BuildStatusOrder(actor),
             BlockAddCount: actor.Block.AddCount,
             BlockRawSum: actor.Block.Sum,
-            Phase: PhaseRules.Name(actor.Phase));
+            Phase: PhaseRules.Name(actor.Phase),
+            AttackPower: actor.AttackPower,
+            DefensePower: actor.DefensePower);
 
     private static IReadOnlyList<string> BuildStatusOrder(CombatActor actor)
     {

@@ -12,7 +12,7 @@ namespace RoguelikeCardGame.Core.Tests.Battle.Engine;
 public sealed class ResonanceRuntimeTests
 {
     [Fact]
-    public void Self_buff_group_spreads_to_every_other_living_ally_and_spends_one_stack()
+    public void Self_buff_group_is_given_again_to_self_and_every_living_ally_and_spends_one_stack()
     {
         var source = BattleFixtures.Hero() with
         {
@@ -40,7 +40,10 @@ public sealed class ResonanceRuntimeTests
             new FakeRng([], []),
             BattleFixtures.MinimalCatalog());
 
-        Assert.All(after.Allies, actor =>
+        // 共鳴（2026-11-28〜）: 自身にも再度付くので、自身は 2 倍、他の味方は 1 回分。
+        Assert.Equal(4, after.Allies[0].GetStatus(BattleStatusIds.Strength));
+        Assert.Equal(2, after.Allies[0].GetStatus(BattleStatusIds.Vigor));
+        Assert.All(after.Allies.Skip(1), actor =>
         {
             Assert.Equal(2, actor.GetStatus(BattleStatusIds.Strength));
             Assert.Equal(1, actor.GetStatus(BattleStatusIds.Vigor));
@@ -48,6 +51,8 @@ public sealed class ResonanceRuntimeTests
         Assert.Equal(1, after.Allies[0].GetStatus(BattleStatusIds.Resonance));
         Assert.Equal(
             [
+                (source.InstanceId, BattleStatusIds.Strength),
+                (source.InstanceId, BattleStatusIds.Vigor),
                 (source.InstanceId, BattleStatusIds.Strength),
                 (source.InstanceId, BattleStatusIds.Vigor),
                 (front.InstanceId, BattleStatusIds.Strength),
@@ -167,7 +172,8 @@ public sealed class ResonanceRuntimeTests
             new FakeRng([], []),
             BattleFixtures.MinimalCatalog());
 
-        Assert.Equal(1, after.Allies[0].GetStatus(BattleStatusIds.Strength));
+        // 味方がいなくても、自身に再度付く（ソロでもバフを増やす効果として働く）。
+        Assert.Equal(2, after.Allies[0].GetStatus(BattleStatusIds.Strength));
         Assert.Equal(0, after.Allies[0].GetStatus(BattleStatusIds.Resonance));
         Assert.Contains(events, battleEvent =>
             battleEvent.Kind == BattleEventKind.RemoveStatus
@@ -230,11 +236,11 @@ public sealed class ResonanceRuntimeTests
             new FakeRng([], []),
             BattleFixtures.MinimalCatalog());
 
-        Assert.Equal(1, after.Allies[0].GetStatus(BattleStatusIds.Strength));
+        Assert.Equal(2, after.Allies[0].GetStatus(BattleStatusIds.Strength));
         Assert.Equal(1, after.Allies[1].GetStatus(BattleStatusIds.Strength));
         Assert.Equal(0, after.Allies[0].GetStatus(BattleStatusIds.Resonance));
         Assert.Equal(2, after.Allies[1].GetStatus(BattleStatusIds.Resonance));
-        Assert.Equal(2, events.Count(battleEvent =>
+        Assert.Equal(3, events.Count(battleEvent =>
             battleEvent.Kind == BattleEventKind.ApplyStatus
             && battleEvent.Note == BattleStatusIds.Strength));
         Assert.Single(events, battleEvent =>

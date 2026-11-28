@@ -116,11 +116,20 @@ type CharacterCatalogs = {
   characters: CharacterCatalog | null
 }
 
+/** 参加者（味方・敵）から分かる、ターンごとの資源と操作者。 */
+export type ActorResources = {
+  energy?: number
+  energyPerTurn?: number
+  drawPerTurn?: number
+  controllerLabel?: string
+}
+
 export function toCharacterDemo(
   actor: CombatActorDto,
   catalogs: CharacterCatalogs,
   accountId: string,
   characterId?: string,
+  resources?: ActorResources,
 ): CharacterDemo {
   const isHero = actor.definitionId === HERO_DEFINITION_ID
   const enemyDef = !isHero && actor.side === 'Enemy'
@@ -191,6 +200,15 @@ export function toCharacterDemo(
     buffs: toBuffs(actor),
     phase: actor.phase === 'calm' || actor.phase === 'motion' ? actor.phase : undefined,
     disruption: Math.max(0, actor.statuses?.disruption ?? 0),
+    charName: isHero ? characterDef?.name ?? name : name,
+    controllerLabel: resources?.controllerLabel,
+    stats: {
+      attack: actor.attackPower,
+      defense: actor.defensePower,
+      drawPerTurn: resources?.drawPerTurn,
+      energy: resources?.energy,
+      energyPerTurn: resources?.energyPerTurn,
+    },
   }
 }
 

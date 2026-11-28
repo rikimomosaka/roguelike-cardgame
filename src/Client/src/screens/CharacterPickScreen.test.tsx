@@ -119,10 +119,10 @@ describe('CharacterPickScreen', () => {
     const { container } = renderPicker()
 
     expect(await screen.findByRole('button', { name: '冒険者を選択' })).toBeInTheDocument()
-    // 能力値: 体力・行動力・知力・攻撃力・守備力。
-    expect(container.querySelector('.actor-stats__item--hp')).toHaveTextContent('体力80')
-    expect(container.querySelector('.actor-stats__item--energyPerTurn')).toHaveTextContent('行動力3')
-    expect(container.querySelector('.actor-stats__item--drawPerTurn')).toHaveTextContent('知力5')
+    // 能力値: HP・攻撃力・守備力・ドロー・エナジー（2026-11-28 に 体力・知力・行動力 から改名）。
+    expect(container.querySelector('.actor-stats__item--hp')).toHaveTextContent('HP80')
+    expect(container.querySelector('.actor-stats__item--energyPerTurn')).toHaveTextContent('エナジー3')
+    expect(container.querySelector('.actor-stats__item--drawPerTurn')).toHaveTextContent('ドロー5')
     expect(container.querySelector('.actor-stats__item--attack')).toHaveTextContent('攻撃力')
     expect(container.querySelector('.actor-stats__item--defense')).toHaveTextContent('守備力')
     expect(screen.getByText('攻撃を得意とする冒険者。')).toBeInTheDocument()

@@ -95,7 +95,7 @@ public sealed class EffectApplierNewClassMechanicsTests
             Rng(),
             BattleFixtures.MinimalCatalog());
 
-        Assert.Equal(1, next.Allies[0].GetStatus(BattleStatusIds.Vigor));
+        Assert.Equal(2, next.Allies[0].GetStatus(BattleStatusIds.Vigor));
         Assert.Equal(1, next.Allies[1].GetStatus(BattleStatusIds.Vigor));
         Assert.Equal(0, next.Allies[0].GetStatus(BattleStatusIds.Resonance));
     }

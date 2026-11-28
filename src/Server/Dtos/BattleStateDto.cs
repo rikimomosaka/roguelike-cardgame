@@ -50,4 +50,8 @@ public sealed record EnemyParticipantSummaryDto(
     int HandCount,
     int DrawPileCount,
     int DiscardPileCount,
-    int ExhaustPileCount);
+    int ExhaustPileCount,
+    /// <summary>ターン開始時に回復するエナジーの規定値。</summary>
+    int EnergyPerTurn = 0,
+    /// <summary>ターン開始時のドロー枚数。</summary>
+    int DrawPerTurn = 0);

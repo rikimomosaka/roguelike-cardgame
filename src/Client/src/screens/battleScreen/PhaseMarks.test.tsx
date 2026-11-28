@@ -35,26 +35,38 @@ describe('phaseRingStyle', () => {
 })
 
 describe('slotTooltipContent', () => {
-  it('appends the current phase and its effect after the trait', () => {
-    const tip = slotTooltipContent({ traitName: '残光', traitDescription: '特性の説明。', phase: 'calm' })
-    expect(tip?.name).toBe('特性：残光')
-    expect(tip?.desc).toContain('特性の説明。')
-    expect(tip?.desc).toContain('位相：[P:calm]')
-    expect(tip?.desc).toContain('[K:bipolar]')
+  const base = { name: 'phasetest1', charName: '作戦参謀ユノ', hpCur: 74, hpMax: 74 }
+
+  it('titles the tooltip with the character name and controlling account', () => {
+    expect(slotTooltipContent({ ...base, controllerLabel: 'phasetest1' }).name).toBe('作戦参謀ユノ(phasetest1)')
+    expect(slotTooltipContent({ ...base, charName: undefined, name: 'ダイア・ウルフ' }).name).toBe('ダイア・ウルフ')
   })
 
-  it('uses the phase as the title when there is no trait', () => {
-    const tip = slotTooltipContent({ phase: 'motion' })
-    const title = render(<>{tip?.name}</>).container
-    expect(title.textContent).toBe('位相：動')
-    expect(title.querySelector('.card-desc-phase--motion')).toBeInTheDocument()
-    expect(tip?.desc).toContain('1.5倍')
-    expect(tip?.desc).not.toContain('位相：')
+  it('lists HP, attack/defense and draw/energy before the trait and phase', () => {
+    const tip = slotTooltipContent({
+      ...base,
+      stats: { attack: 6, defense: 5, drawPerTurn: 5, energy: 2, energyPerTurn: 3 },
+      traitName: '策応',
+      traitDescription: '特性の説明。',
+      phase: 'calm',
+    })
+    const lines = tip.desc.split('\n')
+    expect(lines.slice(0, 8)).toEqual([
+      'HP74/74',
+      '攻撃力6 / 守備力5',
+      'ドロー5 / エナジー2/3',
+      '',
+      '特性：策応',
+      '特性の説明。',
+      '',
+      '位相：[P:calm]',
+    ])
+    // 位相の効果（静の説明）が続く。
+    expect(lines.slice(8).join('\n')).toContain('[K:bipolar]')
   })
 
-  it('keeps the trait-only tooltip and returns null without trait or phase', () => {
-    expect(slotTooltipContent({ traitName: '残光', traitDescription: '説明' })).toEqual({ name: '特性：残光', desc: '説明' })
-    expect(slotTooltipContent({ traitDescription: '説明' })?.name).toBe('特性')
-    expect(slotTooltipContent({})).toBeNull()
+  it('omits unknown stat rows and the phase when there is none', () => {
+    const tip = slotTooltipContent({ ...base, stats: { attack: 6, defense: 5 } })
+    expect(tip.desc).toBe('HP74/74\n攻撃力6 / 守備力5')
   })
 })

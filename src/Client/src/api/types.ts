@@ -244,9 +244,9 @@ export type BestiaryCharacterDto = {
   traitEffects?: string | null
   /** 操作キャラの初期デッキ（カード ID。重複あり）。 */
   deck?: string[] | null
-  /** 行動力（エナジー回復量）。 */
+  /** エナジー（ターン開始時の規定値）。 */
   energyPerTurn?: number
-  /** 知力（ドロー枚数）。 */
+  /** ドロー（ターン開始時の枚数）。 */
   drawPerTurn?: number
   attack?: number
   defense?: number
@@ -345,6 +345,9 @@ export type CombatActorDto = {
   statusOrder?: string[] | null
   /** 位相（none = なし、calm = 静、motion = 動）。旧サーバーでは省略。 */
   phase?: 'none' | 'calm' | 'motion'
+  /** 基礎攻撃力・基礎守備力（筋力・敏捷は含まない）。旧サーバーでは省略。 */
+  attackPower?: number
+  defensePower?: number
   currentMoveId: string | null
   remainingLifetimeTurns: number | null
   associatedSummonHeldInstanceId: string | null
@@ -551,6 +554,9 @@ export type EnemyParticipantSummaryDto = {
   drawPileCount: number
   discardPileCount: number
   exhaustPileCount: number
+  /** ターン開始時のエナジーの規定値・ドロー枚数。旧サーバーでは省略。 */
+  energyPerTurn?: number
+  drawPerTurn?: number
 }
 
 export type BattleParticipantDto = {

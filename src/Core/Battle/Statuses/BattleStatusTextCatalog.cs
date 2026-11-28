@@ -41,7 +41,7 @@ public static class BattleStatusTextCatalog
             [BattleStatusIds.DefensiveStance] = new("守勢", "自身のブロックを使って敵のアタックを完全に防いだ時、コンボゲージを[N:1]得る。ターン終了時に[S:defensiveStance]が1減少する。"),
             [BattleStatusIds.ComboCarryover] = new("連環", "ターン終了時、現在コンボを次のターンへ持ち越し、[S:comboCarryover]が1減少する。次のターンに最初に使用するカードは条件を問わずコンボを継続するが、コンボによるコスト軽減を受けない。"),
             [BattleStatusIds.Afterglow] = new("余韻", "ターン終了時に減少または消滅する自身の他のバフが[N:1]つ以上ある時、それらを全て維持し、[S:afterglow]が消滅する。"),
-            [BattleStatusIds.Resonance] = new("共鳴", "自身のみに[S:resonance]以外のバフが付与された時、付与された全てのバフを他の全ての味方に付与し、[S:resonance]が1減少する。"),
+            [BattleStatusIds.Resonance] = new("共鳴", "自身に[S:resonance]以外のバフが付与された時、自身と全ての味方に再度そのバフを付与し、[S:resonance]が1減少する。"),
             [BattleStatusIds.VirulentPoison] = new("猛毒", "[S:poison]によって受けるダメージが[N:X]倍になる。"),
             [BattleStatusIds.Stagnation] = new("停滞", "コンボゲージが増えなくなる。ターン終了時に[S:stagnation]が1減少する。"),
             [BattleStatusIds.Burn] = new("火傷", "ターン開始時に現在HPの[N:X]%のダメージを受け、[S:burn]が消滅する。"),

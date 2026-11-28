@@ -2,7 +2,8 @@ import './ActorStats.css'
 
 /**
  * キャラクター共通の能力値。操作キャラ・味方・敵のすべてが持つ。
- * 体力=HP、行動力=ターン開始時のエナジー回復量、知力=ターン開始時のドロー枚数。
+ * HP、攻撃力・守備力（攻撃力・守備力参照カードの基準値）、ドロー＝ターン開始時のドロー枚数、
+ * エナジー＝ターン開始時に回復するエナジーの規定値。（2026-11-28 に 体力・知力・行動力 から改名）
  * 値が無い（古いサーバー等で未送信）場合は 0 と誤表示せず「—」にする。
  */
 export type ActorStatValues = {
@@ -18,11 +19,11 @@ const STAT_ROWS: ReadonlyArray<{
   label: string
   hint: string
 }> = [
-  { key: 'hp', label: '体力', hint: 'HP' },
-  { key: 'energyPerTurn', label: '行動力', hint: 'エナジー回復量' },
-  { key: 'drawPerTurn', label: '知力', hint: 'ドロー枚数' },
+  { key: 'hp', label: 'HP', hint: '最大HP' },
   { key: 'attack', label: '攻撃力', hint: '攻撃力参照カードの基準値' },
   { key: 'defense', label: '守備力', hint: '守備力参照カードの基準値' },
+  { key: 'drawPerTurn', label: 'ドロー', hint: 'ターン開始時に引く枚数' },
+  { key: 'energyPerTurn', label: 'エナジー', hint: 'ターン開始時に回復するエナジーの規定値' },
 ]
 
 function displayValue(value: number | null | undefined): string {

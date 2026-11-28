@@ -342,7 +342,7 @@ public class BattleEngineCharacterSkillTests
     }
 
     [Fact]
-    public void Tactical_skill_resonates_its_grouped_buffs_to_other_allies()
+    public void Tactical_skill_resonates_its_grouped_buffs_to_self_and_other_allies()
     {
         var hero = BattleFixtures.Hero() with
         {
@@ -359,8 +359,8 @@ public class BattleEngineCharacterSkillTests
 
         var (next, events) = BattleEngine.UseTacticalSkill(state);
 
-        Assert.Equal(1, next.Allies[0].GetStatus(BattleStatusIds.Strength));
-        Assert.Equal(1, next.Allies[0].GetStatus(BattleStatusIds.Omnistrike));
+        Assert.Equal(2, next.Allies[0].GetStatus(BattleStatusIds.Strength));
+        Assert.Equal(2, next.Allies[0].GetStatus(BattleStatusIds.Omnistrike));
         Assert.Equal(0, next.Allies[0].GetStatus(BattleStatusIds.Resonance));
         Assert.Equal(1, next.Allies[1].GetStatus(BattleStatusIds.Strength));
         Assert.Equal(1, next.Allies[1].GetStatus(BattleStatusIds.Omnistrike));
