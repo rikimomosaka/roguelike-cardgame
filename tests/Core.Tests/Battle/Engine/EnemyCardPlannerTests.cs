@@ -384,6 +384,28 @@ public class EnemyCardPlannerTests
     }
 
     [Fact]
+    public void Zero_cost_draw_two_gives_one_energy_enemy_two_actions_through_the_combo_discount()
+    {
+        // 臨戦態勢（0 コスト・2 枚引く）→ 1 コスト（コンボで 0 支払い）→ 1 コスト（残りのエナジー 1）。
+        // ドロー = エナジー = 1 の敵でも、臨戦態勢を引けば 2 回行動できる（2026-11-28 の行動デッキの原則）。
+        var ready = Card("e_ready", 0, new CardEffect("draw", EffectScope.Self, null, 2));
+        var catalog = BattleFixtures.MinimalCatalog(
+            cards: new[] { BattleFixtures.Strike(), BattleFixtures.Defend(), Strike, Guard, ready },
+            enemies: new[] { CardGoblin(energyPerTurn: 1, drawPerTurn: 1) },
+            encounters: new[] { new EncounterDefinition("enc_card", new EnemyPool(1, EnemyTier.Weak), new[] { EnemyId }) });
+        var state = StateWithEnemyDeck("e_ready", "e_strike", "e_guard");
+        var enemyParticipant = state.EnemyParticipants[0] with { EnergyPerTurn = 1, DrawPerTurn = 1 };
+        state = state with { EnemyParticipants = state.EnemyParticipants.SetItem(0, enemyParticipant) };
+
+        var (planned, _) = EnemyCardPlanner.StartTurnAndPlan(state, Rng(), catalog);
+
+        Assert.Equal(new[] { "attack", "block" }, planned.Enemies[0].PlannedEffects
+            .Where(effect => effect.Effect.Action is "attack" or "block")
+            .Select(effect => effect.Effect.Action)
+            .OrderBy(action => action));
+    }
+
+    [Fact]
     public void Opening_actions_can_attack_and_never_enter_any_pile()
     {
         // 初期行動は通常の敵の行動と同じ処理で実行するので、攻撃も使える（2026-11-28）。
