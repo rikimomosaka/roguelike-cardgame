@@ -8,14 +8,16 @@ import { useCardCatalog } from '../hooks/useCardCatalog'
 import { useUnitCatalog } from '../hooks/useUnitCatalog'
 import type { CardPoolClass } from '../api/catalog'
 import { cardArt, cardFrame } from '../presentation/assets'
+import { isEnemyCardId, OwnerCardArt, ownerArtTone, useCardArtOwner } from './CardArtOwner'
 import './Card.css'
 
 export type CardType = 'attack' | 'skill' | 'power' | 'curse' | 'status' | 'unit'
 export type CardRarity = 'c' | 'r' | 'e' | 'l' | 't'
 
-type CardFrameAffiliation = 'striker' | 'guardian' | 'tactician' | 'enhancer' | 'universal' | 'curse'
+/** enemy = 敵専用のカード（ID が enemy_ で始まる）。クラス・ユニバーサルとは別の禍々しい枠。 */
+type CardFrameAffiliation = 'striker' | 'guardian' | 'tactician' | 'enhancer' | 'universal' | 'curse' | 'enemy'
 
-const KNOWN_POOL_CLASSES: Readonly<Record<string, Exclude<CardFrameAffiliation, 'curse'>>> = {
+const KNOWN_POOL_CLASSES: Readonly<Record<string, Exclude<CardFrameAffiliation, 'curse' | 'enemy'>>> = {
   striker: 'striker',
   guardian: 'guardian',
   tactician: 'tactician',
@@ -29,13 +31,16 @@ const FRAME_AFFILIATION_LABELS: Readonly<Record<CardFrameAffiliation, string>> =
   enhancer: 'Enhancer',
   universal: 'Universal',
   curse: 'Curse',
+  enemy: 'Enemy',
 }
 
 function resolveFrameAffiliation(
   type: CardType,
   poolClass: CardPoolClass | null | undefined,
+  cardId?: string | null,
 ): CardFrameAffiliation {
   if (type === 'curse') return 'curse'
+  if (isEnemyCardId(cardId)) return 'enemy'
 
   const normalizedPool = typeof poolClass === 'string' ? poolClass.toLowerCase() : ''
   return KNOWN_POOL_CLASSES[normalizedPool] ?? 'universal'
@@ -117,12 +122,17 @@ export function Card({
   onMouseEnter,
   onMouseLeave,
 }: Props) {
-  const frameAffiliation = resolveFrameAffiliation(type, poolClass)
+  const frameAffiliation = resolveFrameAffiliation(type, poolClass, cardId)
   const frameAffiliationLabel = FRAME_AFFILIATION_LABELS[frameAffiliation]
   const affiliationFrameSrc = cardFrame('affiliations', frameAffiliation)
   const typeFrameSrc = cardFrame('types', type)
   const costFrameSrc = cardFrame('costs', frameAffiliation)
   const artSrc = cardArt(cardId)
+  // 敵カードで専用のイラストが無い時は、持ち主の敵のドット絵を色付きの背景で出す。
+  const artOwner = useCardArtOwner()
+  const ownerArt = !art && !artSrc && artOwner && isEnemyCardId(cardId)
+    ? <OwnerCardArt owner={artOwner} tone={ownerArtTone(type, description)} />
+    : null
   const comboAuraActive = comboRingHighlighted ?? comboContinues ?? comboReductionEligible
   const classes = [
     'card',
@@ -285,7 +295,7 @@ export function Card({
         draggable={false}
       />
       <div className="card__illust" aria-hidden="true">
-        <div className="card__art-content">{art ?? (artSrc ? <img src={artSrc} alt="" draggable={false} /> : 'ILLUST')}</div>
+        <div className="card__art-content">{art ?? ownerArt ?? (artSrc ? <img src={artSrc} alt="" draggable={false} /> : 'ILLUST')}</div>
       </div>
       <img
         className="card__type-frame"

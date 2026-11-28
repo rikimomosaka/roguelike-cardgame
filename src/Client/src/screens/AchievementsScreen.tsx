@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { CardArtOwnerProvider } from '../components/CardArtOwner'
 import { getBestiary } from '../api/bestiary'
 import { getHistory } from '../api/history'
 import type { BestiaryCharacterDto, BestiaryDto, EnemyCatalogEntryDto, EnemyTier, RunResultDto } from '../api/types'
@@ -992,6 +993,8 @@ function MonstersTab({ allIds, discovered }: { allIds: string[]; discovered: Set
         </div>
       </div>
       {deckPreview ? (
+        // 行動デッキのカード（専用イラストの無い敵カード）は、この敵のドット絵で表示する。
+        <CardArtOwnerProvider owner={deckPreview.imageId ? { kind: 'enemies', imageId: deckPreview.imageId } : null}>
         <DeckListModal
           title={`${deckPreview.name}の行動デッキ (${expandEnemyDeck(deckPreview).length}枚)`}
           cardIds={expandEnemyDeck(deckPreview)}
@@ -999,6 +1002,7 @@ function MonstersTab({ allIds, discovered }: { allIds: string[]; discovered: Set
           emptyText="行動デッキは空です。"
           onClose={() => setDeckPreview(null)}
         />
+        </CardArtOwnerProvider>
       ) : null}
     </div>
   )

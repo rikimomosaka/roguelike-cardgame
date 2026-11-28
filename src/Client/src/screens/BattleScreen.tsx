@@ -17,6 +17,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { CSSProperties, KeyboardEvent, MouseEventHandler, ReactNode } from 'react'
 import { Card } from '../components/Card'
 import { CardDesc } from '../components/CardDesc'
+import { CardArtOwnerProvider, type CardArtOwner } from '../components/CardArtOwner'
 import { AmbientScene } from '../components/ambient/AmbientScene'
 import type { CardRarity, CardType } from '../components/Card'
 import { rarityCodeFromName, rarityCodeFromNumber } from '../components/rarity'
@@ -4979,7 +4980,15 @@ export function BattleScreen({
         && readyIntent.turn === displayedState.turn)).length ?? 0
   const participantCount = displayedState.participants?.length ?? 1
 
+  const replayEnemyImageId = replayView?.actor.side === 'Enemy'
+    ? enemyCatalog?.[replayView.actor.definitionId]?.imageId ?? null
+    : null
+  const enemyCardArtOwner: CardArtOwner | null = replayEnemyImageId
+    ? { kind: 'enemies', imageId: replayEnemyImageId }
+    : null
   return (
+    // 敵の行動を再生している間は、敵カード（専用イラスト無し）にその敵のドット絵を出す。
+    <CardArtOwnerProvider owner={enemyCardArtOwner}>
     <div className="battle-screen">
       {/* Why: ユーザ要望「上のバーは map 画面のものをそのまま」。
           HP は live battle override (heroHp.cur)、potion 操作は battle 内で
@@ -5719,7 +5728,8 @@ export function BattleScreen({
           })}
         </div>
       )}
-    </div>
+      </div>
+    </CardArtOwnerProvider>
   )
 }
 

@@ -612,3 +612,26 @@
   background: transparent;
   box-shadow: none;
 }
+
+/* 敵カードの絵: 持ち主のドット絵を、攻撃 = 赤 / 防御 = 青 / その他 = 紫 の背景の上に、体が収まるよう拡大する。
+   拡大率は「体の高さを 78%」と「体の幅を 88%」の小さい方。--body-* は 128 キャンバス上の体の範囲。 */
+.card-owner-art {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  container-type: size;
+  --owner-size: min(calc(78cqh * 128 / var(--body-h)), calc(88cqw * 128 / var(--body-w)));
+}
+.card-owner-art--attack { background: radial-gradient(ellipse at 50% 60%, #9a2a22 0%, #4a0e0e 60%, #22060a 100%); }
+.card-owner-art--defense { background: radial-gradient(ellipse at 50% 60%, #2a5a9a 0%, #0f2550 60%, #070f24 100%); }
+.card-owner-art--other { background: radial-gradient(ellipse at 50% 60%, #5a2a7a 0%, #2a1040 60%, #12071c 100%); }
+.card__art-content > .card-owner-art > img {
+  position: absolute;
+  width: var(--owner-size);
+  height: var(--owner-size);
+  max-width: none;
+  left: calc(50cqw - var(--owner-size) * (var(--body-l) + var(--body-w) / 2) / 128);
+  top: calc(50cqh - var(--owner-size) * (var(--body-t) + var(--body-h) / 2) / 128);
+  object-fit: fill;
+  image-rendering: pixelated;
+}

@@ -135,6 +135,15 @@
   3. `node tools/art-pipeline/compose-card-art.mjs <id>=<seed> ...` で採用した候補を `art/source/cards/art/` に置く（背景のカードはここで合成。横の `<id>.json` に採用した seed を記録）。
   4. `node tools/art-pipeline/build-assets.mjs cards/art`。
 
+### 4.5.1 敵カードの枠とイラスト（2026-11-28）
+
+- 敵カード（ID が `enemy_` で始まる。`src/Core/Data/Cards/enemy_*.json`）は、クラス・ユニバーサル・呪いとは別の **敵専用の枠**（`cards/frames/affiliations/enemy.png`・`costs/enemy.png`）を使う。
+  黒鉄の縁に暗い血の赤、赤く光るひび、赤黒い地、灰色がかった骨色の本文欄。ユニバーサル枠の色を塗り替えて作った（`art-work/frames/make-enemy-frame.mjs`、git 管理外）。
+- 敵カードで専用のイラストが無いもの（通常攻撃・通常防御などの共通カードと、敵ごとの専用カードの大半）は、**持ち主の敵のドット絵** を自動で表示する。
+  背景の色は、アタック = 赤、ブロックを得るカード = 青、それ以外 = 紫。体が絵の枠に収まるよう拡大する。
+- 持ち主は表示している画面が渡す（`CardArtOwnerProvider`）: 戦闘中の敵の行動再生、図鑑（モンスター）の行動デッキ。持ち主が分からない画面では従来どおり仮表示（ILLUST）。
+- 敵カードに専用のイラスト（`art/source/cards/art/<id>.png`）を置けば、そちらが優先される。
+
 ### 4.6 背景の規格と演出（2026-11-28）
 
 | 用途 | 画像 | 比率 | 表示 | 色数 | 演出 |
