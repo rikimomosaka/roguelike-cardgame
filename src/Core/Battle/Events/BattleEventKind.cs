@@ -80,4 +80,9 @@ public enum BattleEventKind
     /// そのカードの効果は出ない。
     /// </summary>
     ActionFailed = 41,
+    /// <summary>
+    /// 初期行動のカードを使った（CasterInstanceId = 使ったキャラ、CardId = カード、ReenactedCard = 表示用のカードの写し）。
+    /// この後にそのカードの効果のイベントが続く。画面では中央にカードを出す。
+    /// </summary>
+    OpeningAction = 42,
 }

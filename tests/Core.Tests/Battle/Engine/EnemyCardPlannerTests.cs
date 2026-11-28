@@ -420,6 +420,10 @@ public class EnemyCardPlannerTests
         // 実行後も、1 ターン目の行動予約は別に作られる。
         Assert.NotEmpty(started.Enemies[0].PlannedEffects);
         Assert.Contains(events, e => e.Kind == BattleEventKind.EnemyCardAction && e.CardId == "e_strike");
+        // 画面で中央にカードを出すための、写し付きの初期行動イベント。
+        Assert.Equal(new[] { "e_strike", "e_open_ward" }, events
+            .Where(e => e.Kind == BattleEventKind.OpeningAction && e.ReenactedCard is not null)
+            .Select(e => e.CardId));
         var participant = Participant(started);
         Assert.DoesNotContain(
             participant.DrawPile.Concat(participant.Hand).Concat(participant.DiscardPile).Concat(participant.ExhaustPile),

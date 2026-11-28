@@ -840,6 +840,8 @@ type ReenactCardState = {
   toY?: number
   /** 伏策の発動: 判子の下に出す発動条件（例: 相手の攻撃時）。空文字なら条件は出さない。 */
   contingencyTrigger?: string
+  /** 中央のカードの絵の持ち主（敵カードで専用のイラストが無い時に、その敵のドット絵を出す）。 */
+  artOwner?: CardArtOwner | null
   /** 伏策の発動: 判子に転記する、発動した効果の説明文（伏策条件の行より後）。 */
   contingencyEffect?: string
 }
@@ -1546,6 +1548,8 @@ function toReplayCardDemo(
   }))
   return {
     instanceId: card.cardInstanceId,
+    // カード ID が無いとイラスト（と敵カードの枠・持ち主の絵）を出せない。
+    cardId: card.definitionId,
     name: card.displayName,
     cost: card.currentCost,
     costOrig: card.currentCost !== card.originalCost ? card.originalCost : null,
@@ -3424,18 +3428,24 @@ export function BattleScreen({
           continue
         }
 
-        if (ev.kind === 'ReenactCardEffects') {
+        // 再演・初期行動: カードを中央にポップさせてから効果へ進む。
+        if (ev.kind === 'ReenactCardEffects' || ev.kind === 'OpeningAction') {
           if (ev.card) {
             const reenactId = [
               ev.order,
               ev.card.cardInstanceId,
               ev.note ?? '',
             ].join(':')
+            const casterEnemyImageId = ev.casterInstanceId
+              && baselineActor(ev.casterInstanceId)?.side === 'Enemy'
+              ? enemyCatalog?.[baselineActor(ev.casterInstanceId)!.definitionId]?.imageId ?? null
+              : null
             setReenactCard({
               id: reenactId,
               demo: toReplayCardDemo(ev.card, cardCatalog),
               stage: 'appearing',
               movement: 'popup',
+              artOwner: casterEnemyImageId ? { kind: 'enemies', imageId: casterEnemyImageId } : null,
             })
             if (!await waitForPresentation(16)) {
               clearTransientPresentation()
@@ -5653,7 +5663,9 @@ export function BattleScreen({
           } as CSSProperties}
           aria-hidden="true"
         >
-          <BattleCardVisual card={reenactCard.demo} detailsDisabled ariaHidden />
+          <CardArtOwnerProvider owner={reenactCard.artOwner ?? enemyCardArtOwner}>
+            <BattleCardVisual card={reenactCard.demo} detailsDisabled ariaHidden />
+          </CardArtOwnerProvider>
           {reenactCard.contingencyTrigger !== undefined ? (
             <>
               <span className="reenact-card__burst" />

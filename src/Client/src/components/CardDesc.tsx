@@ -18,6 +18,11 @@ export const KEYWORD_DEFS: Record<string, { name: string; desc: string }> = {
     name: '刻印',
     desc: '【 】内の能力をカードに刻む。',
   },
+  // 初期行動として使ったカードの説明の一行目に付く（サーバーが付ける）。
+  opening: {
+    name: '初期行動',
+    desc: '戦闘開始時、行動を始める前に使う。デッキの外から使い、使った後もどの山にも入らない。',
+  },
   invert: {
     name: '反転',
     desc: '位相を持つ場合、対となる位相に変更する。',

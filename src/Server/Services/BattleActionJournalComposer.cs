@@ -700,10 +700,15 @@ internal static class BattleActionJournalComposer
         if (battleEvent.Kind is not BattleEventKind.ReenactCardEffects
                 and not BattleEventKind.ContingencyTriggered
                 and not BattleEventKind.ContingencyResolved
+                and not BattleEventKind.OpeningAction
             || battleEvent.ReenactedCard is not { } snapshot)
             return null;
 
-        return SnapshotReenactedCard(snapshot, catalog);
+        var card = SnapshotReenactedCard(snapshot, catalog);
+        // 初期行動として使ったカードは、説明の一行目にキーワード「初期行動」を付ける。
+        return battleEvent.Kind == BattleEventKind.OpeningAction
+            ? card with { Description = string.IsNullOrEmpty(card.Description) ? "[K:opening]" : $"[K:opening]\n{card.Description}" }
+            : card;
     }
 
     private static BattleCardDecisionSnapshot SnapshotReenactedCard(

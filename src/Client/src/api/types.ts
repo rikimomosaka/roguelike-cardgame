@@ -302,6 +302,8 @@ export type BattleEventKind =
   | 'CardAugmented'
   /** 攪乱で行動（カード 1 枚・技 1 回）が失敗した（casterInstanceId、cardId、amount = 失敗率%）。 */
   | 'ActionFailed'
+  /** 初期行動のカードを使った（casterInstanceId、card = 表示用の写し。説明の一行目に [K:opening]）。 */
+  | 'OpeningAction'
 
 export type IntentDto = {
   /** 通常攻撃 (single) の予定ダメージ。 */

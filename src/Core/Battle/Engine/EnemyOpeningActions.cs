@@ -46,45 +46,39 @@ internal static class EnemyOpeningActions
             if (!catalog.TryGetEnemy(enemy.DefinitionId, out var def)) continue;
             if (def.EffectiveOpeningActions.Count == 0) continue;
 
-            // 初期行動のカードを、その敵の予約として並べて、通常の敵の行動と同じ処理で実行する。
+            // 初期行動のカードを 1 枚ずつ、その敵の予約として置き、通常の敵の行動と同じ処理で実行する。
             // 実行の処理は予約を空にするので、本来の予約（1 ターン目の行動）はこの後で作る。
-            var planned = ImmutableArray.CreateBuilder<PlannedCardEffect>();
             int ordinal = 0;
             foreach (var cardId in def.EffectiveOpeningActions)
             {
                 if (!catalog.TryGetCard(cardId, out var card)) continue;
+                var caster = result.Enemies.FirstOrDefault(e => e.InstanceId == enemyId);
+                if (caster is null || !caster.IsAlive) break;
                 string instanceId = $"opening:{enemyId}:{ordinal++}";
-                for (int effectIndex = 0; effectIndex < card.Effects.Count; effectIndex++)
-                {
-                    var effect = card.Effects[effectIndex];
-                    planned.Add(new PlannedCardEffect(effect, new CombatSource(
-                        CombatSourceKind.CardEffect,
-                        OwnerSlot: enemy.SlotIndex,
-                        OwnerInstanceId: enemy.InstanceId,
-                        ActorInstanceId: enemy.InstanceId,
-                        DefinitionId: card.Id,
-                        InstanceId: instanceId,
-                        EffectIndex: effectIndex,
-                        Scope: effect.Scope.ToString().ToLowerInvariant())));
-                }
+                var planned = card.Effects.Select((effect, effectIndex) => new PlannedCardEffect(effect, new CombatSource(
+                    CombatSourceKind.CardEffect,
+                    OwnerSlot: caster.SlotIndex,
+                    OwnerInstanceId: caster.InstanceId,
+                    ActorInstanceId: caster.InstanceId,
+                    DefinitionId: card.Id,
+                    InstanceId: instanceId,
+                    EffectIndex: effectIndex,
+                    Scope: effect.Scope.ToString().ToLowerInvariant()))).ToImmutableArray();
+                events.Add(OpeningEvent(caster.InstanceId, card, instanceId, ref order));
+                int index = result.Enemies.IndexOf(caster);
+                result = result with { Enemies = result.Enemies.SetItem(index, caster with { PlannedEffects = planned }) };
+                var (after, actionEvents) = EnemyAttackingResolver.ResolveRemaining(
+                    result, new[] { enemyId }, rng, catalog,
+                    // 1 ターン目の初期行動の前に、ブロックを消す処理は要らない（まだ何も持っていない）。
+                    firstEnemyBlockAlreadyReset: true,
+                    firstEnemySingleTargetActorInstanceId: result.Allies
+                        .Where(a => a.IsAlive).OrderBy(a => a.SlotIndex)
+                        .Select(a => a.InstanceId).FirstOrDefault());
+                result = after;
+                foreach (var ev in actionEvents)
+                    events.Add(ev with { Order = order++ });
+                if (result.Outcome != RoguelikeCardGame.Core.Battle.State.BattleOutcome.Pending) break;
             }
-            if (planned.Count == 0) continue;
-
-            int index = result.Enemies.IndexOf(enemy);
-            result = result with
-            {
-                Enemies = result.Enemies.SetItem(index, enemy with { PlannedEffects = planned.ToImmutable() }),
-            };
-            var (after, actionEvents) = EnemyAttackingResolver.ResolveRemaining(
-                result, new[] { enemyId }, rng, catalog,
-                // 1 ターン目の初期行動の前に、ブロックを消す処理は要らない（まだ何も持っていない）。
-                firstEnemyBlockAlreadyReset: true,
-                firstEnemySingleTargetActorInstanceId: result.Allies
-                    .Where(a => a.IsAlive).OrderBy(a => a.SlotIndex)
-                    .Select(a => a.InstanceId).FirstOrDefault());
-            result = after;
-            foreach (var ev in actionEvents)
-                events.Add(ev with { Order = order++ });
             var (afterOutcome, outcomeEvents) = BattleOutcomeResolver.ApplyIfTerminal(result, order);
             result = afterOutcome;
             foreach (var ev in outcomeEvents)
@@ -109,10 +103,7 @@ internal static class EnemyOpeningActions
                 if (!catalog.TryGetCard(cardId, out var card)) continue;
                 var caster = result.Allies.FirstOrDefault(a => a.InstanceId == actorId);
                 if (caster is null || !caster.IsAlive) break;
-                events.Add(new BattleEvent(
-                    BattleEventKind.EnemyCardAction, Order: order++,
-                    CasterInstanceId: actorId, CardId: card.Id,
-                    Note: "opening"));
+                events.Add(OpeningEvent(actorId, card, $"opening:{actorId}:{card.Id}", ref order));
                 for (int effectIndex = 0; effectIndex < card.Effects.Count; effectIndex++)
                 {
                     caster = result.Allies.FirstOrDefault(a => a.InstanceId == actorId);
@@ -134,4 +125,19 @@ internal static class EnemyOpeningActions
         }
         return result;
     }
+
+    /// <summary>初期行動を使ったことを示すイベント（画面で中央にカードを出すための写し付き）。</summary>
+    private static BattleEvent OpeningEvent(string actorId, Cards.CardDefinition card, string instanceId, ref int order) =>
+        new(BattleEventKind.OpeningAction, Order: order++,
+            CasterInstanceId: actorId,
+            CardId: card.Id,
+            ReenactedCard: new PlayedCardEffectSnapshot(
+                card.Id, instanceId, actorId, card.CardType,
+                card.Cost ?? 0, PaidCost: 0, IsUpgraded: false,
+                (card.Keywords ?? System.Array.Empty<string>()).ToImmutableArray(),
+                card.Effects.ToImmutableArray(),
+                PlaySequence: 0)
+            {
+                PoolClass = card.PoolClass,
+            });
 }
