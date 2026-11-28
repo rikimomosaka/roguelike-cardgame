@@ -5,7 +5,7 @@ import './AmbientScene.css'
 
 /**
  * 背景の控えめな演出の層。背景画像（center / cover）とまったく同じ範囲・同じ拡大率で重なり、
- * 元の絵のドット単位で揺れ・光・粒・霧を置く。操作は受けない（pointer-events: none）。
+ * 元の絵のドット単位で光・粒・霧を置く（絵そのものは動かさない）。操作は受けない（pointer-events: none）。
  * モーション設定 off で停止（粒は消す）、reduced で周期 2 倍（AmbientScene.css）。
  */
 export function AmbientScene({ scene, className }: { scene: string | null | undefined; className?: string }) {
@@ -16,7 +16,6 @@ export function AmbientScene({ scene, className }: { scene: string | null | unde
     '--w': def.width,
     '--h': def.height,
     '--ar': `${def.width} / ${def.height}`,
-    '--src': `url('${def.src}')`,
   } as CSSProperties
   return (
     <div className={`ambient${className ? ` ${className}` : ''}`} data-ambient={scene} aria-hidden="true">
@@ -33,18 +32,6 @@ export function AmbientScene({ scene, className }: { scene: string | null | unde
           >
             <i />
           </div>
-        ))}
-        {def.sway?.map((sway, i) => (
-          <div
-            key={`sway-${i}`}
-            className={`ambient__sway ambient__sway--${sway.axis ?? 'x'}`}
-            style={px({ left: sway.x, top: sway.y, width: sway.w, height: sway.h }, {
-              '--bx': -sway.x,
-              '--by': -sway.y,
-              '--dur': `${sway.period}s`,
-              '--delay': `${sway.delay ?? 0}s`,
-            })}
-          />
         ))}
         {def.rays?.map((ray, i) => (
           <div
@@ -64,7 +51,7 @@ export function AmbientScene({ scene, className }: { scene: string | null | unde
           <div
             key={`glow-${i}`}
             className={`ambient__glow ambient__glow--${glow.style ?? 'flicker'}`}
-            style={px({ left: glow.x - glow.r, top: glow.y - glow.r, width: glow.r * 2, height: glow.r * 2 }, {
+            style={px({ left: glow.x - glow.r, top: glow.y - (glow.ry ?? glow.r), width: glow.r * 2, height: (glow.ry ?? glow.r) * 2 }, {
               '--glow-color': glow.color,
               '--min': glow.min,
               '--max': glow.max,

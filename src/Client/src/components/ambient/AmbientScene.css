@@ -32,35 +32,10 @@ html[data-motion='reduced'] .ambient { --ambient-slow: 2; }
   --px: calc(100cqw / var(--w));
 }
 
-/* ---- 揺れ: 元の絵の一部を 1 ドットだけ往復させる（風の草木・流れる水）。境目はぼかして馴染ませる。 ---- */
-.ambient__sway {
-  background-image: var(--src);
-  background-repeat: no-repeat;
-  background-size: calc(var(--w) * var(--px)) calc(var(--h) * var(--px));
-  background-position: calc(var(--bx) * var(--px)) calc(var(--by) * var(--px));
-  image-rendering: pixelated;
-  -webkit-mask-image:
-    linear-gradient(to bottom, transparent, #000 22%, #000 78%, transparent),
-    linear-gradient(to right, transparent, #000 18%, #000 82%, transparent);
-  -webkit-mask-composite: source-in;
-  mask-image:
-    linear-gradient(to bottom, transparent, #000 22%, #000 78%, transparent),
-    linear-gradient(to right, transparent, #000 18%, #000 82%, transparent);
-  mask-composite: intersect;
-  animation: ambient-sway-x calc(var(--dur) * var(--ambient-slow)) steps(1, end) var(--delay) infinite;
-}
-.ambient__sway--y { animation-name: ambient-sway-y; }
-@keyframes ambient-sway-x {
-  0%, 100% { transform: translateX(0); }
-  50% { transform: translateX(var(--px)); }
-}
-@keyframes ambient-sway-y {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(var(--px)); }
-}
-
 /* ---- 差し込む光: 上が明るく下へ消える筋。ゆっくり明滅。 ---- */
 .ambient__ray {
+  /* 上端が細く、下へ行くほど広がる（差し込み口から地面へ）。 */
+  clip-path: polygon(38% 0, 62% 0, 100% 100%, 0 100%);
   transform-origin: 50% 0;
   transform: rotate(var(--angle));
   background: linear-gradient(to bottom, var(--ray-color), transparent);
@@ -74,7 +49,7 @@ html[data-motion='reduced'] .ambient { --ambient-slow: 2; }
 /* ---- 灯り・結晶の光: 火は不規則にゆらぎ、結晶や月はゆっくり呼吸する。 ---- */
 .ambient__glow {
   border-radius: 50%;
-  background: radial-gradient(circle, var(--glow-color) 0%, transparent 70%);
+  background: radial-gradient(closest-side, var(--glow-color) 0%, transparent 100%);
   mix-blend-mode: screen;
   opacity: var(--min);
 }

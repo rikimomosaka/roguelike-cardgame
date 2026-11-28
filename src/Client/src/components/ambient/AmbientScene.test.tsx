@@ -8,7 +8,8 @@ describe('AmbientScene', () => {
     const { container } = render(<AmbientScene scene="battle_forest" />)
     const def = AMBIENT_SCENES.battle_forest
     expect(container.querySelector('[data-ambient="battle_forest"]')).toBeInTheDocument()
-    expect(container.querySelectorAll('.ambient__sway')).toHaveLength(def.sway!.length)
+    // 絵そのものを動かす揺れの層は使わない（2026-11-28 に廃止）。
+    expect(container.querySelectorAll('.ambient__sway')).toHaveLength(0)
     expect(container.querySelectorAll('.ambient__ray')).toHaveLength(def.rays!.length)
     const particleCount = def.particles!.reduce((sum, group) => sum + group.count, 0)
     expect(container.querySelectorAll('.ambient__particle')).toHaveLength(particleCount)
@@ -32,11 +33,7 @@ describe('AmbientScene', () => {
         expect(glow.x, `${id} glow x`).toBeLessThanOrEqual(scene.width)
         expect(glow.y, `${id} glow y`).toBeLessThanOrEqual(scene.height)
       }
-      for (const ray of scene.rays ?? []) expect(ray.max, `${id} ray`).toBeLessThanOrEqual(0.22)
-      for (const sway of scene.sway ?? []) {
-        expect(sway.x + sway.w, `${id} sway`).toBeLessThanOrEqual(scene.width)
-        expect(sway.y + sway.h, `${id} sway`).toBeLessThanOrEqual(scene.height)
-      }
+      for (const ray of scene.rays ?? []) expect(ray.max, `${id} ray`).toBeLessThanOrEqual(0.25)
     }
   })
 })

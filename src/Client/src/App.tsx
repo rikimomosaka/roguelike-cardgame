@@ -10,6 +10,7 @@ import { useAccount } from './context/AccountContext'
 import { ScreenTransition } from './presentation'
 import { AchievementsScreen } from './screens/AchievementsScreen'
 import { AudioLabScreen } from './screens/AudioLabScreen'
+import { SceneLabScreen } from './screens/SceneLabScreen'
 import { DevCardsScreen } from './screens/DevCardsScreen'
 import { DevHomeScreen } from './screens/DevHomeScreen'
 import { DevRelicsScreen } from './screens/DevRelicsScreen'
@@ -36,6 +37,7 @@ type Screen =
   | { kind: 'dev-relics' }
   | { kind: 'dev-content'; initialKind?: string }
   | { kind: 'dev-audio' }
+  | { kind: 'dev-scenes' }
 
 // Why: 3 段ゲートのうち UI ゲート。`import.meta.env.DEV` は本番ビルド時に false で
 //   DCE 対象になるため、本番 bundle から DevHome/DevCards のコードが消える。
@@ -105,6 +107,11 @@ export default function App() {
         if (cancelled) return
         if (devParam === 'audio') {
           setScreen({ kind: 'dev-audio' })
+          return
+        }
+        // 背景と演出の確認（?dev=scenes）。
+        if (devParam === 'scenes') {
+          setScreen({ kind: 'dev-scenes' })
           return
         }
         const aliases: Record<string, string> = {
@@ -211,6 +218,12 @@ export default function App() {
       <ContentWorkbenchScreen
         initialKind={screen.initialKind}
         onClose={() => window.location.assign(window.location.pathname)}
+      />
+    )
+  } else if (import.meta.env.DEV && screen.kind === 'dev-scenes') {
+    content = (
+      <SceneLabScreen
+        onBack={() => window.location.assign(window.location.pathname)}
       />
     )
   } else if (import.meta.env.DEV && screen.kind === 'dev-audio') {

@@ -1,5 +1,5 @@
 /**
- * 背景の控えめな演出（風に揺れる草木・差し込む光・灯りのゆらぎ・漂う粒・霧）の定義。
+ * 背景の控えめな演出（差し込む光・灯りのゆらぎ・漂う粒・霧）の定義。絵そのものは動かさない。
  * 座標・大きさはすべて元の背景画像のドット単位（戦闘・マップ 640×360、イベント 480×320）。
  * 動きは小さく遅く、光は薄く（最大でも 0.25 程度）して、戦闘や読み物の邪魔をしない。
  * 規格: docs/current-art-asset-spec.md「背景の演出」。
@@ -7,17 +7,7 @@
 
 export type AmbientRect = { x: number; y: number; w: number; h: number }
 
-/** 元の絵の一部を 1 ドットだけ往復させる（風に揺れる草木・流れる水）。 */
-export type AmbientSway = AmbientRect & {
-  /** 'x' = 横に揺れる（草木・水面）、'y' = 縦に揺れる（滝・溶岩の流れ）。 */
-  axis?: 'x' | 'y'
-  /** 往復の周期（秒）。 */
-  period: number
-  /** 開始のずれ（秒）。隣の帯とずらして、風が渡っていくように見せる。 */
-  delay?: number
-}
-
-/** 差し込む光の筋（ゆっくり明滅）。 */
+/** 差し込む光の筋（ゆっくり明滅）。上端が細く、下へ行くほど広がる。 */
 export type AmbientRay = {
   /** 光の上端の中心。 */
   x: number
@@ -38,8 +28,10 @@ export type AmbientRay = {
 export type AmbientGlow = {
   x: number
   y: number
-  /** 半径。 */
+  /** 半径（横）。 */
   r: number
+  /** 縦の半径（省略時は r と同じ円。地面に落ちた光だまりは平たい楕円にする）。 */
+  ry?: number
   color: string
   min: number
   max: number
@@ -65,11 +57,10 @@ export type AmbientParticles = {
 export type AmbientMist = { y: number; h: number; color: string; opacity: number; period: number }
 
 export type AmbientScene = {
-  /** 元の背景画像（揺れの帯で同じ絵を使う）。 */
+  /** 元の背景画像。 */
   src: string
   width: number
   height: number
-  sway?: AmbientSway[]
   rays?: AmbientRay[]
   glows?: AmbientGlow[]
   particles?: AmbientParticles[]
@@ -80,35 +71,25 @@ const BATTLE = (id: string) => `/assets/backgrounds/battle/${id}.png`
 const MAP = (id: string) => `/assets/backgrounds/map/${id}.png`
 const EVENT = (id: string) => `/assets/backgrounds/events/${id}.png`
 
-/** 横長の帯を n 本に分け、周期を少しずつずらした揺れにする（風が渡っていくように）。 */
-function swayBand(x: number, y: number, w: number, h: number, parts: number, period: number): AmbientSway[] {
-  const step = w / parts
-  return Array.from({ length: parts }, (_, i) => ({
-    x: Math.round(x + step * i),
-    y,
-    w: Math.round(step),
-    h,
-    period,
-    delay: -(period / parts) * i,
-  }))
-}
-
 export const AMBIENT_SCENES: Readonly<Record<string, AmbientScene>> = {
   // ---------------- 戦闘（640×360） ----------------
   battle_forest: {
     src: BATTLE('battle_forest'), width: 640, height: 360,
-    sway: [
-      ...swayBand(0, 140, 640, 54, 5, 3.2),
-      ...swayBand(140, 0, 360, 70, 3, 4.4),
-    ],
+    // 真上の木々の切れ間（x 330〜370、y 0〜20）から、斜め左下の地面の中央へ光が落ちる。絵の光の向きに合わせた扇。
     rays: [
-      { x: 340, y: -10, w: 46, h: 240, angle: 18, color: 'rgba(214, 240, 196, 1)', min: 0.08, max: 0.21, period: 11 },
-      { x: 392, y: -10, w: 30, h: 220, angle: 22, color: 'rgba(214, 240, 196, 1)', min: 0.06, max: 0.16, period: 9, delay: -4 },
-      { x: 296, y: -10, w: 26, h: 200, angle: 14, color: 'rgba(214, 240, 196, 1)', min: 0.05, max: 0.14, period: 13, delay: -7 },
+      { x: 352, y: -6, w: 84, h: 280, angle: 16, color: 'rgba(226, 246, 204, 1)', min: 0.1, max: 0.24, period: 11 },
+      { x: 368, y: -6, w: 52, h: 260, angle: 27, color: 'rgba(226, 246, 204, 1)', min: 0.07, max: 0.19, period: 9, delay: -3 },
+      { x: 338, y: -6, w: 48, h: 250, angle: 7, color: 'rgba(226, 246, 204, 1)', min: 0.07, max: 0.18, period: 13, delay: -6 },
+      { x: 376, y: -6, w: 30, h: 210, angle: 36, color: 'rgba(226, 246, 204, 1)', min: 0.05, max: 0.14, period: 10, delay: -8 },
+    ],
+    glows: [
+      // 切れ間の明るさと、光が地面に落ちた光だまり（筋と同じ周期で明滅）。
+      { x: 352, y: 6, r: 40, ry: 26, color: '#e8f6d4', min: 0.1, max: 0.2, period: 11, style: 'pulse' },
+      { x: 300, y: 238, r: 120, ry: 26, color: '#e6efb4', min: 0.05, max: 0.13, period: 11, style: 'pulse' },
     ],
     particles: [
-      { kind: 'mote', count: 16, area: { x: 220, y: 30, w: 250, h: 170 }, colors: ['#eef7cf', '#dfeebb'], duration: 11, opacity: 0.74 },
-      { kind: 'leaf', count: 5, area: { x: 80, y: 0, w: 520, h: 50 }, colors: ['#7f9a45', '#a2b65b', '#5f7a35'], duration: 16, opacity: 0.85 },
+      { kind: 'mote', count: 22, area: { x: 250, y: 20, w: 140, h: 210 }, colors: ['#eef7cf', '#dfeebb'], duration: 12, opacity: 0.74 },
+      { kind: 'leaf', count: 4, area: { x: 120, y: 0, w: 420, h: 40 }, colors: ['#7f9a45', '#a2b65b', '#5f7a35'], duration: 17, opacity: 0.85 },
     ],
     mist: [{ y: 158, h: 48, color: '#a4c8b8', opacity: 0.12, period: 70 }],
   },
@@ -129,11 +110,6 @@ export const AMBIENT_SCENES: Readonly<Record<string, AmbientScene>> = {
   },
   battle_hell: {
     src: BATTLE('battle_hell'), width: 640, height: 360,
-    sway: [
-      { x: 88, y: 20, w: 16, h: 92, axis: 'y', period: 0.9 },
-      { x: 558, y: 76, w: 16, h: 76, axis: 'y', period: 1.1, delay: -0.4 },
-      { x: 270, y: 96, w: 12, h: 40, axis: 'y', period: 1, delay: -0.2 },
-    ],
     glows: [
       { x: 95, y: 64, r: 40, color: '#ff6a2a', min: 0.12, max: 0.24, period: 3.2 },
       { x: 565, y: 112, r: 40, color: '#ff6a2a', min: 0.12, max: 0.24, period: 3.8, delay: -1 },
@@ -147,10 +123,6 @@ export const AMBIENT_SCENES: Readonly<Record<string, AmbientScene>> = {
   // ---------------- マップ（640×360） ----------------
   map_act1: {
     src: MAP('act1'), width: 640, height: 360,
-    sway: [
-      ...swayBand(0, 110, 220, 250, 2, 3.6),
-      ...swayBand(420, 110, 220, 250, 2, 3.6),
-    ],
     rays: [
       { x: 300, y: -10, w: 70, h: 260, angle: 8, color: 'rgba(228, 250, 210, 1)', min: 0.08, max: 0.19, period: 12 },
       { x: 365, y: -10, w: 40, h: 230, angle: 12, color: 'rgba(228, 250, 210, 1)', min: 0.06, max: 0.16, period: 10, delay: -5 },
@@ -190,12 +162,6 @@ export const AMBIENT_SCENES: Readonly<Record<string, AmbientScene>> = {
   // ---------------- イベント（480×320） ----------------
   event_blessing_fountain: {
     src: EVENT('blessing_fountain'), width: 480, height: 320,
-    sway: [
-      { x: 0, y: 0, w: 90, h: 170, period: 3.8 },
-      { x: 395, y: 0, w: 85, h: 200, period: 4.2, delay: -1.5 },
-      { x: 246, y: 146, w: 20, h: 54, axis: 'y', period: 0.7 },
-      ...swayBand(110, 196, 270, 44, 3, 2.4),
-    ],
     rays: [
       { x: 248, y: -10, w: 50, h: 200, angle: -10, color: 'rgba(236, 255, 214, 1)', min: 0.08, max: 0.21, period: 11 },
       { x: 212, y: -10, w: 30, h: 170, angle: -18, color: 'rgba(236, 255, 214, 1)', min: 0.06, max: 0.16, period: 9, delay: -4 },
@@ -221,7 +187,6 @@ export const AMBIENT_SCENES: Readonly<Record<string, AmbientScene>> = {
   },
   event_lost_caravan: {
     src: EVENT('lost_caravan'), width: 480, height: 320,
-    sway: [...swayBand(0, 0, 220, 100, 2, 4.4)],
     glows: [
       { x: 318, y: 120, r: 36, color: '#ffb04a', min: 0.16, max: 0.3, period: 2.6 },
       { x: 318, y: 120, r: 14, color: '#ffd98a', min: 0.18, max: 0.3, period: 1.9, delay: -0.7 },
@@ -233,11 +198,6 @@ export const AMBIENT_SCENES: Readonly<Record<string, AmbientScene>> = {
   },
   event_moonlit_garden: {
     src: EVENT('moonlit_garden'), width: 480, height: 320,
-    sway: [
-      { x: 288, y: 220, w: 50, h: 28, period: 2.2 },
-      { x: 305, y: 180, w: 14, h: 32, axis: 'y', period: 0.8 },
-      ...swayBand(360, 0, 120, 140, 2, 4.8),
-    ],
     glows: [
       { x: 335, y: 55, r: 48, color: '#cfe3ff', min: 0.08, max: 0.16, period: 9, style: 'pulse' },
       { x: 35, y: 250, r: 20, color: '#6fa8ff', min: 0.12, max: 0.24, period: 5, style: 'pulse' },
