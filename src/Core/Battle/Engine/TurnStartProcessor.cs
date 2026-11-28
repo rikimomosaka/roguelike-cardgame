@@ -99,13 +99,6 @@ internal static class TurnStartProcessor
         foreach (var (actorId, delta) in pendingEnergy)
             if (delta != 0) s = AddEnergyForActorOwner(s, actorId, delta);
 
-        // 敵の先制行動: 最初の手札を配った直後、他の全処理の前に即時解決する。
-        if (s.Turn == 1)
-        {
-            s = EnemyOpeningActions.Apply(s, events, ref order, rng, catalog);
-            s = TargetingAutoSwitch.Apply(s);
-        }
-
         // Character passives observe the refreshed per-participant hand and
         // resources, then resolve before armed TurnStart Contingencies and
         // ordinary relic/power triggers. Projection is explicit so a

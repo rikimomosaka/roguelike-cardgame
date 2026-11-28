@@ -1,0 +1,27 @@
+{
+  "id": "enemy_common_weaken",
+  "name": "脱力付与",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy common (rare: generic special action)",
+      "spec": {
+        "rarity": 2,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "debuff",
+            "scope": "all",
+            "side": "enemy",
+            "name": "weak",
+            "amount": 1
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -167,6 +167,19 @@ public static partial class BattleEngine
             afterBattleStart,
             BattleParticipantAccess.DefaultPrimaryParticipantId,
             BattleParticipantControllerKind.Human);
+        if (withPrimaryParticipant.Outcome ==
+            RoguelikeCardGame.Core.Battle.State.BattleOutcome.Pending)
+        {
+            // 初期行動: ターン開始の処理と戦闘開始時のレリックがすべて終わった後、プレイヤーの操作の直前に、
+            // 敵 → 味方の順で使う（2026-11-28）。使ったカードはどの山にも入らない。
+            withPrimaryParticipant = EnemyOpeningActions.Apply(
+                withPrimaryParticipant, events, ref order, rng, catalog);
+            if (!withPrimaryParticipant.Participants.IsDefaultOrEmpty)
+            {
+                withPrimaryParticipant = BattleParticipantAccess.CommitRootToParticipant(
+                    withPrimaryParticipant, withPrimaryParticipant.Participants[0].ParticipantId);
+            }
+        }
         if (withPrimaryParticipant.Outcome !=
             RoguelikeCardGame.Core.Battle.State.BattleOutcome.Pending)
         {

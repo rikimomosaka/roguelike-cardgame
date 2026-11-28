@@ -384,6 +384,56 @@ public class EnemyCardPlannerTests
     }
 
     [Fact]
+    public void Opening_actions_can_attack_and_never_enter_any_pile()
+    {
+        // 初期行動は通常の敵の行動と同じ処理で実行するので、攻撃も使える（2026-11-28）。
+        var enemy = CardGoblin() with { OpeningActions = new[] { "e_strike", "e_open_ward" } };
+        var catalog = StatCatalog(enemy);
+
+        var (started, events) = BattleEngine.Start(
+            MakeRun("strike", "strike", "strike", "defend", "defend"), "enc_card", Rng(), catalog);
+
+        Assert.Equal(70 - 5, started.Allies[0].CurrentHp);
+        Assert.Equal(3, started.Enemies[0].GetStatus("resistance"));
+        // 実行後も、1 ターン目の行動予約は別に作られる。
+        Assert.NotEmpty(started.Enemies[0].PlannedEffects);
+        Assert.Contains(events, e => e.Kind == BattleEventKind.EnemyCardAction && e.CardId == "e_strike");
+        var participant = Participant(started);
+        Assert.DoesNotContain(
+            participant.DrawPile.Concat(participant.Hand).Concat(participant.DiscardPile).Concat(participant.ExhaustPile),
+            card => card.CardDefinitionId is "e_open_ward");
+    }
+
+    [Fact]
+    public void Ally_opening_actions_run_after_enemy_openings_and_before_player_input()
+    {
+        var enemy = CardGoblin() with { OpeningActions = new[] { "e_open_ward" } };
+        var baseCatalog = StatCatalog(enemy);
+        var character = new CharacterDefinition(
+            "default", "Hero", 70, 99, 3, new[] { "strike" },
+            OpeningActions: new[] { "e_guard" });
+        var catalog = baseCatalog with
+        {
+            Characters = new Dictionary<string, CharacterDefinition> { ["default"] = character },
+        };
+
+        var (started, events) = BattleEngine.Start(
+            MakeRun("strike", "strike", "strike", "defend", "defend"), "enc_card", Rng(), catalog);
+
+        Assert.Equal(BattlePhase.PlayerInput, started.Phase);
+        Assert.Equal(4, started.Allies[0].Block.Sum);
+        var eventList = events.ToList();
+        var enemyOpening = eventList.FindIndex(e => e.Kind == BattleEventKind.ApplyStatus && e.Note == "resistance");
+        var allyOpening = eventList.FindIndex(e => e.Kind == BattleEventKind.GainBlock
+            && e.TargetInstanceId == started.Allies[0].InstanceId);
+        Assert.True(enemyOpening >= 0 && allyOpening > enemyOpening);
+        // 使ったカードはどの山にも入らない（デッキの strike/defend だけ）。
+        Assert.DoesNotContain(
+            started.DrawPile.Concat(started.Hand).Concat(started.DiscardPile).Concat(started.ExhaustPile),
+            card => card.CardDefinitionId == "e_guard");
+    }
+
+    [Fact]
     public void Move_enemies_do_not_create_enemy_participants()
     {
         var (started, _) = BattleEngine.Start(

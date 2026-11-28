@@ -11,7 +11,7 @@
       "spec": {
         "rarity": 2,
         "cardType": "Skill",
-        "cost": 2,
+        "cost": 1,
         "effects": [
           {
             "action": "block",

@@ -9,7 +9,7 @@
   "attack": 27,
   "defense": 22,
   "initialEnergy": 0,
-  "energyPerTurn": 3,
+  "energyPerTurn": 2,
   "drawPerTurn": 2,
   "handLimit": 5,
   "aiProfileId": "low_cost_combo",
@@ -24,10 +24,14 @@
     },
     {
       "cardId": "enemy_common_attack",
-      "count": 6
+      "count": 3
     },
     {
       "cardId": "enemy_common_defend",
+      "count": 1
+    },
+    {
+      "cardId": "enemy_common_weaken",
       "count": 2
     }
   ]

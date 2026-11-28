@@ -97,6 +97,7 @@ public class ActorStatAmountTests
         Assert.Equal("selfAttack", catalog.Cards["basic_attack"].Effects[0].AmountSource);
         Assert.Equal("selfDefense", catalog.Cards["basic_defense"].Effects[0].AmountSource);
         Assert.Equal(150, catalog.Cards["enemy_common_heavy_attack"].Effects[0].AmountScalePercent);
-        Assert.Equal(2, catalog.Cards["enemy_common_heavy_attack"].Cost);
+        // 敵の行動カードは原則 1 コスト（2026-11-28）。
+        Assert.Equal(1, catalog.Cards["enemy_common_heavy_attack"].Cost);
     }
 }

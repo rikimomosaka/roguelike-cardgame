@@ -1,0 +1,26 @@
+{
+  "id": "enemy_common_strengthen",
+  "name": "筋力強化",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy common (rare: generic special action)",
+      "spec": {
+        "rarity": 2,
+        "cardType": "Skill",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "buff",
+            "scope": "self",
+            "name": "strength",
+            "amount": 1
+          }
+        ]
+      }
+    }
+  ]
+}

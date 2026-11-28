@@ -9,25 +9,25 @@
   "attack": 6,
   "defense": 3,
   "initialEnergy": 0,
-  "energyPerTurn": 2,
+  "energyPerTurn": 1,
   "drawPerTurn": 1,
   "handLimit": 5,
   "aiProfileId": "low_cost_combo",
   "deck": [
-    {
-      "cardId": "enemy_louse_red_bite",
-      "count": 2
-    },
     {
       "cardId": "enemy_louse_red_curl",
       "count": 2
     },
     {
       "cardId": "enemy_common_attack",
-      "count": 6
+      "count": 4
     },
     {
       "cardId": "enemy_common_defend",
+      "count": 2
+    },
+    {
+      "cardId": "enemy_common_double_attack",
       "count": 2
     }
   ]

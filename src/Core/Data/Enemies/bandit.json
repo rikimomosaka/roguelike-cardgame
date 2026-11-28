@@ -9,26 +9,18 @@
   "attack": 9,
   "defense": 7,
   "initialEnergy": 0,
-  "energyPerTurn": 2,
+  "energyPerTurn": 1,
   "drawPerTurn": 1,
   "handLimit": 5,
   "aiProfileId": "low_cost_combo",
   "deck": [
-    {
-      "cardId": "enemy_bandit_mug",
-      "count": 2
-    },
-    {
-      "cardId": "enemy_bandit_dodge",
-      "count": 2
-    },
     {
       "cardId": "enemy_bandit_backstab",
       "count": 2
     },
     {
       "cardId": "enemy_common_attack",
-      "count": 4
+      "count": 3
     },
     {
       "cardId": "enemy_common_defend",
@@ -37,6 +29,10 @@
     {
       "cardId": "enemy_common_prepare",
       "count": 1
+    },
+    {
+      "cardId": "enemy_common_weaken",
+      "count": 2
     }
   ]
 }

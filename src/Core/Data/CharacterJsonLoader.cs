@@ -48,6 +48,19 @@ public static class CharacterJsonLoader
             // 基礎攻撃力・守備力（筋力・敏捷とは別の能力値）。
             int attack = ParseOptionalIntInRange(r, "attack", 0, 0, int.MaxValue, id);
             int defense = ParseOptionalIntInRange(r, "defense", 0, 0, int.MaxValue, id);
+            // 初期行動: "openingActions": ["cardId", ...]（記載順に使う）。
+            List<string>? openingActions = null;
+            if (r.TryGetProperty("openingActions", out var openingEl) && openingEl.ValueKind == JsonValueKind.Array)
+            {
+                openingActions = new List<string>();
+                foreach (var e in openingEl.EnumerateArray())
+                {
+                    string? cardId = e.ValueKind == JsonValueKind.String ? e.GetString() : null;
+                    if (string.IsNullOrWhiteSpace(cardId))
+                        throw new CharacterJsonException($"openingActions の要素は空でないカード ID 文字列である必要があります (id={id})");
+                    openingActions.Add(cardId);
+                }
+            }
 
             return new CharacterDefinition(id, name, maxHp, gold, slots, deck,
                 HeightTier: heightTier, Skills: skills,
@@ -57,7 +70,8 @@ public static class CharacterJsonLoader
                 DrawPerTurn: drawPerTurn,
                 Trait: trait,
                 Attack: attack,
-                Defense: defense);
+                Defense: defense,
+                OpeningActions: openingActions);
         }
     }
 

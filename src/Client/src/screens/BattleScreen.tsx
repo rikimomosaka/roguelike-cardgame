@@ -3062,7 +3062,8 @@ export function BattleScreen({
 
       // Why: 「敵のターン」 banner は 1 turn につき 1 回 (味方攻撃終了 → 初の
       // 敵 caster AttackFire の前) で出す。表示済フラグでガードする。
-      let shownEnemyTurnBanner = false
+      // 戦闘開始時の敵の初期行動（BattleStart と同じ応答で届く）は、「敵のターン」の帯を出さずに見せる。
+      let shownEnemyTurnBanner = steps.some(step => step.event.kind === 'BattleStart')
 
       let i = 0
       while (i < steps.length) {

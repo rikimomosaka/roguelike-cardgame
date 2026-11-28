@@ -9,15 +9,11 @@
   "attack": 8,
   "defense": 4,
   "initialEnergy": 0,
-  "energyPerTurn": 3,
+  "energyPerTurn": 2,
   "drawPerTurn": 2,
   "handLimit": 5,
   "aiProfileId": "low_cost_combo",
   "deck": [
-    {
-      "cardId": "enemy_sleeping_dragon_wake",
-      "count": 2
-    },
     {
       "cardId": "enemy_sleeping_dragon_fire_breath",
       "count": 2
@@ -28,10 +24,14 @@
     },
     {
       "cardId": "enemy_common_attack",
-      "count": 4
+      "count": 3
     },
     {
       "cardId": "enemy_common_defend",
+      "count": 1
+    },
+    {
+      "cardId": "enemy_common_heavy_attack",
       "count": 2
     }
   ]

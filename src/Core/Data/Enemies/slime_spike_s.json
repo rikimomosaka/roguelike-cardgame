@@ -9,7 +9,7 @@
   "attack": 5,
   "defense": 4,
   "initialEnergy": 0,
-  "energyPerTurn": 2,
+  "energyPerTurn": 1,
   "drawPerTurn": 1,
   "handLimit": 5,
   "aiProfileId": "low_cost_combo",
@@ -19,15 +19,15 @@
       "count": 2
     },
     {
-      "cardId": "enemy_slime_spike_s_harden",
-      "count": 2
-    },
-    {
       "cardId": "enemy_common_attack",
-      "count": 6
+      "count": 4
     },
     {
       "cardId": "enemy_common_defend",
+      "count": 2
+    },
+    {
+      "cardId": "enemy_common_heavy_defend",
       "count": 2
     }
   ]

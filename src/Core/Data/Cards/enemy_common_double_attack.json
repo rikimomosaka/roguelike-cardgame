@@ -1,0 +1,36 @@
+{
+  "id": "enemy_common_double_attack",
+  "name": "連続攻撃",
+  "displayName": null,
+  "poolKinds": [],
+  "activeVersion": "v1",
+  "versions": [
+    {
+      "version": "v1",
+      "label": "enemy common (rare: generic special action)",
+      "spec": {
+        "rarity": 2,
+        "cardType": "Attack",
+        "cost": 1,
+        "effects": [
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 0,
+            "amountSource": "selfAttack",
+            "amountScalePercent": 60
+          },
+          {
+            "action": "attack",
+            "scope": "all",
+            "side": "enemy",
+            "amount": 0,
+            "amountSource": "selfAttack",
+            "amountScalePercent": 60
+          }
+        ]
+      }
+    }
+  ]
+}

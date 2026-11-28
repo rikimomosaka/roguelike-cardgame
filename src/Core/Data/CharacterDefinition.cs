@@ -19,8 +19,16 @@ public sealed record CharacterDefinition(
     int DrawPerTurn = 5,
     CharacterTraitDefinition? Trait = null,
     int Attack = 0,
-    int Defense = 0)
+    int Defense = 0,
+    IReadOnlyList<string>? OpeningActions = null)
 {
+    /// <summary>
+    /// 初期行動（戦闘開始時、敵の初期行動の後・プレイヤーの操作の前に使うカード ID。記載順）。
+    /// 今はどのキャラにも設定していないが、設定すれば動く。
+    /// </summary>
+    public IReadOnlyList<string> EffectiveOpeningActions =>
+        OpeningActions ?? System.Array.Empty<string>();
+
     public IReadOnlyList<CharacterSkillDefinition> EffectiveSkills =>
         Skills ?? System.Array.Empty<CharacterSkillDefinition>();
 }

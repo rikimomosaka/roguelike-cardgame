@@ -76,14 +76,9 @@ public static class DataCatalogIntegrityValidator
             Fail(location, "attack and defense must be non-negative.");
         foreach (var openingCardId in enemy.EffectiveOpeningActions)
         {
-            if (!catalog.Cards.TryGetValue(openingCardId, out var openingCard))
+            // 初期行動はどの効果のカードでも使える（2026-11-28 から攻撃も可）。
+            if (!catalog.Cards.ContainsKey(openingCardId))
                 Fail(location, $"openingActions references unknown card '{openingCardId}'.");
-            foreach (var effect in openingCard.Effects)
-            {
-                if (!Battle.Engine.EnemyOpeningActions.IsAllowedAction(effect.Action))
-                    Fail(location,
-                        $"opening action card '{openingCardId}' uses '{effect.Action}', which opening actions do not support.");
-            }
         }
         if (!enemy.IsCardControlled)
         {
