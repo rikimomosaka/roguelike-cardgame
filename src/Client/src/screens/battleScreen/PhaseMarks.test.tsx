@@ -72,6 +72,15 @@ describe('slotTooltipContent', () => {
     expect(lines.slice(3).join('\n')).toContain('[K:bipolar]')
   })
 
+  it('lists opening actions after the trait so they can be checked later', () => {
+    const tip = slotTooltipContent({
+      ...base,
+      traitDescription: '特性の説明。',
+      openingActionNames: ['詠唱', '強防御'],
+    })
+    expect(tip.desc.split('\n')).toEqual(['特性の説明。', '', '先制行動：詠唱、強防御'])
+  })
+
   it('has an empty body without a trait or phase', () => {
     const tip = slotTooltipContent({ ...base, stats: { attack: 6, defense: 5 } })
     expect(tip.desc).toBe('')

@@ -188,6 +188,7 @@ export function toCharacterDemo(
     // 主人公は自分専用の戦闘UI（頭上の行動予告の下地など）を使う。
     uiHeroId: isHero ? characterId ?? HERO_CHARACTER_ID : undefined,
     traitName: characterDef?.traitName ?? undefined,
+    openingActions: enemyDef?.openingActions?.length ? [...enemyDef.openingActions] : undefined,
     traitDescription: characterDef?.traitEffects
       ?? characterDef?.traitDescription
       ?? undefined,

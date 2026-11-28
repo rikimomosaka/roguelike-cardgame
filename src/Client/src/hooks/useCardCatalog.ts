@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   getCardCatalog,
   getPotionCatalog,
+  subscribeCardCatalog,
   type CardCatalog,
   type PotionCatalog,
 } from '../api/catalog'
@@ -23,8 +24,13 @@ export function useCardCatalog(): { names: CardNameMap; catalog: CardCatalog | n
       .catch(() => {
         if (!cancelled) setCatalog(null)
       })
+    // カタログを取り直したら描き直す。
+    const unsubscribe = subscribeCardCatalog((next) => {
+      if (!cancelled) setCatalog(next)
+    })
     return () => {
       cancelled = true
+      unsubscribe()
     }
   }, [])
 

@@ -19,8 +19,17 @@ public static partial class BattleEngine
     public const int InitialEnergy = 3;
 
     public static (BattleState, IReadOnlyList<BattleEvent>) Start(
-        RunState run, string encounterId, IRng rng, DataCatalog catalog)
+        RunState run, string encounterId, IRng rng, DataCatalog catalog) =>
+        Start(run, encounterId, rng, catalog, out _);
+
+    /// <summary>
+    /// 戦闘開始。preOpeningState には、初期行動を使う直前（手札が配られ、プレイヤーの操作の直前）の状態が入る。
+    /// 初期行動を誰も使わなかった時は null。画面はこの状態を先に出し、初期行動の演出の後で最終状態に切り替える。
+    /// </summary>
+    public static (BattleState, IReadOnlyList<BattleEvent>) Start(
+        RunState run, string encounterId, IRng rng, DataCatalog catalog, out BattleState? preOpeningState)
     {
+        preOpeningState = null;
         if (!catalog.TryGetEncounter(encounterId, out var encounter))
             throw new System.InvalidOperationException($"encounter '{encounterId}' not found in catalog");
 
@@ -172,8 +181,12 @@ public static partial class BattleEngine
         {
             // 初期行動: ターン開始の処理と戦闘開始時のレリックがすべて終わった後、プレイヤーの操作の直前に、
             // 敵 → 味方の順で使う（2026-11-28）。使ったカードはどの山にも入らない。
+            var beforeOpening = withPrimaryParticipant;
+            int eventsBeforeOpening = events.Count;
             withPrimaryParticipant = EnemyOpeningActions.Apply(
                 withPrimaryParticipant, events, ref order, rng, catalog);
+            if (events.Count > eventsBeforeOpening)
+                preOpeningState = beforeOpening;
             if (!withPrimaryParticipant.Participants.IsDefaultOrEmpty)
             {
                 withPrimaryParticipant = BattleParticipantAccess.CommitRootToParticipant(

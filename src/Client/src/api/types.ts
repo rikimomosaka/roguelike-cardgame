@@ -737,6 +737,8 @@ export type BattleEventStepDto = {
 export type BattleActionResponseDto = {
   state: BattleStateDto
   steps: BattleEventStepDto[]
+  /** 戦闘開始の応答だけ: 初期行動を使う直前の状態。画面はこれを先に出し、演出の後で state に切り替える。 */
+  initialState?: BattleStateDto | null
 }
 
 export type EnemyTier = 'Weak' | 'Strong' | 'Elite' | 'Boss'

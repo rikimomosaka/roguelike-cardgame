@@ -30,7 +30,7 @@ export function actorStatLines(char: {
 /**
  * キャラにカーソルを合わせたときの説明。
  * 見出しは「キャラ名(操作アカウント)」。見出しの下に能力値（HP・攻撃力/守備力・ドロー/エナジー）と、
- * 特性名（戦技・奥義の名前と同じ見出しの書式）。本文は特性の効果と位相（あれば）。
+ * 特性名（戦技・奥義の名前と同じ見出しの書式）。本文は特性の効果・先制行動・位相（あれば）。
  */
 export function slotTooltipContent(char: {
   name: string
@@ -45,6 +45,8 @@ export function slotTooltipContent(char: {
   }
   traitName?: string
   traitDescription?: string
+  /** 先制行動のカード名（記載順）。 */
+  openingActionNames?: string[]
   phase?: ActorPhaseDemo
 }): { name: ReactNode; statusLine: ReactNode; desc: string } {
   const title = `${char.charName ?? char.name}${char.controllerLabel ? `(${char.controllerLabel})` : ''}`
@@ -61,6 +63,11 @@ export function slotTooltipContent(char: {
   )
   const desc: string[] = []
   if (char.traitDescription) desc.push(char.traitDescription)
+  // 先制行動は戦闘開始時に一度だけなので、後から何をしたか分かるよう説明に残す。
+  if (char.openingActionNames && char.openingActionNames.length > 0) {
+    if (desc.length > 0) desc.push('')
+    desc.push(`先制行動：${char.openingActionNames.join('、')}`)
+  }
   const phase = char.phase ? PHASE_INFO[char.phase] : null
   if (phase) {
     if (desc.length > 0) desc.push('')

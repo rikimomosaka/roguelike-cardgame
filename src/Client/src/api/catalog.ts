@@ -66,8 +66,53 @@ export function getPotionCatalog(): Promise<PotionCatalog> {
   return potionCache
 }
 
+/** カードカタログを取り直した時に呼ぶ購読者（useCardCatalog が描き直すため）。 */
+const cardCatalogListeners = new Set<(catalog: CardCatalog) => void>()
+
+export function subscribeCardCatalog(listener: (catalog: CardCatalog) => void): () => void {
+  cardCatalogListeners.add(listener)
+  return () => { cardCatalogListeners.delete(listener) }
+}
+
+/** カードカタログを取り直す（ページを開いた後にサーバーでカードが増えた時）。 */
+export function refreshCardCatalog(): Promise<CardCatalog> {
+  cardCache = null
+  const next = getCardCatalog()
+  next.then(catalog => cardCatalogListeners.forEach(listener => listener(catalog))).catch(() => {})
+  return next
+}
+
+const refreshedForMissingIds = new Set<string>()
+
+/**
+ * カード ID の表示名。カタログの取得を待ち、ID が無ければ一度だけ取り直す。それでも無ければ ID を返す。
+ */
+export async function resolveCardName(cardId: string): Promise<string> {
+  try {
+    let catalog = await getCardCatalog()
+    if (!catalog[cardId] && !refreshedForMissingIds.has(cardId)) {
+      refreshedForMissingIds.add(cardId)
+      catalog = await refreshCardCatalog()
+    }
+    const entry = catalog[cardId]
+    return entry?.displayName ?? entry?.name ?? cardId
+  } catch {
+    return cardId
+  }
+}
+
+/** 表示するカードのうちカタログに無いものがあれば、一度だけカタログを取り直す（同じ ID では繰り返さない）。 */
+export function refreshCardCatalogIfMissing(catalog: CardCatalog | null, cardIds: readonly string[]): void {
+  if (!catalog) return
+  const missing = cardIds.filter(id => !catalog[id] && !refreshedForMissingIds.has(id))
+  if (missing.length === 0) return
+  missing.forEach(id => refreshedForMissingIds.add(id))
+  void refreshCardCatalog().catch(() => {})
+}
+
 export function resetCardCatalogCacheForTests(): void {
   cardCache = null
+  refreshedForMissingIds.clear()
 }
 
 export function resetPotionCatalogCacheForTests(): void {

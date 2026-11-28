@@ -55,6 +55,7 @@ import type {
   RunSnapshotDto,
 } from '../api/types'
 import { useCardCatalog } from '../hooks/useCardCatalog'
+import { refreshCardCatalogIfMissing, resolveCardName } from '../api/catalog'
 import { useCharacterCatalog } from '../hooks/useCharacterCatalog'
 import { useEnemyCatalog } from '../hooks/useEnemyCatalog'
 import { useUnitCatalog } from '../hooks/useUnitCatalog'
@@ -303,6 +304,8 @@ export type CharacterDemo = {
   traitName?: string
   /** Marker-bearing passive text rendered with the common card tooltip. */
   traitDescription?: string
+  /** 先制行動（戦闘開始時に使うカード ID、記載順）。説明に名前を出す。 */
+  openingActions?: string[]
   hpCur: number
   hpMax: number
   hpLv: HpLv
@@ -1094,8 +1097,12 @@ function Slot({
   actionLabel = null,
   aura = null,
 }: SlotProps) {
-  // 特性と今の位相（名前と効果）をまとめて出す。
-  const traitTip = useTip(slotTooltipContent(char))
+  // 特性・先制行動と今の位相（名前と効果）をまとめて出す。
+  const { names: cardNames } = useCardCatalog()
+  const traitTip = useTip(slotTooltipContent({
+    ...char,
+    openingActionNames: char.openingActions?.map(cardId => cardNames[cardId] ?? cardId),
+  }))
   // Why: 影の横幅は描画後の sprite 横幅と同じにしたい。silhouette は決定論的
   //  (tier-height × 0.55) で同期計算できる。画像は naturalWidth/Height が
   //  load 後にしか取れないので onLoad で aspect を State に保持し、それ以降
@@ -2831,7 +2838,9 @@ export function BattleScreen({
   const playSteps = useCallback(
     async (resp: BattleActionResponseDto, options: PlayStepsOptions = {}) => {
       const presentationOnly = options.presentationOnly === true
-      const baselineState = options.baselineState ?? state
+      // 戦闘開始（state === null）で初期行動がある時は、その直前の状態を基準に演出する。
+      const openingBaseline = !presentationOnly && state === null ? resp.initialState ?? null : null
+      const baselineState = options.baselineState ?? state ?? openingBaseline
       const playbackSpeed = Math.max(0.25, options.speed ?? 1)
       const motionScale = effectiveMotionLevel === 'off'
         ? 0
@@ -2882,8 +2891,9 @@ export function BattleScreen({
       // 初回は最初に resp.state を設定して battle UI を出してから演出に入る。
       // 初回 response (battle start) に DealDamage は含まれないため、
       // setState(resp.state) しても progressive HP は問題にならない。
+      // 初期行動がある時は、その直前の状態を出しておき、初期行動の演出の後（最後）で最終状態に切り替える。
       if (!presentationOnly && state === null) {
-        setState(resp.state)
+        setState(openingBaseline ?? resp.state)
       }
       // Why: playSteps 中は setState を呼ばず、ローカル overlay を更新して
       // setDamageOverlay / setBlockOverlay でレンダーに反映させる。
@@ -3190,7 +3200,7 @@ export function BattleScreen({
         // 「戦闘開始」「プレイヤーのターン」 banner: BattleStart / TurnStart
         // event をそのまま trigger にする (engine が emit するタイミング)。
         if (!presentationOnly && ev.kind === 'BattleStart') {
-          if (baselineState === null && resp.state.hand.length > 0) {
+          if (state === null && resp.state.hand.length > 0) {
             playBattleCue('cardDraw', `opening:${resp.state.hand[0].instanceId}`)
           }
           await showBanner('戦闘開始')
@@ -3651,9 +3661,8 @@ export function BattleScreen({
 
         // 敵が予約したカードの実行開始: カード名を頭上に札で見せ、読める間を取る。
         if (ev.kind === 'EnemyCardAction' && ev.casterInstanceId) {
-          const cardName = (ev.cardId
-            ? cardCatalog?.[ev.cardId]?.displayName ?? cardCatalog?.[ev.cardId]?.name
-            : null) ?? ev.cardId ?? '行動'
+          // カタログの取得前（戦闘開始時の初期行動など）でも ID ではなく名前を出す。
+          const cardName = ev.cardId ? await resolveCardName(ev.cardId) : '行動'
           const readMs = Math.round(ENEMY_CARD_ACTION_READ_MS * motionScale / playbackSpeed)
           showActionLabel(ev.casterInstanceId, cardName, Math.max(readMs + 900, 1200))
           if (!await waitForPresentation(ENEMY_CARD_ACTION_READ_MS)) {
@@ -3676,8 +3685,8 @@ export function BattleScreen({
         }
 
         // 位相が変わった瞬間は一時的な光を出す（続く間のオーラは state の phase で描く）。
-        // カードに能力（双極など）が付いた: 連続する付与をまとめて、手札のカードを光らせ、
-        // 光の途中で付与後の見た目（説明文）に差し替える。
+        // カードに能力（双極・刻印など）が付いた: 連続する付与をまとめて、付与後の見た目（説明文）に
+        // 差し替えるのと同時に手札のカードを光らせる（光ってから文字が変わるまでのずれを無くす）。
         if (ev.kind === 'CardAugmented') {
           const augmentedIds: string[] = []
           let j = i
@@ -3688,25 +3697,20 @@ export function BattleScreen({
           }
           const inHand = augmentedIds.filter(id => handCardRefs.current.has(id))
           if (inHand.length > 0 && !presentationOnly) {
-            if (effectiveMotionLevel !== 'off') {
-              setAugmentingCardIds(new Set(inHand))
-              window.setTimeout(() => setAugmentingCardIds(new Set()),
-                Math.round(CARD_AUGMENT_GLOW_MS * motionScale / playbackSpeed))
-              if (!await waitForPresentation(CARD_AUGMENT_GLOW_MS / 2)) {
-                clearTransientPresentation()
-                return
-              }
-            }
             const updated = new Map(resp.state.hand
               .filter(card => inHand.includes(card.instanceId))
               .map(card => [card.instanceId, card] as const))
             setState(current => current
               ? { ...current, hand: current.hand.map(card => updated.get(card.instanceId) ?? card) }
               : current)
-            if (effectiveMotionLevel !== 'off'
-              && !await waitForPresentation(CARD_AUGMENT_GLOW_MS / 2)) {
-              clearTransientPresentation()
-              return
+            if (effectiveMotionLevel !== 'off') {
+              setAugmentingCardIds(new Set(inHand))
+              window.setTimeout(() => setAugmentingCardIds(new Set()),
+                Math.round(CARD_AUGMENT_GLOW_MS * motionScale / playbackSpeed))
+              if (!await waitForPresentation(CARD_AUGMENT_GLOW_MS)) {
+                clearTransientPresentation()
+                return
+              }
             }
           }
           i = j
@@ -4756,6 +4760,12 @@ export function BattleScreen({
         hand: projectedDisplayedState.hand.filter(card => card.instanceId !== replayPlayingInstanceId),
       }
     : projectedDisplayedState
+  // 表示中のカードにカタログに無いもの（ページを開いた後にサーバーで増えたカード）があれば、カタログを 1 回取り直す。
+  // 取り直しは非同期で、届いたら useCardCatalog が描き直す。
+  refreshCardCatalogIfMissing(cardCatalog, [
+    ...displayedState.hand,
+    ...(displayedState.participants ?? []).flatMap(participant => participant.hand),
+  ].map(card => card.cardDefinitionId))
   const primaryIsReady = primaryParticipant?.isReady ?? false
   const readyIntent = readyIntentRef.current
   const viewingReplay = replayView !== null

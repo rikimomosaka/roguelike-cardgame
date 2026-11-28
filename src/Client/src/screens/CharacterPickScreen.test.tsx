@@ -10,6 +10,7 @@ vi.mock('../api/catalog', () => ({
   fetchCharacterCatalog: vi.fn(),
   fetchUnitCatalog: vi.fn().mockResolvedValue({}),
   getCardCatalog: vi.fn(),
+  subscribeCardCatalog: vi.fn(() => () => {}),
 }))
 
 vi.mock('../api/runs', () => ({

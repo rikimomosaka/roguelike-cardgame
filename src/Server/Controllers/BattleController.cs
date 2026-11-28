@@ -80,7 +80,7 @@ public sealed class BattleController : ControllerBase
 
         var rng = MakeBattleRng(run);
         var (startedState, startEvents) = BattleEngine.Start(
-            run, run.ActiveBattle.EncounterId, rng, _data);
+            run, run.ActiveBattle.EncounterId, rng, _data, out var preOpeningState);
         var initialCpu = BattleCpuPlanningCoordinator.PlanUntilReady(
             startedState, rng, _data);
         var state = initialCpu.State;
@@ -118,7 +118,10 @@ public sealed class BattleController : ControllerBase
             ActionJournal = journal,
         });
 
-        return Ok(BattleStateDtoMapper.ToActionResponse(state, events, _data));
+        return Ok(BattleStateDtoMapper.ToActionResponse(state, events, _data) with
+        {
+            InitialState = preOpeningState is null ? null : BattleStateDtoMapper.ToDto(preOpeningState, _data),
+        });
     }
 
     /// <summary>

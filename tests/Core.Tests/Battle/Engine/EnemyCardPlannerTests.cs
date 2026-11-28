@@ -431,6 +431,28 @@ public class EnemyCardPlannerTests
     }
 
     [Fact]
+    public void Start_reports_the_state_right_before_opening_actions()
+    {
+        // 画面は初期行動の直前の状態を先に出し、演出の後で最終状態に切り替える（バフが演出より先に見えないように）。
+        var enemy = CardGoblin() with { OpeningActions = new[] { "e_open_ward" } };
+        var catalog = StatCatalog(enemy);
+
+        var (started, _) = BattleEngine.Start(
+            MakeRun("strike", "strike", "strike", "defend", "defend"), "enc_card", Rng(), catalog,
+            out var preOpening);
+
+        Assert.NotNull(preOpening);
+        Assert.Equal(0, preOpening!.Enemies[0].GetStatus("resistance"));
+        Assert.Equal(3, started.Enemies[0].GetStatus("resistance"));
+        Assert.Equal(started.Hand.Select(c => c.InstanceId), preOpening.Hand.Select(c => c.InstanceId));
+
+        var (_, _) = BattleEngine.Start(
+            MakeRun("strike", "strike", "strike", "defend", "defend"), "enc_card", Rng(),
+            StatCatalog(CardGoblin()), out var none);
+        Assert.Null(none);
+    }
+
+    [Fact]
     public void Ally_opening_actions_run_after_enemy_openings_and_before_player_input()
     {
         var enemy = CardGoblin() with { OpeningActions = new[] { "e_open_ward" } };
