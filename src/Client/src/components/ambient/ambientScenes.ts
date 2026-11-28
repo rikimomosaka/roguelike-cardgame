@@ -123,39 +123,66 @@ export const AMBIENT_SCENES: Readonly<Record<string, AmbientScene>> = {
   // ---------------- マップ（640×360） ----------------
   map_act1: {
     src: MAP('act1'), width: 640, height: 360,
+    // 上中央の木々の切れ間（x 300〜360）から、右下へ斜めに差す光と、道に落ちた光だまり。
     rays: [
-      { x: 300, y: -10, w: 70, h: 260, angle: 8, color: 'rgba(228, 250, 210, 1)', min: 0.08, max: 0.19, period: 12 },
-      { x: 365, y: -10, w: 40, h: 230, angle: 12, color: 'rgba(228, 250, 210, 1)', min: 0.06, max: 0.16, period: 10, delay: -5 },
+      { x: 338, y: -6, w: 80, h: 250, angle: -14, color: 'rgba(232, 248, 210, 1)', min: 0.08, max: 0.2, period: 12 },
+      { x: 318, y: -6, w: 50, h: 270, angle: 2, color: 'rgba(232, 248, 210, 1)', min: 0.05, max: 0.14, period: 10, delay: -5 },
+    ],
+    glows: [
+      { x: 330, y: 10, r: 50, ry: 30, color: '#eef8dc', min: 0.08, max: 0.18, period: 12, style: 'pulse' },
+      { x: 322, y: 262, r: 70, ry: 16, color: '#e8efb8', min: 0.05, max: 0.12, period: 12, style: 'pulse' },
     ],
     particles: [
-      { kind: 'firefly', count: 14, area: { x: 0, y: 20, w: 640, h: 290 }, colors: ['#e8ff7d', '#d2f56a'], duration: 9, opacity: 0.85 },
-      { kind: 'mote', count: 10, area: { x: 250, y: 20, w: 180, h: 200 }, colors: ['#f2ffd6'], duration: 12, opacity: 0.61 },
+      { kind: 'firefly', count: 12, area: { x: 40, y: 150, w: 560, h: 190 }, colors: ['#e8ff7d', '#d2f56a'], duration: 9, opacity: 0.85 },
+      { kind: 'mote', count: 14, area: { x: 270, y: 20, w: 140, h: 200 }, colors: ['#f2ffd6'], duration: 12, opacity: 0.6 },
+      { kind: 'leaf', count: 3, area: { x: 160, y: 0, w: 320, h: 40 }, colors: ['#7f9a45', '#a2b65b'], duration: 17, opacity: 0.8 },
     ],
+    mist: [{ y: 170, h: 60, color: '#9cc6bc', opacity: 0.1, period: 80 }],
   },
   map_act2: {
     src: MAP('act2'), width: 640, height: 360,
     glows: [
-      { x: 195, y: 160, r: 30, color: '#ffc04a', min: 0.14, max: 0.26, period: 2.6 },
-      { x: 95, y: 250, r: 30, color: '#ffc04a', min: 0.14, max: 0.26, period: 3.1, delay: -1 },
-      { x: 535, y: 215, r: 36, color: '#ffc04a', min: 0.14, max: 0.26, period: 2.8, delay: -0.5 },
-      { x: 485, y: 130, r: 26, color: '#ffc04a', min: 0.12, max: 0.22, period: 3.4, delay: -2 },
-      { x: 355, y: 100, r: 85, color: '#6fd2e2', min: 0.06, max: 0.14, period: 8, style: 'pulse' },
-      { x: 620, y: 300, r: 32, color: '#9a7bff', min: 0.1, max: 0.2, period: 6, style: 'pulse' },
+      // 道沿いのランタン（手前ほど大きく）
+      { x: 197, y: 285, r: 34, color: '#ffb44a', min: 0.16, max: 0.3, period: 2.6 },
+      { x: 435, y: 258, r: 30, color: '#ffb44a', min: 0.16, max: 0.3, period: 3.1, delay: -1 },
+      { x: 263, y: 226, r: 18, color: '#ffb44a', min: 0.14, max: 0.26, period: 2.8, delay: -0.5 },
+      { x: 357, y: 206, r: 14, color: '#ffb44a', min: 0.14, max: 0.26, period: 3.4, delay: -2 },
+      { x: 285, y: 197, r: 12, color: '#ffb44a', min: 0.12, max: 0.24, period: 2.9, delay: -1.4 },
+      // 奥の青白い光
+      { x: 320, y: 160, r: 95, ry: 80, color: '#8fd8ec', min: 0.06, max: 0.14, period: 9, style: 'pulse' },
+      // 壁の結晶
+      { x: 57, y: 178, r: 16, color: '#8f8cff', min: 0.08, max: 0.22, period: 6, style: 'pulse' },
+      { x: 129, y: 190, r: 14, color: '#6fd2ff', min: 0.08, max: 0.22, period: 6.8, delay: -2, style: 'pulse' },
+      { x: 515, y: 268, r: 18, color: '#6fd2ff', min: 0.08, max: 0.22, period: 6.2, delay: -3, style: 'pulse' },
+      { x: 595, y: 148, r: 14, color: '#6fd2ff', min: 0.08, max: 0.22, period: 7, delay: -1, style: 'pulse' },
+      { x: 485, y: 240, r: 12, color: '#a78cff', min: 0.08, max: 0.2, period: 5.6, delay: -4, style: 'pulse' },
     ],
     particles: [
-      { kind: 'sparkle', count: 8, area: { x: 20, y: 170, w: 600, h: 140 }, colors: ['#9fe4ff', '#c8a8ff'], duration: 5, opacity: 0.75 },
-      { kind: 'mote', count: 12, area: { x: 290, y: 50, w: 140, h: 160 }, colors: ['#bdf0ff'], duration: 12, opacity: 0.61 },
+      { kind: 'sparkle', count: 8, area: { x: 30, y: 130, w: 590, h: 150 }, colors: ['#9fe4ff', '#c8a8ff'], duration: 5, opacity: 0.75 },
+      { kind: 'mote', count: 12, area: { x: 260, y: 100, w: 120, h: 120 }, colors: ['#bdf0ff'], duration: 12, opacity: 0.55 },
+      { kind: 'drip', count: 4, area: { x: 150, y: 30, w: 340, h: 40 }, colors: ['#93a9dc'], duration: 6, opacity: 0.55 },
     ],
+    mist: [{ y: 180, h: 60, color: '#7f9fc0', opacity: 0.1, period: 90 }],
   },
   map_act3: {
     src: MAP('act3'), width: 640, height: 360,
     glows: [
-      { x: 30, y: 220, r: 40, color: '#ff7a2a', min: 0.14, max: 0.26, period: 2.8 },
-      { x: 540, y: 225, r: 40, color: '#ff7a2a', min: 0.14, max: 0.26, period: 3.3, delay: -1 },
-      { x: 325, y: 155, r: 75, color: '#ff5a1e', min: 0.08, max: 0.16, period: 6, style: 'pulse' },
+      // 奥の赤い光と、溶岩だまり
+      { x: 320, y: 168, r: 100, ry: 80, color: '#ff5a1e', min: 0.06, max: 0.14, period: 7, style: 'pulse' },
+      { x: 320, y: 207, r: 40, ry: 14, color: '#ff7a2a', min: 0.12, max: 0.24, period: 3.4 },
+      { x: 240, y: 242, r: 22, ry: 12, color: '#ff7a2a', min: 0.12, max: 0.24, period: 3 },
+      { x: 198, y: 270, r: 16, ry: 10, color: '#ff7a2a', min: 0.12, max: 0.22, period: 3.6, delay: -1 },
+      // 細く流れ落ちる溶岩
+      { x: 172, y: 150, r: 14, ry: 100, color: '#ff6a2a', min: 0.08, max: 0.18, period: 4.2 },
+      { x: 427, y: 170, r: 14, ry: 85, color: '#ff6a2a', min: 0.08, max: 0.18, period: 4.6, delay: -2 },
+      { x: 228, y: 165, r: 10, ry: 70, color: '#ff6a2a', min: 0.06, max: 0.14, period: 5, delay: -1 },
+      // 岩の割れ目
+      { x: 550, y: 230, r: 24, color: '#ff5a1e', min: 0.06, max: 0.16, period: 4, delay: -1.5 },
+      { x: 600, y: 160, r: 20, color: '#ff5a1e', min: 0.06, max: 0.16, period: 4.4, delay: -2.5 },
+      { x: 75, y: 220, r: 24, color: '#ff5a1e', min: 0.06, max: 0.16, period: 4.8, delay: -0.5 },
     ],
     particles: [
-      { kind: 'ember', count: 24, area: { x: 0, y: 200, w: 640, h: 120 }, colors: ['#ffe6b0', '#ffd08a', '#fff0c8'], duration: 9, opacity: 0.8 },
+      { kind: 'ember', count: 22, area: { x: 60, y: 180, w: 520, h: 140 }, colors: ['#ffe6b0', '#ffd08a', '#fff0c8'], duration: 9, opacity: 0.8 },
     ],
   },
 
@@ -198,13 +225,14 @@ export const AMBIENT_SCENES: Readonly<Record<string, AmbientScene>> = {
   },
   event_moonlit_garden: {
     src: EVENT('moonlit_garden'), width: 480, height: 320,
+    // 花と月の光は、ゆっくり大きく強弱させて「光っている」ことを見せる（6〜9 秒で、ほぼ消える所から明るい所まで）。
     glows: [
-      { x: 335, y: 55, r: 48, color: '#cfe3ff', min: 0.08, max: 0.16, period: 9, style: 'pulse' },
-      { x: 35, y: 250, r: 20, color: '#6fa8ff', min: 0.12, max: 0.24, period: 5, style: 'pulse' },
-      { x: 90, y: 215, r: 18, color: '#6fa8ff', min: 0.12, max: 0.24, period: 5.6, delay: -2, style: 'pulse' },
-      { x: 195, y: 205, r: 14, color: '#6fa8ff', min: 0.1, max: 0.2, period: 6, delay: -1, style: 'pulse' },
-      { x: 255, y: 190, r: 14, color: '#6fa8ff', min: 0.1, max: 0.2, period: 5.2, delay: -3, style: 'pulse' },
-      { x: 392, y: 190, r: 18, color: '#6fa8ff', min: 0.12, max: 0.24, period: 5.8, delay: -4, style: 'pulse' },
+      { x: 335, y: 55, r: 52, color: '#cfe3ff', min: 0.05, max: 0.22, period: 9, style: 'pulse' },
+      { x: 35, y: 250, r: 22, color: '#6fa8ff', min: 0.03, max: 0.3, period: 6.5, style: 'pulse' },
+      { x: 90, y: 215, r: 20, color: '#6fa8ff', min: 0.03, max: 0.3, period: 7.2, delay: -2.4, style: 'pulse' },
+      { x: 195, y: 205, r: 16, color: '#6fa8ff', min: 0.03, max: 0.28, period: 7.8, delay: -1.2, style: 'pulse' },
+      { x: 255, y: 190, r: 16, color: '#6fa8ff', min: 0.03, max: 0.28, period: 6.8, delay: -4, style: 'pulse' },
+      { x: 392, y: 190, r: 20, color: '#6fa8ff', min: 0.03, max: 0.3, period: 7.5, delay: -5.2, style: 'pulse' },
     ],
     particles: [
       { kind: 'firefly', count: 8, area: { x: 50, y: 170, w: 400, h: 130 }, colors: ['#c9ff9c', '#a8d8ff'], duration: 10, opacity: 0.8 },
